@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#ffffff",
+              "on-secondary": "#ffffff",
+              "on-error-container": "#93000a",
+              "inverse-surface": "#2e3132",
+              "outline": "#8c7164",
+              "error-container": "#ffdad6",
+              "surface": "#f8f9fb",
+              "on-primary-fixed-variant": "#783200",
+              "on-tertiary-fixed": "#001d32",
+              "background": "#f8f9fb",
+              "on-secondary-fixed": "#00164e",
+              "primary-fixed-dim": "#ffb690",
+              "error": "#ba1a1a",
+              "on-error": "#ffffff",
+              "on-tertiary-container": "#003554",
+              "inverse-primary": "#ffb690",
+              "outline-variant": "#e0c0b1",
+              "surface-tint": "#9d4300",
+              "on-surface": "#191c1e",
+              "surface-bright": "#f8f9fb",
+              "surface-container": "#edeef0",
+              "surface-variant": "#e1e2e4",
+              "primary-fixed": "#ffdbca",
+              "surface-container-high": "#e7e8ea",
+              "tertiary-container": "#00a2f4",
+              "primary-container": "#f97316",
+              "secondary": "#4059aa",
+              "inverse-on-surface": "#f0f1f3",
+              "surface-dim": "#d9dadc",
+              "tertiary-fixed": "#cde5ff",
+              "tertiary-fixed-dim": "#93ccff",
+              "secondary-fixed": "#dce1ff",
+              "surface-container-highest": "#e1e2e4",
+              "tertiary": "#006398",
+              "secondary-container": "#8fa7fe",
+              "on-secondary-container": "#1d3989",
+              "primary": "#9d4300",
+              "on-secondary-fixed-variant": "#264191",
+              "surface-container-low": "#f3f4f6",
+              "on-primary-fixed": "#341100",
+              "on-tertiary-fixed-variant": "#004b74",
+              "on-background": "#191c1e",
+              "on-surface-variant": "#584237",
+              "on-tertiary": "#ffffff",
+              "secondary-fixed-dim": "#b6c4ff",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#582200"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-manrope { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface-container-low text-on-surface flex min-h-screen">
+<!-- SideNavBar (Authority Source: JSON & Design System) -->
+<aside class="fixed left-0 top-0 h-full z-50 flex flex-col py-6 bg-blue-900 dark:bg-slate-950 w-64 shadow-xl dark:shadow-none">
+<div class="px-6 mb-10">
+<h1 class="text-lg font-bold text-white font-manrope">The Editorial Ledger</h1>
+<p class="text-xs text-blue-200/60 font-medium uppercase tracking-widest mt-1">Corporate Finance</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-inter text-sm font-semibold tracking-wide">Dashboard</span>
+</a>
+<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="app_registration">app_registration</span>
+<span class="font-inter text-sm font-semibold tracking-wide">Registration</span>
+</a>
+<a class="bg-white/10 text-white rounded-md mx-2 px-4 py-3 flex items-center gap-3 scale-[0.99] transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-inter text-sm font-semibold tracking-wide">Accounts Receivable</span>
+</a>
+<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-inter text-sm font-semibold tracking-wide">Accounts Payable</span>
+</a>
+<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-inter text-sm font-semibold tracking-wide">Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-white/10">
+<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-inter text-sm font-semibold tracking-wide">Help Center</span>
+</a>
+<div class="mx-6 mt-6 flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-sm">FA</div>
+<div class="overflow-hidden">
+<p class="text-sm font-bold text-white truncate">Financial Architect</p>
+<p class="text-xs text-blue-200/50 truncate">admin@ledger.corp</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="flex-1 ml-64 p-8">
+<!-- Top Navigation Bar -->
+<header class="flex justify-between items-center mb-10">
+<div>
+<h2 class="text-3xl font-extrabold tracking-tight text-on-surface font-manrope">Accounts Receivable</h2>
+<p class="text-on-surface-variant text-sm font-medium mt-1">Manage and track your incoming corporate revenue.</p>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Farol Operacional (Metric Indicators) -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+<!-- Indicator 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl transition-all duration-200">
+<div class="flex justify-between items-start mb-4">
+<span class="p-2 bg-tertiary-container/10 text-tertiary rounded-lg">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+</span>
+<span class="text-tertiary font-bold text-xs uppercase tracking-tighter">Hoje</span>
+</div>
+<p class="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-1">Notas Cadastradas Hoje</p>
+<h3 class="text-2xl font-extrabold font-manrope text-on-surface">142</h3>
+</div>
+<!-- Indicator 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl transition-all duration-200">
+<div class="flex justify-between items-start mb-4">
+<span class="p-2 bg-primary-container/10 text-primary rounded-lg">
+<span class="material-symbols-outlined" data-icon="event_upcoming">event_upcoming</span>
+</span>
+<span class="text-primary font-bold text-xs uppercase tracking-tighter">Fluxo</span>
+</div>
+<p class="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-1">Vencem Hoje (R$)</p>
+<h3 class="text-2xl font-extrabold font-manrope text-on-surface">R$ 42.890,50</h3>
+</div>
+<!-- Indicator 3 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl transition-all duration-200 border-l-4 border-error">
+<div class="flex justify-between items-start mb-4">
+<span class="p-2 bg-error-container/20 text-error rounded-lg">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+</span>
+<span class="text-error font-bold text-xs uppercase tracking-tighter">Alerta</span>
+</div>
+<p class="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-1">Pendências/Atrasos</p>
+<h3 class="text-2xl font-extrabold font-manrope text-on-surface">12 Faturas</h3>
+</div>
+</section>
+<!-- Action Bar -->
+<div class="flex flex-col md:flex-row gap-4 mb-8 items-center justify-between">
+<div class="relative w-full md:w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+<input class="w-full pl-10 pr-4 py-2.5 bg-surface-container rounded-lg border-none focus:ring-2 focus:ring-primary/20 text-sm font-medium" placeholder="Pesquisar por NF-e ou Cliente..." type="text"/>
+</div>
+<div class="flex items-center gap-3 w-full md:w-auto">
+<button class="flex items-center gap-2 px-5 py-2.5 bg-surface-container-lowest border-2 border-secondary/30 text-secondary text-sm font-bold rounded-md hover:bg-secondary/5 transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="filter_list">filter_list</span>
+                    Filtros Avançados
+                </button>
+<button class="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-white text-sm font-bold rounded-md shadow-lg shadow-primary/20 hover:opacity-90 transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="upload_file">upload_file</span>
+                    Importar Planilha (Excel)
+                </button>
+</div>
+</div>
+<!-- Data Table Section -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high">
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-on-surface-variant">NF-e</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-on-surface-variant">Empresa Emissora</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-on-surface-variant">Cliente</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-on-surface-variant">Vencimento</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-on-surface-variant text-right">Valor Líquido</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-on-surface-variant text-center">Status</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-on-surface-variant text-right">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-manrope font-bold text-on-surface">#98231</td>
+<td class="px-6 py-4 text-sm font-medium">Logistics Corp LTDA</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Varejo Central S.A.</td>
+<td class="px-6 py-4 text-sm font-medium">15 Out 2023</td>
+<td class="px-6 py-4 text-sm font-bold text-right">R$ 12.450,00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-3 py-1 bg-tertiary-container/20 text-on-tertiary-container text-xs font-bold rounded-full">PAGO</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="visibility">visibility</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-manrope font-bold text-on-surface">#98232</td>
+<td class="px-6 py-4 text-sm font-medium">Editorial Ledger S.A.</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Mídias Globais Inc.</td>
+<td class="px-6 py-4 text-sm font-medium text-error">12 Out 2023</td>
+<td class="px-6 py-4 text-sm font-bold text-right">R$ 8.900,00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-3 py-1 bg-error-container/20 text-on-error-container text-xs font-bold rounded-full">ATRASADO</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="visibility">visibility</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-manrope font-bold text-on-surface">#98235</td>
+<td class="px-6 py-4 text-sm font-medium">Logistics Corp LTDA</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Tecnologia Horizonte</td>
+<td class="px-6 py-4 text-sm font-medium">22 Out 2023</td>
+<td class="px-6 py-4 text-sm font-bold text-right">R$ 5.120,00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-3 py-1 bg-primary-container/20 text-on-primary-fixed-variant text-xs font-bold rounded-full">PENDENTE</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="visibility">visibility</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-manrope font-bold text-on-surface">#98238</td>
+<td class="px-6 py-4 text-sm font-medium">The Editorial Ledger</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Alfa Comércio Ext.</td>
+<td class="px-6 py-4 text-sm font-medium">25 Out 2023</td>
+<td class="px-6 py-4 text-sm font-bold text-right">R$ 31.000,00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-3 py-1 bg-primary-container/20 text-on-primary-fixed-variant text-xs font-bold rounded-full">PENDENTE</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="visibility">visibility</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-5 flex items-center justify-between border-t border-surface-container">
+<span class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Mostrando 1-10 de 1.240 faturas</span>
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded border border-surface-container hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded bg-secondary text-white font-bold text-xs">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-surface-container hover:bg-surface-container transition-colors text-xs font-medium">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-surface-container hover:bg-surface-container transition-colors text-xs font-medium">3</button>
+<span class="px-1 text-on-surface-variant">...</span>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-surface-container hover:bg-surface-container transition-colors text-xs font-medium">124</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-surface-container hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Secondary Information / Bento Grid Style Area -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+<div class="bg-surface-container-low p-8 rounded-xl relative overflow-hidden">
+<div class="relative z-10">
+<h4 class="text-lg font-bold font-manrope text-on-surface mb-2">Conciliação Automática</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-4">O sistema identificou 12 novos pagamentos no extrato bancário que podem ser vinculados automaticamente a faturas pendentes.</p>
+<button class="text-secondary font-bold text-sm hover:underline flex items-center gap-1">
+                        Verificar sugestões <span class="material-symbols-outlined text-base" data-icon="arrow_right_alt">arrow_right_alt</span>
+</button>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
+<span class="material-symbols-outlined text-[120px]" data-icon="auto_awesome">auto_awesome</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-8 rounded-xl border-l-4 border-secondary">
+<h4 class="text-lg font-bold font-manrope text-on-surface mb-2">Projeção de Caixa</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-4">Baseado no histórico de pagamentos, a previsão de recebimento para a próxima semana é de <strong>R$ 156.400,00</strong>.</p>
+<div class="flex items-center gap-4">
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 65%;"></div>
+</div>
+<span class="text-xs font-bold text-secondary">65% Confirmação</span>
+</div>
+</div>
+</section>
+</main>
+</body></html>
