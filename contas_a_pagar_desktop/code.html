@@ -425,4 +425,24 @@
 <span class="font-inter text-[10px] font-semibold uppercase tracking-tighter mt-1">More</span>
 </a>
 </nav>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+  // A SUA CHAVE SECRETA (Agora com os dados corretos do CentraFin)
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+    authDomain: "centra-fin.firebaseapp.com",
+    projectId: "centra-fin",
+    storageBucket: "centra-fin.firebasestorage.app",
+    messagingSenderId: "666471089411",
+    appId: "1:666471089411:web:4630f5b2ced70ceb981536",
+    measurementId: "G-CJJX2T2HT8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  
+  console.log("🔥 Motor do CentraFin conectado com sucesso ao Firebase!");
+</script>        
 </body></html>
