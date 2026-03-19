@@ -257,6 +257,26 @@
 <span class="material-symbols-outlined">settings</span>
 <span class="text-[10px] font-bold uppercase">Ajustes</span>
 </div>
+ <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+  // A SUA CHAVE SECRETA (Agora com os dados corretos do CentraFin)
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+    authDomain: "centra-fin.firebaseapp.com",
+    projectId: "centra-fin",
+    storageBucket: "centra-fin.firebasestorage.app",
+    messagingSenderId: "666471089411",
+    appId: "1:666471089411:web:4630f5b2ced70ceb981536",
+    measurementId: "G-CJJX2T2HT8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  
+  console.log("🔥 Motor do CentraFin conectado com sucesso ao Firebase!");
+</script>     
 </nav>
 <!-- Backdrop for side menu placeholder -->
 <div class="fixed inset-0 bg-black/40 z-50 pointer-events-none opacity-0 transition-opacity"></div>
