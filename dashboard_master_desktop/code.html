@@ -568,64 +568,55 @@
       </div>
 
       <div id="tela-metas" class="view-tela hidden">
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
               <h2 class="text-2xl font-extrabold text-brandDarkBlue flex items-center gap-2"><span class="material-symbols-outlined text-brandAqua text-3xl">track_changes</span> Acompanhamento de Metas</h2>
-              <p class="text-slate-500 text-xs font-medium mt-1">Visão de atingimento por Período (Faturamento Real vs Meta).</p>
+              <p class="text-slate-500 text-xs font-medium mt-1">Selecione os meses para ver o acumulado e a comparação detalhada.</p>
             </div>
-            <div class="flex gap-2">
-                <select id="filtro-mes-dash-metas" onchange="window.processarDashMetas()" class="bg-white border border-slate-200 text-brandDarkBlue text-sm font-bold rounded-xl px-5 py-2.5 outline-none shadow-sm focus:border-brandGreen cursor-pointer">
-                    <option value="todos">Todos os Meses</option>
-                    <option value="0">Janeiro</option>
-                    <option value="1">Fevereiro</option>
-                    <option value="2">Março</option>
-                    <option value="3">Abril</option>
-                    <option value="4">Maio</option>
-                    <option value="5">Junho</option>
-                    <option value="6">Julho</option>
-                    <option value="7">Agosto</option>
-                    <option value="8">Setembro</option>
-                    <option value="9">Outubro</option>
-                    <option value="10">Novembro</option>
-                    <option value="11">Dezembro</option>
-                </select>
-                <select id="filtro-ano-dash-metas" onchange="window.processarDashMetas()" class="bg-white border border-slate-200 text-brandDarkBlue text-sm font-bold rounded-xl px-5 py-2.5 outline-none shadow-sm focus:border-brandGreen cursor-pointer">
-                    <option value="2026">Ano: 2026</option>
-                    <option value="2025">Ano: 2025</option>
+            <div class="flex flex-wrap items-center gap-2 bg-slate-100/50 p-2 rounded-2xl border border-slate-200">
+                <div id="container-meses-metas" class="flex flex-wrap gap-1.5 mr-2">
+                    <!-- Badges de meses serão gerados via JS -->
+                </div>
+                <div class="h-8 w-px bg-slate-300 mx-1"></div>
+                <button onclick="window.toggleTodosMesesMetas(true)" class="text-[10px] font-bold px-3 py-1.5 bg-brandDarkBlue text-white rounded-lg hover:bg-brandMidBlue transition-all">Todos</button>
+                <button onclick="window.toggleTodosMesesMetas(false)" class="text-[10px] font-bold px-3 py-1.5 bg-white text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">Limpar</button>
+                <select id="filtro-ano-dash-metas" onchange="window.processarDashMetas()" class="ml-2 bg-white border border-slate-200 text-brandDarkBlue text-xs font-bold rounded-lg px-3 py-1.5 outline-none focus:border-brandGreen cursor-pointer shadow-sm">
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
                 </select>
             </div>
         </div>
 
         <!-- LINHA 1: Gauges -->
         <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-            <div class="bg-brandDarkBlue p-4 rounded-xl shadow-lg text-center transform hover:scale-105 transition-all outline outline-2 outline-brandGreen/30">
+            <div class="bg-brandDarkBlue p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition-all outline outline-2 outline-brandGreen/30 min-h-[240px] flex flex-col justify-between">
               <h3 class="text-[10px] font-extrabold text-brandGreen uppercase tracking-widest mb-1">META TOTAL GERAL</h3>
-              <div id="gauge-geral" class="flex justify-center -mb-4"></div>
+              <div id="gauge-geral" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-geral" class="text-[11px] font-bold text-white mt-2">R$ 0 / R$ 0</div>
             </div>
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform min-h-[240px] flex flex-col justify-between">
               <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Consultoria & RPO</h3>
-              <div id="gauge-cons-rpo" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="gauge-cons-rpo" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-cons-rpo" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform min-h-[240px] flex flex-col justify-between">
               <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Estágio & Fopag</h3>
-              <div id="gauge-est-fopag" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="gauge-est-fopag" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-est-fopag" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform min-h-[240px] flex flex-col justify-between">
               <h3 class="text-[10px] font-extrabold text-[#434f55] uppercase tracking-widest">THOMAS</h3>
-              <div id="gauge-thomas" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="gauge-thomas" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-thomas" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform min-h-[240px] flex flex-col justify-between">
               <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Temporário</h3>
-              <div id="gauge-temporario" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="gauge-temporario" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-temporario" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform min-h-[240px] flex flex-col justify-between">
               <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Terceirizados</h3>
-              <div id="gauge-terceirizados" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="gauge-terceirizados" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-terceirizados" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
         </div>
@@ -1792,11 +1783,47 @@
     if (typeof google !== 'undefined') google.charts.load('current', { 'packages': ['geochart'] });
 
     window.graficosGauges = {};
+    window.mesesSelecionadosMetas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; // Inicia com visão anual (todos)
     
+    window.inicializarBadgesMesesMetas = function() {
+        const container = document.getElementById('container-meses-metas');
+        if(!container) return;
+        const nomesMeses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        container.innerHTML = '';
+        nomesMeses.forEach((nome, idx) => {
+            const ativo = window.mesesSelecionadosMetas.includes(idx);
+            const btn = document.createElement('button');
+            btn.className = `text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all border ${ativo ? 'bg-brandGreen text-brandDarkBlue border-brandGreen shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`;
+            btn.innerText = nome;
+            btn.onclick = () => window.toggleMesMetas(idx);
+            container.appendChild(btn);
+        });
+    };
+
+    window.toggleMesMetas = function(idx) {
+        if(window.mesesSelecionadosMetas.includes(idx)) {
+            window.mesesSelecionadosMetas = window.mesesSelecionadosMetas.filter(m => m !== idx);
+        } else {
+            window.mesesSelecionadosMetas.push(idx);
+            window.mesesSelecionadosMetas.sort((a, b) => a - b);
+        }
+        window.renderizarUXMetas();
+    };
+
+    window.toggleTodosMesesMetas = function(selecionar) {
+        window.mesesSelecionadosMetas = selecionar ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] : [];
+        window.renderizarUXMetas();
+    };
+
+    window.renderizarUXMetas = function() {
+        window.inicializarBadgesMesesMetas();
+        window.processarDashMetas();
+    };
+
     window.inicializarGraficosMetas = function() {
       const gaugeOpt = {
-        chart: { type: 'radialBar', height: 160, sparkline: { enabled: true } },
-        plotOptions: { radialBar: { startAngle: -90, endAngle: 90, track: { background: "#e2e8f0", strokeWidth: '97%', margin: 5, dropShadow: { enabled: true, top: 2, left: 0, color: '#999', opacity: 1, blur: 2 } }, dataLabels: { name: { show: false }, value: { offsetY: -2, fontSize: '14px', fontWeight: 'bold', color: '#002443', formatter: function (val) { return val.toFixed(1) + "%"; } } } } },
+        chart: { height: 200, type: 'radialBar', sparkline: { enabled: true } },
+        plotOptions: { radialBar: { startAngle: -90, endAngle: 90, track: { background: "#e2e8f0", strokeWidth: '97%', margin: 5, dropShadow: { enabled: true, top: 2, left: 0, color: '#999', opacity: 1, blur: 2 } }, dataLabels: { name: { show: false }, value: { offsetY: -5, fontSize: '14px', fontWeight: 'bold', color: '#002443', formatter: function (val) { return val.toFixed(1) + "%"; } } } } },
         fill: { type: 'gradient', gradient: { shade: 'light', shadeIntensity: 0.4, inverseColors: false, opacityFrom: 1, opacityTo: 1, stops: [0, 50, 53, 91] } }
       };
 
@@ -1831,34 +1858,40 @@
 
       if(document.querySelector("#chart-metas-mensal")) {
           window.chartMetasMensal = new ApexCharts(document.querySelector("#chart-metas-mensal"), {
-            chart: { height: 350, type: 'line', stacked: true, toolbar: { show: false } },
+            chart: { height: 350, type: 'bar', toolbar: { show: false } },
             series: [
-                { name: 'Consultoria & RPO', type: 'column', data: [] },
-                { name: 'Estágio & Fopag', type: 'column', data: [] },
-                { name: 'THOMAS', type: 'column', data: [] },
-                { name: 'Temporário', type: 'column', data: [] },
-                { name: 'Terceirizados', type: 'column', data: [] },
-                { name: 'Meta Geral Total', type: 'line', data: [] }
+                { name: 'Realizado', type: 'column', data: [] },
+                { name: 'Meta Mensal', type: 'column', data: [] }
             ],
-            stroke: { width: [0, 0, 0, 0, 0, 3], curve: 'smooth' },
-            colors: ['#aad12f', '#59a4d8', '#ff5f15', '#1a4895', '#ff8864', '#002443'],
-            dataLabels: { enabled: false },
-            xaxis: { categories: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] },
+            plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 4, dataLabels: { position: 'top' } } },
+            colors: ['#59a4d8', '#aad12f'],
+            dataLabels: { 
+                enabled: true, 
+                formatter: function (val) { return window.formatMil(val); },
+                style: { fontSize: '10px', colors: ['#fff'] },
+                offsetY: 20
+            },
+            xaxis: { categories: [], labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 'bold' } } },
             yaxis: { labels: { formatter: function(val) { return window.formatMil(val); } } },
-            tooltip: { shared: true, intersect: false, y: { formatter: function (val) { return window.formatMoedaFull(val); } } },
-            legend: { position: 'top' }
+            tooltip: { 
+                shared: true, 
+                intersect: false, 
+                y: { formatter: function (val) { return window.formatMoedaFull(val); } } 
+            },
+            legend: { show: true, position: 'top', fontWeight: 'bold' }
           });
           window.chartMetasMensal.render();
       }
+      window.inicializarBadgesMesesMetas();
     };
 
     window.processarDashMetas = function() {
         if(!window.dadosGlobaisFirestore || !window.dadosMetasGlobais) return;
         
         const anoFiltro = document.getElementById('filtro-ano-dash-metas').value;
-        const mesFiltro = document.getElementById('filtro-mes-dash-metas').value;
+        const mesesFiltro = window.mesesSelecionadosMetas; // Array de meses selecionados [0, 1, 2...]
         
-        // 1. Processar Lançamentos (Realizado)
+        // 1. Processar Lançamentos (Realizado em todos os meses para o ano)
         let faturamentoPorMesProduto = {
             'Consultoria & RPO': Array(12).fill(0),
             'Estágio & Fopag': Array(12).fill(0),
@@ -1877,7 +1910,6 @@
             let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
             if(!dRef || dRef.getFullYear() != anoFiltro) return;
 
-            const vFatura = Number(window.extrairNum(data['valor_fatura'] || data['Valor Fatura'] || data['valor'])) || 0;
             const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
             const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
             const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
@@ -1891,78 +1923,81 @@
             else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) { faturReal = vTaxa; grupoMeta = 'Consultoria & RPO'; }
             else if (empresa === "NEAT") { faturReal = vTaxa * 0.55; grupoMeta = 'THOMAS'; }
 
-            if(grupoMeta) {
-                faturamentoPorMesProduto[grupoMeta][dRef.getMonth()] += faturReal;
-            }
+            if(grupoMeta) faturamentoPorMesProduto[grupoMeta][dRef.getMonth()] += faturReal;
         });
 
-        // 2. Processar Metas e Cálculo Global
+        // 2. Processar Metas e Cálculo Acumulado
         const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-        let metaTotalGeralAnual = 0;
-        let realTotalGeralAnual = 0;
-        let metaTotalMesesGlobal = Array(12).fill(0);
+        const nomesMesesFull = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        
+        let metaTotalPeriodo = 0;
+        let realTotalPeriodo = 0;
+        
+        let serieMetaMensal = [];
+        let serieRealMensal = [];
+        let categoriasX = [];
 
-        const keysProdutos = Object.keys(faturamentoPorMesProduto);
-        keysProdutos.forEach(grupo => {
-            const metaDoc = window.dadosMetasGlobais.find(m => m.ano == anoFiltro && m.produto === grupo);
-            const realMeses = faturamentoPorMesProduto[grupo];
+        // Calcular valores para o gráfico dinâmico (apenas meses selecionados)
+        mesesFiltro.forEach(mIdx => {
+            categoriasX.push(nomesMesesFull[mIdx]);
+            let somaRealMes = 0;
+            let somaMetaMes = 0;
+
+            Object.keys(faturamentoPorMesProduto).forEach(grupo => {
+                somaRealMes += faturamentoPorMesProduto[grupo][mIdx];
+                const metaDoc = window.dadosMetasGlobais.find(m => m.ano == anoFiltro && m.produto === grupo);
+                if (metaDoc && metaDoc.meses) {
+                    somaMetaMes += (metaDoc.meses[refMeses[mIdx]] || 0);
+                }
+            });
+
+            serieRealMensal.push(somaRealMes);
+            serieMetaMensal.push(somaMetaMes);
             
-            // Cálculos baseados no filtro de período
-            let realPeriodo = 0;
-            let metaPeriodo = 0;
+            realTotalPeriodo += somaRealMes;
+            metaTotalPeriodo += somaMetaMes;
+        });
 
-            if (mesFiltro === 'todos') {
-                realPeriodo = realMeses.reduce((a, b) => a + b, 0);
-                metaPeriodo = metaDoc ? metaDoc.total : 0;
-            } else {
-                realPeriodo = realMeses[parseInt(mesFiltro)];
-                metaPeriodo = (metaDoc && metaDoc.meses) ? (metaDoc.meses[refMeses[parseInt(mesFiltro)]] || 0) : 0;
-            }
+        // Atualizar Gauges Individuais baseado no selecionado
+        Object.keys(faturamentoPorMesProduto).forEach(grupo => {
+            let realAcumulado = 0;
+            let metaAcumulada = 0;
+            const metaDoc = window.dadosMetasGlobais.find(m => m.ano == anoFiltro && m.produto === grupo);
+            
+            mesesFiltro.forEach(mIdx => {
+                realAcumulado += faturamentoPorMesProduto[grupo][mIdx];
+                if(metaDoc && metaDoc.meses) metaAcumulada += (metaDoc.meses[refMeses[mIdx]] || 0);
+            });
 
-            metaTotalGeralAnual += metaPeriodo;
-            realTotalGeralAnual += realPeriodo;
-
-            // Atualizar Gauge Individual
-            let perc = metaPeriodo > 0 ? (realPeriodo / metaPeriodo) * 100 : 0;
+            let perc = metaAcumulada > 0 ? (realAcumulado / metaAcumulada) * 100 : 0;
             if(perc > 100) perc = 100;
+            if(window.graficosGauges[grupo]) window.graficosGauges[grupo].updateSeries([perc]);
 
-            if(window.graficosGauges[grupo]) {
-                window.graficosGauges[grupo].updateSeries([perc]);
-            }
-
-            // Atualizar Labels Gauges
             let lblMap = { 'Consultoria & RPO': 'lbl-meta-cons-rpo', 'Estágio & Fopag': 'lbl-meta-est-fopag', 'THOMAS': 'lbl-meta-thomas', 'Temporário': 'lbl-meta-temporario', 'Terceirizados': 'lbl-meta-terceirizados' };
             let lblEl = document.getElementById(lblMap[grupo]);
             if(lblEl) {
-                let falta = metaPeriodo - realPeriodo;
-                let percFalta = metaPeriodo > 0 ? (falta / metaPeriodo) * 100 : 0;
+                let falta = metaAcumulada - realAcumulado;
+                let percFalta = metaAcumulada > 0 ? (falta / metaAcumulada) * 100 : 0;
                 let txtFalta = falta > 0 ? `Falta: ${window.formatMil(falta)} (${percFalta.toFixed(1)}%)` : `<span class="text-brandGreen">Meta Superada!</span>`;
-                
                 lblEl.innerHTML = `
-                    <div class="flex justify-center items-center gap-1"><span class="text-brandDarkBlue">${window.formatMil(realPeriodo)}</span> / ${window.formatMil(metaPeriodo)}</div>
+                    <div class="flex justify-center items-center gap-1"><span class="text-brandDarkBlue">${window.formatMil(realAcumulado)}</span> / ${window.formatMil(metaAcumulada)}</div>
                     <hr class="border-slate-200 my-1 w-1/2 mx-auto">
                     <span class="text-orange-500 text-[10px] block font-extrabold uppercase tracking-tight">${txtFalta}</span>
                 `;
-            }
-
-            // Preparar dados para o gráfico consolidado (sempre 12 meses)
-            if(metaDoc && metaDoc.meses) {
-                refMeses.forEach((m, idx) => { metaTotalMesesGlobal[idx] += (metaDoc.meses[m] || 0); });
             }
         });
 
         // 3. Atualizar Gauge GERAL
         if(window.graficosGauges['GERAL']) {
-            let percGeral = metaTotalGeralAnual > 0 ? (realTotalGeralAnual / metaTotalGeralAnual) * 100 : 0;
+            let percGeral = metaTotalPeriodo > 0 ? (realTotalPeriodo / metaTotalPeriodo) * 100 : 0;
             if(percGeral > 100) percGeral = 100;
             window.graficosGauges['GERAL'].updateSeries([percGeral]);
             
-            let faltaGeral = metaTotalGeralAnual - realTotalGeralAnual;
-            let percFaltaGeral = metaTotalGeralAnual > 0 ? (faltaGeral / metaTotalGeralAnual) * 100 : 0;
+            let faltaGeral = metaTotalPeriodo - realTotalPeriodo;
+            let percFaltaGeral = metaTotalPeriodo > 0 ? (faltaGeral / metaTotalPeriodo) * 100 : 0;
             let txtFaltaG = faltaGeral > 0 ? `Falta: ${window.formatMil(faltaGeral)} (${percFaltaGeral.toFixed(1)}%)` : `<span class="text-brandGreen">Meta Superada!</span>`;
-
             document.getElementById('lbl-meta-geral').innerHTML = `
-                <div class="flex justify-center items-center gap-1"><span class="text-white">${window.formatMil(realTotalGeralAnual)}</span> / ${window.formatMil(metaTotalGeralAnual)}</div>
+                <div class="flex justify-center items-center gap-1"><span class="text-white">${window.formatMil(realTotalPeriodo)}</span> / ${window.formatMil(metaTotalPeriodo)}</div>
                 <hr class="border-white/20 my-1 w-1/2 mx-auto">
                 <span class="text-brandGreen text-[10px] block font-extrabold pb-1">${txtFaltaG}</span>
             `;
@@ -1971,20 +2006,17 @@
         // 4. Atualizar Gráfico Anual (Barra Horizontal)
         if(window.chartMetaAnualFat) {
             window.chartMetaAnualFat.updateSeries([
-                { name: 'Meta Total', data: [metaTotalGeralAnual] },
-                { name: 'Faturamento Real', data: [realTotalGeralAnual] }
+                { name: 'Meta Total', data: [metaTotalPeriodo] },
+                { name: 'Faturamento Real', data: [realTotalPeriodo] }
             ]);
         }
 
-        // 5. Atualizar Gráfico Mensal Consolidado (Timeline)
+        // 5. Atualizar Gráfico Mensal Dinâmico
         if(window.chartMetasMensal) {
+            window.chartMetasMensal.updateOptions({ xaxis: { categories: categoriasX } });
             window.chartMetasMensal.updateSeries([
-                { name: 'Consultoria & RPO', data: faturamentoPorMesProduto['Consultoria & RPO'] },
-                { name: 'Estágio & Fopag', data: faturamentoPorMesProduto['Estágio & Fopag'] },
-                { name: 'THOMAS', data: faturamentoPorMesProduto['THOMAS'] },
-                { name: 'Temporário', data: faturamentoPorMesProduto['Temporário'] },
-                { name: 'Terceirizados', data: faturamentoPorMesProduto['Terceirizados'] },
-                { name: 'Meta Geral Total', data: metaTotalMesesGlobal }
+                { name: 'Realizado', data: serieRealMensal },
+                { name: 'Meta Mensal', data: serieMetaMensal }
             ]);
         }
     };
