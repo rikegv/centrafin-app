@@ -590,7 +590,7 @@
                 </div>
                 <div class="h-8 w-px bg-slate-300 mx-1"></div>
                 <button onclick="window.toggleTodosMesesMetas(true)" class="text-[10px] font-bold px-3 py-1.5 bg-brandDarkBlue text-white rounded-lg hover:bg-brandMidBlue transition-all">Todos</button>
-                <button onclick="window.toggleTodosMesesMetas(false)" class="text-[10px] font-bold px-3 py-1.5 bg-white text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">Limpar</button>
+                <button onclick="window.limparFiltrosMetas()" class="text-[10px] font-bold px-3 py-1.5 bg-white text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">Limpar</button>
                 <select id="filtro-ano-dash-metas" onchange="window.processarDashMetas()" class="ml-2 bg-white border border-slate-200 text-brandDarkBlue text-xs font-bold rounded-lg px-3 py-1.5 outline-none focus:border-brandGreen cursor-pointer shadow-sm">
                     <option value="2026">2026</option>
                     <option value="2025">2025</option>
@@ -601,32 +601,32 @@
         <!-- LINHA 1: Gauges -->
         <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
             <div onclick="window.filtrarPorProduto('GERAL')" class="bg-brandDarkBlue p-6 rounded-xl shadow-lg text-center transform hover:scale-[1.02] active:scale-95 transition-all outline outline-2 outline-brandGreen/30 min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-[10px] font-extrabold text-brandGreen uppercase tracking-widest mb-1 group-hover:underline">META TOTAL GERAL</h3>
+              <h3 class="text-sm font-black text-brandGreen uppercase tracking-widest mb-1 group-hover:underline">META TOTAL GERAL</h3>
               <div id="gauge-geral" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-geral" class="text-[11px] font-bold text-white mt-2">R$ 0 / R$ 0</div>
             </div>
             <div onclick="window.filtrarPorProduto('Consultoria & RPO')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest group-hover:text-brandMidBlue">Consultoria & RPO</h3>
+              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">Consultoria & RPO</h3>
               <div id="gauge-cons-rpo" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-cons-rpo" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
             <div onclick="window.filtrarPorProduto('Estágio & Fopag')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest group-hover:text-brandMidBlue">Estágio & Fopag</h3>
+              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">Estágio & Fopag</h3>
               <div id="gauge-est-fopag" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-est-fopag" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
             <div onclick="window.filtrarPorProduto('THOMAS')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-[10px] font-extrabold text-[#434f55] uppercase tracking-widest group-hover:text-brandMidBlue">THOMAS</h3>
+              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">THOMAS</h3>
               <div id="gauge-thomas" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-thomas" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
             <div onclick="window.filtrarPorProduto('Temporário')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest group-hover:text-brandMidBlue">Temporário</h3>
+              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">Temporário</h3>
               <div id="gauge-temporario" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-temporario" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
             <div onclick="window.filtrarPorProduto('Terceirizados')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest group-hover:text-brandMidBlue">Terceirizados</h3>
+              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">Terceirizados</h3>
               <div id="gauge-terceirizados" class="flex justify-center mt-4 mb-2"></div>
               <div id="lbl-meta-terceirizados" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
             </div>
@@ -1845,6 +1845,12 @@
         window.renderizarUXMetas();
     };
 
+    window.limparFiltrosMetas = function() {
+        window.mesesSelecionadosMetas = [];
+        window.produtoFiltroMetas = null;
+        window.renderizarUXMetas();
+    };
+
     window.renderizarUXMetas = function() {
         window.inicializarBadgesMesesMetas();
         window.processarDashMetas();
@@ -2024,34 +2030,58 @@
         // 4. Extrato de Performance Mensal (Design Premium)
         const extratoContainer = document.getElementById('extrato-performance-meses');
         if(extratoContainer) {
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+
             extratoContainer.innerHTML = nomesMesesFull.map((mes, idx) => {
                 const atingiu = serieRealMensal[idx] >= serieMetaMensal[idx] && serieMetaMensal[idx] > 0;
                 const semMeta = serieMetaMensal[idx] === 0;
                 const estaNoFiltro = mesesFiltro.includes(idx);
                 
+                // Determinar se é passado, presente ou futuro
+                const isPassado = (anoFiltro < anoAtual) || (anoFiltro == anoAtual && idx < mesAtual);
+                const isFuturoOuAtual = (anoFiltro > anoAtual) || (anoFiltro == anoAtual && idx >= mesAtual);
+
                 let cardClass = "";
                 let icon = "";
                 let iconColor = "";
+                let statusTxt = "";
+                let clickEv = "";
                 
-                if (semMeta) {
+                if (atingiu) {
+                    cardClass = "bg-green-50/50 border-green-100 hover:bg-green-100/50 cursor-pointer";
+                    icon = "check_circle";
+                    iconColor = "text-brandGreen";
+                    statusTxt = "SALDO OK";
+                    clickEv = `onclick="window.abrirModalMetaBatida(${idx}, ${anoFiltro})"`;
+                } else if (semMeta) {
                     cardClass = "bg-slate-50 border-slate-100 opacity-40";
                     icon = "block";
                     iconColor = "text-slate-300";
+                    statusTxt = "-";
                 } else {
-                    cardClass = atingiu ? "bg-green-50/50 border-green-100" : "bg-red-50/50 border-red-100";
-                    icon = atingiu ? "check_circle" : "error";
-                    iconColor = atingiu ? "text-brandGreen" : "text-red-500 shadow-sm";
+                    if (isPassado) {
+                        cardClass = "bg-red-50 border-red-100";
+                        icon = "cancel"; // Sinal negativo para passado não atingido
+                        iconColor = "text-red-500";
+                        statusTxt = "NÃO ATINGIDA";
+                    } else {
+                        cardClass = "bg-slate-50/80 border-slate-200";
+                        icon = "error"; // Ícone de alerta/pendente para futuro/atual
+                        iconColor = "text-slate-400";
+                        statusTxt = "PENDENTE";
+                    }
                 }
 
-                // Efeito de destaque para meses selecionados no filtro
                 if(estaNoFiltro) cardClass += " ring-2 ring-brandMidBlue/20 shadow-sm";
 
                 return `
-                    <div class="flex flex-col items-center justify-center p-3 rounded-xl border transition-all hover:scale-105 ${cardClass}">
+                    <div class="flex flex-col items-center justify-center p-3 rounded-xl border transition-all hover:scale-105 ${cardClass}" ${clickEv}>
                         <span class="text-[10px] font-extrabold text-brandDarkBlue mb-2">${mes.toUpperCase()}</span>
                         <span class="material-symbols-outlined text-[20px] ${iconColor}">${icon}</span>
                         <div class="mt-2 text-[8px] font-extrabold flex flex-col items-center leading-tight">
-                            <span class="${atingiu ? 'text-brandGreen' : 'text-slate-400'}">${atingiu ? 'SALDO OK' : (semMeta ? '-' : 'PENDENTE')}</span>
+                            <span class="${atingiu ? 'text-brandGreen' : (isPassado && !semMeta ? 'text-red-600' : 'text-slate-400')}">${statusTxt}</span>
                         </div>
                     </div>
                 `;
@@ -2074,11 +2104,15 @@
             const lblGeral = document.getElementById('lbl-meta-geral');
             if(lblGeral) {
                 let faltaGeral = metaTotalPeriodo - realTotalPeriodo;
-                let txtFalta = faltaGeral > 0 ? `Falta: ${window.formatMil(faltaGeral)}` : `<span class="text-brandGreen">Meta Superada!</span>`;
+                
+                let percAtingido = percGeral.toFixed(1);
+                let percFaltaTotal = faltaGeral > 0 ? ((faltaGeral / metaTotalPeriodo) * 100).toFixed(1) : 0;
+                
                 lblGeral.innerHTML = `
-                    <div class="flex justify-center items-center gap-1"><span class="text-brandGreen font-extrabold">${window.formatMil(realTotalPeriodo)}</span> / ${window.formatMil(metaTotalPeriodo)}</div>
+                    <div class="text-xl font-black text-brandGreen mb-1">${percAtingido}% <span class="text-[10px] font-normal text-slate-300">atingido</span></div>
+                    <div class="flex justify-center items-center gap-1 text-[11px]"><span class="text-white font-extrabold">${window.formatMil(realTotalPeriodo)}</span> / <span class="text-slate-400">${window.formatMil(metaTotalPeriodo)}</span></div>
                     <hr class="border-white/20 my-1 w-1/2 mx-auto">
-                    <span class="text-white text-[10px] block font-extrabold uppercase tracking-tight">${txtFalta}</span>
+                    <span class="text-white text-[10px] block font-extrabold uppercase tracking-tight">${faltaGeral > 0 ? `Falta: ${window.formatMil(faltaGeral)} <span class="text-brandOrange">(${percFaltaTotal}%)</span>` : '<span class="text-brandGreen">Meta Superada!</span>'}</span>
                 `;
             }
         }
@@ -2117,6 +2151,85 @@
             // (Lógica de cálculo para os Gauges não mudou, apenas movi o bloco para depois do gráfico consolidado para manter a ordem lógica)
             // ... (rest of code)
         }
+    };
+
+    window.abrirModalMetaBatida = function(mesIdx, ano) {
+        // Recalcula faturamento e metas especificamente para o mês clicado
+        if(!window.dadosGlobaisFirestore || !window.dadosMetasGlobais) return;
+        
+        const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+        const nomesMesesFull = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        
+        let faturMes = { 'Consultoria & RPO': 0, 'Estágio & Fopag': 0, 'THOMAS': 0, 'Temporário': 0, 'Terceirizados': 0 };
+        
+        window.dadosGlobaisFirestore.forEach(data => {
+            const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
+            const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
+            const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
+            if(!isRecebido) return;
+            
+            let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
+            if(!dRef || dRef.getFullYear() != ano || dRef.getMonth() != mesIdx) return;
+
+            const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
+            const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
+            const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+
+            let grupoMeta = null;
+            if (tipoServicoRaw.includes("TEMPORA")) grupoMeta = 'Temporário';
+            else if (tipoServicoRaw.includes("TERCEIROS")) grupoMeta = 'Terceirizados';
+            else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) grupoMeta = 'Estágio & Fopag';
+            else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) grupoMeta = 'Consultoria & RPO';
+            else if (empresa === "NEAT") grupoMeta = 'THOMAS';
+
+            if(grupoMeta) faturMes[grupoMeta] += (grupoMeta === 'THOMAS' ? vTaxa * 0.55 : vTaxa);
+        });
+
+        let listHtml = "";
+        Object.keys(faturMes).forEach(produto => {
+            const real = faturMes[produto];
+            const metaDoc = window.dadosMetasGlobais.find(m => m.ano == ano && m.produto === produto);
+            const meta = metaDoc ? (metaDoc.meses[refMeses[mesIdx]] || 0) : 0;
+            
+            if(meta > 0 && real >= meta) {
+                listHtml += `
+                    <div class="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-100 shadow-sm animate-fade-in list-item-stagger">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-brandGreen text-brandDarkBlue flex items-center justify-center font-bold shadow-sm">
+                                <span class="material-symbols-outlined text-[20px]">check</span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${produto}</p>
+                                <p class="text-sm font-extrabold text-brandDarkBlue">Meta Atingida</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Realizado</p>
+                            <p class="text-sm font-extrabold text-brandGreen">${window.formatMoedaFull(real)}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        const modal = document.getElementById('modal-detalhe-meta');
+        const content = document.getElementById('modal-detalhe-meta-content');
+        document.getElementById('modal-detalhe-meta-titulo').innerText = `Detalhamento de Sucesso: ${nomesMesesFull[mesIdx]} / ${ano}`;
+        document.getElementById('modal-detalhe-meta-lista').innerHTML = listHtml || `
+            <div class="text-center py-10 opacity-50">
+                <span class="material-symbols-outlined text-4xl mb-2">info</span>
+                <p class="text-xs font-bold">Nenhum produto individual superou a meta consolidada neste mês.</p>
+            </div>
+        `;
+        
+        modal.classList.remove('hidden'); modal.classList.add('flex');
+        setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+    };
+
+    window.fecharModalMetaBatida = function() {
+        const m = document.getElementById('modal-detalhe-meta');
+        const c = document.getElementById('modal-detalhe-meta-content');
+        m.classList.add('opacity-0'); c.classList.add('scale-95'); setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
     };
   </script>
 
@@ -2202,6 +2315,30 @@
       }
     });
   </script>
+
+  <!-- Novo Modal: Detalhamento de Meta Batida -->
+  <div id="modal-detalhe-meta" class="fixed inset-0 z-[200] bg-black/60 hidden items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-sm px-4">
+    <div id="modal-detalhe-meta-content" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-2xl w-full max-w-lg transform scale-95 transition-transform duration-300 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-brandGreen"></div>
+        
+        <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+            <h3 id="modal-detalhe-meta-titulo" class="text-brandDarkBlue font-extrabold text-sm flex items-center gap-2">
+                <span class="material-symbols-outlined text-brandGreen">verified</span> Detalhamento de Sucesso
+            </h3>
+            <button onclick="window.fecharModalMetaBatida()" class="text-slate-400 hover:text-brandOrange transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div id="modal-detalhe-meta-lista" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
+            <!-- Itens injetados via JS -->
+        </div>
+
+        <div class="mt-8 flex gap-3 pt-6 border-t border-slate-100">
+            <button onclick="window.fecharModalMetaBatida()" class="flex-1 bg-brandDarkBlue text-white py-2.5 rounded-xl font-bold hover:bg-opacity-90 transition shadow-lg">Entendido</button>
+        </div>
+    </div>
+  </div>
 </body>
 
 </html>

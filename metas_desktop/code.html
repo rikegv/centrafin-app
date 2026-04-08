@@ -99,13 +99,12 @@
                 </div>
                 <div class="overflow-x-auto custom-scroll">
                     <table class="w-full text-left text-sm whitespace-nowrap table-fixed">
-                        <thead
-                            class="bg-slate-100/50 text-slate-400 text-[10px] uppercase tracking-widest font-extrabold border-b border-slate-200">
+                        <thead class="bg-brandDarkBlue text-white text-[11px] uppercase tracking-widest font-extrabold border-b border-slate-700">
                             <tr>
-                                <th class="px-6 py-4 w-[100px]">Ano</th>
-                                <th class="px-6 py-4">Produto / Serviço</th>
-                                <th class="px-6 py-4 text-right w-[200px]">Meta Anual Bruta</th>
-                                <th class="px-6 py-4 text-center w-[120px]">Ações</th>
+                                <th class="px-6 py-4 w-[10%]">Ano</th>
+                                <th class="px-6 py-4 w-[40%]">Produto / Serviço</th>
+                                <th class="px-6 py-4 text-right w-[30%]">Meta Anual Bruta</th>
+                                <th class="px-6 py-4 text-center w-[20%]">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-metas" class="text-slate-600">
@@ -327,32 +326,45 @@
                     return;
                 }
 
-                tbody.innerHTML = filtradas.map(meta => {
+                tbody.innerHTML = filtradas.map((meta, index) => {
+                    const zebraClass = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30';
                     const mesesGrid = meses.map((m, idx) => `
-                        <div class="flex-1 flex flex-col border-r border-slate-200 last:border-0 px-1 text-center min-w-0">
-                            <span class="text-[9px] text-slate-400 font-bold uppercase truncate">${nomesMeses[idx].substring(0,3)}</span>
-                            <span class="text-[10px] text-brandDarkBlue font-extrabold truncate">${window.formatMoeda(meta.meses[m] || 0).replace('R$', '')}</span>
+                        <div class="flex flex-col border-r border-slate-200 last:border-0 px-2 py-1 text-center min-w-0 group/mes hover:bg-white transition-colors">
+                            <span class="text-[9px] text-slate-400 font-extrabold uppercase mb-0.5">${nomesMeses[idx].substring(0,3)}</span>
+                            <span class="text-[10px] text-brandDarkBlue font-extrabold truncate">${window.formatMoeda(meta.meses[m] || 0).replace('R$', '').trim()}</span>
                         </div>
                     `).join('');
 
                     return `
-                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td class="px-6 py-4 font-bold text-slate-700">${meta.ano}</td>
-                            <td class="px-6 py-4 font-extrabold text-brandDarkBlue truncate">
-                                <div class="flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-brandLightBlue"></span> ${meta.produto}
+                        <!-- Linha Principal -->
+                        <tr class="${zebraClass} border-b border-slate-100 hover:bg-slate-50/50 transition-colors relative">
+                            <td class="px-6 py-4 font-extrabold text-slate-600 border-l-4 border-brandLightBlue">${meta.ano}</td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-2 h-2 rounded-full bg-brandAqua shadow-[0_0_8px_rgba(137,213,201,0.5)]"></div>
+                                    <span class="font-extrabold text-brandDarkBlue text-sm tracking-tight">${meta.produto}</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-right font-extrabold text-brandGreen">${window.formatMoeda(meta.total)}</td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-black text-brandGreen text-base leading-none">${window.formatMoeda(meta.total)}</span>
+                                    <span class="text-[9px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">Valor Consolidado</span>
+                                </div>
+                            </td>
                             <td class="px-6 py-4 text-center">
-                                <button onclick="window.editarMeta('${meta.id}')" class="text-brandLightBlue hover:text-brandMidBlue mx-1 transition-colors" title="Editar"><span class="material-symbols-outlined text-[18px]">edit</span></button>
-                                <button onclick="window.excluirMeta('${meta.id}')" class="text-red-400 hover:text-red-600 mx-1 transition-colors" title="Excluir"><span class="material-symbols-outlined text-[18px]">delete</span></button>
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="window.editarMeta('${meta.id}')" class="p-2 text-brandLightBlue hover:bg-brandLightBlue/10 rounded-lg transition-all" title="Editar"><span class="material-symbols-outlined text-[20px]">edit_note</span></button>
+                                    <button onclick="window.excluirMeta('${meta.id}')" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-all" title="Excluir"><span class="material-symbols-outlined text-[20px]">delete_sweep</span></button>
+                                </div>
                             </td>
                         </tr>
-                        <tr class="bg-slate-50/50 border-b border-slate-200/60">
+                        <!-- Sub-linha: Extrato Mensal -->
+                        <tr class="${zebraClass} border-b border-slate-200/60 shadow-inner">
                             <td colspan="4" class="px-6 py-3">
-                                <div class="flex w-full overflow-hidden">
-                                    ${mesesGrid}
+                                <div class="bg-slate-100/50 rounded-xl border border-slate-100 p-1">
+                                    <div class="grid grid-cols-6 lg:grid-cols-12 w-full">
+                                        ${mesesGrid}
+                                    </div>
                                 </div>
                             </td>
                         </tr>

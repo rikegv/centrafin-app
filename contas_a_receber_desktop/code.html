@@ -155,10 +155,9 @@
   <div id="sidebar-container"></div>
 
   <main class="flex-1 ml-20 p-8">
-    <header class="flex justify-between items-center mb-8">
+    <header class="flex justify-between items-center mb-6 border-b border-slate-200 pb-4">
       <div>
-        <h1 class="text-3xl font-extrabold tracking-tight text-on-surface font-manrope">Contas a Receber / Faturamento
-        </h1>
+        <h1 class="text-lg font-extrabold text-brandDarkBlue font-manrope uppercase tracking-wider">Gerenciador CRF</h1>
       </div>
       <div class="flex items-center gap-4">
         <button class="p-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full">
@@ -173,12 +172,38 @@
       </div>
     </header>
 
+    <div class="mb-6">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-brandAqua text-3xl">receipt_long</span>
+        <h2 class="text-2xl font-extrabold text-brandDarkBlue">Faturamento e Emissões</h2>
+      </div>
+      <p class="text-slate-500 text-sm font-medium">Acompanhe e gerencie as notas fiscais, status de recebimento e
+        inadimplência da operação.</p>
+    </div>
+
     <section class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
-      <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-variant/30 shadow-sm"><span
-          class="p-1 bg-blue-50 text-blue-600 rounded-lg inline-flex mb-1"><span
-            class="material-symbols-outlined text-base">description</span></span>
-        <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider mb-0.5">Notas</p>
-        <h3 id="card-total-notas" class="text-base font-extrabold font-manrope text-on-surface">0</h3>
+      <div
+        class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm flex flex-col justify-between min-h-[160px]">
+        <div>
+          <p
+            class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-blue-500">receipt</span> Notas Emitidas
+          </p>
+          <h3 id="card-total-notas" class="text-3xl font-black font-manrope text-secondary leading-none">0</h3>
+        </div>
+        <div class="mt-4 border-t border-slate-100 pt-3">
+          <p class="text-red-400 text-[10px] font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">block</span> Notas Canceladas
+          </p>
+          <h3 id="kpi-notas-canceladas" class="text-3xl font-black font-manrope text-red-500 leading-none">0</h3>
+        </div>
+        <div class="mt-3 pt-2 border-t border-slate-100 flex justify-end">
+          <button onclick="window.abrirModalExplicacaoCanceladas()"
+            class="text-amber-400 hover:text-amber-500 hover:scale-110 transition-all flex items-center gap-1 text-[9px] font-bold uppercase"
+            title="Logica de Contagem">
+            <span class="material-symbols-outlined text-[16px]">lightbulb</span> Dica
+          </button>
+        </div>
       </div>
       <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-variant/30 shadow-sm"><span
           class="p-1 bg-green-50 text-green-600 rounded-lg inline-flex mb-1"><span
@@ -853,6 +878,52 @@
     </div>
   </div>
 
+  <div id="modal-explicacao-canceladas"
+    class="fixed inset-0 z-[100] bg-black/60 hidden items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+    <div
+      class="bg-white border border-slate-200 p-6 rounded-2xl shadow-2xl w-full max-w-sm transform scale-95 transition-transform duration-300 relative"
+      id="modal-content-explicacao">
+      <button onclick="window.fecharModalExplicacaoCanceladas()"
+        class="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-500 shrink-0">
+          <span class="material-symbols-outlined">lightbulb</span>
+        </div>
+        <h2 class="text-brandDarkBlue font-extrabold text-sm">Entenda a Contagem</h2>
+      </div>
+
+      <div class="text-slate-600 text-xs font-medium space-y-3 leading-relaxed">
+        <p>O <strong>Total de Notas Emitidas</strong> reflete o volume absoluto de trabalho (tudo que foi gerado no
+          sistema).</p>
+        <p>As <strong>Notas Canceladas</strong> estão <em>dentro</em> desse volume total, mas são isoladas pelo sistema.
+        </p>
+        <p class="bg-slate-50 p-3 rounded-lg border border-slate-100 text-brandDarkBlue font-bold">
+          Na prática: Elas não somam no seu Faturamento Real e não entram nos cálculos de atingimento de meta.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-auditoria-servicos" class="fixed inset-0 z-[110] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onclick="window.fecharModalAuditoria()"></div>
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[85vh] flex flex-col">
+        <div class="flex items-center gap-3 mb-4 text-red-500">
+            <span class="material-symbols-outlined text-4xl">policy</span>
+            <h3 class="font-headline text-xl font-bold text-slate-800 tracking-tight">Auditoria de Serviços</h3>
+        </div>
+        <p class="text-slate-600 text-sm mb-4 leading-relaxed">
+            O sistema identificou <strong id="count-auditoria-servicos" class="text-red-600 font-black">0</strong> notas com serviços não mapeados. O Faturamento Real destas notas foi zerado temporariamente por segurança financeira.
+        </p>
+        <div class="overflow-y-auto custom-scroll pr-2 flex-1 border border-slate-200 rounded-xl bg-slate-50 p-4 mb-6">
+            <div id="lista-auditoria-servicos" class="space-y-1"></div>
+        </div>
+        <button onclick="window.fecharModalAuditoria()" class="w-full py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 active:scale-95 transition-all">Ciente, vou corrigir depois</button>
+    </div>
+  </div>
+
   <script type="module">
     import { renderSidebar } from "../sidebar.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -903,6 +974,20 @@
         });
       } catch (e) { console.error("Falha ao gravar log:", e); }
     }
+
+    window.abrirModalExplicacaoCanceladas = function () {
+      const m = document.getElementById('modal-explicacao-canceladas');
+      const c = document.getElementById('modal-content-explicacao');
+      m.classList.remove('hidden'); m.classList.add('flex');
+      setTimeout(() => { m.classList.remove('opacity-0'); c.classList.remove('scale-95'); }, 10);
+    };
+
+    window.fecharModalExplicacaoCanceladas = function () {
+      const m = document.getElementById('modal-explicacao-canceladas');
+      const c = document.getElementById('modal-content-explicacao');
+      m.classList.add('opacity-0'); c.classList.add('scale-95');
+      setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
+    };
 
     let todasAsNotas = [];
     let paginaAtual = 1;
@@ -962,6 +1047,10 @@
     function obterStatusReal(data, hojeData = new Date()) {
       hojeData.setHours(0, 0, 0, 0);
       const sRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
+      const baixaRawStr = String(data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || '').toUpperCase();
+
+      // INTERCEPTAÇÃO ABSOLUTA: CANCELAMENTO (Pode estar no status ou na data da baixa)
+      if (sRaw.includes("CANC") || baixaRawStr.includes("CANC")) return "Cancelada";
 
       if (sRaw.includes("PREJUÍZO") || sRaw.includes("PREJUIZO")) return "PREJUÍZO";
       if (sRaw.includes("PROTESTO")) return "PROTESTO";
@@ -1810,15 +1899,60 @@
     }
 
     function calcularFaturamentoReal(descricaoContrato, valorFatura, valorTaxa = 0) {
-      const desc = String(descricaoContrato || "").toUpperCase();
+      const descRaw = String(descricaoContrato || "").toUpperCase();
+      const desc = descRaw.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove acentos
       const valor = Number(valorFatura) || 0;
       const taxa = Number(valorTaxa) || 0;
       const grupo1 = ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "CONSULTORIA", "RPO"];
-      const grupo2 = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "ASSESSMENT", "HOTMART"];
+      const grupo2 = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRACAO", "UNIDADES", "DEVOLUTIVA", "ASSESSMENT", "HOTMART"];
       if (grupo1.some(g => desc.includes(g))) return taxa;
       if (grupo2.some(g => desc.includes(g))) return valor * 0.55;
-      return 0;
+      return 0; // Trava de segurança: não inflar faturamento
     }
+
+    window.auditarServicosNaoMapeados = function (notas) {
+      const grupo1 = ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "CONSULTORIA", "RPO"];
+      const grupo2 = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRACAO", "UNIDADES", "DEVOLUTIVA", "ASSESSMENT", "HOTMART"];
+      let faturasComErro = [];
+
+      notas.forEach(nota => {
+        const descRaw = String(nota['descricao_contrato'] || nota['Descrição Do Contrato'] || nota['descricao'] || "");
+        const desc = descRaw.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (descRaw && descRaw !== "-") {
+          if (!grupo1.some(g => desc.includes(g)) && !grupo2.some(g => desc.includes(g))) {
+            const nf = nota['nf'] || nota['Nº NF'] || nota['Nº NF-e'] || "S/N";
+            faturasComErro.push({ nf: nf, servico: descRaw, id: nota.id });
+          }
+        }
+      });
+
+      const modal = document.getElementById('modal-auditoria-servicos');
+      const lista = document.getElementById('lista-auditoria-servicos');
+      const count = document.getElementById('count-auditoria-servicos');
+
+      if (faturasComErro.length > 0 && modal && lista && count) {
+        count.textContent = faturasComErro.length;
+        lista.innerHTML = faturasComErro.map(f =>
+          `<div class="border-b border-slate-200/60 py-3 flex justify-between items-center">
+                <div>
+                    <span class="font-extrabold text-slate-700 text-xs">NF: ${f.nf}</span>
+                    <p class="text-[10px] text-red-500 font-bold mt-0.5">Serviço não reconhecido: "${f.servico}"</p>
+                </div>
+                <button onclick="window.abrirEdicao('${f.id}'); window.fecharModalAuditoria();" class="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-bold transition-colors shadow-sm">Corrigir</button>
+            </div>`
+        ).join('');
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        modal.querySelector('.bg-white').classList.remove('scale-95');
+      }
+    };
+
+    window.fecharModalAuditoria = function () {
+      const modal = document.getElementById('modal-auditoria-servicos');
+      if (modal) {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        modal.querySelector('.bg-white').classList.add('scale-95');
+      }
+    };
 
     const elTabelaCorpo = document.querySelector('tbody');
     const elFooterCount = document.getElementById('footer-count');
@@ -2036,6 +2170,7 @@
 
           const statusReal = obterStatusReal(data, hoje);
           let statusClass = "bg-primary-container/20 text-on-primary-fixed-variant";
+          if (statusReal === "Cancelada") statusClass = "bg-red-100 text-red-700 px-3 py-1 rounded-full text-[10px] font-extrabold shadow-sm tracking-wider";
           if (statusReal === "RECEBIDO") statusClass = "bg-tertiary-container/20 text-on-tertiary-container";
           if (statusReal === "VENCIDO") statusClass = "bg-error-container/20 text-on-error-container text-error";
           if (statusReal === "A VENCER") statusClass = "bg-indigo-50 text-indigo-600";
@@ -2122,6 +2257,7 @@
       hoje.setHours(0, 0, 0, 0);
 
       let totalNotas = docs.length;
+      let qtdNotasCanceladas = 0;
       let valorTotal = 0, totalFatReal = 0, totalPendente = 0, totalAVencer = 0, totalBaixado = 0;
       let totalFatLiquido = 0;
       let totalBaixadoLiquido = 0;
@@ -2142,6 +2278,12 @@
         const vTaxa = typeof vTaxaRaw === 'number' ? vTaxaRaw : parseFloat(String(vTaxaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
         const faturReal = calcularFaturamentoReal(descContrato, vFatura, vTaxa);
         const statusReal = obterStatusReal(data, hoje);
+
+        if (statusReal === "Cancelada") {
+          qtdNotasCanceladas++;
+          // Importante: Notas canceladas não devem ser somadas no faturamento nem consideradas como recebidas.
+          return;
+        }
 
         valorTotal += Number(vFatura);
         totalFatReal += Number(faturReal);
@@ -2164,6 +2306,9 @@
       });
 
       if (elCardTotalNotas) elCardTotalNotas.textContent = totalNotas;
+      const elKpiCanceladas = document.getElementById('kpi-notas-canceladas');
+      if (elKpiCanceladas) elKpiCanceladas.textContent = qtdNotasCanceladas;
+
       if (elCardValorTotal) elCardValorTotal.textContent = formatadorMoeda.format(valorTotal);
       if (elCardFatLiquido) elCardFatLiquido.textContent = formatadorMoeda.format(totalFatLiquido);
       if (elCardFatReal) elCardFatReal.textContent = formatadorMoeda.format(totalFatReal);
@@ -2334,6 +2479,7 @@
       });
 
       aplicarFiltros();
+      window.auditarServicosNaoMapeados(todasAsNotas);
     }, (err) => {
       console.error("Erro ao escutar Lancamentos:", err);
     });
