@@ -1,465 +1,2077 @@
 <!DOCTYPE html>
+<html lang="pt-br">
 
-<html class="light" lang="pt-br"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Financial Architect | The Editorial Ledger</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "surface-container-lowest": "#ffffff",
-                        "on-secondary": "#ffffff",
-                        "on-error-container": "#93000a",
-                        "inverse-surface": "#2e3132",
-                        "outline": "#8c7164",
-                        "error-container": "#ffdad6",
-                        "surface": "#f8f9fb",
-                        "on-primary-fixed-variant": "#783200",
-                        "on-tertiary-fixed": "#001d32",
-                        "background": "#f8f9fb",
-                        "on-secondary-fixed": "#00164e",
-                        "primary-fixed-dim": "#ffb690",
-                        "error": "#ba1a1a",
-                        "on-error": "#ffffff",
-                        "on-tertiary-container": "#003554",
-                        "inverse-primary": "#ffb690",
-                        "outline-variant": "#e0c0b1",
-                        "surface-tint": "#9d4300",
-                        "on-surface": "#191c1e",
-                        "surface-bright": "#f8f9fb",
-                        "surface-container": "#edeef0",
-                        "surface-variant": "#e1e2e4",
-                        "primary-fixed": "#ffdbca",
-                        "surface-container-high": "#e7e8ea",
-                        "tertiary-container": "#00a2f4",
-                        "primary-container": "#f97316",
-                        "secondary": "#4059aa",
-                        "inverse-on-surface": "#f0f1f3",
-                        "surface-dim": "#d9dadc",
-                        "tertiary-fixed": "#cde5ff",
-                        "tertiary-fixed-dim": "#93ccff",
-                        "secondary-fixed": "#dce1ff",
-                        "surface-container-highest": "#e1e2e4",
-                        "tertiary": "#006398",
-                        "secondary-container": "#8fa7fe",
-                        "on-secondary-container": "#1d3989",
-                        "primary": "#9d4300",
-                        "on-secondary-fixed-variant": "#264191",
-                        "surface-container-low": "#f3f4f6",
-                        "on-primary-fixed": "#341100",
-                        "on-tertiary-fixed-variant": "#004b74",
-                        "on-background": "#191c1e",
-                        "on-surface-variant": "#584237",
-                        "on-tertiary": "#ffffff",
-                        "secondary-fixed-dim": "#b6c4ff",
-                        "on-primary": "#ffffff",
-                        "on-primary-container": "#582200"
-                    },
-                    fontFamily: {
-                        "headline": ["Manrope"],
-                        "body": ["Inter"],
-                        "label": ["Inter"]
-                    },
-                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
-                },
-            },
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Geral - CentraFin</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300,1&display=swap"
+    rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Manrope', 'sans-serif'] },
+          colors: {
+            brandGreen: '#aad12f', brandDarkBlue: '#002443', brandMidBlue: '#1a4895',
+            brandLightBlue: '#59a4d8', brandPaleBlue: '#bfd7ea', brandAqua: '#89d5c9', brandOrange: '#ff8864'
+          }
         }
-    </script>
-<style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .editorial-shadow {
-            box-shadow: 0px 20px 40px rgba(25, 28, 30, 0.06);
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-    </style>
+      }
+    }
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.45.2/apexcharts.min.js"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+
+    #chart-mapa-brasil {
+      overflow: hidden;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(26, 72, 149, 0.2);
+      border-radius: 4px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #59a4d8;
+      border-radius: 4px;
+    }
+
+    .google-visualization-tooltip {
+      font-family: 'Manrope', sans-serif !important;
+      border-radius: 8px !important;
+      border: 1px solid #1a4895 !important;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+      padding: 10px !important;
+      background-color: #002443 !important;
+      color: #f5f5f5 !important;
+      font-weight: bold !important;
+    }
+  </style>
 </head>
-<body class="bg-surface-container-low font-body text-on-surface">
-<!-- SideNavBar Shell -->
-<aside class="fixed left-0 top-0 h-full z-50 flex flex-col py-6 bg-blue-900 dark:bg-slate-950 w-64 shadow-xl dark:shadow-none">
-<div class="px-6 mb-10">
-<h1 class="text-lg font-bold text-white font-manrope tracking-tight">The Editorial Ledger</h1>
-<p class="text-[10px] uppercase tracking-widest text-blue-200/60 font-semibold mt-1">Corporate Finance</p>
-</div>
-<nav class="flex-1 flex flex-col gap-1">
-<!-- Active State: Dashboard -->
-<a class="bg-white/10 text-white rounded-md mx-2 px-4 py-3 flex items-center gap-3 scale-[0.99] transition-transform" href="#">
-<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
-<span class="font-inter text-sm font-semibold tracking-wide">Dashboard</span>
-</a>
-<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
-<span class="material-symbols-outlined" data-icon="app_registration">app_registration</span>
-<span class="font-inter text-sm font-semibold tracking-wide">Registration</span>
-</a>
-<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
-<span class="material-symbols-outlined" data-icon="payments">payments</span>
-<span class="font-inter text-sm font-semibold tracking-wide">Accounts Receivable</span>
-</a>
-<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
-<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
-<span class="font-inter text-sm font-semibold tracking-wide">Accounts Payable</span>
-</a>
-<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
-<span class="material-symbols-outlined" data-icon="settings">settings</span>
-<span class="font-inter text-sm font-semibold tracking-wide">Settings</span>
-</a>
-</nav>
-<div class="mt-auto pt-6">
-<a class="text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200" href="#">
-<span class="material-symbols-outlined" data-icon="help">help</span>
-<span class="font-inter text-sm font-semibold tracking-wide">Help Center</span>
-</a>
-<div class="px-6 mt-6 flex items-center gap-3">
-<div class="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-xs font-bold text-white overflow-hidden">
-<img alt="User Profile" data-alt="User profile avatar placeholder" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbO6c9pWxUc-pW_3e2qSaR-s1ISlVGu186sfW9q3g9zm9PYnDpusHBwHLI8pt_svOb3GJP4vWvKuXx8rO-Ak6c64tBiU7UkpS_5f9HtU74fERezZVI7ksYYlcVroht727dNxlPvPEwcEjz97B38PR3gl0EdkVR7k2SmIe_bBaXO5LAnv8OgyoDteD6R4jCly3zHlfjMAt20D_A57OFBveYURtWnNS32JojepPn51ucteUOfKwqdmCL1E2DBsaFxQbT4AfScQ0iX90"/>
-</div>
-<div class="flex flex-col">
-<span class="text-xs font-bold text-white">Admin User</span>
-<span class="text-[10px] text-blue-200/50">Director</span>
-</div>
-</div>
-</div>
-</aside>
-<!-- Main Content Area -->
-<main class="ml-64 min-h-screen">
-<!-- TopAppBar Shell -->
-<header class="sticky top-0 left-0 w-full z-40 flex justify-between items-center px-8 h-20 bg-slate-50 dark:bg-slate-900">
-<div class="flex items-center gap-8">
-<h2 class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 font-manrope">Financial Architect</h2>
-<div class="flex items-center gap-2">
-<button class="flex items-center gap-2 px-4 py-2 rounded-md bg-surface-container-high text-on-surface-variant hover:bg-slate-200 transition-colors text-sm font-medium">
-<span class="material-symbols-outlined text-sm" data-icon="tune">tune</span>
-                        Filtros Avançados
-                    </button>
-</div>
-</div>
-<div class="flex items-center gap-4">
-<button class="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-500">
-<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
-</button>
-<button class="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-500">
-<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
-</button>
-</div>
-</header>
-<!-- Dashboard Canvas -->
-<div class="p-8 max-w-7xl mx-auto space-y-10">
-<!-- Hero Metrics Grid -->
-<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-<!-- Card: Saldo Atual -->
-<div class="bg-surface-container-lowest p-6 rounded-xl editorial-shadow relative overflow-hidden group">
-<div class="flex justify-between items-start mb-4">
-<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">Saldo Atual</span>
-<span class="material-symbols-outlined text-tertiary" data-icon="account_balance">account_balance</span>
-</div>
-<p class="font-headline text-3xl font-extrabold text-on-surface tracking-tight">R$ 2.480.950,00</p>
-<div class="mt-4 flex items-center gap-2">
-<span class="text-xs font-bold text-tertiary flex items-center">
-<span class="material-symbols-outlined text-xs" data-icon="trending_up">trending_up</span> 12.5%
-                        </span>
-<span class="text-[10px] text-on-surface-variant">vs. último mês</span>
-</div>
-<div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-tertiary to-tertiary-container opacity-20 group-hover:opacity-100 transition-opacity"></div>
-</div>
-<!-- Card: A Receber (Mês) -->
-<div class="bg-surface-container-lowest p-6 rounded-xl editorial-shadow relative overflow-hidden group">
-<div class="flex justify-between items-start mb-4">
-<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">A Receber (Mês)</span>
-<span class="material-symbols-outlined text-secondary" data-icon="arrow_downward">arrow_downward</span>
-</div>
-<p class="font-headline text-3xl font-extrabold text-on-surface tracking-tight">R$ 412.300,50</p>
-<div class="mt-4 flex items-center gap-2">
-<span class="text-xs font-bold text-tertiary flex items-center">
-<span class="material-symbols-outlined text-xs" data-icon="schedule">schedule</span> 85% concil.
-                        </span>
-</div>
-</div>
-<!-- Card: A Pagar (Mês) -->
-<div class="bg-surface-container-lowest p-6 rounded-xl editorial-shadow relative overflow-hidden group">
-<div class="flex justify-between items-start mb-4">
-<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">A Pagar (Mês)</span>
-<span class="material-symbols-outlined text-primary" data-icon="arrow_upward">arrow_upward</span>
-</div>
-<p class="font-headline text-3xl font-extrabold text-on-surface tracking-tight">R$ 198.440,00</p>
-<div class="mt-4 flex items-center gap-2 text-error">
-<span class="text-xs font-bold flex items-center">
-<span class="material-symbols-outlined text-xs" data-icon="warning">warning</span> 3 vencidos
-                        </span>
-</div>
-</div>
-<!-- Card: Inadimplência -->
-<div class="bg-surface-container-lowest p-6 rounded-xl editorial-shadow relative overflow-hidden group">
-<div class="flex justify-between items-start mb-4">
-<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">Inadimplência</span>
-<span class="material-symbols-outlined text-error" data-icon="error_outline">error_outline</span>
-</div>
-<p class="font-headline text-3xl font-extrabold text-on-surface tracking-tight">4.2%</p>
-<div class="mt-4 flex items-center gap-2">
-<span class="text-xs font-bold text-error flex items-center">
-<span class="material-symbols-outlined text-xs" data-icon="trending_up">trending_up</span> 0.8%
-                        </span>
-<span class="text-[10px] text-on-surface-variant">proj. trimestral</span>
-</div>
-</div>
-</section>
-<!-- Middle Section: Charts & Insights -->
-<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-<!-- Main Chart Card -->
-<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl editorial-shadow p-8">
-<div class="flex justify-between items-center mb-10">
-<div>
-<h3 class="font-headline text-xl font-bold text-on-surface">Fluxo de Caixa Mensal</h3>
-<p class="text-sm text-on-surface-variant mt-1">Comparativo entre Entradas e Saídas (Year to Date)</p>
-</div>
-<div class="flex items-center gap-4">
-<div class="flex items-center gap-2">
-<div class="w-3 h-3 rounded-full bg-secondary"></div>
-<span class="text-xs font-medium">Entradas</span>
-</div>
-<div class="flex items-center gap-2">
-<div class="w-3 h-3 rounded-full bg-primary-container"></div>
-<span class="text-xs font-medium">Saídas</span>
-</div>
-</div>
-</div>
-<!-- Chart Placeholder Layout -->
-<div class="h-64 flex items-end justify-between gap-4 px-2">
-<div class="w-full flex flex-col justify-end gap-1 h-full">
-<div class="w-full bg-secondary/20 rounded-t-sm h-[40%]"></div>
-<div class="w-full bg-primary-container/20 rounded-t-sm h-[20%]"></div>
-<span class="text-[10px] text-center mt-2 text-on-surface-variant font-bold">JAN</span>
-</div>
-<div class="w-full flex flex-col justify-end gap-1 h-full">
-<div class="w-full bg-secondary/40 rounded-t-sm h-[55%]"></div>
-<div class="w-full bg-primary-container/40 rounded-t-sm h-[30%]"></div>
-<span class="text-[10px] text-center mt-2 text-on-surface-variant font-bold">FEV</span>
-</div>
-<div class="w-full flex flex-col justify-end gap-1 h-full">
-<div class="w-full bg-secondary/60 rounded-t-sm h-[70%]"></div>
-<div class="w-full bg-primary-container/60 rounded-t-sm h-[45%]"></div>
-<span class="text-[10px] text-center mt-2 text-on-surface-variant font-bold">MAR</span>
-</div>
-<div class="w-full flex flex-col justify-end gap-1 h-full">
-<div class="w-full bg-secondary/80 rounded-t-sm h-[65%]"></div>
-<div class="w-full bg-primary-container/80 rounded-t-sm h-[50%]"></div>
-<span class="text-[10px] text-center mt-2 text-on-surface-variant font-bold">ABR</span>
-</div>
-<div class="w-full flex flex-col justify-end gap-1 h-full">
-<div class="w-full bg-secondary rounded-t-sm h-[85%]"></div>
-<div class="w-full bg-primary-container rounded-t-sm h-[60%]"></div>
-<span class="text-[10px] text-center mt-2 text-on-surface-variant font-bold">MAI</span>
-</div>
-</div>
-</div>
-<!-- Secondary Chart / Stats Card -->
-<div class="bg-blue-900 text-white rounded-xl editorial-shadow p-8 flex flex-col justify-between">
-<div>
-<h3 class="font-headline text-lg font-bold">Performance de Crédito</h3>
-<p class="text-xs text-blue-200/60 mt-1">Status de limite de faturamento anual</p>
-</div>
-<div class="relative py-12 flex justify-center items-center">
-<div class="w-40 h-40 rounded-full border-8 border-blue-800/50 flex items-center justify-center relative">
-<div class="absolute inset-0 rounded-full border-8 border-t-tertiary-container border-r-tertiary-container border-b-transparent border-l-transparent rotate-[45deg]"></div>
-<div class="flex flex-col items-center">
-<span class="text-3xl font-extrabold font-manrope">72%</span>
-<span class="text-[10px] uppercase font-bold text-blue-200">Atingido</span>
-</div>
-</div>
-</div>
-<div class="space-y-3">
-<div class="flex justify-between items-center text-xs">
-<span class="text-blue-200/70">Meta Trimestral</span>
-<span class="font-bold">R$ 1.2M</span>
-</div>
-<div class="w-full h-1 bg-blue-800 rounded-full overflow-hidden">
-<div class="w-[72%] h-full bg-tertiary-container"></div>
-</div>
-</div>
-</div>
-</section>
-<!-- Bottom Table Section -->
-<section class="bg-surface-container-lowest rounded-xl editorial-shadow overflow-hidden">
-<div class="p-8 flex justify-between items-center">
-<div>
-<h3 class="font-headline text-xl font-bold text-on-surface">Próximos Vencimentos</h3>
-<p class="text-sm text-on-surface-variant mt-1">Lista de faturas pendentes para os próximos 15 dias</p>
-</div>
-<button class="px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-md text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all">
-                        Nova Lançamento
-                    </button>
-</div>
-<div class="overflow-x-auto">
-<table class="w-full border-collapse text-left">
-<thead>
-<tr class="bg-surface-container-low">
-<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Empresa</th>
-<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Cliente/Fornecedor</th>
-<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Valor</th>
-<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Data</th>
-<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Status</th>
-<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Ações</th>
-</tr>
-</thead>
-<tbody class="divide-y divide-surface-container">
-<tr class="hover:bg-surface-container-low/50 transition-colors">
-<td class="px-8 py-6">
-<div class="flex items-center gap-3">
-<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center">
-<span class="material-symbols-outlined text-slate-400 text-sm" data-icon="domain">domain</span>
-</div>
-<span class="text-sm font-bold text-on-surface">Global Tech Ltda.</span>
-</div>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm text-on-surface-variant">Amazon Web Services</span>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm font-bold text-on-surface">R$ 12.450,00</span>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm text-on-surface-variant">22 Jun 2024</span>
-</td>
-<td class="px-8 py-6">
-<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-tertiary-container text-on-tertiary-container">Pago</span>
-</td>
-<td class="px-8 py-6">
-<button class="text-slate-400 hover:text-on-surface transition-colors">
-<span class="material-symbols-outlined text-sm" data-icon="more_horiz">more_horiz</span>
-</button>
-</td>
-</tr>
-<tr class="hover:bg-surface-container-low/50 transition-colors">
-<td class="px-8 py-6">
-<div class="flex items-center gap-3">
-<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center">
-<span class="material-symbols-outlined text-slate-400 text-sm" data-icon="domain">domain</span>
-</div>
-<span class="text-sm font-bold text-on-surface">Solaris Energy</span>
-</div>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm text-on-surface-variant">Electro Sul Distrib.</span>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm font-bold text-on-surface">R$ 4.890,20</span>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm text-on-surface-variant">25 Jun 2024</span>
-</td>
-<td class="px-8 py-6">
-<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-primary-container/20 text-on-primary-fixed-variant">Pendente</span>
-</td>
-<td class="px-8 py-6">
-<button class="text-slate-400 hover:text-on-surface transition-colors">
-<span class="material-symbols-outlined text-sm" data-icon="more_horiz">more_horiz</span>
-</button>
-</td>
-</tr>
-<tr class="hover:bg-surface-container-low/50 transition-colors">
-<td class="px-8 py-6">
-<div class="flex items-center gap-3">
-<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center">
-<span class="material-symbols-outlined text-slate-400 text-sm" data-icon="domain">domain</span>
-</div>
-<span class="text-sm font-bold text-on-surface">Creative Mind Agency</span>
-</div>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm text-on-surface-variant">Freelancer Design</span>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm font-bold text-on-surface">R$ 2.100,00</span>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm text-on-surface-variant">18 Jun 2024</span>
-</td>
-<td class="px-8 py-6">
-<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-error-container text-on-error-container">Vencido</span>
-</td>
-<td class="px-8 py-6">
-<button class="text-slate-400 hover:text-on-surface transition-colors">
-<span class="material-symbols-outlined text-sm" data-icon="more_horiz">more_horiz</span>
-</button>
-</td>
-</tr>
-<tr class="hover:bg-surface-container-low/50 transition-colors">
-<td class="px-8 py-6">
-<div class="flex items-center gap-3">
-<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center">
-<span class="material-symbols-outlined text-slate-400 text-sm" data-icon="domain">domain</span>
-</div>
-<span class="text-sm font-bold text-on-surface">Indústria Alpha SA</span>
-</div>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm text-on-surface-variant">Transportes Rápidos</span>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm font-bold text-on-surface">R$ 38.500,00</span>
-</td>
-<td class="px-8 py-6">
-<span class="text-sm text-on-surface-variant">28 Jun 2024</span>
-</td>
-<td class="px-8 py-6">
-<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-primary-container/20 text-on-primary-fixed-variant">Agendado</span>
-</td>
-<td class="px-8 py-6">
-<button class="text-slate-400 hover:text-on-surface transition-colors">
-<span class="material-symbols-outlined text-sm" data-icon="more_horiz">more_horiz</span>
-</button>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="p-6 bg-surface-container-low flex justify-end">
-<nav class="flex items-center gap-1">
-<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 text-on-surface-variant">
-<span class="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span>
-</button>
-<button class="w-8 h-8 flex items-center justify-center rounded bg-secondary text-white text-xs font-bold">1</button>
-<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 text-xs font-bold">2</button>
-<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 text-xs font-bold">3</button>
-<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 text-on-surface-variant">
-<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
-</button>
-</nav>
-</div>
-</section>
-</div>
-</main>
-<!-- Contextual FAB (Only on relevant screens) -->
-<button class="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
-<span class="material-symbols-outlined text-2xl" data-icon="add">add</span>
-</button>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-  // A SUA CHAVE SECRETA (Agora com os dados corretos do CentraFin)
-  const firebaseConfig = {
-    apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
-    authDomain: "centra-fin.firebaseapp.com",
-    projectId: "centra-fin",
-    storageBucket: "centra-fin.firebasestorage.app",
-    messagingSenderId: "666471089411",
-    appId: "1:666471089411:web:4630f5b2ced70ceb981536",
-    measurementId: "G-CJJX2T2HT8"
-  };
+<body class="min-h-screen flex antialiased bg-slate-50">
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  
-  console.log("🔥 Motor do CentraFin conectado com sucesso ao Firebase!");
-</script>        
-</body></html>
+  <div id="sidebar-container"></div>
+
+  <main class="flex-1 ml-[80px] w-full min-h-screen flex flex-col transition-all duration-300">
+
+    <header
+      class="bg-white border-b border-slate-200 sticky top-0 z-40 h-16 shadow-sm px-6 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <h1 class="text-lg font-extrabold tracking-wide text-brandDarkBlue">Dashboard Master</h1>
+        <button id="btn-voltar-inicio" onclick="window.voltarInicio()"
+          class="hidden items-center gap-2 bg-slate-100 hover:bg-slate-200 text-brandDarkBlue px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm">
+          <span class="material-symbols-outlined text-[16px]">arrow_back</span> Voltar ao Início
+        </button>
+      </div>
+      <button onclick="window.exportarPDF()"
+        class="hidden bg-brandGreen text-brandDarkBlue px-4 py-2 rounded-lg font-bold text-xs shadow-sm items-center gap-2 hover:bg-opacity-90">
+        <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span> Baixar PDF
+      </button>
+    </header>
+
+    <div class="p-6 overflow-hidden relative" id="area-exportacao-pdf">
+
+      <div id="tela-inicio" class="view-tela block animate-fade-in space-y-8">
+        <div>
+          <h2 class="text-2xl font-extrabold text-brandDarkBlue mb-1">Visão Geral Consolidada</h2>
+          <p class="text-slate-500 text-sm font-medium">Resumo estratégico. Selecione um módulo abaixo para aprofundar.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-4 gap-6">
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Faturamento Bruto Total</p>
+            <h3 class="text-3xl font-extrabold text-brandDarkBlue" id="kpi-bruto-total">Carregando...</h3>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Faturamento Realizado</p>
+            <h3 class="text-3xl font-extrabold text-brandGreen" id="kpi-real-total">Carregando...</h3>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Faturamento Líquido</p>
+            <h3 class="text-3xl font-extrabold text-brandLightBlue" id="kpi-liquido-total">Carregando...</h3>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Em Desenvolvimento</p>
+            <h3 class="text-3xl font-extrabold text-brandOrange">--</h3>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-6">
+          <div onclick="window.abrirModulo('tela-faturamento')"
+            class="bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+            <span class="material-symbols-outlined text-4xl text-brandGreen mb-4 block">payments</span>
+            <h3 class="text-white text-xl font-extrabold mb-2">Módulo Faturamento</h3>
+            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Análises detalhadas de bruto vs realizado, performance
+              comercial e distribuição.</p>
+            <span
+              class="text-brandGreen text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
+              Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
+          </div>
+          <div onclick="window.abrirModulo('tela-fluxo')"
+            class="bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+            <span class="material-symbols-outlined text-4xl text-brandLightBlue mb-4 block">account_balance</span>
+            <h3 class="text-white text-xl font-extrabold mb-2">Fluxo de Caixa</h3>
+            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Acompanhamento executivo de entradas, saídas e projeções
+              financeiras.</p>
+            <span
+              class="text-brandLightBlue text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
+              Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
+          </div>
+          <div onclick="window.abrirModulo('tela-rh')"
+            class="bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+            <span class="material-symbols-outlined text-4xl text-brandOrange mb-4 block">groups</span>
+            <h3 class="text-white text-xl font-extrabold mb-2">FORECAST</h3>
+            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Calculadora de headcount, provisões e impacto financeiro.
+            </p>
+            <span
+              class="text-brandOrange text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
+              Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
+          </div>
+          <div onclick="window.abrirModulo('tela-metas')"
+            class="bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+            <span class="material-symbols-outlined text-4xl text-brandAqua mb-4 block">track_changes</span>
+            <h3 class="text-white text-xl font-extrabold mb-2">Metas Financeiras</h3>
+            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Gestão de metas anuais e acompanhamento de atingimento por produto.</p>
+            <span class="text-brandAqua text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="tela-faturamento" class="view-tela hidden">
+        <div class="flex justify-between items-center mb-6">
+          <div class="flex flex-wrap gap-3">
+            <button id="btn-soulan" onclick="window.alternarVisao('soulan')"
+              class="bg-brandDarkBlue text-brandGreen border border-brandGreen/50 px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-[0_4px_15px_rgba(170,209,47,0.2)] transition-all flex items-center gap-2 transform -translate-y-0.5">
+              <span class="material-symbols-outlined text-[16px]">domain</span> Visão SOULAN
+            </button>
+            <button id="btn-thomas" onclick="window.alternarVisao('thomas')"
+              class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
+              <span class="material-symbols-outlined text-[16px]">psychology</span> Visão THOMAS
+            </button>
+            <button id="btn-emissoes" onclick="window.alternarVisao('emissoes')"
+              class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
+              <span class="material-symbols-outlined text-[16px]">receipt_long</span> Emissões Diárias
+            </button>
+            <button id="btn-fechamento" onclick="window.alternarVisao('fechamento')"
+              class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
+              <span class="material-symbols-outlined text-[16px]">lock_clock</span> Fechamento
+            </button>
+          </div>
+          <div class="flex items-center gap-4">
+            <div id="aviso-filtro-ativo"
+              class="hidden items-center gap-2 bg-brandLightBlue/20 text-brandDarkBlue px-3 py-1.5 rounded-lg text-xs font-bold">
+              <span class="material-symbols-outlined text-[16px] text-brandMidBlue">filter_alt_off</span>
+              <span id="texto-filtro-ativo">Filtros Ativos</span>
+              <button onclick="window.limparFiltrosInterativos()" class="ml-2 hover:text-brandOrange"><span
+                  class="material-symbols-outlined text-[14px]">close</span></button>
+            </div>
+            <button onclick="window.abrirModalFiltros()"
+              class="bg-brandDarkBlue text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-brandMidBlue transition-all flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-brandGreen">tune</span> Filtros Avançados
+            </button>
+          </div>
+        </div>
+
+        <div id="visao-soulan" class="grid grid-cols-12 gap-6 animate-fade-in">
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center justify-between"><span
+                class="flex items-center gap-2"><span class="material-symbols-outlined text-brandGreen">bar_chart</span>
+                FATURAMENTO BRUTO</span></h2>
+            <div id="chart-bruto" class="w-full h-[320px]"></div>
+          </div>
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center justify-between"><span
+                class="flex items-center gap-2"><span
+                  class="material-symbols-outlined text-brandLightBlue">bar_chart</span> FATURAMENTO REALIZADO</span>
+            </h2>
+            <div id="chart-realizado" class="w-full h-[320px]"></div>
+          </div>
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><span
+                class="material-symbols-outlined text-brandAqua">domain</span> Bruto vs Realizado por EMPRESA</h2>
+            <div id="chart-empresa" class="w-full h-[320px]"></div>
+          </div>
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><span
+                class="material-symbols-outlined text-brandOrange">work</span> Bruto vs Realizado por SERVIÇO</h2>
+            <div id="chart-servico" class="w-full h-[320px]"></div>
+          </div>
+          <div
+            class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg flex flex-col md:flex-row gap-6">
+            <div class="flex-1">
+              <h2 class="text-sm font-bold text-white mb-2 flex items-center gap-2"><span
+                  class="material-symbols-outlined text-brandGreen">map</span> Faturamento por Região (Estado)</h2>
+              <div id="chart-mapa-brasil" class="w-full h-[350px] flex justify-center items-center"></div>
+            </div>
+            <div class="w-full md:w-[350px] flex flex-col border-l border-brandMidBlue pl-6">
+              <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><span
+                  class="material-symbols-outlined text-brandLightBlue">list_alt</span> Detalhamento de Faturamento</h2>
+              <div class="flex-1 overflow-y-auto custom-scroll pr-2 max-h-[320px] block">
+                <table class="w-full text-left text-sm">
+                  <thead>
+                    <tr class="border-b border-brandMidBlue text-brandPaleBlue">
+                      <th class="pb-3 font-medium">Estado</th>
+                      <th class="pb-3 text-right font-medium">Faturamento</th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-[#f5f5f5]" id="tabela-estados-body">
+                    <tr>
+                      <td colspan="2" class="text-center py-4 text-brandPaleBlue/50 text-xs italic">Carregando dados
+                        reais...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><span
+                class="material-symbols-outlined text-brandLightBlue">leaderboard</span> Faturamento Comercial por
+              Serviço (Top 10)</h2>
+            <div id="chart-comercial" class="w-full h-[480px]"></div>
+          </div>
+        </div>
+
+        <div id="visao-thomas" class="hidden grid grid-cols-12 gap-6 animate-fade-in">
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center justify-between"><span
+                class="flex items-center gap-2"><span class="material-symbols-outlined text-brandGreen">bar_chart</span>
+                FATURAMENTO BRUTO | THOMAS</span></h2>
+            <div id="chart-thomas-bruto" class="w-full h-[320px]"></div>
+          </div>
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center justify-between"><span
+                class="flex items-center gap-2"><span
+                  class="material-symbols-outlined text-brandLightBlue">bar_chart</span> FATURAMENTO REALIZADO |
+                THOMAS</span></h2>
+            <div id="chart-thomas-realizado" class="w-full h-[320px]"></div>
+          </div>
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><span
+                class="material-symbols-outlined text-brandOrange">hexagon</span> FATURAMENTO POR SERVIÇO | THOMAS</h2>
+            <div id="chart-thomas-servico" class="w-full h-[350px]"></div>
+          </div>
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><span
+                class="material-symbols-outlined text-brandLightBlue">person</span> Faturamento Comercial por Serviço |
+              THOMAS</h2>
+            <div id="chart-thomas-comercial" class="w-full h-[400px]"></div>
+          </div>
+        </div>
+
+        <div id="visao-emissoes" class="hidden grid grid-cols-12 gap-6 animate-fade-in">
+
+          <div class="col-span-12 flex justify-between items-center mb-2 mt-2">
+            <div>
+              <h2 class="text-xl font-extrabold text-brandDarkBlue">Análise de Emissões Diárias</h2>
+              <p class="text-xs font-bold text-slate-400 mt-1">Dica: Clique sobre uma coluna nos gráficos abaixo para
+                filtrar a base instantaneamente.</p>
+            </div>
+            <button id="btn-limpar-filtro-grafico" onclick="window.limparFiltroGraficoEmissoes()"
+              class="hidden bg-brandOrange text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-opacity-90 transition-all items-center gap-2 shadow-md">
+              <span class="material-symbols-outlined text-[16px]">filter_alt_off</span> Limpar Filtro de Data
+            </button>
+          </div>
+
+          <div
+            class="col-span-12 lg:col-span-3 bg-white p-5 rounded-xl border border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform"><span
+                class="material-symbols-outlined text-7xl">receipt_long</span></div>
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Total de Notas Emitidas</p>
+            <h3 class="text-4xl font-extrabold text-brandDarkBlue"><span id="kpi-emissao-total-qtd">0</span> <span
+                class="text-sm font-medium text-slate-400">notas</span></h3>
+            <p class="text-brandGreen text-lg font-bold mt-1" id="kpi-emissao-total-val">R$ 0,00</p>
+
+            <div class="w-full h-px bg-slate-100 my-4"></div>
+
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Total Realizado (Liquidadas)
+            </p>
+            <h3 class="text-xl font-extrabold text-brandLightBlue" id="kpi-emissao-total-real">R$ 0,00</h3>
+          </div>
+
+          <div
+            class="col-span-12 lg:col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-all duration-300">
+            <p
+              class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+              Emissões por Empresa</p>
+            <div class="grid grid-cols-2 gap-y-4 gap-x-2">
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[10px] font-extrabold text-slate-700">SOULAN CONSULTORIA</p>
+                <p class="text-sm font-bold text-brandDarkBlue"><span id="kpi-emp-sc-qtd">0</span> <span
+                    class="text-[9px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[11px] font-bold text-brandGreen" id="kpi-emp-sc-val">R$ 0,00</p>
+              </div>
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[10px] font-extrabold text-slate-700">SOULAN ADM</p>
+                <p class="text-sm font-bold text-brandDarkBlue"><span id="kpi-emp-sa-qtd">0</span> <span
+                    class="text-[9px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[11px] font-bold text-brandGreen" id="kpi-emp-sa-val">R$ 0,00</p>
+              </div>
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[10px] font-extrabold text-slate-700">ESTÁGIO</p>
+                <p class="text-sm font-bold text-brandDarkBlue"><span id="kpi-emp-est-qtd">0</span> <span
+                    class="text-[9px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[11px] font-bold text-brandGreen" id="kpi-emp-est-val">R$ 0,00</p>
+              </div>
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[10px] font-extrabold text-slate-700">NEAT</p>
+                <p class="text-sm font-bold text-brandDarkBlue"><span id="kpi-emp-nt-qtd">0</span> <span
+                    class="text-[9px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[11px] font-bold text-brandGreen" id="kpi-emp-nt-val">R$ 0,00</p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="col-span-12 lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-all duration-300">
+            <p
+              class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+              Emissões por Serviço</p>
+            <div class="grid grid-cols-3 gap-y-3 gap-x-2">
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[9px] font-extrabold text-slate-700 truncate">TEMPORÁRIO</p>
+                <p class="text-xs font-bold text-brandDarkBlue"><span id="kpi-srv-temp-qtd">0</span> <span
+                    class="text-[8px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[10px] font-bold text-brandOrange" id="kpi-srv-temp-val">R$ 0,00</p>
+              </div>
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[9px] font-extrabold text-slate-700 truncate">TERCEIROS</p>
+                <p class="text-xs font-bold text-brandDarkBlue"><span id="kpi-srv-terc-qtd">0</span> <span
+                    class="text-[8px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[10px] font-bold text-brandOrange" id="kpi-srv-terc-val">R$ 0,00</p>
+              </div>
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[9px] font-extrabold text-slate-700 truncate">ESTÁGIO</p>
+                <p class="text-xs font-bold text-brandDarkBlue"><span id="kpi-srv-est-qtd">0</span> <span
+                    class="text-[8px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[10px] font-bold text-brandOrange" id="kpi-srv-est-val">R$ 0,00</p>
+              </div>
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[9px] font-extrabold text-slate-700 truncate">NEAT</p>
+                <p class="text-xs font-bold text-brandDarkBlue"><span id="kpi-srv-neat-qtd">0</span> <span
+                    class="text-[8px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[10px] font-bold text-brandOrange" id="kpi-srv-neat-val">R$ 0,00</p>
+              </div>
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[9px] font-extrabold text-slate-700 truncate">RPO</p>
+                <p class="text-xs font-bold text-brandDarkBlue"><span id="kpi-srv-rpo-qtd">0</span> <span
+                    class="text-[8px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[10px] font-bold text-brandOrange" id="kpi-srv-rpo-val">R$ 0,00</p>
+              </div>
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[9px] font-extrabold text-slate-700 truncate">FOPAG</p>
+                <p class="text-xs font-bold text-brandDarkBlue"><span id="kpi-srv-fopag-qtd">0</span> <span
+                    class="text-[8px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[10px] font-bold text-brandOrange" id="kpi-srv-fopag-val">R$ 0,00</p>
+              </div>
+              <div class="border-b border-slate-100 pb-2 mb-2">
+                <p class="text-[9px] font-extrabold text-slate-700 truncate">CONSULTORIA</p>
+                <p class="text-xs font-bold text-brandDarkBlue"><span id="kpi-srv-cons-qtd">0</span> <span
+                    class="text-[8px] font-normal text-slate-400">n.</span></p>
+                <p class="text-[10px] font-bold text-brandOrange" id="kpi-srv-cons-val">R$ 0,00</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center justify-between">
+              <span class="flex items-center gap-2"><span
+                  class="material-symbols-outlined text-brandGreen">calendar_month</span> VOLUME E VALOR DIÁRIO (ÚLTIMOS
+                30 DIAS)</span>
+            </h2>
+            <div id="chart-emissoes-30dias" class="w-full h-[350px]"></div>
+          </div>
+
+          <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandLightBlue">insert_chart</span> EMISSÕES MENSAIS (ANO
+              VIGENTE)
+            </h2>
+            <div id="chart-emissoes-ano" class="w-full h-[320px]"></div>
+          </div>
+
+          <div
+            class="col-span-12 bg-white p-6 rounded-xl border border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] mt-2">
+            <h2 class="text-sm font-bold text-brandDarkBlue mb-5 flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandOrange">format_list_numbered</span> Ranking de
+              Lançamentos
+            </h2>
+            <div class="overflow-x-auto max-h-[350px] overflow-y-auto custom-scroll pr-2">
+              <table class="w-full text-left text-sm">
+                <thead class="sticky top-0 bg-white z-10">
+                  <tr class="border-b border-slate-200 text-slate-400 text-[10px] uppercase tracking-widest">
+                    <th class="pb-3 pt-1 font-extrabold w-16 text-center">Posição</th>
+                    <th class="pb-3 pt-1 font-extrabold">Usuário / Responsável</th>
+                    <th class="pb-3 pt-1 font-extrabold text-right">Qtd. Notas Lançadas</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-ranking-usuarios">
+                  <tr>
+                    <td colspan="3" class="text-center text-xs text-slate-400 py-6">Aguardando dados...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="visao-fechamento" class="hidden animate-fade-in mt-6">
+          <div class="mb-12">
+            <h2 class="text-xl font-extrabold text-brandDarkBlue mb-6 flex items-center gap-3">
+              <img src="../assets/soulan.png" alt="Soulan" class="h-8 w-auto object-contain">
+              FECHAMENTO SOULAN
+            </h2>
+
+            <div class="space-y-10">
+              <div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Bruto
+                  (Soulan)</h3>
+                <div
+                  class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
+                  <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead
+                      class="sticky top-0 z-20 bg-[#002443] text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
+                      <tr>
+                        <th class="sticky left-0 z-30 bg-[#002443] px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
+                          Comercial</th>
+                        <th class="px-2 py-1.5 text-right">Consultoria</th>
+                        <th class="px-2 py-1.5 text-right">Estágio</th>
+                        <th class="px-2 py-1.5 text-right">Fopag</th>
+                        <th class="px-2 py-1.5 text-right">RPO</th>
+                        <th class="px-2 py-1.5 text-right">Temporário</th>
+                        <th class="px-2 py-1.5 text-right">Terceiros</th>
+                        <th class="px-2 py-1.5 text-right text-brandGreen bg-[#003459]">Total Geral</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-fech-soulan-bruto"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
+                  (Soulan)</h3>
+                <div
+                  class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
+                  <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead
+                      class="sticky top-0 z-20 bg-[#002443] text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
+                      <tr>
+                        <th class="sticky left-0 z-30 bg-[#002443] px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
+                          Comercial</th>
+                        <th class="px-2 py-1.5 text-right">Consultoria</th>
+                        <th class="px-2 py-1.5 text-right">Estágio</th>
+                        <th class="px-2 py-1.5 text-right">Fopag</th>
+                        <th class="px-2 py-1.5 text-right">RPO</th>
+                        <th class="px-2 py-1.5 text-right">Temporário</th>
+                        <th class="px-2 py-1.5 text-right">Terceiros</th>
+                        <th class="px-2 py-1.5 text-right text-brandGreen bg-[#003459]">Total Geral</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-fech-soulan-real"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-12">
+            <h2 class="text-xl font-extrabold text-[#434f55] mb-6 flex items-center gap-3">
+              <img src="../assets/thomas.png" alt="Thomas" class="h-8 w-auto object-contain">
+              FECHAMENTO THOMAS
+            </h2>
+
+            <div class="space-y-10">
+              <div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Bruto
+                  (Thomas)</h3>
+                <div
+                  class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
+                  <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead
+                      class="sticky top-0 z-20 bg-[#434f55] text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
+                      <tr>
+                        <th class="sticky left-0 z-30 bg-[#434f55] px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
+                          Comercial</th>
+                        <th class="px-2 py-1.5 text-right">Devolutiva</th>
+                        <th class="px-2 py-1.5 text-right">Integração</th>
+                        <th class="px-2 py-1.5 text-right">Subscription</th>
+                        <th class="px-2 py-1.5 text-right">Treinamento</th>
+                        <th class="px-2 py-1.5 text-right">Unidades</th>
+                        <th class="px-2 py-1.5 text-right">Hotmart</th>
+                        <th class="px-2 py-1.5 text-right">Assessment</th>
+                        <th class="px-2 py-1.5 text-right text-[#ffefe8] bg-[#ff5f15]">Total Geral</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-fech-thomas-bruto"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
+                  (Thomas)</h3>
+                <div
+                  class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
+                  <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead
+                      class="sticky top-0 z-20 bg-[#434f55] text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
+                      <tr>
+                        <th class="sticky left-0 z-30 bg-[#434f55] px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
+                          Comercial</th>
+                        <th class="px-2 py-1.5 text-right">Devolutiva</th>
+                        <th class="px-2 py-1.5 text-right">Integração</th>
+                        <th class="px-2 py-1.5 text-right">Subscription</th>
+                        <th class="px-2 py-1.5 text-right">Treinamento</th>
+                        <th class="px-2 py-1.5 text-right">Unidades</th>
+                        <th class="px-2 py-1.5 text-right">Hotmart</th>
+                        <th class="px-2 py-1.5 text-right">Assessment</th>
+                        <th class="px-2 py-1.5 text-right text-[#ffefe8] bg-[#ff5f15]">Total Geral</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-fech-thomas-real"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tela-fluxo" class="view-tela hidden">
+        <div class="bg-white p-10 rounded-xl border border-slate-200 text-center">
+          <h2 class="text-xl font-bold text-slate-600">Fluxo de Caixa em desenvolvimento...</h2>
+        </div>
+      </div>
+      <div id="tela-rh" class="view-tela hidden">
+        <div class="bg-white p-10 rounded-xl border border-slate-200 text-center">
+          <h2 class="text-xl font-bold text-slate-600">FORECAST em desenvolvimento...</h2>
+        </div>
+      </div>
+
+      <div id="tela-metas" class="view-tela hidden">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+              <h2 class="text-2xl font-extrabold text-brandDarkBlue flex items-center gap-2"><span class="material-symbols-outlined text-brandAqua text-3xl">track_changes</span> Acompanhamento de Metas</h2>
+              <p class="text-slate-500 text-xs font-medium mt-1">Visão de atingimento por Período (Faturamento Real vs Meta).</p>
+            </div>
+            <div class="flex gap-2">
+                <select id="filtro-mes-dash-metas" onchange="window.processarDashMetas()" class="bg-white border border-slate-200 text-brandDarkBlue text-sm font-bold rounded-xl px-5 py-2.5 outline-none shadow-sm focus:border-brandGreen cursor-pointer">
+                    <option value="todos">Todos os Meses</option>
+                    <option value="0">Janeiro</option>
+                    <option value="1">Fevereiro</option>
+                    <option value="2">Março</option>
+                    <option value="3">Abril</option>
+                    <option value="4">Maio</option>
+                    <option value="5">Junho</option>
+                    <option value="6">Julho</option>
+                    <option value="7">Agosto</option>
+                    <option value="8">Setembro</option>
+                    <option value="9">Outubro</option>
+                    <option value="10">Novembro</option>
+                    <option value="11">Dezembro</option>
+                </select>
+                <select id="filtro-ano-dash-metas" onchange="window.processarDashMetas()" class="bg-white border border-slate-200 text-brandDarkBlue text-sm font-bold rounded-xl px-5 py-2.5 outline-none shadow-sm focus:border-brandGreen cursor-pointer">
+                    <option value="2026">Ano: 2026</option>
+                    <option value="2025">Ano: 2025</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- LINHA 1: Gauges -->
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+            <div class="bg-brandDarkBlue p-4 rounded-xl shadow-lg text-center transform hover:scale-105 transition-all outline outline-2 outline-brandGreen/30">
+              <h3 class="text-[10px] font-extrabold text-brandGreen uppercase tracking-widest mb-1">META TOTAL GERAL</h3>
+              <div id="gauge-geral" class="flex justify-center -mb-4"></div>
+              <div id="lbl-meta-geral" class="text-[11px] font-bold text-white mt-2">R$ 0 / R$ 0</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+              <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Consultoria & RPO</h3>
+              <div id="gauge-cons-rpo" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="lbl-meta-cons-rpo" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+              <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Estágio & Fopag</h3>
+              <div id="gauge-est-fopag" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="lbl-meta-est-fopag" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+              <h3 class="text-[10px] font-extrabold text-[#434f55] uppercase tracking-widest">THOMAS</h3>
+              <div id="gauge-thomas" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="lbl-meta-thomas" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+              <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Temporário</h3>
+              <div id="gauge-temporario" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="lbl-meta-temporario" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center hover:-translate-y-1 transition-transform">
+              <h3 class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Terceirizados</h3>
+              <div id="gauge-terceirizados" class="flex justify-center mt-1 -mb-4"></div>
+              <div id="lbl-meta-terceirizados" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+            </div>
+        </div>
+
+        <!-- LINHA 2: Gráfico Anual vs Faturamento -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
+            <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-4"><span class="material-symbols-outlined text-brandAqua">bar_chart</span> Meta vs Faturamento Realizado (Global)</h3>
+            <div id="chart-meta-anual-fat" class="w-full h-[250px]"></div>
+        </div>
+
+        <!-- LINHA 3: Gráfico Mensal Consolidado -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-4"><span class="material-symbols-outlined text-brandOrange">monitoring</span> Acompanhamento Mensal de Grupos</h3>
+            <div id="chart-metas-mensal" class="w-full h-[350px]"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="modal-filtros"
+    class="fixed inset-0 z-[100] bg-black/60 hidden items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+    <div
+      class="bg-[#002443] border border-brandMidBlue p-6 rounded-2xl shadow-2xl w-full max-w-2xl transform scale-95 transition-transform duration-300"
+      id="modal-content">
+      <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-3">
+        <h2 class="text-white font-bold text-lg flex items-center gap-2"><span
+            class="material-symbols-outlined text-brandGreen">filter_alt</span> Filtros Avançados</h2>
+        <button onclick="window.fecharModalFiltros()"
+          class="text-brandPaleBlue hover:text-brandOrange transition-colors"><span
+            class="material-symbols-outlined">close</span></button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2 border-b border-white/5 pb-4 mb-2">
+          <label class="text-brandPaleBlue text-xs font-bold mb-2 block">Período de Análise (Emissão)</label>
+          <div class="flex gap-4">
+            <input type="date" id="filtro-modal-data-inicio"
+              class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
+            <input type="date" id="filtro-modal-data-fim"
+              class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
+          </div>
+        </div>
+
+        <div class="col-span-1">
+          <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Cliente</label>
+          <select id="filtro-modal-cliente"
+            class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
+            <option value="">Todos os Clientes</option>
+          </select>
+        </div>
+        <div class="col-span-1">
+          <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Comercial</label>
+          <select id="filtro-modal-comercial"
+            class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
+            <option value="">Todos os Comerciais</option>
+          </select>
+        </div>
+        <div class="col-span-1">
+          <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Empresa</label>
+          <select id="filtro-modal-empresa"
+            class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
+            <option value="">Todas</option>
+            <option value="SOULAN ADM">SOULAN ADM</option>
+            <option value="SOULAN CONSULTORIA">SOULAN CONSULTORIA</option>
+            <option value="NEAT">NEAT</option>
+            <option value="ESTÁGIO">ESTÁGIO</option>
+          </select>
+        </div>
+        <div class="col-span-1">
+          <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Região (Estado)</label>
+          <select id="filtro-modal-regiao"
+            class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
+            <option value="">Todas as Regiões</option>
+          </select>
+        </div>
+        <div class="col-span-2">
+          <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Descrição / Serviço</label>
+          <select id="filtro-modal-servico"
+            class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
+            <option value="">Todos os Serviços</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-8 flex gap-3">
+        <button onclick="window.limparFiltrosInterativos()"
+          class="flex-1 border border-brandMidBlue text-brandPaleBlue py-2.5 rounded-lg font-bold hover:bg-brandMidBlue hover:text-white transition">Limpar
+          Tudo</button>
+        <button onclick="window.aplicarFiltrosModal()"
+          class="flex-1 bg-brandGreen text-brandDarkBlue py-2.5 rounded-lg font-bold hover:bg-opacity-90 transition shadow-[0_0_15px_rgba(170,209,47,0.3)]">Aplicar
+          Filtros</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.visaoAtivaFaturamento = 'soulan';
+    window.filtrosPorAba = {
+      soulan: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
+      thomas: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
+      emissoes: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
+      fechamento: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' }
+    };
+
+    window.verificarFiltroAtivoNaAba = function () {
+      let f = window.filtrosPorAba[window.visaoAtivaFaturamento];
+      if (!f) return;
+      let ativo = f.ini || f.fim || f.cli || f.com || f.emp || f.reg || f.ser;
+      if (ativo) {
+        document.getElementById('aviso-filtro-ativo').classList.remove('hidden');
+        document.getElementById('aviso-filtro-ativo').classList.add('flex');
+      } else {
+        document.getElementById('aviso-filtro-ativo').classList.add('hidden');
+        document.getElementById('aviso-filtro-ativo').classList.remove('flex');
+      }
+    };
+
+    window.formatMil = function (val) {
+      if (val === 0 || !val) return "";
+      let absVal = Math.abs(val);
+      if (absVal >= 1000000) return (val / 1000000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " mi";
+      if (absVal >= 1000) return (val / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " mil";
+      return val.toLocaleString('pt-BR');
+    };
+
+    window.formatMoedaFull = function (val) {
+      if (!val) return "R$ 0,00";
+      return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    window.exportarPDF = function () {
+      console.log("PDF temporariamente desativado por questões de performance.");
+    };
+
+    window.abrirModulo = function (telaId) {
+      document.querySelectorAll('.view-tela').forEach(el => el.classList.add('hidden'));
+      document.getElementById(telaId).classList.remove('hidden');
+      document.getElementById('btn-voltar-inicio').classList.remove('hidden');
+      document.getElementById('btn-voltar-inicio').classList.add('flex');
+      window.dispatchEvent(new Event('resize'));
+      window.desenharMapaGeral();
+    };
+
+    window.voltarInicio = function () {
+      document.querySelectorAll('.view-tela').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tela-inicio').classList.remove('hidden');
+      document.getElementById('btn-voltar-inicio').classList.add('hidden');
+      document.getElementById('btn-voltar-inicio').classList.remove('flex');
+    };
+
+    window.abrirModalFiltros = function () {
+      let aba = window.visaoAtivaFaturamento;
+      let f = window.filtrosPorAba[aba];
+      if (f) {
+        document.getElementById('filtro-modal-data-inicio').value = f.ini;
+        document.getElementById('filtro-modal-data-fim').value = f.fim;
+        document.getElementById('filtro-modal-cliente').value = f.cli;
+        document.getElementById('filtro-modal-comercial').value = f.com;
+        document.getElementById('filtro-modal-empresa').value = f.emp;
+        document.getElementById('filtro-modal-regiao').value = f.reg;
+        document.getElementById('filtro-modal-servico').value = f.ser;
+      }
+
+      const m = document.getElementById('modal-filtros'); const c = document.getElementById('modal-content');
+      m.classList.remove('hidden'); m.classList.add('flex');
+      setTimeout(() => { m.classList.remove('opacity-0'); c.classList.remove('scale-95'); }, 10);
+    };
+
+    window.fecharModalFiltros = function () {
+      const m = document.getElementById('modal-filtros');
+      const c = document.getElementById('modal-content');
+      m.classList.add('opacity-0'); c.classList.add('scale-95'); setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
+    };
+
+    window.obterComercialSeguro = function (data) {
+      let val = data['Comissionado 01'] || data['comissionado_01'] || data['Vendedor'] || data['vendedor'] || data['Comercial'] || data['comercial'];
+      return val ? String(val).trim() : "";
+    };
+
+    window.mapearComercial = function (raw) {
+      if (raw === undefined || raw === null || String(raw).trim() === "") return "NÃO INFORMADO (Vazio na Base)";
+      let t = String(raw).toUpperCase().trim();
+
+      if (t.startsWith("032") || t.includes("JEFFERSON")) return "Diretoria";
+      if (t.startsWith("006") || t.includes("ADRIANA SARDINHA")) return "Adriana S.";
+      if (t.startsWith("004") || t.includes("SILVIA MARIA")) return "Sílvia D.";
+      if (t.startsWith("051") || t.includes("SHELICA")) return "Shelica S.";
+      if (t.startsWith("017") || t.startsWith("027") || t.includes("TATIANA OLIVEIRA")) return "Tatiana O.";
+      if (t.startsWith("013") || t.includes("CATARINA")) return "Catarina S.";
+      if (t.startsWith("054") || t.includes("MARIANA MUNIK")) return "Mariana M.";
+      if (t.startsWith("008") || t.startsWith("08 -") || t.includes("DIRETORIA")) return "Diretoria";
+      if (t.startsWith("018") || t.includes("ANDERSON NAGADO")) return "Diretoria";
+      if (t.startsWith("025") || t.includes("ANA PASSARINI")) return "Ana P.";
+      if (t.startsWith("045") || t.includes("MARIANA LIMA")) return "Mariana L.";
+      if (t.startsWith("050") || t.includes("RICARDO PRIMERANO")) return "Vendas Internas";
+      if (t.startsWith("046") || t.includes("KELLY CRISTINA")) return "Vendas Internas";
+      if (t.startsWith("047") || t.includes("TAMIRES FIDELIS")) return "Vendas Internas";
+      if (t.startsWith("052") || t.includes("JULIANA ROCHA")) return "Vendas Internas";
+      if (t.startsWith("049") || t.includes("DEBORA MENDES")) return "Debora M.";
+      if (t.startsWith("055") || t.includes("LARA PEREIRA")) return "Vendas Internas";
+      if (t.startsWith("024") || t.includes("PRISCILA ZANFORLIN")) return "Priscila Z.";
+      if (t.startsWith("022") || t.includes("SUELY RODRIGUES")) return "Suely R.";
+      if (t.startsWith("020") || t.includes("VALERIA PIMENTA")) return "Valéria P.";
+      if (t.startsWith("048") || t.includes("THAMIRIS SANTOS")) return "Thamiris S.";
+      if (t.startsWith("010") || t.includes("PARCEIRO")) return "Parceiro";
+      if (t.startsWith("056") || t.includes("FERNANDA MARTINS")) return "Fernanda M.";
+      if (t.startsWith("058") || t.includes("RAFAELLA")) return "Rafaella C.";
+      if (t.startsWith("057") || t.includes("ALANA GIACOMIN")) return "Alana G.";
+      if (t.startsWith("031") || t.includes("GUSTAVO BARRIOS")) return "Gustavo B.";
+      if (t.startsWith("059") || t.includes("NICOLAS")) return "Nicolas P.";
+      if (t.startsWith("062") || t.includes("BRUNA PIRES")) return "Bruna P.";
+      if (t.startsWith("063") || t.includes("GIOVANNA ROBERTI")) return "Giovanna R.";
+
+      let fallback = t.replace(/^[0-9\-\s]+/, '').trim();
+      if (!fallback || fallback === "NÃO INFORMADO" || fallback.includes("SEM VENDEDOR") || fallback === "NULL" || fallback === "UNDEFINED") {
+        return "NÃO INFORMADO (Vazio na Base)";
+      }
+      return fallback;
+    };
+
+    window.aplicarFiltrosModal = function () {
+      let aba = window.visaoAtivaFaturamento;
+      const fCli = document.getElementById('filtro-modal-cliente').value;
+      const fCom = document.getElementById('filtro-modal-comercial').value;
+      const fEmp = document.getElementById('filtro-modal-empresa').value;
+      const fReg = document.getElementById('filtro-modal-regiao').value;
+      const fSer = document.getElementById('filtro-modal-servico').value;
+      const fIni = document.getElementById('filtro-modal-data-inicio').value;
+      const fFim = document.getElementById('filtro-modal-data-fim').value;
+
+      window.filtrosPorAba[aba] = { ini: fIni, fim: fFim, cli: fCli, com: fCom, emp: fEmp, reg: fReg, ser: fSer };
+
+      let filtrados = window.dadosGlobaisFirestore.filter(d => {
+        let cli = String(d['Cliente'] || d['cliente'] || "").trim();
+
+        let com = window.mapearComercial(window.obterComercialSeguro(d));
+
+        let reg = String(d['Cidade do Cliente'] || d['cidade_cliente'] || d['Região'] || "").trim();
+        let ser = String(d['descricao_contrato'] || d['Descrição Do Contrato'] || "").trim().toUpperCase();
+
+        let emp = String(d['empresa_atribuida'] || window.calcEmpresaExcel(ser)).toUpperCase().trim();
+
+        if (fCli && cli !== fCli) return false;
+        if (fCom && com !== fCom) return false;
+        if (fReg && reg !== fReg) return false;
+        if (fSer && ser !== fSer.toUpperCase()) return false;
+        if (fEmp && emp !== fEmp.toUpperCase()) return false;
+
+        if (fIni || fFim) {
+          let dEm = window.parseDataExt(d['data_emissao'] || d['Dt Emissao'] || d['data_criacao']);
+          if (!dEm || isNaN(dEm.getTime())) return false;
+          let m = String(dEm.getMonth() + 1).padStart(2, '0');
+          let a = dEm.getFullYear();
+          let dDia = String(dEm.getDate()).padStart(2, '0');
+          let localIso = `${a}-${m}-${dDia}`;
+          if (fIni && localIso < fIni) return false;
+          if (fFim && localIso > fFim) return false;
+        }
+        return true;
+      });
+
+      window.processarEAtualizarGraficos(filtrados, aba);
+      window.verificarFiltroAtivoNaAba();
+      window.fecharModalFiltros();
+    };
+
+    window.limparFiltrosInterativos = function () {
+      let aba = window.visaoAtivaFaturamento;
+      window.filtrosPorAba[aba] = { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' };
+      document.getElementById('filtro-modal-cliente').value = "";
+      document.getElementById('filtro-modal-comercial').value = "";
+      document.getElementById('filtro-modal-empresa').value = "";
+      document.getElementById('filtro-modal-regiao').value = "";
+      document.getElementById('filtro-modal-servico').value = "";
+      document.getElementById('filtro-modal-data-inicio').value = "";
+      document.getElementById('filtro-modal-data-fim').value = "";
+
+      window.processarEAtualizarGraficos(window.dadosGlobaisFirestore, aba);
+      window.verificarFiltroAtivoNaAba();
+      window.fecharModalFiltros();
+    };
+
+    window.alternarVisao = function (visao) {
+      window.visaoAtivaFaturamento = visao;
+      document.getElementById('visao-soulan').classList.toggle('hidden', visao !== 'soulan');
+      document.getElementById('visao-thomas').classList.toggle('hidden', visao !== 'thomas');
+      document.getElementById('visao-emissoes').classList.toggle('hidden', visao !== 'emissoes');
+      document.getElementById('visao-fechamento').classList.toggle('hidden', visao !== 'fechamento');
+      const configs = {
+        'soulan': { isImage: true, icon: '../assets/soulan.png', text: 'Visão SOULAN' },
+        'thomas': { isImage: true, icon: '../assets/thomas.png', text: 'Visão THOMAS' },
+        'emissoes': { isImage: false, icon: 'receipt_long', text: 'Emissões Diárias' },
+        'fechamento': { isImage: false, icon: 'lock_clock', text: 'Fechamento' }
+      };
+      Object.keys(configs).forEach(b => {
+        const btnEl = document.getElementById('btn-' + b);
+        if (b === visao) {
+          btnEl.className = "bg-brandDarkBlue text-brandGreen border border-brandGreen/50 px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-[0_4px_15px_rgba(170,209,47,0.2)] transition-all flex items-center gap-2 transform -translate-y-0.5";
+        } else {
+          btnEl.className = "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5";
+        }
+        let iconeHtml = configs[b].isImage
+          ? `<img src="${configs[b].icon}" class="h-4 w-auto object-contain mr-1">`
+          : `<span class="material-symbols-outlined text-[16px]">${configs[b].icon}</span>`;
+        btnEl.innerHTML = `${iconeHtml} ${configs[b].text}`;
+      });
+      window.verificarFiltroAtivoNaAba();
+      window.dispatchEvent(new Event('resize'));
+      window.desenharMapaGeral();
+    };
+
+    window.extrairNum = function (raw) {
+      if (typeof raw === 'number') return raw;
+      return parseFloat(String(raw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+    };
+
+    window.parseDataExt = function (raw) {
+      if (!raw) return null;
+      if (raw.toDate) return raw.toDate();
+      if (raw instanceof Date) return raw;
+      if (typeof raw === 'number') return new Date((raw - 25569) * 86400 * 1000);
+      const s = String(raw).trim();
+      if (s.includes('/')) return new Date(s.split('/')[2], s.split('/')[1] - 1, s.split('/')[0]);
+      if (s.includes('-') && s.length >= 10) {
+        let p = s.split('T')[0].split('-');
+        return new Date(p[0], p[1] - 1, p[2]);
+      }
+      return null;
+    };
+
+    window.calcEmpresaExcel = function (desc) {
+      if (!desc) return "";
+      let t = desc.toUpperCase().trim();
+      if (t.includes("TEMPORARIO") || t.includes("TEMPORÁRIO")) return "SOULAN CONSULTORIA";
+      if (t.includes("ESTAGIO") || t.includes("ESTÁGIO")) return "ESTÁGIO";
+      const adm = ["TERCEIROS", "FOPAG", "CONSULTORIA", "RPO"];
+      if (adm.some(k => t.includes(k))) return "SOULAN ADM";
+      const neat = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
+      if (neat.some(k => t.includes(k))) return "NEAT";
+      return "";
+    };
+
+    window.calcServicoAgrupado = function (desc) {
+      if (!desc) return null;
+      let t = desc.toUpperCase().trim();
+      const puros = ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "RPO", "CONSULTORIA"];
+      for (let s of puros) {
+        if (t.includes(s) || t === s) return s;
+      }
+      const neatGroup = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
+      if (neatGroup.some(k => t.includes(k))) return "NEAT";
+      return null;
+    };
+
+    window.traduzirCidadeParaEstado = function (cidade) {
+      let c = cidade.toUpperCase();
+      const sp = ['SÃO PAULO', 'SAO PAULO', 'CAMPINAS', 'GUARULHOS', 'PAULINIA', 'PAULÍNIA', 'OSASCO', 'SBC', 'SÃO BERNARDO', 'SANTO ANDRÉ', 'SANTOS', 'SOROCABA', 'JUNDIAI', 'JUNDIAÍ', 'BARUERI', 'SP'];
+      if (sp.some(x => c.includes(x))) return { id: 'BR-SP', sigla: 'SP', estadoNome: 'São Paulo' };
+      const rj = ['RIO DE JANEIRO', 'MACAÉ', 'MACAE', 'NITERÓI', 'NITEROI', 'DUQUE DE CAXIAS', 'RJ'];
+      if (rj.some(x => c.includes(x))) return { id: 'BR-RJ', sigla: 'RJ', estadoNome: 'Rio de Janeiro' };
+      const mg = ['MINAS GERAIS', 'BELO HORIZONTE', 'UBERLÂNDIA', 'UBERLANDIA', 'EXTREMA', 'CONTAGEM', 'MG'];
+      if (mg.some(x => c.includes(x))) return { id: 'BR-MG', sigla: 'MG', estadoNome: 'Minas Gerais' };
+      const pr = ['PARANÁ', 'PARANA', 'CURITIBA', 'LONDRINA', 'MARINGÁ', 'PR'];
+      if (pr.some(x => c.includes(x))) return { id: 'BR-PR', sigla: 'PR', estadoNome: 'Paraná' };
+      const rs = ['RIO GRANDE DO SUL', 'PORTO ALEGRE', 'CAXIAS DO SUL', 'RS'];
+      if (rs.some(x => c.includes(x))) return { id: 'BR-RS', sigla: 'RS', estadoNome: 'Rio Grande do Sul' };
+      const sc = ['SANTA CATARINA', 'FLORIANOPOLIS', 'JOINVILLE', 'BLUMENAU', 'SC'];
+      if (sc.some(x => c.includes(x))) return { id: 'BR-SC', sigla: 'SC', estadoNome: 'Santa Catarina' };
+      const ba = ['BAHIA', 'SALVADOR', 'CAMAÇARI', 'FEIRA DE SANTANA', 'BA'];
+      if (ba.some(x => c.includes(x))) return { id: 'BR-BA', sigla: 'BA', estadoNome: 'Bahia' };
+      const df = ['DISTRITO FEDERAL', 'BRASILIA', 'BRASÍLIA', 'DF'];
+      if (df.some(x => c.includes(x))) return { id: 'BR-DF', sigla: 'DF', estadoNome: 'Distrito Federal' };
+      const go = ['GOIAS', 'GOIÁS', 'GOIANIA', 'GOIÂNIA', 'APARECIDA DE GOIANIA', 'GO'];
+      if (go.some(x => c.includes(x))) return { id: 'BR-GO', sigla: 'GO', estadoNome: 'Goiás' };
+      const pe = ['PERNAMBUCO', 'RECIFE', 'JABOATÃO', 'PE'];
+      if (pe.some(x => c.includes(x))) return { id: 'BR-PE', sigla: 'PE', estadoNome: 'Pernambuco' };
+      return { id: 'BR-SP', sigla: 'SP', estadoNome: 'São Paulo' };
+    };
+
+    window.popularListasFiltro = function (arrayDados) {
+      let sClientes = new Set(), sComerciais = new Set(), sRegioes = new Set(), sServicos = new Set();
+      arrayDados.forEach(d => {
+        let cli = String(d['Cliente'] || d['cliente'] || "").trim();
+
+        let com = window.mapearComercial(window.obterComercialSeguro(d));
+
+        let reg = String(d['Cidade do Cliente'] || d['cidade_cliente'] || d['Região'] || "").trim();
+        let ser = String(d['descricao_contrato'] || d['Descrição Do Contrato'] || "").trim();
+        if (cli) sClientes.add(cli); if (com && !com.includes("NÃO INFORMADO")) sComerciais.add(com);
+
+        if (reg) sRegioes.add(reg); if (ser)
+          sServicos.add(ser);
+      });
+      const preencherSelect = (id, objSet) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = '<option value="">Todos</option>';
+        Array.from(objSet).sort().forEach(item => { el.innerHTML += `<option value="${item}">${item}</option>`; });
+      };
+      preencherSelect('filtro-modal-cliente', sClientes);
+      preencherSelect('filtro-modal-comercial', sComerciais);
+      preencherSelect('filtro-modal-regiao', sRegioes);
+      preencherSelect('filtro-modal-servico', sServicos);
+    };
+
+    window.limparFiltroGraficoEmissoes = function () {
+      document.getElementById('filtro-modal-data-inicio').value = '';
+      document.getElementById('filtro-modal-data-fim').value = '';
+      window.aplicarFiltrosModal();
+      document.getElementById('btn-limpar-filtro-grafico').classList.add('hidden');
+      document.getElementById('btn-limpar-filtro-grafico').classList.remove('flex');
+    };
+
+    window.processarEAtualizarGraficos = function (arrayDeDados, abaEspecifica = 'todas') {
+      try {
+        let fatBrutoGlobal = 0, fatRealGlobal = 0, fatLiquidoGlobal = 0;
+        let pivotSoulan = {}; let pivotThomas = {};
+        let soulanBruto2026 = Array(12).fill(0), soulanBruto2025 = Array(12).fill(0);
+        let soulanReal2026 = Array(12).fill(0), soulanReal2025 = Array(12).fill(0);
+        let thomasBruto2026 = Array(12).fill(0), thomasBruto2025 = Array(12).fill(0);
+        let thomasReal2026 = Array(12).fill(0), thomasReal2025 = Array(12).fill(0);
+        let dadosEmpresa = { bruto: {}, real: {} };
+        let dadosServico = { bruto: {}, real: {} };
+        let dadosComercialTotal = {};
+        let dadosComercialServico = {};
+        let dadosServicoNeat = { bruto: {}, real: {} };
+        let dadosComercialNeatTotal = {};
+        let dadosComercialNeatServico = {};
+        let mapRegioes = {};
+
+        let emissoesPorDia = {};
+        let hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+
+        for (let i = 29; i >= 0; i--) {
+          let d = new Date(hoje);
+          d.setDate(d.getDate() - i);
+          let isoStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          emissoesPorDia[isoStr] = { qtd: 0, val: 0, date: d };
+        }
+
+        let emissaoAnoMesesQtd = Array(12).fill(0);
+        let emissaoAnoMesesVal = Array(12).fill(0);
+        let emissaoTotalQtd = 0, emissaoTotalVal = 0, emissaoTotalReal = 0;
+        let kpiEmp = { 'SOULAN CONSULTORIA': { qtd: 0, val: 0 }, 'SOULAN ADM': { qtd: 0, val: 0 }, 'ESTÁGIO': { qtd: 0, val: 0 }, 'NEAT': { qtd: 0, val: 0 } };
+        let kpiSrv = { 'TEMPORARIO': { qtd: 0, val: 0 }, 'TERCEIROS': { qtd: 0, val: 0 }, 'ESTAGIO': { qtd: 0, val: 0 }, 'NEAT': { qtd: 0, val: 0 }, 'RPO': { qtd: 0, val: 0 }, 'FOPAG': { qtd: 0, val: 0 }, 'CONSULTORIA': { qtd: 0, val: 0 } };
+        let usuariosInclusaoCount = {};
+
+        arrayDeDados.forEach((data) => {
+          const vFatura = Number(window.extrairNum(data['valor_fatura'] || data['Valor Fatura'] || data['valor'])) || 0;
+          const vLiquido = Number(window.extrairNum(data['valor_liquido'] || data['Vl. Líquido'] || data['Vl Líquido'])) || 0;
+          const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
+
+          const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
+          const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+          const servicoAgrupado = window.calcServicoAgrupado(tipoServicoRaw);
+
+          const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
+          const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
+          const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") ||
+            statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
+
+          let faturReal = 0;
+          if (isRecebido) {
+            const g1 = ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "CONSULTORIA", "RPO"];
+            const g2 = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
+            if (g1.some(g => tipoServicoRaw.includes(g))) faturReal = vTaxa;
+            else if (g2.some(g => tipoServicoRaw.includes(g))) faturReal = vTaxa * 0.55;
+            else faturReal = vFatura;
+          }
+
+          fatBrutoGlobal += vFatura; fatRealGlobal += faturReal;
+          fatLiquidoGlobal += vLiquido;
+
+          let dEmissao = window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
+          if (dEmissao && !isNaN(dEmissao.getTime())) {
+            let dCopy = new Date(dEmissao);
+            dCopy.setHours(0, 0, 0, 0);
+            let isoStr = `${dCopy.getFullYear()}-${String(dCopy.getMonth() + 1).padStart(2, '0')}-${String(dCopy.getDate()).padStart(2, '0')}`;
+            if (emissoesPorDia[isoStr]) {
+              emissoesPorDia[isoStr].qtd++;
+              emissoesPorDia[isoStr].val += vFatura;
+            }
+
+            let mes = dEmissao.getMonth();
+            let ano = dEmissao.getFullYear();
+            if (ano === hoje.getFullYear()) {
+              emissaoAnoMesesQtd[mes]++;
+              emissaoAnoMesesVal[mes] += vFatura;
+            }
+
+            emissaoTotalQtd++;
+            emissaoTotalVal += vFatura;
+            if (isRecebido) {
+              emissaoTotalReal += faturReal;
+            }
+
+            if (kpiEmp[empresa]) {
+              kpiEmp[empresa].qtd++;
+              kpiEmp[empresa].val += vFatura;
+            }
+
+            let tsUpper = tipoServicoRaw.toUpperCase();
+            if (tsUpper.includes('TEMPORA')) { kpiSrv['TEMPORARIO'].qtd++; kpiSrv['TEMPORARIO'].val += vFatura; }
+            else if (tsUpper.includes('TERCEIROS')) {
+              kpiSrv['TERCEIROS'].qtd++;
+              kpiSrv['TERCEIROS'].val += vFatura;
+            }
+            else if (tsUpper.includes('ESTAGIO') || tsUpper.includes('ESTÁGIO')) {
+              kpiSrv['ESTAGIO'].qtd++;
+              kpiSrv['ESTAGIO'].val += vFatura;
+            }
+            else if (tsUpper.includes('RPO')) {
+              kpiSrv['RPO'].qtd++;
+              kpiSrv['RPO'].val += vFatura;
+            }
+            else if (tsUpper.includes('FOPAG')) {
+              kpiSrv['FOPAG'].qtd++;
+              kpiSrv['FOPAG'].val += vFatura;
+            }
+            else if (tsUpper.includes('CONSULTORIA')) {
+              kpiSrv['CONSULTORIA'].qtd++;
+              kpiSrv['CONSULTORIA'].val += vFatura;
+            }
+            else {
+              const neatGroup = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
+              if (neatGroup.some(k => tsUpper.includes(k))) { kpiSrv['NEAT'].qtd++; kpiSrv['NEAT'].val += vFatura; }
+            }
+
+            if (empresa !== "NEAT") {
+              if (ano === 2026) soulanBruto2026[mes] += vFatura;
+              if (ano === 2025) soulanBruto2025[mes] += vFatura;
+            } else if (empresa === "NEAT") {
+              if (ano === 2026) thomasBruto2026[mes] += vFatura;
+              if (ano === 2025) thomasBruto2025[mes] += vFatura;
+            }
+          }
+
+          if (isRecebido) {
+            let dRef = temBaixa ?
+              window.parseDataExt(temBaixa) : null;
+            if (!dRef || isNaN(dRef.getTime())) {
+              let dVencFallback = window.parseDataExt(data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto']);
+              dRef = (dVencFallback && !isNaN(dVencFallback.getTime())) ? dVencFallback : dEmissao;
+            }
+
+            if (dRef && !isNaN(dRef.getTime())) {
+              let mes = dRef.getMonth();
+              let ano = dRef.getFullYear();
+              if (empresa !== "NEAT") {
+                if (ano === 2026) soulanReal2026[mes] += faturReal;
+                if (ano === 2025) soulanReal2025[mes] += faturReal;
+              } else if (empresa === "NEAT") {
+                if (ano === 2026) thomasReal2026[mes] += faturReal;
+                if (ano === 2025) thomasReal2025[mes] += faturReal;
+              }
+            }
+          }
+
+          let usuarioInc = String(data['Usuário Inclusão'] || data['usuario_inclusao'] || data['Usuário'] || "").trim();
+          if (usuarioInc && usuarioInc !== "undefined" && usuarioInc !== "null" && usuarioInc !== "N/I") {
+            if (!usuariosInclusaoCount[usuarioInc]) usuariosInclusaoCount[usuarioInc] = 0;
+            usuariosInclusaoCount[usuarioInc]++;
+          }
+
+          let cidadeRaw = String(data['Cidade do Cliente'] || data['cidade_cliente'] || data['Região'] || "").toUpperCase().trim();
+          if (cidadeRaw && empresa !== "NEAT") {
+            let geo = window.traduzirCidadeParaEstado(cidadeRaw);
+            if (!mapRegioes[geo.id]) mapRegioes[geo.id] = { id: geo.id, sigla: geo.sigla, nome: geo.estadoNome, val: 0 };
+            mapRegioes[geo.id].val += vFatura;
+          }
+
+          // EXCLUSÃO DA NEAT DO GRÁFICO DE EMPRESA DA SOULAN
+          const empresasValidas = ["SOULAN CONSULTORIA", "SOULAN ADM", "ESTÁGIO"];
+          if (empresasValidas.includes(empresa)) {
+            if (!dadosEmpresa.bruto[empresa]) {
+              dadosEmpresa.bruto[empresa] = 0;
+              dadosEmpresa.real[empresa] = 0;
+            }
+            dadosEmpresa.bruto[empresa] += vFatura;
+            dadosEmpresa.real[empresa] += faturReal;
+          }
+
+          let comercialText = window.mapearComercial(window.obterComercialSeguro(data));
+
+          if (empresa !== "NEAT") {
+            if (servicoAgrupado) {
+              if (!dadosServico.bruto[servicoAgrupado]) {
+                dadosServico.bruto[servicoAgrupado] = 0;
+                dadosServico.real[servicoAgrupado] = 0;
+              }
+              dadosServico.bruto[servicoAgrupado] += vFatura;
+              dadosServico.real[servicoAgrupado] += faturReal;
+            }
+
+            if (comercialText && !comercialText.includes("NÃO INFORMADO")) {
+              if (!dadosComercialTotal[comercialText]) {
+                dadosComercialTotal[comercialText] = 0;
+                dadosComercialServico[comercialText] = {};
+              }
+              dadosComercialTotal[comercialText] += vFatura;
+              let servAgrupadoOuOutros = servicoAgrupado || tipoServicoRaw || "NÃO INFORMADO";
+
+              if (!dadosComercialServico[comercialText][servAgrupadoOuOutros]) dadosComercialServico[comercialText][servAgrupadoOuOutros] = 0;
+              dadosComercialServico[comercialText][servAgrupadoOuOutros] += vFatura;
+            }
+          }
+
+          if (empresa === "NEAT" && tipoServicoRaw && tipoServicoRaw !== "NÃO INFORMADO") {
+            let servicoThomasFinal = tipoServicoRaw;
+            if (servicoThomasFinal === "PROCESSAMENTO DE PPA") servicoThomasFinal = "UNIDADE";
+            if (servicoThomasFinal === "TREINAMENTO DE PPA") servicoThomasFinal = "TREINAMENTO";
+            if (!dadosServicoNeat.bruto[servicoThomasFinal]) {
+              dadosServicoNeat.bruto[servicoThomasFinal] = 0;
+              dadosServicoNeat.real[servicoThomasFinal] = 0;
+            }
+            dadosServicoNeat.bruto[servicoThomasFinal] += vFatura;
+            dadosServicoNeat.real[servicoThomasFinal] += faturReal;
+
+            if (comercialText && !comercialText.includes("NÃO INFORMADO")) {
+              if (!dadosComercialNeatTotal[comercialText]) {
+                dadosComercialNeatTotal[comercialText] = 0;
+                dadosComercialNeatServico[comercialText] = {};
+              }
+              dadosComercialNeatTotal[comercialText] += vFatura;
+              if (!dadosComercialNeatServico[comercialText][servicoThomasFinal]) dadosComercialNeatServico[comercialText][servicoThomasFinal] = 0;
+              dadosComercialNeatServico[comercialText][servicoThomasFinal] += vFatura;
+            }
+          }
+
+          // LÓGICA DE AGRUPAMENTO MATRICIAL (FECHAMENTO)
+          if (["SOULAN CONSULTORIA", "SOULAN ADM", "ESTÁGIO"].includes(empresa)) {
+            let servC = "OUTROS";
+            let t = tipoServicoRaw.toUpperCase();
+            if (t.includes("CONSULTORIA")) servC = "CONSULTORIA";
+            else if (t.includes("ESTAGIO") || t.includes("ESTÁGIO")) servC = "ESTAGIO";
+            else if (t.includes("FOPAG")) servC = "FOPAG";
+            else if (t.includes("RPO")) servC = "RPO";
+            else if (t.includes("TEMPORA")) servC = "TEMPORARIO";
+            else if (t.includes("TERCEIROS")) servC = "TERCEIROS";
+
+            if (servC !== "OUTROS" && !comercialText.includes("NÃO INFORMADO")) {
+              if (!pivotSoulan[comercialText]) {
+                pivotSoulan[comercialText] = {
+                  bruto: { CONSULTORIA: 0, ESTAGIO: 0, FOPAG: 0, RPO: 0, TEMPORARIO: 0, TERCEIROS: 0, TOTAL: 0 },
+                  real: {
+                    CONSULTORIA: 0,
+                    ESTAGIO: 0, FOPAG: 0, RPO: 0, TEMPORARIO: 0, TERCEIROS: 0, TOTAL: 0
+                  }
+                };
+              }
+              pivotSoulan[comercialText].bruto[servC] += vFatura;
+              pivotSoulan[comercialText].real[servC] += faturReal;
+              pivotSoulan[comercialText].bruto.TOTAL += vFatura;
+              pivotSoulan[comercialText].real.TOTAL += faturReal;
+            }
+          } else if (empresa === "NEAT") {
+            let servT = "OUTROS";
+            let t = tipoServicoRaw.toUpperCase();
+            if (t.includes("DEVOLUTIVA")) servT = "DEVOLUTIVA";
+            else if (t.includes("INTEGRA")) servT = "INTEGRAÇÃO";
+            else if (t.includes("SUBSCRIPTION")) servT = "SUBSCRIPTION";
+            else if (t.includes("TREINA")) servT = "TREINAMENTO";
+            else if (t.includes("UNIDADE") || t.includes("PROCESSAMENTO DE PPA")) servT = "UNIDADES";
+            else if (t.includes("HOTMART")) servT = "HOTMART";
+            else if (t.includes("ASSESSMENT")) servT = "ASSESSMENT";
+
+            if (servT !== "OUTROS" && !comercialText.includes("NÃO INFORMADO")) {
+              if (!pivotThomas[comercialText]) {
+                pivotThomas[comercialText] = {
+                  bruto: { DEVOLUTIVA: 0, "INTEGRAÇÃO": 0, SUBSCRIPTION: 0, TREINAMENTO: 0, UNIDADES: 0, HOTMART: 0, ASSESSMENT: 0, TOTAL: 0 },
+                  real: {
+                    DEVOLUTIVA: 0, "INTEGRAÇÃO": 0, SUBSCRIPTION: 0, TREINAMENTO: 0, UNIDADES: 0, HOTMART: 0, ASSESSMENT: 0, TOTAL: 0
+                  }
+                };
+              }
+              pivotThomas[comercialText].bruto[servT] += vFatura;
+              pivotThomas[comercialText].real[servT] += faturReal;
+              pivotThomas[comercialText].bruto.TOTAL += vFatura;
+              pivotThomas[comercialText].real.TOTAL += faturReal;
+            }
+          }
+        });
+        if (abaEspecifica === 'todas') {
+          document.getElementById('kpi-bruto-total').innerText = window.formatMoedaFull(fatBrutoGlobal);
+          document.getElementById('kpi-real-total').innerText = window.formatMoedaFull(fatRealGlobal);
+          document.getElementById('kpi-liquido-total').innerText = window.formatMoedaFull(fatLiquidoGlobal);
+        }
+
+        if (abaEspecifica === 'todas' || abaEspecifica === 'emissoes') {
+          let emissoesArr = Object.values(emissoesPorDia).sort((a, b) => a.date - b.date);
+          let labels30Dias = emissoesArr.map(item => `${item.date.getDate().toString().padStart(2, '0')}/${(item.date.getMonth() + 1).toString().padStart(2, '0')}`);
+          window.labels30DiasIso = emissoesArr.map(item => `${item.date.getFullYear()}-${String(item.date.getMonth() + 1).padStart(2, '0')}-${String(item.date.getDate()).padStart(2, '0')}`);
+          let emissaoQtd30 = emissoesArr.map(item => item.qtd);
+          let emissaoVal30 = emissoesArr.map(item => item.val);
+
+          document.getElementById('kpi-emissao-total-qtd').innerText = window.formatMil(emissaoTotalQtd);
+          document.getElementById('kpi-emissao-total-val').innerText = window.formatMoedaFull(emissaoTotalVal);
+          document.getElementById('kpi-emissao-total-real').innerText = window.formatMoedaFull(emissaoTotalReal);
+
+          document.getElementById('kpi-emp-sc-qtd').innerText = window.formatMil(kpiEmp['SOULAN CONSULTORIA'].qtd);
+          document.getElementById('kpi-emp-sc-val').innerText = window.formatMoedaFull(kpiEmp['SOULAN CONSULTORIA'].val);
+          document.getElementById('kpi-emp-sa-qtd').innerText = window.formatMil(kpiEmp['SOULAN ADM'].qtd);
+          document.getElementById('kpi-emp-sa-val').innerText = window.formatMoedaFull(kpiEmp['SOULAN ADM'].val);
+          document.getElementById('kpi-emp-est-qtd').innerText = window.formatMil(kpiEmp['ESTÁGIO'].qtd);
+          document.getElementById('kpi-emp-est-val').innerText = window.formatMoedaFull(kpiEmp['ESTÁGIO'].val);
+          document.getElementById('kpi-emp-nt-qtd').innerText = window.formatMil(kpiEmp['NEAT'].qtd);
+          document.getElementById('kpi-emp-nt-val').innerText = window.formatMoedaFull(kpiEmp['NEAT'].val);
+
+          document.getElementById('kpi-srv-temp-qtd').innerText = window.formatMil(kpiSrv['TEMPORARIO'].qtd);
+          document.getElementById('kpi-srv-temp-val').innerText = window.formatMoedaFull(kpiSrv['TEMPORARIO'].val);
+          document.getElementById('kpi-srv-terc-qtd').innerText = window.formatMil(kpiSrv['TERCEIROS'].qtd);
+          document.getElementById('kpi-srv-terc-val').innerText = window.formatMoedaFull(kpiSrv['TERCEIROS'].val);
+          document.getElementById('kpi-srv-est-qtd').innerText = window.formatMil(kpiSrv['ESTAGIO'].qtd);
+          document.getElementById('kpi-srv-est-val').innerText = window.formatMoedaFull(kpiSrv['ESTAGIO'].val);
+          document.getElementById('kpi-srv-neat-qtd').innerText = window.formatMil(kpiSrv['NEAT'].qtd);
+          document.getElementById('kpi-srv-neat-val').innerText = window.formatMoedaFull(kpiSrv['NEAT'].val);
+          document.getElementById('kpi-srv-rpo-qtd').innerText = window.formatMil(kpiSrv['RPO'].qtd);
+          document.getElementById('kpi-srv-rpo-val').innerText = window.formatMoedaFull(kpiSrv['RPO'].val);
+          document.getElementById('kpi-srv-fopag-qtd').innerText = window.formatMil(kpiSrv['FOPAG'].qtd);
+          document.getElementById('kpi-srv-fopag-val').innerText = window.formatMoedaFull(kpiSrv['FOPAG'].val);
+          document.getElementById('kpi-srv-cons-qtd').innerText = window.formatMil(kpiSrv['CONSULTORIA'].qtd);
+          document.getElementById('kpi-srv-cons-val').innerText = window.formatMoedaFull(kpiSrv['CONSULTORIA'].val);
+          const tbodyRanking = document.getElementById('tbody-ranking-usuarios');
+          if (tbodyRanking) {
+            let rankingArr = Object.entries(usuariosInclusaoCount).sort((a, b) => b[1] - a[1]);
+            if (rankingArr.length === 0) {
+              tbodyRanking.innerHTML = `<tr><td colspan="3" class="text-center text-xs text-slate-400 py-6">Nenhum usuário detectado neste período.</td></tr>`;
+            } else {
+              tbodyRanking.innerHTML = rankingArr.map((item, index) => {
+                let pos = index + 1;
+                let icon = `<span class="text-slate-400 font-bold text-xs w-6 inline-block text-center">${pos}º</span>`;
+                if (index === 0) icon = '<span class="material-symbols-outlined text-yellow-500 text-[20px]">workspace_premium</span>';
+
+
+                else if (index === 1) icon = '<span class="material-symbols-outlined text-slate-400 text-[20px]">workspace_premium</span>';
+                else if (index === 2) icon = '<span class="material-symbols-outlined text-amber-700 text-[20px]">workspace_premium</span>';
+
+                let initials = item[0].substring(0, 2).toUpperCase();
+
+                return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-all duration-300">
+             
+                                     <td class="py-3 px-2 w-12 text-center shrink-0">${icon}</td>
+                                    <td class="py-3 px-2 flex items-center gap-3">
+                 
+         <div class="w-8 h-8 rounded-full bg-brandLightBlue/20 text-brandMidBlue flex items-center justify-center font-bold text-xs shrink-0">${initials}</div>
+                                        <span class="text-slate-700 font-bold text-xs truncate max-w-[200px]" title="${item[0]}">${item[0]}</span>
+                    
+  </td>
+                                    <td class="py-3 px-2 text-right">
+                                        <span class="bg-brandGreen/20 text-brandDarkBlue px-3 py-1 rounded-lg font-extrabold text-xs shadow-sm">${item[1]}</span>
+           
+                         </td>
+                                </tr>`;
+              }).join('');
+            }
+          }
+
+          if (window.chartEmissoes30Dias) {
+            window.chartEmissoes30Dias.updateSeries([
+              { name: 'Qtd Notas', type: 'column', data: emissaoQtd30 },
+              { name: 'Valor Faturado (R$)', type: 'column', data: emissaoVal30 }
+            ]);
+            window.chartEmissoes30Dias.updateOptions({ xaxis: { categories: labels30Dias } });
+          }
+          if (window.chartEmissoesAno) {
+            window.chartEmissoesAno.updateSeries([
+              { name: 'Qtd Notas', type: 'column', data: emissaoAnoMesesQtd },
+              { name: 'Valor Faturado (R$)', type: 'column', data: emissaoAnoMesesVal }
+            ]);
+          }
+        }
+
+        if (abaEspecifica === 'todas' || abaEspecifica === 'soulan') {
+          const temSoulanBruto25 = soulanBruto2025.some(v => v > 0);
+          const seriesSoulanBruto = [{ name: 'FAT BRUTO 2026', type: 'column', data: soulanBruto2026 }];
+          let colorsSoulanBruto = ['#59a4d8'];
+          let strokeSoulanBruto = [0]; let fillSoulanBruto = ['solid']; let labelsSoulanBruto = [0];
+          if (temSoulanBruto25) {
+            seriesSoulanBruto.push({ name: 'FAT BRUTO 2025', type: 'column', data: soulanBruto2025 });
+            colorsSoulanBruto.push('#89d5c9'); strokeSoulanBruto.push(0); fillSoulanBruto.push('solid'); labelsSoulanBruto.push(1);
+          }
+          seriesSoulanBruto.push({ name: 'EVOLUÇÃO 2026', type: 'area', data: soulanBruto2026 });
+          colorsSoulanBruto.push('#aad12f'); strokeSoulanBruto.push(3); fillSoulanBruto.push('gradient');
+
+          if (window.chartBrutoGlobal) {
+            window.chartBrutoGlobal.updateOptions({ colors: colorsSoulanBruto, stroke: { width: strokeSoulanBruto, curve: 'smooth' }, fill: { type: fillSoulanBruto, gradient: { shade: 'dark', type: 'vertical', opacityFrom: 0.35, opacityTo: 0 } }, dataLabels: { enabledOnSeries: labelsSoulanBruto } });
+            window.chartBrutoGlobal.updateSeries(seriesSoulanBruto);
+          }
+
+          const temSoulanReal25 = soulanReal2025.some(v => v > 0);
+          const seriesSoulanReal = [{ name: 'FAT REAL 2026', type: 'column', data: soulanReal2026 }];
+          let colorsSoulanReal = ['#aad12f'];
+          let strokeSoulanReal = [0]; let fillSoulanReal = ['solid']; let labelsSoulanReal = [0];
+          if (temSoulanReal25) {
+            seriesSoulanReal.push({ name: 'FAT REAL 2025', type: 'column', data: soulanReal2025 });
+            colorsSoulanReal.push('#efdcbd'); strokeSoulanReal.push(0); fillSoulanReal.push('solid'); labelsSoulanReal.push(1);
+          }
+          seriesSoulanReal.push({ name: 'EVOLUÇÃO 2026', type: 'area', data: soulanReal2026 });
+          colorsSoulanReal.push('#59a4d8'); strokeSoulanReal.push(3); fillSoulanReal.push('gradient');
+
+          if (window.chartRealGlobal) {
+            window.chartRealGlobal.updateOptions({ colors: colorsSoulanReal, stroke: { width: strokeSoulanReal, curve: 'smooth' }, fill: { type: fillSoulanReal, gradient: { shade: 'dark', type: 'vertical', opacityFrom: 0.35, opacityTo: 0 } }, dataLabels: { enabledOnSeries: labelsSoulanReal } });
+            window.chartRealGlobal.updateSeries(seriesSoulanReal);
+          }
+
+          let catEmp = Object.keys(dadosEmpresa.bruto);
+          if (window.chartEmpresaGlobal) {
+            window.chartEmpresaGlobal.updateOptions({ xaxis: { categories: catEmp } });
+            window.chartEmpresaGlobal.updateSeries([{ name: 'FAT BRUTO', data: catEmp.map(e => dadosEmpresa.bruto[e]) }, { name: 'FAT REAL', data: catEmp.map(e => dadosEmpresa.real[e]) }]);
+          }
+
+          let catServ = Object.keys(dadosServico.bruto).sort((a, b) => dadosServico.bruto[b] - dadosServico.bruto[a]);
+          if (window.chartServicoGlobal) {
+            window.chartServicoGlobal.updateOptions({ xaxis: { categories: catServ } });
+            window.chartServicoGlobal.updateSeries([{ name: 'FAT BRUTO', data: catServ.map(e => dadosServico.bruto[e]) }, { name: 'FAT REAL', data: catServ.map(e => dadosServico.real[e]) }]);
+          }
+
+          let top10Comerciais = Object.keys(dadosComercialTotal).sort((a, b) => dadosComercialTotal[b] - dadosComercialTotal[a]).slice(0, 10);
+          let servicosUnicos = new Set();
+          top10Comerciais.forEach(c => Object.keys(dadosComercialServico[c]).forEach(s => servicosUnicos.add(s)));
+          let seriesComercial = Array.from(servicosUnicos).map(srv => {
+            return {
+              name: srv,
+              data: top10Comerciais.map(c => {
+                let val = dadosComercialServico[c][srv];
+                return (typeof val === 'number' && !isNaN(val) && isFinite(val)) ? val : 0;
+              })
+            };
+          });
+          if (window.chartComercialGlobal) {
+            window.chartComercialGlobal.updateOptions({ xaxis: { categories: top10Comerciais, labels: { show: false } } });
+            window.chartComercialGlobal.updateSeries(seriesComercial);
+          }
+
+          window.mapaDadosGlobais = Object.values(mapRegioes).sort((a, b) => b.val - a.val);
+          const tbody = document.getElementById('tabela-estados-body');
+          if (tbody) {
+            if (window.mapaDadosGlobais.length === 0) tbody.innerHTML = `<tr><td colspan="2" class="text-center py-4 text-brandPaleBlue/50 text-xs italic">Nenhum faturamento regional.</td></tr>`;
+            else tbody.innerHTML = window.mapaDadosGlobais.map(est => `<tr class="border-b border-brandMidBlue/50 hover:bg-brandMidBlue/20 transition-colors"><td class="py-3 font-bold text-white">${est.sigla} <span class="text-brandPaleBlue/50 text-xs ml-1 font-normal">(${est.nome})</span></td><td class="py-3 text-right font-bold text-brandGreen">${window.formatMoedaFull(est.val)}</td></tr>`).join('');
+          }
+          window.desenharMapaGeral();
+        }
+
+        if (abaEspecifica === 'todas' || abaEspecifica === 'thomas') {
+          const temThomasBruto25 = thomasBruto2025.some(v => v > 0);
+          const seriesThomasBruto = [{ name: 'FAT BRUTO 2026', type: 'column', data: thomasBruto2026 }];
+          let colorsThomasBruto = ['#59a4d8'];
+          let strokeThomasBruto = [0]; let fillThomasBruto = ['solid']; let labelsThomasBruto = [0];
+          if (temThomasBruto25) {
+            seriesThomasBruto.push({ name: 'FAT BRUTO 2025', type: 'column', data: thomasBruto2025 });
+            colorsThomasBruto.push('#89d5c9'); strokeThomasBruto.push(0); fillThomasBruto.push('solid'); labelsThomasBruto.push(1);
+          }
+          seriesThomasBruto.push({ name: 'EVOLUÇÃO 2026', type: 'area', data: thomasBruto2026 });
+          colorsThomasBruto.push('#aad12f'); strokeThomasBruto.push(3); fillThomasBruto.push('gradient');
+
+          if (window.chartThomasBrutoGlobal) {
+            window.chartThomasBrutoGlobal.updateOptions({ colors: ['#ff5f15', '#434f55'], stroke: { width: strokeThomasBruto, curve: 'smooth' }, fill: { type: fillThomasBruto, gradient: { shade: 'dark', type: 'vertical', opacityFrom: 0.35, opacityTo: 0 } }, dataLabels: { enabledOnSeries: labelsThomasBruto } });
+            window.chartThomasBrutoGlobal.updateSeries(seriesThomasBruto);
+          }
+
+          const temThomasReal25 = thomasReal2025.some(v => v > 0);
+          const seriesThomasReal = [{ name: 'FAT REAL 2026', type: 'column', data: thomasReal2026 }];
+          let colorsThomasReal = ['#aad12f'];
+          let strokeThomasReal = [0]; let fillThomasReal = ['solid']; let labelsThomasReal = [0];
+          if (temThomasReal25) {
+            seriesThomasReal.push({ name: 'FAT REAL 2025', type: 'column', data: thomasReal2025 });
+            colorsThomasReal.push('#efdcbd'); strokeThomasReal.push(0); fillThomasReal.push('solid'); labelsThomasReal.push(1);
+          }
+          seriesThomasReal.push({ name: 'EVOLUÇÃO 2026', type: 'area', data: thomasReal2026 });
+          colorsThomasReal.push('#59a4d8'); strokeThomasReal.push(3); fillThomasReal.push('gradient');
+
+          if (window.chartThomasRealGlobal) {
+            window.chartThomasRealGlobal.updateOptions({ colors: ['#ff5f15', '#434f55'], stroke: { width: strokeThomasReal, curve: 'smooth' }, fill: { type: fillThomasReal, gradient: { shade: 'dark', type: 'vertical', opacityFrom: 0.35, opacityTo: 0 } }, dataLabels: { enabledOnSeries: labelsThomasReal } });
+            window.chartThomasRealGlobal.updateSeries(seriesThomasReal);
+          }
+
+          let catServNeat = Object.keys(dadosServicoNeat.bruto);
+          if (window.chartThomasServicoGlobal) {
+            window.chartThomasServicoGlobal.updateOptions({ xaxis: { categories: catServNeat } });
+            window.chartThomasServicoGlobal.updateSeries([{ name: 'FAT BRUTO', data: catServNeat.map(e => dadosServicoNeat.bruto[e]) }, { name: 'FAT REAL', data: catServNeat.map(e => dadosServicoNeat.real[e]) }]);
+          }
+
+          let top10ComerciaisNeat = Object.keys(dadosComercialNeatTotal).sort((a, b) => dadosComercialNeatTotal[b] - dadosComercialNeatTotal[a]).slice(0, 10);
+          let servicosUnicosNeat = new Set();
+          top10ComerciaisNeat.forEach(c => Object.keys(dadosComercialNeatServico[c]).forEach(s => servicosUnicosNeat.add(s)));
+          let seriesComercialNeat = Array.from(servicosUnicosNeat).map(srv => {
+            return {
+              name: srv,
+              data: top10ComerciaisNeat.map(c => {
+                let val = dadosComercialNeatServico[c][srv];
+                return (typeof val === 'number' && !isNaN(val) && isFinite(val)) ? val : 0;
+              })
+            };
+          });
+          if (window.chartThomasComercialGlobal) {
+            window.chartThomasComercialGlobal.updateOptions({ xaxis: { categories: top10ComerciaisNeat, labels: { show: false } } });
+            window.chartThomasComercialGlobal.updateSeries(seriesComercialNeat);
+          }
+        }
+
+        // RENDERIZAÇÃO DA ABA FECHAMENTO (Premium Matrix)
+        if (abaEspecifica === 'todas' || abaEspecifica === 'fechamento') {
+          const renderTable = (pivotDict, cols, tipo) => {
+            let sortedKeys = Object.keys(pivotDict).sort((a, b) => pivotDict[b][tipo].TOTAL - pivotDict[a][tipo].TOTAL);
+            if (sortedKeys.length === 0) {
+              return `<tr><td colspan="${cols.length + 2}" class="text-center py-4 text-slate-400 text-xs italic">Nenhum dado encontrado para o período/filtros.</td></tr>`;
+            }
+
+            const formatVal = (v) => {
+              if (!v || v === 0) return `<span class="text-slate-300">-</span>`;
+              return `<span class="text-slate-600 font-semibold">${window.formatMoedaFull(v)}</span>`;
+            };
+
+            let html = '';
+            let totCol = { TOTAL: 0 };
+            cols.forEach(c => totCol[c] = 0);
+
+            sortedKeys.forEach(com => {
+              let row = pivotDict[com][tipo];
+              cols.forEach(c => totCol[c] += (row[c] || 0));
+              totCol.TOTAL += row.TOTAL;
+
+              html += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                  <td class="sticky left-0 z-10 bg-slate-200 group-hover:bg-slate-300 px-2 py-1.5 text-[11px] font-extrabold text-brandDarkBlue border-r-2 border-slate-300 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.05)]">${com}</td>`;
+              cols.forEach(c => {
+                html += `<td class="px-2 py-1.5 text-[11px] text-right whitespace-nowrap">${formatVal(row[c])}</td>`;
+              });
+              html += `<td class="px-2 py-1.5 text-[11px] text-right bg-slate-50 font-extrabold text-brandDarkBlue whitespace-nowrap">${formatVal(row.TOTAL)}</td></tr>`;
+            });
+            // Linha Final (Rodapé Total Geral)
+            const isThomas = cols.includes("DEVOLUTIVA");
+            const footerBg = isThomas ? "bg-[#ff5f15]" : "bg-brandGreen/10";
+            const footerBorder = isThomas ? "border-[#ffefe8]" : "border-brandGreen";
+            const footerText = isThomas ? "text-[#ffefe8]" : "text-brandDarkBlue";
+            const footerCellBg = isThomas ? "bg-[#ff5f15]" : "bg-[#f0f9d9]";
+
+            html += `<tr class="sticky bottom-0 z-20 ${footerBg} border-t-2 ${footerBorder} shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                  <td class="sticky left-0 z-10 ${footerCellBg} px-2 py-1.5 text-[11px] font-extrabold ${footerText} border-r-2 border-slate-300 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.05)]">TOTAL GERAL</td>`;
+            cols.forEach(c => {
+              html += `<td class="px-2 py-1.5 text-[11px] text-right font-extrabold ${footerText} whitespace-nowrap">${formatVal(totCol[c])}</td>`;
+            });
+            html += `<td class="px-2 py-1.5 text-[11px] text-right ${isThomas ? 'bg-[#ff5f15]' : 'bg-brandGreen/20'} font-extrabold ${footerText} whitespace-nowrap">${formatVal(totCol.TOTAL)}</td></tr>`;
+
+            return html;
+          };
+          const colsSoulan = ["CONSULTORIA", "ESTAGIO", "FOPAG", "RPO", "TEMPORARIO", "TERCEIROS"];
+          const colsThomas = ["DEVOLUTIVA", "INTEGRAÇÃO", "SUBSCRIPTION", "TREINAMENTO", "UNIDADES", "HOTMART", "ASSESSMENT"];
+          const tbodySoulanBruto = document.getElementById('tbody-fech-soulan-bruto');
+          const tbodySoulanReal = document.getElementById('tbody-fech-soulan-real');
+          const tbodyThomasBruto = document.getElementById('tbody-fech-thomas-bruto');
+          const tbodyThomasReal = document.getElementById('tbody-fech-thomas-real');
+          if (tbodySoulanBruto) tbodySoulanBruto.innerHTML = renderTable(pivotSoulan, colsSoulan, 'bruto');
+          if (tbodySoulanReal) tbodySoulanReal.innerHTML = renderTable(pivotSoulan, colsSoulan, 'real');
+          if (tbodyThomasBruto) tbodyThomasBruto.innerHTML = renderTable(pivotThomas, colsThomas, 'bruto');
+          if (tbodyThomasReal) tbodyThomasReal.innerHTML = renderTable(pivotThomas, colsThomas, 'real');
+
+          const kpiN = document.getElementById('kpi-fech-notas');
+          const kpiB = document.getElementById('kpi-fech-bruto');
+          const kpiR = document.getElementById('kpi-fech-real');
+
+          if (kpiN) kpiN.innerText = arrayDeDados.length.toLocaleString('pt-BR');
+          if (kpiB) kpiB.innerText = window.formatMoedaFull(fatBrutoGlobal);
+          if (kpiR) kpiR.innerText = window.formatMoedaFull(fatRealGlobal);
+        }
+      } catch (err) {
+        console.error("Erro no processamento do motor:", err);
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+      const colOpt = {
+        chart: { type: 'line', foreColor: '#ffffff', toolbar: { show: false }, background: 'transparent', animations: { enabled: true } },
+        tooltip: { theme: 'dark', y: { formatter: function (val) { return window.formatMoedaFull(val); } } },
+        grid: { borderColor: 'rgba(255,255,255,0.1)', strokeDashArray: 4 },
+        plotOptions: {
+          bar: { horizontal: false, borderRadius: 2, columnWidth: '55%', dataLabels: { position: 'top' } }
+        },
+        dataLabels: {
+          enabled: true,
+          formatter: function (val) {
+            if (!val || isNaN(val) || val === 0 || !isFinite(val)) return "";
+            return window.formatMil(val);
+          },
+
+          offsetY: -22, style: { fontSize: '10px', colors: ["#ffffff"] }, background: { enabled: false }, dropShadow: { enabled: true, top: 1, left: 1, blur: 2, color: '#000', opacity: 0.8 }
+        },
+        xaxis: { categories: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'], labels: { style: { colors: '#ffffff', fontSize: '9px', hideOverlappingLabels: false } } },
+        yaxis: { labels: { show: false } },
+
+        legend: { position: 'top', horizontalAlign: 'left', labels: { colors: '#ffffff' } }
+      };
+      const simpleBarOpt = {
+        ...colOpt,
+        chart: { type: 'bar', foreColor: '#ffffff', toolbar: { show: false }, background: 'transparent', animations: { enabled: true } }
+      };
+      window.chartBrutoGlobal = new ApexCharts(document.querySelector("#chart-bruto"), { ...colOpt, chart: { ...colOpt.chart, height: 320 }, series: [], colors: [] }); window.chartBrutoGlobal.render();
+      window.chartRealGlobal = new ApexCharts(document.querySelector("#chart-realizado"), { ...colOpt, chart: { ...colOpt.chart, height: 320 }, series: [], colors: [] }); window.chartRealGlobal.render();
+      window.chartEmpresaGlobal = new ApexCharts(document.querySelector("#chart-empresa"), { ...simpleBarOpt, chart: { ...simpleBarOpt.chart, height: 320 }, xaxis: { categories: [], labels: { style: { colors: '#ffffff' } } }, series: [], colors: ['#59a4d8', '#aad12f'] });
+      window.chartEmpresaGlobal.render();
+      window.chartServicoGlobal = new ApexCharts(document.querySelector("#chart-servico"), { ...simpleBarOpt, chart: { ...simpleBarOpt.chart, height: 320 }, xaxis: { categories: [], labels: { style: { colors: '#ffffff' } } }, series: [], colors: ['#ff8864', '#89d5c9'] });
+      window.chartServicoGlobal.render();
+
+      const hrOpt = {
+        chart: { type: 'bar', height: 480, foreColor: '#ffffff', toolbar: { show: false }, background: 'transparent', stacked: true, animations: { enabled: true } },
+        series: [], colors: ['#59a4d8', '#aad12f', '#ff8864', '#89d5c9', '#efdcbd', '#1a4895'],
+        plotOptions: {
+          bar: {
+            horizontal: true, borderRadius: 2,
+            dataLabels: {
+
+              total: {
+                enabled: true,
+                formatter: function (w) {
+                  let sum = 0;
+                  if (typeof w === 'number') { sum = w; }
+                  else if (w && w.globals && w.globals.seriesTotals) {
+                    sum = w.globals.seriesTotals[w.dataPointIndex];
+                  }
+                  if (!sum || isNaN(sum) || sum === 0 || !isFinite(sum)) return "";
+                  return window.formatMil(sum);
+                },
+                style: { color: '#ffffff', fontSize: '10px', fontWeight: 'bold' }
+              }
+            }
+          }
+        },
+        xaxis: { labels: { show: false }, axisBorder: { show: false }, axisTicks: { show: false } },
+
+        yaxis: { labels: { show: true, style: { colors: '#ffffff', fontSize: '11px', fontFamily: 'Manrope' }, maxWidth: 160 } },
+        dataLabels: {
+          enabled: true, hideOverflowingLabels: false,
+          formatter: function (val) {
+            if (!val || isNaN(val) || val === 0 || !isFinite(val)) return "";
+            return window.formatMil(val);
+          },
+          style: { fontSize: '10px', colors: ['#ffffff'] }, dropShadow: { enabled: true, top: 1, left: 1, blur: 2, color: '#000', opacity: 0.8 }
+        },
+        tooltip: {
+          theme: 'dark', y: {
+            formatter: function (val) {
+              return window.formatMoedaFull(val);
+            }
+          }
+        },
+        grid: { borderColor: 'rgba(255,255,255,0.1)' },
+        legend: { position: 'top', horizontalAlign: 'left', labels: { colors: '#ffffff' } }
+      };
+      window.chartComercialGlobal = new ApexCharts(document.querySelector("#chart-comercial"), hrOpt); window.chartComercialGlobal.render();
+      window.chartThomasBrutoGlobal = new ApexCharts(document.querySelector("#chart-thomas-bruto"), { ...colOpt, chart: { ...colOpt.chart, height: 320 }, series: [], colors: [] });
+      window.chartThomasBrutoGlobal.render();
+      window.chartThomasRealGlobal = new ApexCharts(document.querySelector("#chart-thomas-realizado"), { ...colOpt, chart: { ...colOpt.chart, height: 320 }, series: [], colors: [] }); window.chartThomasRealGlobal.render();
+      window.chartThomasServicoGlobal = new ApexCharts(document.querySelector("#chart-thomas-servico"), { ...simpleBarOpt, chart: { ...simpleBarOpt.chart, height: 350 }, xaxis: { categories: [], labels: { style: { colors: '#ffffff' } } }, series: [], colors: ['#ff5f15', '#434f55', '#1e293b', '#fb923c', '#94a3b8'] });
+      window.chartThomasServicoGlobal.render();
+      window.chartThomasComercialGlobal = new ApexCharts(document.querySelector("#chart-thomas-comercial"), { ...hrOpt, chart: { ...hrOpt.chart, height: 400 }, series: [], colors: ['#ff5f15', '#434f55', '#1e293b', '#fb923c', '#94a3b8'] });
+      window.chartThomasComercialGlobal.render();
+
+      const optEmissoesDesign = {
+        chart: {
+          type: 'bar', height: 350, foreColor: '#ffffff', toolbar: { show: false },
+          events: {
+            dataPointSelection: function (event, chartContext, config) {
+              const index = config.dataPointIndex;
+              if (chartContext.el.id === "chart-emissoes-30dias" && index !== -1 && window.labels30DiasIso && window.labels30DiasIso[index]) {
+                const dateIso = window.labels30DiasIso[index];
+                document.getElementById('filtro-modal-data-inicio').value = dateIso;
+                document.getElementById('filtro-modal-data-fim').value = dateIso;
+                window.aplicarFiltrosModal();
+                document.getElementById('btn-limpar-filtro-grafico').classList.remove('hidden');
+                document.getElementById('btn-limpar-filtro-grafico').classList.add('flex');
+              }
+              if (chartContext.el.id === "chart-emissoes-ano" && index !== -1) {
+                const hoje = new Date();
+                const year = hoje.getFullYear();
+                const month = String(index + 1).padStart(2, '0');
+                const lastDay = new Date(year, index + 1, 0).getDate();
+                document.getElementById('filtro-modal-data-inicio').value = `${year}-${month}-01`;
+                document.getElementById('filtro-modal-data-fim').value = `${year}-${month}-${lastDay}`;
+                window.aplicarFiltrosModal();
+                document.getElementById('btn-limpar-filtro-grafico').classList.remove('hidden');
+                document.getElementById('btn-limpar-filtro-grafico').classList.add('flex');
+              }
+            }
+          }
+        },
+        plotOptions: { bar: { horizontal: false, columnWidth: '70%', borderRadius: 2, dataLabels: { position: 'top' } } },
+        dataLabels: {
+          enabled: true,
+          enabledOnSeries: [0, 1],
+
+          formatter: function (val, opts) {
+            if (!val || isNaN(val) || val === 0 || !isFinite(val)) return "";
+            if (opts.seriesIndex === 0) return val;
+            return window.formatMil(val);
+          },
+          style: { fontSize: '9px', fontWeight: 'bold', colors: ["#ffffff"] },
+          offsetY: -20, background: { enabled: false }, dropShadow: { enabled: true, top: 1, left: 1, blur: 2, color: '#000', opacity: 0.8 }
+        },
+        stroke: { show: true, width: 2, colors: ['transparent'] },
+        colors: ['#aad12f', '#59a4d8'],
+        xaxis:
+          { categories: [], labels: { style: { colors: '#ffffff', fontSize: '9px' } }, axisBorder: { show: true, color: 'rgba(255,255,255,0.2)' } },
+        yaxis: [{ show: false, min: 0 }, { show: false, opposite: true, min: 0 }],
+        grid: { borderColor: 'rgba(255,255,255,0.1)', strokeDashArray: 4 },
+        legend: { position: 'top', horizontalAlign: 'left', labels: { colors: '#ffffff' } },
+        tooltip: {
+          theme: 'dark', shared: true, intersect: false,
+
+          y: {
+            formatter: function (y, opts) {
+              if (typeof y !== "undefined") {
+                if (opts.seriesIndex === 0) return y.toFixed(0) + " notas";
+                return window.formatMoedaFull(y);
+              }
+              return y;
+            }
+          }
+        }
+      };
+      window.chartEmissoes30Dias = new ApexCharts(document.querySelector("#chart-emissoes-30dias"), {
+        ...optEmissoesDesign, series: [{ name: 'Qtd Notas', type: 'column', data: [] }, { name: 'Valor Faturado (R$)', type: 'column', data: [] }]
+      });
+      window.chartEmissoes30Dias.render();
+
+      window.chartEmissoesAno = new ApexCharts(document.querySelector("#chart-emissoes-ano"), {
+        ...optEmissoesDesign, chart: { ...optEmissoesDesign.chart, height: 320 },
+        xaxis: { ...optEmissoesDesign.xaxis, categories: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] },
+        series: [{ name: 'Qtd Notas', type: 'column', data: [] }, { name: 'Valor Faturado (R$)', type: 'column', data: [] }]
+      });
+      window.chartEmissoesAno.render();
+    });
+
+    window.mapaDadosGlobais = [];
+    window.desenharMapaGeral = function () {
+      if (typeof google === 'undefined' || !google.visualization) return;
+      const mapEl = document.getElementById('chart-mapa-brasil');
+
+      if (!mapEl || mapEl.offsetWidth === 0) return;
+
+      let dadosUsar = window.mapaDadosGlobais;
+      if (!dadosUsar || dadosUsar.length === 0) return;
+
+      var data = new google.visualization.DataTable();
+      data.addColumn('string', 'Estado');
+      data.addColumn('number', 'Faturamento');
+      const validos = dadosUsar.filter(e => e.val > 0);
+      const rows = validos.map(e => [e.id, e.val]);
+      data.addRows(rows);
+
+      var options = {
+        region: 'BR',
+        resolution: 'provinces',
+        colorAxis: { colors: ['#59a4d8', '#1a4895', '#aad12f'] },
+        backgroundColor: 'transparent',
+        datalessRegionColor: '#f1f5f9',
+        defaultColor: '#1a4895',
+        legend: 'none'
+      };
+
+      var chart = new google.visualization.GeoChart(mapEl);
+      chart.draw(data, options);
+    };
+    if (typeof google !== 'undefined') google.charts.load('current', { 'packages': ['geochart'] });
+
+    window.graficosGauges = {};
+    
+    window.inicializarGraficosMetas = function() {
+      const gaugeOpt = {
+        chart: { type: 'radialBar', height: 160, sparkline: { enabled: true } },
+        plotOptions: { radialBar: { startAngle: -90, endAngle: 90, track: { background: "#e2e8f0", strokeWidth: '97%', margin: 5, dropShadow: { enabled: true, top: 2, left: 0, color: '#999', opacity: 1, blur: 2 } }, dataLabels: { name: { show: false }, value: { offsetY: -2, fontSize: '14px', fontWeight: 'bold', color: '#002443', formatter: function (val) { return val.toFixed(1) + "%"; } } } } },
+        fill: { type: 'gradient', gradient: { shade: 'light', shadeIntensity: 0.4, inverseColors: false, opacityFrom: 1, opacityTo: 1, stops: [0, 50, 53, 91] } }
+      };
+
+      const mapGauges = [
+        { id: '#gauge-geral', key: 'GERAL', color: '#aad12f' },
+        { id: '#gauge-cons-rpo', key: 'Consultoria & RPO', color: '#aad12f' },
+        { id: '#gauge-est-fopag', key: 'Estágio & Fopag', color: '#59a4d8' },
+        { id: '#gauge-thomas', key: 'THOMAS', color: '#ff5f15' },
+        { id: '#gauge-temporario', key: 'Temporário', color: '#1a4895' },
+        { id: '#gauge-terceirizados', key: 'Terceirizados', color: '#ff8864' }
+      ];
+
+      mapGauges.forEach(g => {
+        if(document.querySelector(g.id)) {
+            window.graficosGauges[g.key] = new ApexCharts(document.querySelector(g.id), { ...gaugeOpt, series: [0], colors: [g.color] });
+            window.graficosGauges[g.key].render();
+        }
+      });
+
+      if(document.querySelector("#chart-meta-anual-fat")) {
+          window.chartMetaAnualFat = new ApexCharts(document.querySelector("#chart-meta-anual-fat"), {
+              chart: { height: 250, type: 'bar', toolbar: { show: false } },
+              plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 8, dataLabels: { position: 'top' } } },
+              colors: ['#002443', '#aad12f'],
+              series: [{ name: 'Meta Total', data: [0] }, { name: 'Faturamento Real', data: [0] }],
+              xaxis: { categories: ['Total Acumulado'], labels: { formatter: function(val) { return window.formatMil(val); } } },
+              dataLabels: { enabled: true, formatter: function(val) { return window.formatMoedaFull(val); }, style: { colors: ['#fff'] }, offsetX: -20 },
+              legend: { position: 'top' }
+          });
+          window.chartMetaAnualFat.render();
+      }
+
+      if(document.querySelector("#chart-metas-mensal")) {
+          window.chartMetasMensal = new ApexCharts(document.querySelector("#chart-metas-mensal"), {
+            chart: { height: 350, type: 'line', stacked: true, toolbar: { show: false } },
+            series: [
+                { name: 'Consultoria & RPO', type: 'column', data: [] },
+                { name: 'Estágio & Fopag', type: 'column', data: [] },
+                { name: 'THOMAS', type: 'column', data: [] },
+                { name: 'Temporário', type: 'column', data: [] },
+                { name: 'Terceirizados', type: 'column', data: [] },
+                { name: 'Meta Geral Total', type: 'line', data: [] }
+            ],
+            stroke: { width: [0, 0, 0, 0, 0, 3], curve: 'smooth' },
+            colors: ['#aad12f', '#59a4d8', '#ff5f15', '#1a4895', '#ff8864', '#002443'],
+            dataLabels: { enabled: false },
+            xaxis: { categories: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] },
+            yaxis: { labels: { formatter: function(val) { return window.formatMil(val); } } },
+            tooltip: { shared: true, intersect: false, y: { formatter: function (val) { return window.formatMoedaFull(val); } } },
+            legend: { position: 'top' }
+          });
+          window.chartMetasMensal.render();
+      }
+    };
+
+    window.processarDashMetas = function() {
+        if(!window.dadosGlobaisFirestore || !window.dadosMetasGlobais) return;
+        
+        const anoFiltro = document.getElementById('filtro-ano-dash-metas').value;
+        const mesFiltro = document.getElementById('filtro-mes-dash-metas').value;
+        
+        // 1. Processar Lançamentos (Realizado)
+        let faturamentoPorMesProduto = {
+            'Consultoria & RPO': Array(12).fill(0),
+            'Estágio & Fopag': Array(12).fill(0),
+            'THOMAS': Array(12).fill(0),
+            'Temporário': Array(12).fill(0),
+            'Terceirizados': Array(12).fill(0)
+        };
+
+        window.dadosGlobaisFirestore.forEach(data => {
+            const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
+            const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
+            const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
+            
+            if(!isRecebido) return;
+            
+            let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
+            if(!dRef || dRef.getFullYear() != anoFiltro) return;
+
+            const vFatura = Number(window.extrairNum(data['valor_fatura'] || data['Valor Fatura'] || data['valor'])) || 0;
+            const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
+            const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
+            const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+
+            let faturReal = 0;
+            let grupoMeta = null;
+
+            if (tipoServicoRaw.includes("TEMPORA")) { faturReal = vTaxa; grupoMeta = 'Temporário'; }
+            else if (tipoServicoRaw.includes("TERCEIROS")) { faturReal = vTaxa; grupoMeta = 'Terceirizados'; }
+            else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) { faturReal = vTaxa; grupoMeta = 'Estágio & Fopag'; }
+            else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) { faturReal = vTaxa; grupoMeta = 'Consultoria & RPO'; }
+            else if (empresa === "NEAT") { faturReal = vTaxa * 0.55; grupoMeta = 'THOMAS'; }
+
+            if(grupoMeta) {
+                faturamentoPorMesProduto[grupoMeta][dRef.getMonth()] += faturReal;
+            }
+        });
+
+        // 2. Processar Metas e Cálculo Global
+        const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+        let metaTotalGeralAnual = 0;
+        let realTotalGeralAnual = 0;
+        let metaTotalMesesGlobal = Array(12).fill(0);
+
+        const keysProdutos = Object.keys(faturamentoPorMesProduto);
+        keysProdutos.forEach(grupo => {
+            const metaDoc = window.dadosMetasGlobais.find(m => m.ano == anoFiltro && m.produto === grupo);
+            const realMeses = faturamentoPorMesProduto[grupo];
+            
+            // Cálculos baseados no filtro de período
+            let realPeriodo = 0;
+            let metaPeriodo = 0;
+
+            if (mesFiltro === 'todos') {
+                realPeriodo = realMeses.reduce((a, b) => a + b, 0);
+                metaPeriodo = metaDoc ? metaDoc.total : 0;
+            } else {
+                realPeriodo = realMeses[parseInt(mesFiltro)];
+                metaPeriodo = (metaDoc && metaDoc.meses) ? (metaDoc.meses[refMeses[parseInt(mesFiltro)]] || 0) : 0;
+            }
+
+            metaTotalGeralAnual += metaPeriodo;
+            realTotalGeralAnual += realPeriodo;
+
+            // Atualizar Gauge Individual
+            let perc = metaPeriodo > 0 ? (realPeriodo / metaPeriodo) * 100 : 0;
+            if(perc > 100) perc = 100;
+
+            if(window.graficosGauges[grupo]) {
+                window.graficosGauges[grupo].updateSeries([perc]);
+            }
+
+            // Atualizar Labels Gauges
+            let lblMap = { 'Consultoria & RPO': 'lbl-meta-cons-rpo', 'Estágio & Fopag': 'lbl-meta-est-fopag', 'THOMAS': 'lbl-meta-thomas', 'Temporário': 'lbl-meta-temporario', 'Terceirizados': 'lbl-meta-terceirizados' };
+            let lblEl = document.getElementById(lblMap[grupo]);
+            if(lblEl) {
+                let falta = metaPeriodo - realPeriodo;
+                let percFalta = metaPeriodo > 0 ? (falta / metaPeriodo) * 100 : 0;
+                let txtFalta = falta > 0 ? `Falta: ${window.formatMil(falta)} (${percFalta.toFixed(1)}%)` : `<span class="text-brandGreen">Meta Superada!</span>`;
+                
+                lblEl.innerHTML = `
+                    <div class="flex justify-center items-center gap-1"><span class="text-brandDarkBlue">${window.formatMil(realPeriodo)}</span> / ${window.formatMil(metaPeriodo)}</div>
+                    <hr class="border-slate-200 my-1 w-1/2 mx-auto">
+                    <span class="text-orange-500 text-[10px] block font-extrabold uppercase tracking-tight">${txtFalta}</span>
+                `;
+            }
+
+            // Preparar dados para o gráfico consolidado (sempre 12 meses)
+            if(metaDoc && metaDoc.meses) {
+                refMeses.forEach((m, idx) => { metaTotalMesesGlobal[idx] += (metaDoc.meses[m] || 0); });
+            }
+        });
+
+        // 3. Atualizar Gauge GERAL
+        if(window.graficosGauges['GERAL']) {
+            let percGeral = metaTotalGeralAnual > 0 ? (realTotalGeralAnual / metaTotalGeralAnual) * 100 : 0;
+            if(percGeral > 100) percGeral = 100;
+            window.graficosGauges['GERAL'].updateSeries([percGeral]);
+            
+            let faltaGeral = metaTotalGeralAnual - realTotalGeralAnual;
+            let percFaltaGeral = metaTotalGeralAnual > 0 ? (faltaGeral / metaTotalGeralAnual) * 100 : 0;
+            let txtFaltaG = faltaGeral > 0 ? `Falta: ${window.formatMil(faltaGeral)} (${percFaltaGeral.toFixed(1)}%)` : `<span class="text-brandGreen">Meta Superada!</span>`;
+
+            document.getElementById('lbl-meta-geral').innerHTML = `
+                <div class="flex justify-center items-center gap-1"><span class="text-white">${window.formatMil(realTotalGeralAnual)}</span> / ${window.formatMil(metaTotalGeralAnual)}</div>
+                <hr class="border-white/20 my-1 w-1/2 mx-auto">
+                <span class="text-brandGreen text-[10px] block font-extrabold pb-1">${txtFaltaG}</span>
+            `;
+        }
+
+        // 4. Atualizar Gráfico Anual (Barra Horizontal)
+        if(window.chartMetaAnualFat) {
+            window.chartMetaAnualFat.updateSeries([
+                { name: 'Meta Total', data: [metaTotalGeralAnual] },
+                { name: 'Faturamento Real', data: [realTotalGeralAnual] }
+            ]);
+        }
+
+        // 5. Atualizar Gráfico Mensal Consolidado (Timeline)
+        if(window.chartMetasMensal) {
+            window.chartMetasMensal.updateSeries([
+                { name: 'Consultoria & RPO', data: faturamentoPorMesProduto['Consultoria & RPO'] },
+                { name: 'Estágio & Fopag', data: faturamentoPorMesProduto['Estágio & Fopag'] },
+                { name: 'THOMAS', data: faturamentoPorMesProduto['THOMAS'] },
+                { name: 'Temporário', data: faturamentoPorMesProduto['Temporário'] },
+                { name: 'Terceirizados', data: faturamentoPorMesProduto['Terceirizados'] },
+                { name: 'Meta Geral Total', data: metaTotalMesesGlobal }
+            ]);
+        }
+    };
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { renderSidebar } from "../sidebar.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+      authDomain: "centra-fin.firebaseapp.com",
+      projectId: "centra-fin",
+      storageBucket: "centra-fin.firebasestorage.app",
+      messagingSenderId: "666471089411",
+      appId: "1:666471089411:web:4630f5b2ced70ceb981536"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const docRef = doc(db, "Usuarios", user.uid);
+          const docSnap = await getDoc(docRef);
+
+          if (docSnap.exists()) {
+            const userProfile = docSnap.data().perfil;
+            renderSidebar(userProfile);
+
+
+            if (userProfile !== 'master') window.location.href = "../contas_a_receber_desktop/code.html";
+          } else {
+            renderSidebar('comum');
+          }
+
+          const q = query(collection(db, "Lancamentos"), where("tipo", "==", "receita"));
+          const querySnapshot = await getDocs(q);
+
+          window.dadosGlobaisFirestore = [];
+          querySnapshot.forEach(doc => {
+            const data = doc.data();
+
+            // 🛑 BLOQUEIO DE LIXO DO EXCEL: Ignora linhas de subtotal que inflavam 65 Milhões
+            const nfStr = String(data['nf'] || data['Nº NF'] || data['Nº NF-e'] || data['NF'] || "").toUpperCase().trim();
+            if (!nfStr.includes('TOTAL') && !nfStr.includes('TOTAIS')) {
+              window.dadosGlobaisFirestore.push(data);
+            }
+          });
+
+
+          window.popularListasFiltro(window.dadosGlobaisFirestore);
+          window.processarEAtualizarGraficos(window.dadosGlobaisFirestore, 'todas');
+
+          // Buscar Metas Financeiras
+          const metasSnapshot = await getDocs(collection(db, "MetasFinanceiras"));
+          window.dadosMetasGlobais = [];
+          metasSnapshot.forEach(doc => {
+             window.dadosMetasGlobais.push(doc.data());
+          });
+          
+          // Renderizar Metas
+          setTimeout(() => {
+             if(typeof window.inicializarGraficosMetas === 'function') window.inicializarGraficosMetas();
+             if(typeof window.processarDashMetas === 'function') window.processarDashMetas();
+          }, 500);
+
+        } catch (error) {
+          console.error("Erro Firebase:", error);
+        }
+      } else {
+        window.location.href = "../login.html";
+      }
+    });
+
+    // EVENT DELEGATION PARA O BOTÃO DE LOGOUT
+    document.addEventListener('click', async (e) => {
+      const logoutBtn = e.target.closest('#btn-logout');
+      if (logoutBtn) {
+        e.preventDefault();
+        await signOut(auth);
+        window.location.href = "../login.html";
+      }
+    });
+  </script>
+</body>
+
+</html>

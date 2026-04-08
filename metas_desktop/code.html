@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Metas - CentraFin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300,1&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'] },
+                    colors: {
+                        brandGreen: '#aad12f', brandDarkBlue: '#002443', brandMidBlue: '#1a4895',
+                        brandLightBlue: '#59a4d8', brandPaleBlue: '#bfd7ea', brandAqua: '#89d5c9', brandOrange: '#ff8864'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(26, 72, 149, 0.2);
+            border-radius: 4px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #59a4d8;
+            border-radius: 4px;
+        }
+
+        /* Loader CSS */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #aad12f;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex antialiased bg-slate-50">
+
+    <div id="sidebar-container"></div>
+
+    <main class="flex-1 ml-[80px] w-full min-h-screen flex flex-col transition-all duration-300">
+        <header
+            class="bg-white border-b border-slate-200 sticky top-0 z-40 h-16 shadow-sm px-6 flex items-center justify-between">
+            <h1 class="text-lg font-extrabold tracking-wide text-brandDarkBlue">Gestão de Metas Financeiras</h1>
+        </header>
+
+        <div class="p-6 overflow-hidden relative">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-brandDarkBlue mb-1 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-brandAqua text-3xl">track_changes</span> Metas
+                        Anuais por Produto
+                    </h2>
+                    <p class="text-slate-500 text-sm font-medium">Cadastre e gerencie os objetivos financeiros da
+                        operação.</p>
+                </div>
+                <button onclick="window.abrirModalMeta()"
+                    class="bg-brandGreen text-brandDarkBlue px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-[0_4px_15px_rgba(170,209,47,0.2)] hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">add_circle</span> Cadastrar Nova Meta
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-brandDarkBlue">Relação de Metas Cadastradas</h3>
+                    <select id="filtro-ano" onchange="window.carregarMetas()"
+                        class="bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg px-3 py-1.5 outline-none focus:border-brandGreen shadow-sm cursor-pointer">
+                    </select>
+                </div>
+                <div class="overflow-x-auto custom-scroll">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead
+                            class="bg-slate-100/50 text-slate-400 text-[10px] uppercase tracking-widest font-extrabold border-b border-slate-200">
+                            <tr>
+                                <th class="px-6 py-4">Ano</th>
+                                <th class="px-6 py-4">Produto / Serviço</th>
+                                <th class="px-6 py-4 text-right">Meta Anual Bruta</th>
+                                <th class="px-6 py-4 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-metas" class="text-slate-600">
+                            <tr>
+                                <td colspan="4"
+                                    class="text-center py-10 text-slate-400 text-xs italic flex flex-col items-center justify-center gap-2">
+                                    <div class="loader mb-2"></div>
+                                    Carregando metas...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="modal-meta"
+        class="fixed inset-0 z-[100] bg-black/60 hidden items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+        <div class="bg-white border border-slate-200 p-6 rounded-2xl shadow-2xl w-full max-w-3xl transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto custom-scroll"
+            id="modal-meta-content">
+
+            <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-3">
+                <h2 id="modal-titulo" class="text-brandDarkBlue font-extrabold text-lg flex items-center gap-2">
+                    <span class="material-symbols-outlined text-brandAqua">edit_square</span> Cadastrar Meta
+                </h2>
+                <button onclick="window.fecharModalMeta()"
+                    class="text-slate-400 hover:text-brandOrange transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1 block">Ano de
+                        Referência</label>
+                    <select id="input-ano"
+                        class="w-full bg-slate-50 border border-slate-200 text-brandDarkBlue text-sm font-bold rounded-lg px-3 py-2.5 outline-none focus:border-brandGreen focus:bg-white transition-colors">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1 block">Produto /
+                        Serviço</label>
+                    <select id="input-produto"
+                        class="w-full bg-slate-50 border border-slate-200 text-brandDarkBlue text-sm font-bold rounded-lg px-3 py-2.5 outline-none focus:border-brandGreen focus:bg-white transition-colors">
+                        <option value="Consultoria & RPO">Consultoria & RPO</option>
+                        <option value="Estágio & Fopag">Estágio & Fopag</option>
+                        <option value="THOMAS">THOMAS</option>
+                        <option value="Temporário">Temporário</option>
+                        <option value="Terceirizados">Terceirizados</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 mb-6">
+                <h3
+                    class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">calendar_month</span> Desdobramento Mensal
+                </h3>
+
+                <div class="grid grid-cols-3 md:grid-cols-4 gap-4" id="grid-meses">
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center bg-brandDarkBlue p-4 rounded-xl shadow-inner mb-8">
+                <span class="text-brandPaleBlue font-bold text-sm">META ANUAL TOTAL:</span>
+                <span class="text-brandGreen font-extrabold text-2xl" id="display-total">R$ 0,00</span>
+            </div>
+
+            <div class="flex gap-3 justify-end">
+                <button onclick="window.fecharModalMeta()"
+                    class="px-6 py-2.5 border border-slate-200 text-slate-500 rounded-lg font-bold hover:bg-slate-50 transition text-sm">Cancelar</button>
+                <button id="btn-salvar-meta" onclick="window.salvarMeta()"
+                    class="px-6 py-2.5 bg-brandGreen text-brandDarkBlue rounded-lg font-extrabold hover:bg-opacity-90 transition shadow-md text-sm flex items-center gap-2">
+                    Salvar Meta Financeira
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="modal-alerta-sistema" class="fixed inset-0 z-[200] bg-black/60 hidden items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+        <div class="bg-white border border-slate-200 p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 bg-brandOrange/10 text-brandOrange rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined text-4xl">warning</span>
+            </div>
+            <h3 class="text-brandDarkBlue font-extrabold text-xl mb-2">Aviso do Sistema</h3>
+            <p id="alerta-mensagem" class="text-slate-500 text-sm font-medium mb-6 leading-relaxed"></p>
+            <button onclick="window.fecharAlerta()" class="w-full py-3 bg-brandDarkBlue text-white rounded-xl font-bold hover:bg-brandMidBlue transition-all shadow-lg active:scale-95">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { renderSidebar } from "../sidebar.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+            authDomain: "centra-fin.firebaseapp.com",
+            projectId: "centra-fin",
+            storageBucket: "centra-fin.firebasestorage.app",
+            messagingSenderId: "666471089411",
+            appId: "1:666471089411:web:4630f5b2ced70ceb981536"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Variáveis Globais
+        window.listaMetas = [];
+        window.idMetaEdicao = null;
+        const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+        const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        // Autenticação
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const docRef = doc(db, "Usuarios", user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const userProfile = docSnap.data().perfil;
+                    renderSidebar(userProfile);
+                    if (userProfile !== 'master') window.location.href = "../contas_a_receber_desktop/code.html";
+                }
+
+                // Setup Inicial
+                window.gerarInputsMeses();
+                window.preencherFiltroAnos();
+                window.carregarMetas();
+
+            } else {
+                window.location.href = "../login.html";
+            }
+        });
+
+        // Função auxiliar de moeda
+        window.formatMoeda = (valor) => {
+            return (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        window.parseMoeda = (str) => {
+            if (!str) return 0;
+            let numeros = str.replace(/\D/g, '');
+            return parseFloat(numeros) / 100 || 0;
+        };
+
+        // Máscara de Moeda (Digitando)
+        window.aplicarMascaraMoeda = (input) => {
+            let valor = input.value.replace(/\D/g, '');
+            if (valor === '') valor = '0';
+            valor = (parseInt(valor) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            input.value = valor;
+            window.calcularTotalMeta();
+        };
+
+        // Gerar os 12 inputs no Modal
+        window.gerarInputsMeses = () => {
+            const grid = document.getElementById('grid-meses');
+            grid.innerHTML = meses.map((mes, index) => `
+        <div>
+          <label class="text-slate-500 text-[10px] font-bold uppercase mb-1 block">${nomesMeses[index]}</label>
+          <div class="relative">
+            <span class="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">R$</span>
+            <input type="text" id="mes-${mes}" onkeyup="window.aplicarMascaraMoeda(this)" class="w-full bg-white border border-slate-200 text-brandDarkBlue text-xs font-bold rounded-lg pl-8 pr-3 py-2 outline-none focus:border-brandGreen transition-colors text-right" value="0,00">
+          </div>
+        </div>
+      `).join('');
+        };
+
+        window.calcularTotalMeta = () => {
+            let total = 0;
+            meses.forEach(mes => {
+                let valStr = document.getElementById(`mes-${mes}`).value;
+                total += window.parseMoeda(valStr);
+            });
+            document.getElementById('display-total').innerText = window.formatMoeda(total);
+            return total;
+        };
+
+        window.preencherFiltroAnos = () => {
+            const select = document.getElementById('filtro-ano');
+            const anoAtual = new Date().getFullYear();
+            select.innerHTML = '';
+            for (let i = anoAtual - 1; i <= anoAtual + 2; i++) {
+                select.innerHTML += `<option value="${i}" ${i === anoAtual ? 'selected' : ''}>Ano: ${i}</option>`;
+            }
+        };
+
+        // --- CRUD ---
+
+        window.carregarMetas = async () => {
+            const tbody = document.getElementById('tbody-metas');
+            const anoFiltro = document.getElementById('filtro-ano').value;
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10"><div class="loader mx-auto mb-2"></div><span class="text-slate-400 text-xs font-bold">Carregando dados...</span></td></tr>`;
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "MetasFinanceiras"));
+                window.listaMetas = [];
+                querySnapshot.forEach((doc) => {
+                    let data = doc.data();
+                    data.id = doc.id;
+                    window.listaMetas.push(data);
+                });
+
+                // Filtrar e renderizar
+                const filtradas = window.listaMetas.filter(m => m.ano == anoFiltro);
+
+                if (filtradas.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400 text-xs italic">Nenhuma meta cadastrada para ${anoFiltro}.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = filtradas.map(meta => {
+                    const mesesGrid = meses.map((m, idx) => `
+                        <div class="flex flex-col border-r border-slate-200 last:border-0 px-2">
+                            <span class="text-[9px] text-slate-400 font-bold uppercase">${nomesMeses[idx].substring(0,3)}</span>
+                            <span class="text-[10px] text-brandDarkBlue font-extrabold">${window.formatMoeda(meta.meses[m] || 0)}</span>
+                        </div>
+                    `).join('');
+
+                    return `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 font-bold text-slate-700">${meta.ano}</td>
+                            <td class="px-6 py-4 font-extrabold text-brandDarkBlue">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-brandLightBlue"></span> ${meta.produto}
+                            </div>
+                            </td>
+                            <td class="px-6 py-4 text-right font-extrabold text-brandGreen">${window.formatMoeda(meta.total)}</td>
+                            <td class="px-6 py-4 text-center">
+                            <button onclick="window.editarMeta('${meta.id}')" class="text-brandLightBlue hover:text-brandMidBlue mx-1 transition-colors" title="Editar"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+                            <button onclick="window.excluirMeta('${meta.id}')" class="text-red-400 hover:text-red-600 mx-1 transition-colors" title="Excluir"><span class="material-symbols-outlined text-[18px]">delete</span></button>
+                            </td>
+                        </tr>
+                        <tr class="bg-slate-50/50 border-b border-slate-200/60">
+                            <td colspan="4" class="px-6 py-2">
+                                <div class="grid grid-cols-6 md:grid-cols-12 gap-y-2">
+                                    ${mesesGrid}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error("Erro ao carregar metas:", error);
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-red-500 text-xs font-bold">Erro ao carregar metas. Tente novamente.</td></tr>`;
+            }
+        };
+
+        window.salvarMeta = async () => {
+            const btn = document.getElementById('btn-salvar-meta');
+            btn.innerHTML = `<div class="loader w-4 h-4 border-2 border-brandDarkBlue border-t-transparent"></div> Salvando...`;
+            btn.disabled = true;
+
+            const ano = document.getElementById('input-ano').value;
+            const produto = document.getElementById('input-produto').value;
+            const total = window.calcularTotalMeta();
+
+            let valoresMeses = {};
+            meses.forEach(mes => {
+                valoresMeses[mes] = window.parseMoeda(document.getElementById(`mes-${mes}`).value);
+            });
+
+            const metaData = { ano, produto, total, meses: valoresMeses, atualizadoEm: new Date().toISOString() };
+
+            try {
+                if (window.idMetaEdicao) {
+                    // Atualiza
+                    await updateDoc(doc(db, "MetasFinanceiras", window.idMetaEdicao), metaData);
+                } else {
+                    // Checar se já existe o mesmo produto no mesmo ano
+                    let existe = window.listaMetas.find(m => m.ano == ano && m.produto == produto);
+                    if (existe) {
+                        window.mostrarAlerta(`Atenção: Já existe uma meta cadastrada para ${produto} no ano ${ano}. Edite a existente.`);
+                        btn.innerHTML = `Salvar Meta Financeira`;
+                        btn.disabled = false;
+                        return;
+                    }
+                    // Cria novo
+                    await addDoc(collection(db, "MetasFinanceiras"), metaData);
+                }
+
+                window.fecharModalMeta();
+                window.carregarMetas();
+            } catch (error) {
+                console.error("Erro ao salvar:", error);
+                window.mostrarAlerta("Erro ao salvar a meta.");
+            }
+
+            btn.innerHTML = `Salvar Meta Financeira`;
+            btn.disabled = false;
+        };
+
+        window.excluirMeta = async (id) => {
+            if (confirm("Tem certeza que deseja excluir permanentemente esta meta?")) {
+                try {
+                    await deleteDoc(doc(db, "MetasFinanceiras", id));
+                    window.carregarMetas();
+                } catch (error) {
+                    console.error("Erro ao excluir:", error);
+                    alert("Erro ao excluir meta.");
+                }
+            }
+        };
+
+        // Controle de Modais
+        window.abrirModalMeta = () => {
+            window.idMetaEdicao = null;
+            document.getElementById('modal-titulo').innerHTML = `<span class="material-symbols-outlined text-brandAqua">add_circle</span> Cadastrar Nova Meta`;
+            document.getElementById('input-ano').value = new Date().getFullYear();
+            document.getElementById('input-produto').selectedIndex = 0;
+
+            meses.forEach(mes => {
+                document.getElementById(`mes-${mes}`).value = "0,00";
+            });
+            window.calcularTotalMeta();
+
+            const m = document.getElementById('modal-meta'); const c = document.getElementById('modal-meta-content');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); c.classList.remove('scale-95'); }, 10);
+        };
+
+        window.editarMeta = (id) => {
+            const meta = window.listaMetas.find(m => m.id === id);
+            if (!meta) return;
+
+            window.idMetaEdicao = id;
+            document.getElementById('modal-titulo').innerHTML = `<span class="material-symbols-outlined text-brandOrange">edit_square</span> Editar Meta`;
+            document.getElementById('input-ano').value = meta.ano;
+            document.getElementById('input-produto').value = meta.produto;
+
+            meses.forEach(mes => {
+                let val = meta.meses[mes] || 0;
+                document.getElementById(`mes-${mes}`).value = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            });
+            window.calcularTotalMeta();
+
+            const m = document.getElementById('modal-meta'); const c = document.getElementById('modal-meta-content');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); c.classList.remove('scale-95'); }, 10);
+        };
+
+        window.fecharModalMeta = () => {
+            const m = document.getElementById('modal-meta'); const c = document.getElementById('modal-meta-content');
+            m.classList.add('opacity-0'); c.classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
+        };
+
+        // --- NOVO: Modal de Alerta Customizado ---
+        window.mostrarAlerta = (mensagem) => {
+            const modal = document.getElementById('modal-alerta-sistema');
+            const txt = document.getElementById('alerta-mensagem');
+            const content = modal.querySelector('div');
+            
+            txt.innerText = mensagem;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        };
+
+        window.fecharAlerta = () => {
+            const modal = document.getElementById('modal-alerta-sistema');
+            const content = modal.querySelector('div');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        };
+
+        document.addEventListener('click', async (e) => {
+            const logoutBtn = e.target.closest('#btn-logout');
+            if (logoutBtn) { e.preventDefault(); await signOut(auth); window.location.href = "../login.html"; }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-br">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Painel Master - CentraFin</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#aad12f",
+                        secondary: "#002443",
+                        "surface-low": "#f8f9fb",
+                        "surface-variant": "#e1e2e4"
+                    },
+                    fontFamily: { headline: ["Manrope", "sans-serif"], body: ["Inter", "sans-serif"] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fb;
+        }
+
+        h1,
+        h2,
+        h3,
+        .font-headline {
+            font-family: 'Manrope', sans-serif;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 flex min-h-screen">
+
+    <div id="sidebar-container"></div>
+
+    <main class="flex-1 ml-[80px] p-8 lg:p-12">
+
+        <header class="flex justify-between items-center mb-8 border-b border-slate-200 pb-6">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-secondary font-headline">Painel de Controle</h1>
+                <p class="text-slate-500 text-sm mt-1 font-medium">Gerencie acessos e monitore a segurança de todo o
+                    ecossistema CentraFin.</p>
+            </div>
+            <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                <span class="material-symbols-outlined text-primary">shield_person</span>
+                <span class="font-bold text-sm text-secondary" id="display-user-email">Acesso Master</span>
+            </div>
+        </header>
+
+        <div class="flex gap-6 mb-8 border-b border-slate-200">
+            <button id="tab-users-btn"
+                class="pb-3 text-sm font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">manage_accounts</span> Gestão de Usuários
+            </button>
+            <button id="tab-logs-btn"
+                class="pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">policy</span> Auditoria (Logs)
+            </button>
+        </div>
+
+        <section id="section-users" class="block">
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div class="xl:col-span-1">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                            <span class="material-symbols-outlined text-primary text-2xl">person_add</span>
+                            <h2 class="font-headline font-bold text-lg text-secondary">Novo Usuário</h2>
+                        </div>
+                        <form id="form-criar-usuario" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Nome
+                                    Completo</label>
+                                <input type="text" id="cad-nome" required
+                                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-300"
+                                    placeholder="Ex: João Silva">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">E-mail
+                                    (Login)</label>
+                                <input type="email" id="cad-email" required
+                                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-300"
+                                    placeholder="joao@empresa.com.br">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Senha
+                                    Provisória</label>
+                                <input type="text" id="cad-senha" required minlength="6"
+                                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-300"
+                                    placeholder="Mínimo 6 caracteres">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Alocação
+                                    de Acesso</label>
+                                <select id="cad-perfil" required
+                                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-slate-50 font-medium">
+                                    <option value="menu1">Menu 1 (Apenas Contas a Receber)</option>
+                                    <option value="menu2">Menu 2 (Contas a Receber e a Pagar)</option>
+                                    <option value="master">Acesso Master (Total)</option>
+                                </select>
+                            </div>
+                            <div id="msg-cadastro"
+                                class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4"></div>
+                            <button type="submit" id="btn-salvar-user"
+                                class="w-full py-3 mt-6 bg-secondary text-white font-extrabold rounded-xl shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-base">how_to_reg</span> Registrar Usuário
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="xl:col-span-2">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-slate-400 text-2xl">groups</span>
+                                <h2 class="font-headline font-bold text-lg text-secondary">Usuários Cadastrados</h2>
+                            </div>
+                            <span class="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full"
+                                id="contador-usuarios">0 usuários</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead
+                                    class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="px-6 py-4 font-bold">Nome / E-mail</th>
+                                        <th class="px-6 py-4 font-bold">Nível de Acesso</th>
+                                        <th class="px-6 py-4 font-bold text-center">Status</th>
+                                        <th class="px-6 py-4 font-bold text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-usuarios" class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td colspan="4" class="text-center py-8 text-sm text-slate-400">Carregando
+                                            usuários...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-logs" class="hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-blue-500 text-2xl">history</span>
+                        <h2 class="font-headline font-bold text-lg text-secondary">Histórico de Movimentações</h2>
+                    </div>
+                    <div class="relative w-64">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                        <input type="text" id="busca-log"
+                            class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-full text-xs focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                            placeholder="Buscar por NF, Usuário ou Ação...">
+                    </div>
+                </div>
+                <div class="overflow-x-auto h-[600px] overflow-y-auto relative">
+                    <table class="w-full text-left border-collapse">
+                        <thead
+                            class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="px-6 py-4 font-bold w-40">Data / Hora</th>
+                                <th class="px-6 py-4 font-bold">Usuário Responsável</th>
+                                <th class="px-6 py-4 font-bold text-center">Ação</th>
+                                <th class="px-6 py-4 font-bold">Documento / Módulo</th>
+                                <th class="px-6 py-4 font-bold">Detalhes Técnicos</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-logs" class="divide-y divide-slate-100 text-xs">
+                            <tr>
+                                <td colspan="5" class="text-center py-8 text-sm text-slate-400">Aguardando geração de
+                                    logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, query, orderBy, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { renderSidebar } from "./sidebar.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU", authDomain: "centra-fin.firebaseapp.com", projectId: "centra-fin", storageBucket: "centra-fin.firebasestorage.app", messagingSenderId: "666471089411", appId: "1:666471089411:web:4630f5b2ced70ceb981536" };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const docRef = doc(db, "Usuarios", user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const dadosUser = docSnap.data();
+                    renderSidebar(dadosUser.perfil);
+                }
+            } else {
+                window.location.href = "login.html";
+            }
+        });
+
+        const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+        const secondaryAuth = getAuth(secondaryApp);
+
+        // CORREÇÃO: Lógica segura de navegação entre abas
+        const btnUsers = document.getElementById('tab-users-btn');
+        const btnLogs = document.getElementById('tab-logs-btn');
+        const secUsers = document.getElementById('section-users');
+        const secLogs = document.getElementById('section-logs');
+
+        if (btnUsers && btnLogs && secUsers && secLogs) {
+            btnUsers.addEventListener('click', (e) => {
+                e.preventDefault();
+                secUsers.classList.remove('hidden');
+                secLogs.classList.add('hidden');
+                btnUsers.className = "pb-3 text-sm font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2";
+                btnLogs.className = "pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2";
+            });
+
+            btnLogs.addEventListener('click', (e) => {
+                e.preventDefault();
+                secLogs.classList.remove('hidden');
+                secUsers.classList.add('hidden');
+                btnLogs.className = "pb-3 text-sm font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2";
+                btnUsers.className = "pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2";
+            });
+
+            // Permite abrir a aba direto caso a URL contenha ?tab=logs
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('tab') === 'logs') {
+                btnLogs.click();
+            }
+        }
+
+        const formUser = document.getElementById('form-criar-usuario');
+        const btnSalvarUser = document.getElementById('btn-salvar-user');
+        const msgCadastro = document.getElementById('msg-cadastro');
+
+        formUser.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('cad-nome').value.trim();
+            const email = document.getElementById('cad-email').value.trim();
+            const senha = document.getElementById('cad-senha').value;
+            const perfil = document.getElementById('cad-perfil').value;
+
+            btnSalvarUser.disabled = true;
+            btnSalvarUser.classList.add('opacity-50');
+            btnSalvarUser.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Processando...';
+            msgCadastro.classList.add('hidden');
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, senha);
+                const uid = userCredential.user.uid;
+                await setDoc(doc(db, "Usuarios", uid), { nome: nome, email: email, perfil: perfil, status: 'ativo', data_criacao: serverTimestamp() });
+                await secondaryAuth.signOut();
+
+                msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-emerald-50 text-emerald-700 border border-emerald-200';
+                msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">check_circle</span> Usuário criado e alocado com sucesso!';
+                msgCadastro.classList.remove('hidden');
+                formUser.reset();
+                registrarLogAutomático("Admin (Master)", "INCLUSÃO", "Cadastro de Usuários", `Criou o usuário ${email} com perfil ${perfil}.`);
+            } catch (error) {
+                msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
+                let msg = "Erro ao criar usuário.";
+                if (error.code === 'auth/email-already-in-use') msg = "Este e-mail já está cadastrado.";
+                if (error.code === 'auth/weak-password') msg = "A senha deve ter pelo menos 6 caracteres.";
+                msgCadastro.innerHTML = `<span class="material-symbols-outlined text-base">error</span> ${msg}`;
+                msgCadastro.classList.remove('hidden');
+            } finally {
+                btnSalvarUser.disabled = false;
+                btnSalvarUser.classList.remove('opacity-50');
+                btnSalvarUser.innerHTML = '<span class="material-symbols-outlined text-base">how_to_reg</span> Registrar Usuário';
+            }
+        });
+
+        const tabelaUsers = document.getElementById('tabela-usuarios');
+        const badgeCount = document.getElementById('contador-usuarios');
+
+        onSnapshot(collection(db, "Usuarios"), (snapshot) => {
+            tabelaUsers.innerHTML = ""; let count = 0;
+            if (snapshot.empty) { tabelaUsers.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-sm">Nenhum usuário cadastrado.</td></tr>`; return; }
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data(); count++;
+                const isAdmin = data.perfil === 'master'; const isAtivo = data.status !== 'inativo';
+                const badgePerfil = isAdmin ? `<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-purple-200 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">local_police</span> Master</span>` : `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-slate-200">${data.perfil === 'menu1' ? 'Menu 1' : 'Menu 2'}</span>`;
+                const badgeStatus = isAtivo ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-100">ATIVO</span>` : `<span class="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-100">INATIVO</span>`;
+                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
+                tr.innerHTML = `<td class="px-6 py-4"><p class="font-bold text-slate-800 text-sm">${data.nome || 'Usuário'}</p><p class="text-[11px] text-slate-500">${data.email}</p></td><td class="px-6 py-4">${badgePerfil}</td><td class="px-6 py-4 text-center">${badgeStatus}</td><td class="px-6 py-4 text-right"><button onclick="window.alternarStatusUser('${docSnap.id}', '${isAtivo}')" class="text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${isAtivo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'}" title="${isAtivo ? 'Bloquear Acesso' : 'Liberar Acesso'}">${isAtivo ? 'Inativar' : 'Reativar'}</button></td>`;
+                tabelaUsers.appendChild(tr);
+            });
+            badgeCount.textContent = `${count} usuário(s)`;
+        });
+
+        window.alternarStatusUser = async (id, isAtivoAtual) => {
+            const novoStatus = isAtivoAtual === 'true' ? 'inativo' : 'ativo';
+            try {
+                await updateDoc(doc(db, "Usuarios", id), { status: novoStatus });
+                registrarLogAutomático("Admin (Master)", "ALTERAÇÃO DE ACESSO", "Cadastro de Usuários", `O usuário ID ${id} teve seu status alterado para ${novoStatus.toUpperCase()}.`);
+            } catch (e) {
+                console.error("Erro ao alterar status:", e);
+                alert("Erro ao modificar usuário.");
+            }
+        };
+
+        const tabelaLogs = document.getElementById('tabela-logs');
+        const inputBuscaLog = document.getElementById('busca-log');
+        let todosOsLogs = [];
+
+        const qLogs = query(collection(db, "Logs"), orderBy("data_hora", "desc"));
+        onSnapshot(qLogs, (snapshot) => {
+            todosOsLogs = [];
+            snapshot.forEach(docSnap => { todosOsLogs.push({ id: docSnap.id, ...docSnap.data() }); });
+            renderizarLogs(todosOsLogs);
+        });
+
+        inputBuscaLog.addEventListener('input', (e) => {
+            const termo = e.target.value.toLowerCase();
+            const filtrados = todosOsLogs.filter(log => { return (log.usuario && log.usuario.toLowerCase().includes(termo)) || (log.acao && log.acao.toLowerCase().includes(termo)) || (log.detalhes && log.detalhes.toLowerCase().includes(termo)) || (log.modulo && log.modulo.toLowerCase().includes(termo)); });
+            renderizarLogs(filtrados);
+        });
+
+        function renderizarLogs(logs) {
+            tabelaLogs.innerHTML = "";
+            if (logs.length === 0) {
+                tabelaLogs.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-sm text-slate-400">Nenhum registro encontrado.</td></tr>`;
+                return;
+            }
+            logs.forEach(log => {
+                let dataFormatada = "-";
+                if (log.data_hora && log.data_hora.seconds) {
+                    const dataObj = new Date(log.data_hora.seconds * 1000);
+                    dataFormatada = dataObj.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' });
+                }
+                let corAcao = "bg-slate-100 text-slate-600";
+                if (log.acao === "INCLUSÃO") corAcao = "bg-emerald-50 text-emerald-600 border border-emerald-100";
+                if (log.acao === "ALTERAÇÃO" || log.acao === "ALTERAÇÃO DE ACESSO") corAcao = "bg-amber-50 text-amber-600 border border-amber-100";
+                if (log.acao === "EXCLUSÃO") corAcao = "bg-red-50 text-red-600 border border-red-100";
+
+                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `<td class="px-6 py-4 font-mono text-slate-500 whitespace-nowrap">${dataFormatada}</td><td class="px-6 py-4 font-bold text-slate-700">${log.usuario || 'Sistema'}</td><td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[9px] font-extrabold uppercase ${corAcao}">${log.acao}</span></td><td class="px-6 py-4 text-slate-600 font-medium">${log.modulo || '-'}</td><td class="px-6 py-4 text-slate-500 break-words max-w-md">${log.detalhes || '-'}</td>`;
+                tabelaLogs.appendChild(tr);
+            });
+        }
+
+        async function registrarLogAutomático(usuario, acao, modulo, detalhes) {
+            try {
+                await addDoc(collection(db, "Logs"), { usuario: usuario, acao: acao, modulo: modulo, detalhes: detalhes, data_hora: serverTimestamp() });
+            } catch (e) {
+                console.error("Falha ao registrar log:", e);
+            }
+        }
+    </script>
+</body>
+
+</html>

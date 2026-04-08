@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Executivo - CentraFin</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300,1&display=swap"
+        rel="stylesheet" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'] },
+                    colors: {
+                        lightBg: '#f8fafc',
+                        cardBg: '#ffffff',
+                        brandGreen: '#8bc34a', /* Tom de verde um pouco mais sólido para o modo claro */
+                        brandBlue: '#0284c7', /* Azul mais forte para contraste */
+                        brandRed: '#ef4444',
+                        textMain: '#1e293b',
+                        textMuted: '#64748b'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        .tab-btn {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background-color: #8bc34a;
+            transition: all 0.3s ease;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .tab-btn.active {
+            color: #1e293b;
+            font-weight: 800;
+        }
+
+        .tab-btn.active::after {
+            width: 100%;
+        }
+
+        /* Custom Scrollbar para Tabelas */
+        .custom-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col antialiased selection:bg-brandGreen selection:text-white">
+
+    <header class="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 h-16 shadow-sm">
+        <div class="w-full px-6 h-full flex items-center justify-between">
+            <div class="flex items-center gap-3 w-1/4">
+                <div class="bg-slate-100 p-1.5 rounded-lg border border-slate-200">
+                    <span class="material-symbols-outlined text-brandGreen font-bold">monitoring</span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-extrabold tracking-wide leading-tight text-slate-800">CentraFin</h1>
+                    <p class="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Executive Dashboard</p>
+                </div>
+            </div>
+
+            <nav class="flex justify-center gap-8 h-full flex-1">
+                <button onclick="alternarTela('tela-faturamento', this)"
+                    class="tab-btn active h-full px-2 text-sm text-slate-500 hover:text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">payments</span> Faturamento
+                </button>
+                <button onclick="alternarTela('tela-fluxo', this)"
+                    class="tab-btn h-full px-2 text-sm text-slate-500 hover:text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">account_balance</span> Fluxo de Caixa
+                </button>
+                <button onclick="alternarTela('tela-rh', this)"
+                    class="tab-btn h-full px-2 text-sm text-slate-500 hover:text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">groups</span> Simulador de RH
+                </button>
+            </nav>
+
+            <div class="w-1/4 flex justify-end">
+                <button
+                    class="bg-brandGreen text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-opacity-90 transition-all shadow-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">download</span> Exportar PDF
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 w-full px-6 py-6 overflow-hidden">
+
+        <div id="tela-faturamento" class="view-tela block animate-fade-in space-y-6">
+
+            <div class="flex gap-3">
+                <button
+                    class="bg-brandGreen/10 text-green-700 border border-brandGreen/40 px-5 py-2 rounded-full text-xs font-bold shadow-sm">Visão
+                    Grupo Soulan</button>
+                <button
+                    class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-800 px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm">Visão
+                    Thomas / NEAT</button>
+            </div>
+
+            <div class="grid grid-cols-5 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 opacity-5 group-hover:scale-125 transition-transform"><span
+                            class="material-symbols-outlined text-8xl text-slate-800">receipt_long</span></div>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Emitido (Mês)</p>
+                    <h3 class="text-2xl font-extrabold text-slate-800">R$ 1.850.000</h3>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div
+                        class="absolute right-0 top-0 opacity-10 group-hover:scale-125 transition-transform text-brandRed">
+                        <span class="material-symbols-outlined text-8xl">warning</span></div>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Total Vencido</p>
+                    <h3 class="text-2xl font-extrabold text-brandRed">R$ 112.400</h3>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div
+                        class="absolute right-0 top-0 opacity-10 group-hover:scale-125 transition-transform text-brandBlue">
+                        <span class="material-symbols-outlined text-8xl">pending_actions</span></div>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">A Vencer</p>
+                    <h3 class="text-2xl font-extrabold text-brandBlue">R$ 640.000</h3>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div
+                        class="absolute right-0 top-0 opacity-10 group-hover:scale-125 transition-transform text-brandGreen">
+                        <span class="material-symbols-outlined text-8xl">check_circle</span></div>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Bruto vs Líquido</p>
+                    <div class="flex items-baseline gap-2">
+                        <h3 class="text-2xl font-extrabold text-green-600">R$ 1.050K</h3>
+                        <span class="text-xs text-slate-400 line-through">R$ 1.100K</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 opacity-5 group-hover:scale-125 transition-transform"><span
+                            class="material-symbols-outlined text-8xl text-slate-800">trending_up</span></div>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Forecast Projetos</p>
+                    <h3 class="text-2xl font-extrabold text-slate-800">R$ 420.000</h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-6">
+                <div class="col-span-8 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><span
+                            class="material-symbols-outlined text-brandGreen">bar_chart</span> Faturamento Bruto vs
+                        Realizado (Ano Atual vs Anterior)</h2>
+                    <div id="chart-fat-anual" class="w-full h-[280px]"></div>
+                </div>
+
+                <div class="col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><span
+                            class="material-symbols-outlined text-brandGreen">pie_chart</span> Faturamento por Região
+                    </h2>
+                    <div id="chart-fat-regiao" class="w-full h-[280px] flex justify-center items-center"></div>
+                </div>
+
+                <div class="col-span-6 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><span
+                            class="material-symbols-outlined text-brandGreen">analytics</span> Bruto vs Realizado por
+                        Serviço</h2>
+                    <div id="chart-fat-servico" class="w-full h-[280px]"></div>
+                </div>
+
+                <div class="col-span-6 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><span
+                            class="material-symbols-outlined text-brandGreen">leaderboard</span> Faturamento por
+                        Comercial (Ranking Top 5)</h2>
+                    <div id="chart-fat-comercial" class="w-full h-[280px]"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tela-fluxo" class="view-tela hidden space-y-6">
+            <h2 class="text-xl font-extrabold flex items-center gap-2 text-slate-800"><span
+                    class="material-symbols-outlined text-brandBlue">account_balance</span> Fluxo de Caixa Executivo
+            </h2>
+
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <h3 class="text-sm font-bold text-slate-600 mb-2">Entradas, Saídas e Saldo (Projetado vs Realizado)</h3>
+                <div id="chart-fluxo" class="w-full h-[350px]"></div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50">
+                    <h3 class="text-sm font-bold text-slate-700">Matriz de Fluxo Consolidada</h3>
+                </div>
+                <div class="overflow-x-auto custom-scroll p-4">
+                    <table class="w-full text-right text-xs whitespace-nowrap">
+                        <thead>
+                            <tr class="text-slate-500 border-b border-slate-200">
+                                <th class="text-left py-3 px-4 font-bold">Descrição</th>
+                                <th class="py-3 px-4">Jan</th>
+                                <th class="py-3 px-4">Fev</th>
+                                <th class="py-3 px-4">Mar</th>
+                                <th class="py-3 px-4">Abr</th>
+                                <th class="py-3 px-4">Mai</th>
+                                <th class="py-3 px-4">Jun</th>
+                            </tr>
+                        </thead>
+                        <tbody class="font-medium text-slate-700">
+                            <tr class="border-b border-slate-100 bg-slate-50/50">
+                                <td class="text-left py-3 px-4 text-brandBlue font-bold">Saldo Inicial</td>
+                                <td class="py-3 px-4">150.000</td>
+                                <td class="py-3 px-4">180.000</td>
+                                <td class="py-3 px-4">220.000</td>
+                                <td class="py-3 px-4">190.000</td>
+                                <td class="py-3 px-4">250.000</td>
+                                <td class="py-3 px-4">310.000</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="text-left py-3 px-4">Entradas Realizadas</td>
+                                <td class="py-3 px-4 text-green-600 font-bold">450.000</td>
+                                <td class="py-3 px-4 text-green-600 font-bold">520.000</td>
+                                <td class="py-3 px-4 text-green-600 font-bold">480.000</td>
+                                <td class="py-3 px-4 text-green-600 font-bold">600.000</td>
+                                <td class="py-3 px-4 text-slate-400">-</td>
+                                <td class="py-3 px-4 text-slate-400">-</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="text-left py-3 px-4">Saídas Realizadas</td>
+                                <td class="py-3 px-4 text-brandRed font-bold">-420.000</td>
+                                <td class="py-3 px-4 text-brandRed font-bold">-480.000</td>
+                                <td class="py-3 px-4 text-brandRed font-bold">-510.000</td>
+                                <td class="py-3 px-4 text-brandRed font-bold">-540.000</td>
+                                <td class="py-3 px-4 text-slate-400">-</td>
+                                <td class="py-3 px-4 text-slate-400">-</td>
+                            </tr>
+                            <tr class="border-t border-slate-200 bg-slate-50">
+                                <td class="text-left py-3 px-4 font-extrabold text-slate-800">Saldo Final Realizado</td>
+                                <td class="py-3 px-4 font-extrabold text-green-600">180.000</td>
+                                <td class="py-3 px-4 font-extrabold text-green-600">220.000</td>
+                                <td class="py-3 px-4 font-extrabold text-green-600">190.000</td>
+                                <td class="py-3 px-4 font-extrabold text-green-600">250.000</td>
+                                <td class="py-3 px-4 text-slate-400">-</td>
+                                <td class="py-3 px-4 text-slate-400">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tela-rh" class="view-tela hidden space-y-6">
+            <h2 class="text-xl font-extrabold flex items-center gap-2 text-slate-800"><span
+                    class="material-symbols-outlined text-brandGreen">groups</span> Simulador de Headcount e Custos</h2>
+
+            <div class="grid grid-cols-12 gap-6">
+                <div class="col-span-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-fit">
+                    <h3 class="font-bold text-slate-800 mb-6 border-b border-slate-200 pb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-brandGreen">settings</span> Parâmetros da Vaga
+                    </h3>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 mb-1.5 block">Cargo</label>
+                            <input type="text" value="Analista Financeiro Pleno"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-800 focus:border-brandGreen focus:ring-1 focus:ring-brandGreen outline-none transition-all">
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 mb-1.5 block">Regime de Contratação</label>
+                            <div class="flex gap-2">
+                                <button
+                                    class="flex-1 bg-brandGreen text-white font-bold py-2 rounded-lg text-sm shadow-sm">CLT</button>
+                                <button
+                                    class="flex-1 bg-white border border-slate-300 text-slate-500 hover:text-slate-800 hover:bg-slate-50 font-bold py-2 rounded-lg text-sm transition-all">PJ</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 mb-1.5 block flex justify-between">Quantidade
+                                de Vagas <span class="text-green-600">5</span></label>
+                            <input type="range" min="1" max="20" value="5"
+                                class="w-full accent-brandGreen h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 mb-1.5 block">Salário Base (R$)</label>
+                                <input type="text" value="4.500"
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-brandGreen outline-none text-brandBlue font-bold">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 mb-1.5 block">Benefícios (R$)</label>
+                                <input type="text" value="1.200"
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-brandGreen outline-none font-bold text-slate-800">
+                            </div>
+                        </div>
+
+                        <button
+                            class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold hover:bg-slate-700 transition-all mt-4 flex justify-center items-center gap-2 shadow-sm">
+                            <span class="material-symbols-outlined text-[18px]">calculate</span> Atualizar Simulação
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-span-8 space-y-6">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <p class="text-slate-500 text-[10px] font-bold uppercase mb-1">Custo Unitário Mensal</p>
+                            <h3 class="text-xl font-extrabold text-slate-800">R$ 8.150,00</h3>
+                        </div>
+                        <div
+                            class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-brandBlue">
+                            <p class="text-slate-500 text-[10px] font-bold uppercase mb-1">Custo Total Equipe / Mês</p>
+                            <h3 class="text-xl font-extrabold text-brandBlue">R$ 40.750,00</h3>
+                        </div>
+                        <div
+                            class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-brandRed">
+                            <p class="text-slate-500 text-[10px] font-bold uppercase mb-1">Impacto Anualizado (+
+                                13º/Férias)</p>
+                            <h3 class="text-xl font-extrabold text-brandRed">R$ 543.000,00</h3>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-700 mb-2">Formação do Custo Unitário (Waterfall)</h3>
+                        <div id="chart-rh-waterfall" class="w-full h-[300px]"></div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="text-slate-500 border-b border-slate-200">
+                                    <th class="pb-2">Rubrica (Encargo/Benefício)</th>
+                                    <th class="pb-2 text-right">Valor Unitário</th>
+                                    <th class="pb-2 text-right text-green-600 font-bold">Total (5 Colab.)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-700">
+                                <tr class="border-b border-slate-100">
+                                    <td class="py-2">Salário Base Mensal</td>
+                                    <td class="py-2 text-right">R$ 4.500,00</td>
+                                    <td class="py-2 text-right font-bold text-green-600">R$ 22.500,00</td>
+                                </tr>
+                                <tr class="border-b border-slate-100">
+                                    <td class="py-2">Encargos Sociais (INSS, FGTS - 28%)</td>
+                                    <td class="py-2 text-right text-brandRed font-medium">R$ 1.260,00</td>
+                                    <td class="py-2 text-right font-bold text-brandRed">R$ 6.300,00</td>
+                                </tr>
+                                <tr class="border-b border-slate-100">
+                                    <td class="py-2">Provisões (Férias + 13º + Multa)</td>
+                                    <td class="py-2 text-right text-brandRed font-medium">R$ 1.190,00</td>
+                                    <td class="py-2 text-right font-bold text-brandRed">R$ 5.950,00</td>
+                                </tr>
+                                <tr class="border-b border-slate-50">
+                                    <td class="py-2">Pacote de Benefícios (VT, VR, Saúde)</td>
+                                    <td class="py-2 text-right text-brandRed font-medium">R$ 1.200,00</td>
+                                    <td class="py-2 text-right font-bold text-brandRed">R$ 6.000,00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Função de Navegação SPA
+        function alternarTela(telaId, btnElement) {
+            document.querySelectorAll('.view-tela').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.add('text-slate-500');
+            });
+
+            document.getElementById(telaId).classList.remove('hidden');
+            btnElement.classList.add('active');
+            btnElement.classList.remove('text-slate-500');
+
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        // Configuração Global ApexCharts (Ajustada para Modo Claro)
+        const defaultOptions = {
+            chart: { foreColor: '#64748b', toolbar: { show: false }, background: 'transparent', animations: { enabled: true, easing: 'easeinout', speed: 800 } },
+            tooltip: { theme: 'light' },
+            grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
+            dataLabels: { enabled: false }
+        };
+
+        // --- TELA 1: GRÁFICOS FATURAMENTO ---
+
+        // A. Bruto vs Realizado (Anual) - col-span-8
+        new ApexCharts(document.querySelector("#chart-fat-anual"), {
+            ...defaultOptions,
+            series: [
+                { name: 'Faturamento Bruto', data: [450, 520, 480, 600, 650, 580] },
+                { name: 'Faturamento Realizado', data: [420, 490, 460, 570, 620, 550] },
+                { name: 'Ano Anterior (Realizado)', data: [380, 410, 390, 450, 480, 500] }
+            ],
+            chart: { type: 'bar', height: 280, stacked: false },
+            colors: ['#0284c7', '#8bc34a', '#94a3b8'],
+            plotOptions: { bar: { borderRadius: 3, columnWidth: '60%' } },
+            xaxis: { categories: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'] },
+            legend: { position: 'top', horizontalAlign: 'right' }
+        }).render();
+
+        // B. Região (Donut) - col-span-4
+        new ApexCharts(document.querySelector("#chart-fat-regiao"), {
+            ...defaultOptions,
+            series: [45, 25, 20, 10],
+            labels: ['São Paulo', 'Rio de Janeiro', 'Minas Gerais', 'Sul'],
+            chart: { type: 'donut', height: 280 },
+            colors: ['#8bc34a', '#0284c7', '#ef4444', '#f59e0b'],
+            stroke: { show: true, colors: ['#ffffff'], width: 2 },
+            legend: { position: 'bottom' }
+        }).render();
+
+        // C. Por Serviço (col-span-6)
+        new ApexCharts(document.querySelector("#chart-fat-servico"), {
+            ...defaultOptions,
+            series: [{ name: 'Faturamento Bruto', data: [800, 450, 320, 210, 150] }, { name: 'Faturamento Realizado', data: [750, 410, 310, 200, 140] }],
+            chart: { type: 'bar', height: 280 },
+            colors: ['#0284c7', '#8bc34a'],
+            plotOptions: { bar: { borderRadius: 3, columnWidth: '50%' } },
+            xaxis: { categories: ['Consultoria', 'Temporário', 'Estágio', 'Terceiros', 'RPO'] }
+        }).render();
+
+        // D. Top Comerciais (Barra Horizontal) - col-span-6
+        new ApexCharts(document.querySelector("#chart-fat-comercial"), {
+            ...defaultOptions,
+            series: [{ name: 'Faturamento', data: [400, 330, 280, 210, 180] }],
+            chart: { type: 'bar', height: 280 },
+            colors: ['#8bc34a'],
+            plotOptions: { bar: { horizontal: true, borderRadius: 3, distributed: true } },
+            xaxis: { categories: ['João Silva', 'Maria Santos', 'Carlos Mendes', 'Ana Costa', 'Pedro Alves'] },
+            legend: { show: false }
+        }).render();
+
+        // --- TELA 2: FLUXO DE CAIXA ---
+        new ApexCharts(document.querySelector("#chart-fluxo"), {
+            ...defaultOptions,
+            series: [
+                { name: 'Entradas', type: 'column', data: [450, 520, 480, 600, 650, 580] },
+                { name: 'Saídas', type: 'column', data: [-420, -480, -510, -540, -520, -500] },
+                { name: 'Saldo Projetado', type: 'line', data: [200, 240, 210, 270, 400, 480] },
+                { name: 'Saldo Realizado', type: 'line', data: [180, 220, 190, 250, null, null] }
+            ],
+            chart: { type: 'line', height: 350 },
+            colors: ['#8bc34a', '#ef4444', '#0284c7', '#8bc34a'],
+            stroke: { width: [0, 0, 3, 3], curve: 'smooth', dashArray: [0, 0, 5, 0] },
+            plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
+            xaxis: { categories: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'] },
+            legend: { position: 'top' }
+        }).render();
+
+        // --- TELA 3: SIMULADOR RH (WATERFALL) ---
+        new ApexCharts(document.querySelector("#chart-rh-waterfall"), {
+            ...defaultOptions,
+            series: [{
+                data: [
+                    { x: 'Salário Base', y: 4500, fillColor: '#0284c7' },
+                    { x: 'Encargos Sociais', y: 1260, fillColor: '#ef4444' },
+                    { x: 'Provisões', y: 1190, fillColor: '#ef4444' },
+                    { x: 'Benefícios', y: 1200, fillColor: '#ef4444' },
+                    { x: 'Custo Total', y: 8150, isIntermediateSum: true, fillColor: '#8bc34a' }
+                ]
+            }],
+            chart: { type: 'waterfall', height: 300 },
+            xaxis: { type: 'category' },
+            yaxis: { labels: { formatter: (val) => "R$ " + val } },
+            plotOptions: { bar: { borderRadius: 3, columnWidth: '50%', dataLabels: { position: 'top' } } },
+            dataLabels: { enabled: true, formatter: (val) => "R$ " + val, style: { fontSize: '10px', colors: ['#1e293b'], fontWeight: 'bold' }, offsetY: -20 }
+        }).render();
+    </script>
+</body>
+
+</html>

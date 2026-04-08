@@ -3,365 +3,171 @@
 <html class="light" lang="pt-br"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CentraFin | Gestão Financeira</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
       tailwind.config = {
         darkMode: "class",
         theme: {
           extend: {
             colors: {
-              "corporate-blue": "#1E3A8A",
-              "light-gray-bg": "#F3F4F6",
-              "outline": "#8c7164",
-              "inverse-on-surface": "#f0f1f3",
-              "primary-fixed": "#ffdbca",
-              "error-container": "#ffdad6",
-              "on-surface": "#191c1e",
-              "secondary-container": "#8fa7fe",
-              "on-error-container": "#93000a",
-              "outline-variant": "#e0c0b1",
-              "primary-container": "#f97316",
-              "secondary": "#4059aa",
-              "primary-fixed-dim": "#ffb690",
-              "inverse-surface": "#2e3132",
-              "on-secondary-fixed": "#00164e",
-              "secondary-fixed": "#dce1ff",
-              "inverse-primary": "#ffb690",
-              "on-secondary-fixed-variant": "#264191",
-              "on-primary-fixed": "#341100",
-              "on-primary-fixed-variant": "#783200",
-              "surface-container-highest": "#e1e2e4",
-              "on-primary-container": "#582200",
-              "primary": "#9d4300",
-              "on-error": "#ffffff",
-              "on-tertiary-fixed-variant": "#004b74",
-              "tertiary-fixed": "#cde5ff",
-              "surface-dim": "#d9dadc",
-              "on-background": "#191c1e",
-              "tertiary-container": "#00a2f4",
-              "surface-tint": "#9d4300",
-              "on-primary": "#ffffff",
-              "error": "#ba1a1a",
-              "surface-container-low": "#f3f4f6",
-              "tertiary-fixed-dim": "#93ccff",
-              "on-secondary": "#ffffff",
-              "secondary-fixed-dim": "#b6c4ff",
-              "background": "#f8f9fb",
-              "on-tertiary-container": "#003554",
-              "tertiary": "#006398",
-              "on-tertiary-fixed": "#001d32",
-              "surface-container": "#edeef0",
-              "surface-bright": "#f8f9fb",
-              "surface": "#f8f9fb",
-              "surface-variant": "#e1e2e4",
-              "on-secondary-container": "#1d3989",
-              "surface-container-high": "#e7e8ea",
-              "surface-container-lowest": "#ffffff",
-              "on-tertiary": "#ffffff",
-              "on-surface-variant": "#584237"
+              "light-gray-bg": "#F3F4F6", "surface-container-low": "#f3f4f6", 
+              "on-surface": "#191c1e", "primary": "#aad12f", "primary-container": "#8eb025",
+              "secondary": "#002443",
+              "on-primary": "#ffffff", "surface-container-highest": "#e1e2e4",
+              "surface-container-high": "#e7e8ea", "surface-container-lowest": "#ffffff",
+              "on-surface-variant": "#584237", "error": "#ba1a1a", "error-container": "#ffdad6"
             },
-            fontFamily: {
-              "headline": ["Manrope"],
-              "body": ["Inter"],
-              "label": ["Inter"]
-            },
-            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
-          },
-        },
+            fontFamily: { "headline": ["Manrope"], "body": ["Inter"], "label": ["Inter"] }
+          }
+        }
       }
     </script>
 <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         body { font-family: 'Inter', sans-serif; }
         h1, h2, h3 { font-family: 'Manrope', sans-serif; }
     </style>
 </head>
 <body class="bg-light-gray-bg text-on-surface antialiased">
 <!-- SideNavBar Container -->
-<aside class="fixed left-0 top-0 bottom-0 w-64 h-full bg-[#1E3A8A] shadow-2xl z-50 flex flex-col p-4 gap-y-2">
-<div class="mb-8 px-2 flex items-center gap-3">
-<div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-900/40">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">architecture</span>
-</div>
-<div>
-<h2 class="font-['Manrope'] text-lg font-extrabold text-white tracking-tighter">Architect ERP</h2>
-<p class="text-[10px] uppercase tracking-widest text-blue-200/60 font-bold">Enterprise Suite</p>
-</div>
-</div>
-<nav class="flex-1 space-y-1">
-<!-- Dashboard -->
-<a class="flex items-center gap-3 px-3 py-2.5 text-blue-100/70 hover:text-white hover:bg-white/10 rounded-md transition-all hover:translate-x-1 duration-200 font-['Inter'] text-sm font-medium" href="#">
-<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
-<span>Dashboard</span>
-</a>
-<!-- Registration (ACTIVE) -->
-<a class="flex items-center gap-3 px-3 py-2.5 bg-gradient-to-r from-orange-600 to-orange-400 text-white rounded-md shadow-lg shadow-black/20 font-['Inter'] text-sm font-medium" href="#">
-<span class="material-symbols-outlined" data-icon="how_to_reg" style="font-variation-settings: 'FILL' 1;">how_to_reg</span>
-<span>Registration</span>
-</a>
-<!-- Receivables -->
-<a class="flex items-center gap-3 px-3 py-2.5 text-blue-100/70 hover:text-white hover:bg-white/10 rounded-md transition-all hover:translate-x-1 duration-200 font-['Inter'] text-sm font-medium" href="#">
-<span class="material-symbols-outlined" data-icon="payments">payments</span>
-<span>Receivables</span>
-</a>
-<!-- Payables -->
-<a class="flex items-center gap-3 px-3 py-2.5 text-blue-100/70 hover:text-white hover:bg-white/10 rounded-md transition-all hover:translate-x-1 duration-200 font-['Inter'] text-sm font-medium" href="#">
-<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
-<span>Payables</span>
-</a>
-<!-- Settings -->
-<a class="flex items-center gap-3 px-3 py-2.5 text-blue-100/70 hover:text-white hover:bg-white/10 rounded-md transition-all hover:translate-x-1 duration-200 font-['Inter'] text-sm font-medium" href="#">
-<span class="material-symbols-outlined" data-icon="settings">settings</span>
-<span>Settings</span>
-</a>
-</nav>
-<div class="mt-auto pt-4 border-t border-white/10">
-<button class="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95">
-<span class="material-symbols-outlined text-sm">add_circle</span>
-<span class="font-semibold text-xs uppercase tracking-wider">New Transaction</span>
-</button>
-</div>
-</aside>
+<div id="sidebar-container"></div>
+
+
 <!-- Main Content Area -->
-<main class="ml-64 min-h-screen flex flex-col">
+<main class="ml-20 min-h-screen flex flex-col">
 <!-- TopAppBar -->
-<header class="fixed top-0 right-0 left-0 flex items-center justify-between px-8 h-16 ml-64 bg-white/85 backdrop-blur-md shadow-sm z-40">
+<header class="fixed top-0 right-0 left-0 flex items-center justify-between px-8 h-16 ml-20 bg-white/85 backdrop-blur-md shadow-sm z-40">
 <div class="flex items-center gap-6">
-<!-- Breadcrumbs -->
 <nav class="flex items-center text-xs font-medium text-slate-400 gap-2">
 <a class="hover:text-primary transition-colors" href="#">ERP</a>
 <span class="material-symbols-outlined text-xs">chevron_right</span>
-<span class="text-slate-600 font-semibold">Gestão de Cadastros</span>
+<span class="text-slate-600 font-semibold">Gestão de Parceiros (Clientes & Fornecedores)</span>
 </nav>
 </div>
 <div class="flex items-center gap-8">
-<div class="flex items-center gap-4 border-r border-slate-200 pr-8">
-<nav class="flex gap-6">
-<a class="text-orange-600 border-b-2 border-orange-600 pb-2 font-['Manrope'] font-semibold tracking-tight text-sm" href="#">Clientes/Fornecedores</a>
-<a class="text-slate-500 hover:text-slate-700 transition-colors font-['Manrope'] font-semibold tracking-tight text-sm" href="#">Empresas do Grupo</a>
-</nav>
-</div>
-<div class="flex items-center gap-4">
 <button class="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all active:scale-95">
-<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined">notifications</span>
 </button>
-<button class="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all active:scale-95">
-<span class="material-symbols-outlined" data-icon="help">help</span>
-</button>
-<div class="w-8 h-8 rounded-full bg-slate-200 overflow-hidden ml-2 border border-slate-300">
-<img alt="User profile photo" class="w-full h-full object-cover" data-alt="Professional male corporate headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDziDwA4T4ZR7j89307h4ciBOKDOKnYbrlUwdmoWipHoUrwqrH_qFPsA7rO85kaXDAbaDKbw4B_A8oafvL-xv1CX9zUcr3ugczb3Tilv8-0RIB2aBE0sgqzHIzg3hlDKxXnYHFV2koMhnRUQ83UibR6Rp-mZoa833Urr0LOkXuq31MvhnNlAOLXyXXNkFSrgQiB8TkqdMw108lMPMxvcA5iy8GAznqVFElrak_mvunk9rXwpUjLKSxB6wArDafaAepQWN_w1jqJJkw"/>
-</div>
-</div>
 </div>
 </header>
+
 <!-- Content Canvas -->
 <div class="mt-16 p-8 flex-1 max-w-[1600px] mx-auto w-full">
-<!-- Page Header Section -->
 <div class="flex justify-between items-end mb-10">
 <div class="space-y-1">
-<h1 class="text-4xl font-extrabold tracking-tight text-on-surface font-headline">Gestão de Cadastros</h1>
-<p class="text-on-surface-variant font-label text-sm opacity-80">Gerencie todos os seus parceiros comerciais e registros internos em um só lugar.</p>
+<h1 class="text-4xl font-extrabold tracking-tight text-on-surface font-headline">Gestão de Parceiros Comerciais</h1>
+<p class="text-on-surface-variant font-label text-sm opacity-80">Controle unificado de auditoria e registro de todos os clientes e fornecedores do sistema.</p>
 </div>
-<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl flex items-center gap-3 shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 font-semibold text-sm">
-<span class="material-symbols-outlined">person_add</span>
-                    + NOVO CADASTRO
-                </button>
+<button id="btn-novo-parceiro" class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl flex items-center gap-3 shadow-xl hover:shadow-2xl transition-all active:scale-95 font-semibold text-sm">
+<span class="material-symbols-outlined">add_business</span>
+    NOVO PARCEIRO
+</button>
 </div>
-<!-- Dashboard Stats Grid (Editorial Style) -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border-l-4 border-primary">
-<p class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 mb-1">Total de Clientes</p>
-<h3 class="text-3xl font-bold text-on-surface font-headline">1,284</h3>
-<div class="mt-2 flex items-center text-tertiary text-xs font-semibold">
-<span class="material-symbols-outlined text-sm mr-1">trending_up</span>
-                        +12% este mês
-                    </div>
-</div>
-<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm">
-<p class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 mb-1">Fornecedores Ativos</p>
-<h3 class="text-3xl font-bold text-on-surface font-headline">432</h3>
-<div class="mt-2 flex items-center text-on-surface-variant text-xs font-semibold opacity-60">
-                        Manutenção em dia
-                    </div>
-</div>
-<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm">
-<p class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 mb-1">Empresas do Grupo</p>
-<h3 class="text-3xl font-bold text-on-surface font-headline">12</h3>
-<div class="mt-2 flex items-center text-on-surface-variant text-xs font-semibold opacity-60">
-                        Consolidado fiscal
-                    </div>
-</div>
-<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm bg-secondary/5 border border-secondary/10">
-<p class="text-xs font-bold uppercase tracking-wider text-secondary mb-1">Aguardando Validação</p>
-<h3 class="text-3xl font-bold text-secondary font-headline">07</h3>
-<div class="mt-2 flex items-center text-secondary text-xs font-semibold">
-<span class="material-symbols-outlined text-sm mr-1">priority_high</span>
-                        Ação necessária
-                    </div>
-</div>
-</div>
-<!-- Table Section -->
+
+<!-- Tabela de Auditoria Unificada -->
 <div class="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm">
 <div class="px-8 py-6 border-b border-surface-container-high flex justify-between items-center bg-surface-container-lowest/50 backdrop-blur-sm">
-<h4 class="font-headline font-bold text-lg">Clientes e Fornecedores</h4>
-<div class="relative">
-<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">search</span>
-<input class="bg-surface-container-low pl-10 pr-4 py-2 rounded-lg text-sm border border-surface-container-high focus:ring-2 focus:ring-primary/20 w-64 transition-all" placeholder="Filtrar registros..." type="text"/>
+<h4 class="font-headline font-bold text-lg">Diretório Oficial</h4>
+<div class="flex gap-4 items-center">
+    <div class="flex gap-2">
+      <span class="flex items-center gap-1 text-[11px] font-bold"><div class="w-3 h-3 bg-red-100 rounded border border-red-300"></div> Fornecedores</span>
+      <span class="flex items-center gap-1 text-[11px] font-bold ml-3"><div class="w-3 h-3 bg-green-100 rounded border border-green-300"></div> Clientes</span>
+    </div>
+    <div class="relative ml-4">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">search</span>
+        <input id="input-busca" class="bg-surface-container-low pl-10 pr-4 py-2 rounded-lg text-sm border border-surface-container-high focus:ring-2 focus:ring-primary/20 w-64 transition-all" placeholder="Buscar por nome ou CNPJ..." type="text"/>
+    </div>
 </div>
 </div>
 <div class="overflow-x-auto">
 <table class="w-full text-left border-collapse">
 <thead>
 <tr class="bg-surface-container-low/50">
-<th class="px-8 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70 font-label">Nome / Razão Social</th>
-<th class="px-8 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70 font-label">CNPJ / CPF</th>
-<th class="px-8 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70 font-label">Tipo</th>
-<th class="px-8 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70 font-label text-right">Ações</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70">Tipo</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70">Nome / Razão Social</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70">CNPJ</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70">Produto / Serviço</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70">Data de Criação</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70">Criado Por</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70 text-right">Ações</th>
 </tr>
 </thead>
-<tbody class="divide-y divide-surface-container">
-<!-- Row 1 -->
-<tr class="group hover:bg-surface-container-low transition-colors duration-150">
-<td class="px-8 py-5">
-<div class="flex items-center gap-3">
-<div class="w-9 h-9 bg-tertiary-fixed rounded-full flex items-center justify-center text-on-tertiary-fixed-variant font-bold text-xs">
-                                            AG
-                                        </div>
-<div>
-<p class="text-sm font-semibold text-on-surface font-body">Almeida &amp; Gonçalves Logística LTDA</p>
-<p class="text-[11px] text-on-surface-variant">contato@almeidag.com.br</p>
-</div>
-</div>
-</td>
-<td class="px-8 py-5 text-sm text-on-surface-variant font-medium">12.345.678/0001-90</td>
-<td class="px-8 py-5">
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-tertiary-container text-on-tertiary-container">
-                                        Fornecedor
-                                    </span>
-</td>
-<td class="px-8 py-5 text-right">
-<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-<button class="p-2 text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-xl">edit</span></button>
-<button class="p-2 text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-xl">delete</span></button>
-</div>
-</td>
-</tr>
-<!-- Row 2 -->
-<tr class="group hover:bg-surface-container-low transition-colors duration-150">
-<td class="px-8 py-5">
-<div class="flex items-center gap-3">
-<div class="w-9 h-9 bg-primary-fixed rounded-full flex items-center justify-center text-on-primary-fixed-variant font-bold text-xs">
-                                            RM
-                                        </div>
-<div>
-<p class="text-sm font-semibold text-on-surface font-body">Ricardo Mendes da Silva</p>
-<p class="text-[11px] text-on-surface-variant">ricardo.mendes@gmail.com</p>
-</div>
-</div>
-</td>
-<td class="px-8 py-5 text-sm text-on-surface-variant font-medium">098.765.432-11</td>
-<td class="px-8 py-5">
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-secondary-container/20 text-on-secondary-container">
-                                        Cliente
-                                    </span>
-</td>
-<td class="px-8 py-5 text-right">
-<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-<button class="p-2 text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-xl">edit</span></button>
-<button class="p-2 text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-xl">delete</span></button>
-</div>
-</td>
-</tr>
-<!-- Row 3 -->
-<tr class="group hover:bg-surface-container-low transition-colors duration-150">
-<td class="px-8 py-5">
-<div class="flex items-center gap-3">
-<div class="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold text-xs">
-                                            FA
-                                        </div>
-<div>
-<p class="text-sm font-semibold text-on-surface font-body">Filial Nordeste - Architect</p>
-<p class="text-[11px] text-on-surface-variant">nordeste@architect.com</p>
-</div>
-</div>
-</td>
-<td class="px-8 py-5 text-sm text-on-surface-variant font-medium">12.345.678/0002-45</td>
-<td class="px-8 py-5">
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-surface-variant text-on-surface-variant">
-                                        Interno
-                                    </span>
-</td>
-<td class="px-8 py-5 text-right">
-<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-<button class="p-2 text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-xl">edit</span></button>
-<button class="p-2 text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-xl">delete</span></button>
-</div>
-</td>
-</tr>
-<!-- Row 4 -->
-<tr class="group hover:bg-surface-container-low transition-colors duration-150">
-<td class="px-8 py-5">
-<div class="flex items-center gap-3">
-<div class="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold text-xs">
-                                            TC
-                                        </div>
-<div>
-<p class="text-sm font-semibold text-on-surface font-body">Tech Cloud Solutions S.A.</p>
-<p class="text-[11px] text-on-surface-variant">billing@techcloud.io</p>
-</div>
-</div>
-</td>
-<td class="px-8 py-5 text-sm text-on-surface-variant font-medium">88.222.111/0001-00</td>
-<td class="px-8 py-5">
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-tertiary-container text-on-tertiary-container">
-                                        Fornecedor
-                                    </span>
-</td>
-<td class="px-8 py-5 text-right">
-<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-<button class="p-2 text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-xl">edit</span></button>
-<button class="p-2 text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-xl">delete</span></button>
-</div>
-</td>
-</tr>
+<tbody id="tabela-parceiros" class="divide-y divide-surface-container">
+<!-- Injetado por JS -->
 </tbody>
 </table>
 </div>
-<!-- Pagination -->
-<div class="px-8 py-4 flex items-center justify-between bg-surface-container-low/30 border-t border-surface-container-high">
-<p class="text-xs text-on-surface-variant opacity-70">Mostrando <span class="font-bold">4</span> de <span class="font-bold">1,284</span> registros</p>
-<div class="flex gap-2">
-<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container border border-surface-container-high text-on-surface hover:bg-white transition-all disabled:opacity-30">
-<span class="material-symbols-outlined text-sm">chevron_left</span>
-</button>
-<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-on-primary font-bold text-xs">1</button>
-<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-white border border-surface-container-high text-on-surface text-xs hover:bg-surface-container transition-all">2</button>
-<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-white border border-surface-container-high text-on-surface text-xs hover:bg-surface-container transition-all">3</button>
-<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-container border border-surface-container-high text-on-surface hover:bg-white transition-all">
-<span class="material-symbols-outlined text-sm">chevron_right</span>
-</button>
 </div>
 </div>
-</div>
-</div>
-<!-- Footer Tonal Separation -->
-<footer class="mt-auto px-8 py-6 border-t border-surface-container-high flex justify-between items-center bg-surface-container-lowest/30">
-<p class="text-[10px] uppercase tracking-widest text-on-surface-variant/50 font-bold">© 2024 Financial Architect Enterprise Suite • All Rights Reserved</p>
-<div class="flex gap-4">
-<a class="text-[10px] uppercase tracking-widest text-on-surface-variant/70 hover:text-primary transition-colors font-bold" href="#">Privacy Policy</a>
-<a class="text-[10px] uppercase tracking-widest text-on-surface-variant/70 hover:text-primary transition-colors font-bold" href="#">Audit Logs</a>
-</div>
-</footer>
 </main>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-  // A SUA CHAVE SECRETA (Agora com os dados corretos do CentraFin)
+<!-- Modal de Cadastro Completo (Auditoria) -->
+<div id="modal-parceiro" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+  <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="modal-overlay"></div>
+  <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative">
+    <div class="flex justify-between items-center mb-6">
+      <h3 class="font-headline text-xl font-bold text-slate-900">Novo Parceiro Comercial</h3>
+      <button id="btn-fechar-modal" class="text-slate-400 hover:text-slate-700 transition-colors">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    
+    <form id="form-parceiro" class="space-y-5">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Parceiro</label>
+            <select id="campo-tipo" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all">
+              <option value="Base_Fornecedores">Fornecedor (Fornece serviços a nós)</option>
+              <option value="Base_Clientes">Cliente (Paga os nossos serviços)</option>
+            </select>
+        </div>
+        
+        <div class="col-span-2">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Nome Fantasia ou Razão Social</label>
+            <input type="text" id="campo-nome" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="Ex: Serviços Técnicos LTDA">
+        </div>
+        
+        <div class="col-span-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1">CNPJ (Apenas números)</label>
+            <input type="text" id="campo-cnpj" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="00.000.000/0000-00">
+        </div>
+        
+        <div class="col-span-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Serviço / Produto</label>
+            <input type="text" id="campo-servico" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="Ex: TI, Limpeza, Marketing">
+        </div>
+        
+        <div class="col-span-2 mt-2 pt-2 border-t border-slate-100">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Auditoria: Usuário Responsável (Logado)</label>
+            <input type="text" id="campo-criado-por" value="Eduardo Santos (Financeiro)" readonly class="w-full bg-slate-50 text-slate-500 font-semibold border border-slate-200 rounded-lg py-2 px-3 text-sm outline-none cursor-not-allowed">
+            <p class="text-[10px] text-slate-400 mt-1">Este registro ficará fisicamente amarrado ao seu usuário perante as auditorias.</p>
+        </div>
+      </div>
+      
+      <div id="alerta-erro" class="hidden bg-error-container text-error text-xs font-bold p-3 rounded-lg flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">warning</span>
+        <span id="alerta-erro-texto">CNPJ já cadastrado no sistema.</span>
+      </div>
+
+      <div class="pt-4 flex justify-end gap-3 mt-4">
+        <button type="button" id="btn-cancelar" class="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">Cancelar</button>
+        <button type="submit" id="btn-salvar" class="flex items-center gap-2 px-8 py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95">
+          <span class="material-symbols-outlined text-lg">save</span> Confirmar Cadastro Valido
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  import { renderSidebar } from "../sidebar.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
   const firebaseConfig = {
     apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
     authDomain: "centra-fin.firebaseapp.com",
@@ -374,7 +180,178 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const docRef = doc(db, "Usuarios", user.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const dadosUser = docSnap.data();
+        if (dadosUser.status === 'inativo') {
+          await signOut(auth);
+          window.location.href = "../login.html";
+        }
+        renderSidebar(dadosUser.perfil);
+      } else {
+        renderSidebar('comum');
+      }
+    } else {
+      window.location.href = "../login.html";
+    }
+  });
+
+  const tbody = document.getElementById('tabela-parceiros');
+  const inputBusca = document.getElementById('input-busca');
+  let dataGlobal = [];
+
+  // Escutar Fornecedores e Clientes Simplesmente
+  function carregarBases() {
+      const colecoes = ["Base_Fornecedores", "Base_Clientes"];
+      const storeLocal = { "Base_Fornecedores": [], "Base_Clientes": [] };
+      
+      colecoes.forEach(colNome => {
+          onSnapshot(collection(db, colNome), (snap) => {
+              storeLocal[colNome] = [];
+              snap.forEach(d => {
+                  storeLocal[colNome].push({ _id: d.id, _colecao: colNome, ...d.data() });
+              });
+              dataGlobal = [...storeLocal["Base_Fornecedores"], ...storeLocal["Base_Clientes"]];
+              // Sort by date mostly
+              dataGlobal.sort((a,b) => b.data_cadastro?.seconds - a.data_cadastro?.seconds);
+              renderTabela(dataGlobal);
+          });
+      });
+  }
+
+  function renderTabela(lista) {
+      tbody.innerHTML = "";
+      const filtro = inputBusca.value.toLowerCase();
+      
+      lista.forEach(data => {
+          if(filtro && !data.nome?.toLowerCase().includes(filtro) && !data.cnpj?.includes(filtro)) return;
+          
+          let dataCad = "N/A";
+          if (data.data_criacao || data.data_cadastro) {
+              const dtCampo = data.data_criacao || data.data_cadastro;
+              const dt = dtCampo.toDate ? dtCampo.toDate() : new Date(dtCampo);
+              dataCad = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+          }
+          
+          const isFornecedor = data._colecao === "Base_Fornecedores";
+          const crachaCor = isFornecedor ? "bg-red-50 text-red-700 border-red-200" : "bg-green-50 text-green-700 border-green-200";
+          const labelTipo = isFornecedor ? "Fornecedor" : "Cliente";
+          
+          const cnpjMask = data.cnpj ? data.cnpj : "<span class='text-slate-300 italic'>Não Inf.</span>";
+          const servicoStr = data.tipo_servico ? data.tipo_servico : "Múltiplos";
+          const criadoPorStr = data.criado_por ? data.criado_por : "Sistema Legado";
+
+          const row = document.createElement('tr');
+          row.className = "hover:bg-slate-50 transition-colors duration-150";
+          row.innerHTML = `
+            <td class="px-6 py-4">
+              <span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${crachaCor}">${labelTipo}</span>
+            </td>
+            <td class="px-6 py-4 text-sm font-bold text-slate-800">${data.nome}</td>
+            <td class="px-6 py-4 text-sm text-slate-600 font-medium">${cnpjMask}</td>
+            <td class="px-6 py-4 text-xs text-slate-500 font-semibold">${servicoStr}</td>
+            <td class="px-6 py-4 text-xs text-slate-500">${dataCad}</td>
+            <td class="px-6 py-4 text-xs font-semibold text-slate-600">${criadoPorStr}</td>
+            <td class="px-6 py-4 text-right">
+                <button onclick="window.deletarParceiro('${data._colecao}', '${data._id}')" class="text-slate-400 hover:text-error transition-colors" title="Inativar Registro">
+                  <span class="material-symbols-outlined text-lg">delete</span>
+                </button>
+            </td>
+          `;
+          tbody.appendChild(row);
+      });
+  }
   
-  console.log("🔥 Motor do CentraFin conectado com sucesso ao Firebase!");
+  inputBusca.addEventListener('input', () => renderTabela(dataGlobal));
+  carregarBases();
+
+  window.deletarParceiro = async function(colecao, id) {
+      if(confirm(`Tem certeza que deseja apagar ${id} da coleção ${colecao}? Impactará os Selects.`)) {
+          await deleteDoc(doc(db, colecao, id));
+      }
+  }
+
+  // --- Lógica do Modal ---
+  const modal = document.getElementById('modal-parceiro');
+  const btnNovoParceiro = document.getElementById('btn-novo-parceiro');
+  const btnFecharModal = document.getElementById('btn-fechar-modal');
+  const btnCancelar = document.getElementById('btn-cancelar');
+  const overlay = document.getElementById('modal-overlay');
+  const formParceiro = document.getElementById('form-parceiro');
+  const alertaErro = document.getElementById('alerta-erro');
+  const alertaErroTexto = document.getElementById('alerta-erro-texto');
+
+  function abrirModal() {
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    modal.querySelector('div.bg-white').classList.remove('scale-95');
+    alertaErro.classList.add('hidden');
+    formParceiro.reset();
+  }
+
+  function fecharModal() {
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    modal.querySelector('div.bg-white').classList.add('scale-95');
+  }
+
+  btnNovoParceiro.addEventListener('click', abrirModal);
+  btnFecharModal.addEventListener('click', fecharModal);
+  btnCancelar.addEventListener('click', fecharModal);
+  overlay.addEventListener('click', fecharModal);
+
+  formParceiro.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertaErro.classList.add('hidden');
+      
+      const tipo = document.getElementById('campo-tipo').value;
+      const nome = document.getElementById('campo-nome').value.trim();
+      const cnpj = document.getElementById('campo-cnpj').value.trim();
+      const servico = document.getElementById('campo-servico').value.trim();
+      const criadoPor = document.getElementById('campo-criado-por').value;
+
+      if (!nome || !cnpj) return;
+
+      const btnSalvar = document.getElementById('btn-salvar');
+      btnSalvar.disabled = true;
+      btnSalvar.textContent = "Validando...";
+
+      try {
+          // Auditoria: Validar integridade do CNPJ (Evitar duplicatas)
+          const q = query(collection(db, tipo), where("cnpj", "==", cnpj));
+          const snapshotCheck = await getDocs(q);
+          
+          if (!snapshotCheck.empty) {
+              alertaErroTexto.textContent = "Governança: Esse CNPJ já está cadastrado no banco de " + (tipo === 'Base_Fornecedores' ? 'Fornecedores' : 'Clientes') + "!";
+              alertaErro.classList.remove('hidden');
+              btnSalvar.disabled = false;
+              btnSalvar.innerHTML = "<span class='material-symbols-outlined text-lg'>save</span> Confirmar Cadastro Valido";
+              return;
+          }
+
+          // Se passou pela validação, insere no Firestore usando o Nome como ID visual principal que alimentará os Selects
+          await setDoc(doc(db, tipo, nome), {
+              nome: nome,
+              cnpj: cnpj,
+              tipo_servico: servico,
+              criado_por: criadoPor,
+              data_criacao: new Date(),
+              data_cadastro: new Date() // Fallback p/ o codigo antigo
+          });
+
+          fecharModal();
+      } catch (e) {
+          console.error("Erro ao auditar/salvar:", e);
+          alertaErroTexto.textContent = "Erro interno: " + e.message;
+          alertaErro.classList.remove('hidden');
+      } finally {
+          btnSalvar.disabled = false;
+          btnSalvar.innerHTML = "<span class='material-symbols-outlined text-lg'>save</span> Confirmar Cadastro Valido";
+      }
+  });
+
 </script>      
 </body></html>

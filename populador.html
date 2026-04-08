@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>População de Firestore (Bases Auxiliares)</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 40px; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; color: #1a73e8; margin-top: 0; }
+        button { background: #1a73e8; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; display: block; margin-bottom: 20px; font-weight: bold; }
+        button:hover { background: #1557b0; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #logs { max-height: 400px; overflow-y: auto; background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 13px; line-height: 1.5; }
+        .success { color: #98c379; }
+        .error { color: #e06c75; }
+        .info { color: #61afef; }
+        .warning { color: #e5c07b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📦 CentraFin - Populador de Bases</h1>
+    <p>Este script irá popular as coleções auxiliares do banco de dados (Fornecedores, Clientes, Categorias, Empresas, Áreas e Responsáveis) garantindo que não existam nomes duplicados.</p>
+    
+    <button id="btn-iniciar">Iniciar População do Banco</button>
+    
+    <div id="logs">Pronto para iniciar...</div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+    authDomain: "centra-fin.firebaseapp.com",
+    projectId: "centra-fin",
+    storageBucket: "centra-fin.firebasestorage.app",
+    messagingSenderId: "666471089411",
+    appId: "1:666471089411:web:4630f5b2ced70ceb981536",
+    measurementId: "G-CJJX2T2HT8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const dadosBrutos = {
+    "Base_Fornecedores": ["Telefonica Brasil", "MBR Gestao", "Nadvi Consultoria", "Carvalho Assessoria", "Exato Digital", "Creditas", "Enel", "Claro", "R8 Consultoria"],
+    "Base_Clientes": ["Bunge Alimentos", "Raia Drogasil", "Sonova", "Arcellormittal", "Puma Sports", "Seara", "Mauser", "TechnipFMC", "Eaton"],
+    "Base_Categorias": ["Infraestrutura", "Salários", "Diretoria", "Viagens e Eventos", "Sistemas", "Contabilidade", "Impostos", "Auxílio Educação"],
+    "Base_Empresas": ["SELLAN", "SOULAN", "NEAT", "SOULAN ADM", "SOULAN CONS", "CENTRAL"],
+    "Base_Areas": ["Comercial", "R&S", "Diretoria", "Marketing", "Gente e Cultura", "Suprimentos", "Estratégia", "Vendas Internas"],
+    "Base_Responsaveis": ["Edilaine", "Nadjane", "Marcelo", "Fernanda", "Medeiros", "Tais", "Rejane", "Alberto", "Flavio", "Nicolas", "Adriana"]
+  };
+
+  const btnIniciar = document.getElementById('btn-iniciar');
+  const logsDiv = document.getElementById('logs');
+
+  function log(mensagem, tipo = '') {
+      const dataHora = new Date().toLocaleTimeString();
+      let classe = '';
+      if(tipo === 'sucesso') classe = 'success';
+      if(tipo === 'erro') classe = 'error';
+      if(tipo === 'info') classe = 'info';
+      if(tipo === 'alerta') classe = 'warning';
+      
+      logsDiv.innerHTML += `<div class="${classe}">[${dataHora}] ${mensagem}</div>`;
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+  }
+
+  btnIniciar.addEventListener('click', async () => {
+      btnIniciar.disabled = true;
+      btnIniciar.textContent = "Processando...";
+      logsDiv.innerHTML = "";
+      log("⚡ Iniciando conexão com o Firestore...", 'info');
+      
+      let totalProcessados = 0;
+
+      for (const [colecao, itens] of Object.entries(dadosBrutos)) {
+          log(`\n============================`, 'info');
+          log(`📁 Processando a Coleção: ${colecao}`, 'alerta');
+          
+          for (const item of itens) {
+              const nomeFiltrado = item.trim();
+              try {
+                  // O setDoc sobrescreve ou cria, então nunca duplica o mesmo nome
+                  const ref = doc(db, colecao, nomeFiltrado);
+                  await setDoc(ref, {
+                      nome: nomeFiltrado,
+                      data_cadastro: new Date()
+                  });
+                  log(`✔ Salvo: ${nomeFiltrado}`, 'sucesso');
+                  totalProcessados++;
+              } catch (erro) {
+                  log(`❌ Falha: ${nomeFiltrado} - ${erro.message}`, 'erro');
+              }
+          }
+      }
+
+      log(`\n============================`, 'info');
+      log(`🎉 PROCESSO CONCLUÍDO! ${totalProcessados} registros salvos / verificados no banco de dados. Pode fechar esta tela.`, 'sucesso');
+      btnIniciar.textContent = "Finalizado com Sucesso!";
+  });
+
+</script>
+
+</body>
+</html>

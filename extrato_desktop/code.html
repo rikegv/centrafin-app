@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CentraFin | Gestão Financeira</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#2e3132",
+                        "outline": "#8c7164",
+                        "error-container": "#ffdad6",
+                        "surface": "#f8f9fb",
+                        "on-primary-fixed-variant": "#783200",
+                        "on-tertiary-fixed": "#001d32",
+                        "background": "#f8f9fb",
+                        "on-secondary-fixed": "#00164e",
+                        "primary-fixed-dim": "#ffb690",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#003554",
+                        "inverse-primary": "#ffb690",
+                        "outline-variant": "#e0c0b1",
+                        "surface-tint": "#9d4300",
+                        "on-surface": "#191c1e",
+                        "surface-bright": "#f8f9fb",
+                        "surface-container": "#edeef0",
+                        "surface-variant": "#e1e2e4",
+                        "primary-fixed": "#ffdbca",
+                        "surface-container-high": "#e7e8ea",
+                        "tertiary-container": "#00a2f4",
+                        "primary-container": "#8eb025",
+                        "secondary": "#002443",
+                        "inverse-on-surface": "#f0f1f3",
+                        "surface-dim": "#d9dadc",
+                        "tertiary-fixed": "#cde5ff",
+                        "tertiary-fixed-dim": "#93ccff",
+                        "secondary-fixed": "#dce1ff",
+                        "surface-container-highest": "#e1e2e4",
+                        "tertiary": "#006398",
+                        "secondary-container": "#8fa7fe",
+                        "on-secondary-container": "#1d3989",
+                        "primary": "#aad12f",
+                        "on-secondary-fixed-variant": "#264191",
+                        "surface-container-low": "#f3f4f6",
+                        "on-primary-fixed": "#341100",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "on-background": "#191c1e",
+                        "on-surface-variant": "#584237",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#b6c4ff",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#ffffff"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-shadow {
+            box-shadow: 0px 20px 40px rgba(25, 28, 30, 0.06);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Loading skeleton pulses */
+        .skeleton {
+            animation: skeleton-loading 1s linear infinite alternate;
+        }
+        @keyframes skeleton-loading {
+            0% { background-color: #e1e2e4; }
+            100% { background-color: #f3f4f6; }
+        }
+    </style>
+</head>
+<body class="bg-surface-container-low font-body text-on-surface">
+<!-- SideNavBar Shell -->
+<div id="sidebar-container"></div>
+
+<!-- Main Content Area -->
+<main class="ml-20 min-h-screen">
+<!-- TopAppBar Shell -->
+<header class="sticky top-0 left-0 w-full z-40 flex justify-between items-center px-8 h-20 bg-slate-50 dark:bg-slate-900 border-b border-surface-variant">
+<div class="flex items-center gap-8">
+<h2 class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 font-manrope">Extrato Geral</h2>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-500">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-500">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Dashboard Canvas -->
+<div class="p-8 max-w-7xl mx-auto space-y-8">
+
+<!-- Filters / Controls Section -->
+<section class="bg-surface-container-lowest rounded-xl editorial-shadow p-6 flex flex-col md:flex-row md:items-end gap-6 justify-between border border-surface-container">
+    <div class="flex flex-col md:flex-row gap-4 flex-1 flex-wrap">
+        <div class="flex flex-col gap-2 w-full md:max-w-[160px]">
+            <label for="filtro-tipo" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Tipo</label>
+            <select id="filtro-tipo" class="w-full bg-surface-container-low border-surface-variant rounded-md text-sm font-medium focus:ring-primary focus:border-primary">
+                <option value="todos">Todos</option>
+                <option value="receita">Receitas</option>
+                <option value="despesa">Despesas</option>
+            </select>
+        </div>
+        <div class="flex flex-col gap-2 w-full md:max-w-[160px]">
+            <label for="filtro-mes" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Mês Ref.</label>
+            <input type="month" id="filtro-mes" class="w-full bg-surface-container-low border-surface-variant rounded-md text-sm font-medium focus:ring-primary focus:border-primary">
+        </div>
+        <div class="flex flex-col gap-2 w-full md:flex-1 min-w-[150px]">
+            <label for="filtro-fornecedor" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Forn/Cliente</label>
+            <input type="text" id="filtro-fornecedor" placeholder="Buscar..." class="w-full bg-surface-container-low border-surface-variant rounded-md text-sm font-medium focus:ring-primary focus:border-primary">
+        </div>
+        <div class="flex flex-col gap-2 w-full md:flex-1 min-w-[150px]">
+            <label for="filtro-categoria" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Categoria</label>
+            <input type="text" id="filtro-categoria" placeholder="Buscar..." class="w-full bg-surface-container-low border-surface-variant rounded-md text-sm font-medium focus:ring-primary focus:border-primary">
+        </div>
+        <div class="flex flex-col gap-2 w-full md:max-w-[160px]">
+            <label for="filtro-status" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Status</label>
+            <select id="filtro-status" class="w-full bg-surface-container-low border-surface-variant rounded-md text-sm font-medium focus:ring-primary focus:border-primary">
+                <option value="todos">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="recebido">Recebido</option>
+                <option value="pago">Pago</option>
+                <option value="atrasado">Atrasado</option>
+            </select>
+        </div>
+    </div>
+    <div>
+        <button id="btn-limpar-filtros" class="px-4 py-2 text-sm font-bold text-secondary hover:bg-surface-container-low rounded-md transition-colors border border-surface-variant">Limpar Filtros</button>
+    </div>
+</section>
+
+<!-- Table Section -->
+<section class="bg-surface-container-lowest rounded-xl editorial-shadow overflow-hidden border border-surface-container flex flex-col min-h-[500px]">
+    <div class="p-6 border-b border-surface-container flex justify-between items-center">
+        <div>
+            <h3 class="font-headline text-lg font-bold text-on-surface tracking-tight">Histórico de Lançamentos</h3>
+            <p class="text-xs text-on-surface-variant mt-1">Todos os registros cadastrados na base</p>
+        </div>
+        <div class="flex items-center gap-2 text-sm font-bold text-on-surface-variant" id="contador-registros">
+            Carregando...
+        </div>
+    </div>
+    
+    <div class="overflow-x-auto flex-1">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-surface-container-low/50">
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-surface-container">Data</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-surface-container">Tipo</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-surface-container">Fornecedor / Cliente</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-surface-container">Categoria</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-surface-container">Valor</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-surface-container">Status</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-surface-container text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-corpo" class="divide-y divide-surface-container bg-surface-container-lowest">
+                <!-- Data will be injected here via JS -->
+                 <tr><td colspan="7" class="px-6 py-10 text-center text-sm text-on-surface-variant"><span class="material-symbols-outlined text-2xl animate-spin mb-2">sync</span><br/>Carregando registros...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+</div>
+</main>
+
+<script type="module">
+  import { renderSidebar } from "../sidebar.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getFirestore, collection, onSnapshot, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+  // A SUA CHAVE SECRETA (Agora com os dados corretos do CentraFin)
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+    authDomain: "centra-fin.firebaseapp.com",
+    projectId: "centra-fin",
+    storageBucket: "centra-fin.firebasestorage.app",
+    messagingSenderId: "666471089411",
+    appId: "1:666471089411:web:4630f5b2ced70ceb981536",
+    measurementId: "G-CJJX2T2HT8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const docRef = doc(db, "Usuarios", user.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const dadosUser = docSnap.data();
+        if (dadosUser.status === 'inativo') {
+          await signOut(auth);
+          window.location.href = "../login.html";
+        }
+        renderSidebar(dadosUser.perfil);
+      } else {
+        renderSidebar('comum');
+      }
+    } else {
+      window.location.href = "../login.html";
+    }
+  });
+  console.log("🔥 Motor do CentraFin conectado no Extrato Geral!");
+
+  const formatadorMoeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  const tabelaCorpo = document.getElementById("tabela-corpo");
+  const contadorRegistros = document.getElementById("contador-registros");
+  const filtroTipo = document.getElementById("filtro-tipo");
+  const filtroMes = document.getElementById("filtro-mes");
+  const filtroFornecedor = document.getElementById("filtro-fornecedor");
+  const filtroCategoria = document.getElementById("filtro-categoria");
+  const filtroStatus = document.getElementById("filtro-status");
+  const btnLimparFiltros = document.getElementById("btn-limpar-filtros");
+
+  let todosLancamentos = []; // Store raw documents
+
+  // Helpers
+  function parseISOToDate(isoString) {
+      if(!isoString) return new Date();
+      // handling both YYYY-MM-DD and complete ISO
+      const parts = isoString.split('-');
+      if(parts.length >= 3) {
+          return new Date(parts[0], parts[1] - 1, parts[2].substring(0,2));
+      }
+      return new Date(isoString);
+  }
+
+  function formatarDataBR(dateObj) {
+      if(isNaN(dateObj.getTime())) return "Data Inválida";
+      const dia = String(dateObj.getDate()).padStart(2, '0');
+      const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const ano = dateObj.getFullYear();
+      return `${dia}/${mes}/${ano}`;
+  }
+
+  function renderTable(dataArray) {
+      tabelaCorpo.innerHTML = "";
+      
+      if (dataArray.length === 0) {
+          tabelaCorpo.innerHTML = `
+            <tr>
+              <td colspan="7" class="px-6 py-12 text-center text-on-surface-variant">
+                <span class="material-symbols-outlined text-4xl mb-3 text-slate-300">receipt_long</span>
+                <p class="font-bold">Nenhum lançamento encontrado.</p>
+                <p class="text-xs mt-1">Altere os filtros ou insira novos dados no sistema.</p>
+              </td>
+            </tr>
+          `;
+          contadorRegistros.innerHTML = `0 registros visíveis`;
+          return;
+      }
+
+      dataArray.forEach((item) => {
+          const dt = parseISOToDate(item.dataObj.data);
+          const dataFormatada = formatarDataBR(dt);
+          
+          let valorNumerico = 0;
+          if (typeof item.dataObj.valor === 'number') { valorNumerico = item.dataObj.valor; }
+          else if (typeof item.dataObj.valor === 'string') {
+               const cleanedStr = item.dataObj.valor.replace(/[^0-9,-]+/g,"").replace(",", ".");
+               valorNumerico = Number(cleanedStr) || 0;
+          }
+          const valorFormatado = formatadorMoeda.format(valorNumerico);
+
+          const tipoRaw = (item.dataObj.tipo || "").toLowerCase().trim();
+          let tipoBadge = "";
+          if (tipoRaw === 'receita') {
+              tipoBadge = `<span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700">Receita</span>`;
+          } else if (tipoRaw === 'despesa') {
+              tipoBadge = `<span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700">Despesa</span>`;
+          } else {
+              tipoBadge = `<span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700">${item.dataObj.tipo || '-'}</span>`;
+          }
+
+          // Create row
+          const tr = document.createElement("tr");
+          tr.className = "hover:bg-surface-container-low/60 transition-colors group";
+          
+          const targetName = item.dataObj.fornecedor || item.dataObj.cliente || "-";
+          const status = item.dataObj.status || "-";
+          const categoria = item.dataObj.categoria || "-";
+
+          tr.innerHTML = `
+              <td class="px-6 py-4 text-sm font-medium text-on-surface whitespace-nowrap">${dataFormatada}</td>
+              <td class="px-6 py-4 whitespace-nowrap">${tipoBadge}</td>
+              <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                       <span class="material-symbols-outlined text-slate-400 text-sm" data-icon="storefront">storefront</span>
+                       <span class="text-sm text-on-surface-variant font-medium truncate max-w-[200px]" title="${targetName}">${targetName}</span>
+                  </div>
+              </td>
+              <td class="px-6 py-4 text-sm text-on-surface-variant truncate max-w-[150px]">${categoria}</td>
+              <td class="px-6 py-4 text-sm font-bold text-on-surface whitespace-nowrap">${valorFormatado}</td>
+              <td class="px-6 py-4 text-xs font-semibold text-on-surface-variant whitespace-nowrap">${status}</td>
+              <td class="px-6 py-4 text-right whitespace-nowrap">
+                  <div class="flex justify-end gap-2">
+                       <button data-id="${item.id}" class="btn-editar inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all" title="Editar Lançamento">
+                           <span class="material-symbols-outlined text-[16px]">edit</span>
+                       </button>
+                       <button data-id="${item.id}" class="btn-excluir inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all" title="Excluir Lançamento">
+                           <span class="material-symbols-outlined text-[16px]">delete</span>
+                       </button>
+                  </div>
+              </td>
+          `;
+          tabelaCorpo.appendChild(tr);
+      });
+
+      contadorRegistros.innerHTML = `${dataArray.length} registro(s) visíveis`;
+
+      // Bind delete events
+      document.querySelectorAll('.btn-excluir').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+              const docId = e.currentTarget.getAttribute('data-id');
+              if (confirm("🚨 TEM CERTEZA QUE DESEJA APAGAR ESTE LANÇAMENTO? \n\nEsta ação não poderá ser desfeita e removerá o registro permanentemente do sistema e dos dashboards.")) {
+                  try {
+                      // Visual feedback before deleting
+                      e.currentTarget.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">sync</span>';
+                      await deleteDoc(doc(db, "Lancamentos", docId));
+                      // No need to manually refresh the array/table since onSnapshot handles it automatically!
+                  } catch (err) {
+                      console.error("Erro ao excluir documento:", err);
+                      alert("Ocorreu um erro ao excluir. Verifique sua conexão e permissões.");
+                      // reset button
+                      e.currentTarget.innerHTML = '<span class="material-symbols-outlined text-[16px]">delete</span>';
+                  }
+              }
+          });
+      });
+  }
+
+  function applyFilters() {
+      const selectedType = filtroTipo.value; // 'todos', 'receita', 'despesa'
+      const selectedMonth = filtroMes.value; // 'YYYY-MM' or ''
+
+      let filtered = [...todosLancamentos];
+
+      if (selectedType !== 'todos') {
+          filtered = filtered.filter(f => (f.dataObj.tipo || "").toLowerCase() === selectedType);
+      }
+
+      if (selectedMonth) {
+          // split 'YYYY-MM'
+          const [sYear, sMonth] = selectedMonth.split('-');
+          filtered = filtered.filter(f => {
+              const dt = parseISOToDate(f.dataObj.data);
+              if (isNaN(dt.getTime())) return false; // skip invalid dates
+              const fYear = String(dt.getFullYear());
+              const fMonth = String(dt.getMonth() + 1).padStart(2, '0');
+              return fYear === sYear && fMonth === sMonth;
+          });
+      }
+
+      if (filtroFornecedor.value) {
+          const termoBusca = filtroFornecedor.value.toLowerCase();
+          filtered = filtered.filter(f => {
+              const nome = (f.dataObj.fornecedor || f.dataObj.cliente || "").toLowerCase();
+              return nome.includes(termoBusca);
+          });
+      }
+
+      if (filtroCategoria.value) {
+          const termoBusca = filtroCategoria.value.toLowerCase();
+          filtered = filtered.filter(f => {
+              const cat = (f.dataObj.categoria || "").toLowerCase();
+              return cat.includes(termoBusca);
+          });
+      }
+
+      if (filtroStatus.value !== 'todos') {
+          const s = filtroStatus.value.toLowerCase();
+          filtered = filtered.filter(f => (f.dataObj.status || "").toLowerCase() === s);
+      }
+
+      renderTable(filtered);
+  }
+
+  // Monitor Database
+  const lancamentosRef = collection(db, "Lancamentos");
+  onSnapshot(lancamentosRef, (snapshot) => {
+      todosLancamentos = [];
+      snapshot.forEach((doc) => {
+          todosLancamentos.push({ id: doc.id, dataObj: doc.data() });
+      });
+
+      // Sort client-side: newest (most recent date) to oldest
+      todosLancamentos.sort((a, b) => {
+          const dateA = parseISOToDate(a.dataObj.data);
+          const dateB = parseISOToDate(b.dataObj.data);
+          return dateB.getTime() - dateA.getTime();
+      });
+
+      applyFilters(); // render respects current UI filters
+  }, (error) => {
+      console.error("❌ Erro ao escutar Lancamentos:", error);
+      tabelaCorpo.innerHTML = `<tr><td colspan="7" class="px-6 py-4 text-center text-red-500 font-bold">Erro ao carregar os dados.</td></tr>`;
+  });
+
+  // Event Listeners for filters
+  filtroTipo.addEventListener('change', applyFilters);
+  filtroMes.addEventListener('change', applyFilters);
+  filtroFornecedor.addEventListener('input', applyFilters);
+  filtroCategoria.addEventListener('input', applyFilters);
+  filtroStatus.addEventListener('change', applyFilters);
+  
+  btnLimparFiltros.addEventListener('click', () => {
+      filtroTipo.value = 'todos';
+      filtroMes.value = '';
+      filtroFornecedor.value = '';
+      filtroCategoria.value = '';
+      filtroStatus.value = 'todos';
+      applyFilters();
+  });
+
+</script>        
+</body></html>

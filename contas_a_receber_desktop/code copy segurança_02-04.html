@@ -134,20 +134,6 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
-
-    .custom-scroll::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-track {
-      background: rgba(203, 213, 225, 0.3);
-      border-radius: 4px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-thumb {
-      background: #94a3b8;
-      border-radius: 4px;
-    }
   </style>
 </head>
 
@@ -155,7 +141,7 @@
   <div id="sidebar-container"></div>
 
   <main class="flex-1 ml-20 p-8">
-    <header class="flex justify-between items-center mb-8">
+    <header class="flex justify-between items-center mb-6">
       <div>
         <h1 class="text-3xl font-extrabold tracking-tight text-on-surface font-manrope">Contas a Receber / Faturamento
         </h1>
@@ -172,6 +158,134 @@
         </div>
       </div>
     </header>
+
+    <div
+      class="mb-8 bg-gradient-to-br from-[#002443] to-[#003b6d] rounded-2xl shadow-lg overflow-hidden transition-all duration-500"
+      id="insights-container">
+      <div class="p-5 flex justify-between items-center cursor-pointer hover:bg-white/5 transition-colors"
+        id="btn-toggle-insights">
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-white/10 rounded-lg backdrop-blur-sm shadow-inner">
+            <span class="material-symbols-outlined text-white">lightbulb</span>
+          </div>
+          <div>
+            <h2 class="text-white font-headline font-bold text-lg">Smart Insights</h2>
+            <p class="text-blue-100/70 text-xs font-medium tracking-wide">Análise dinâmica da sua carteira de recebíveis
+            </p>
+          </div>
+        </div>
+        <span class="material-symbols-outlined text-white transition-transform duration-300 transform"
+          id="icon-toggle-insights">expand_less</span>
+      </div>
+
+      <div class="relative transition-all duration-500 origin-top overflow-hidden" id="insights-content">
+        <div id="carousel-track" class="flex w-full transition-transform duration-700 ease-in-out">
+          <div class="w-full flex-shrink-0 px-6 pb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div
+              class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative overflow-hidden group hover:bg-white/10 transition-colors">
+              <div class="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform"><span
+                  class="material-symbols-outlined text-7xl">event_upcoming</span></div>
+              <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Previsão (Próx. 7 dias)</p>
+              <h4 class="text-white font-headline text-2xl font-extrabold" id="ins-prev7-val">R$ 0,00</h4>
+              <p class="text-blue-100/60 text-[10px] mt-1 font-medium bg-white/10 inline-block px-2 py-0.5 rounded"
+                id="ins-prev7-qtd">0 faturas a vencer</p>
+            </div>
+            <div
+              class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative overflow-hidden group hover:bg-white/10 transition-colors">
+              <div class="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform"><span
+                  class="material-symbols-outlined text-7xl">warning</span></div>
+              <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Total Vencido</p>
+              <h4 class="text-red-400 font-headline text-2xl font-extrabold" id="ins-atraso-val">R$ 0,00</h4>
+              <p class="text-blue-100/60 text-[10px] mt-1 font-medium bg-red-400/20 text-red-200 inline-block px-2 py-0.5 rounded"
+                id="ins-atraso-qtd">0 faturas vencidas</p>
+            </div>
+            <div
+              class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative overflow-hidden group hover:bg-white/10 transition-colors flex flex-col justify-center">
+              <div class="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform"><span
+                  class="material-symbols-outlined text-7xl">check_circle</span></div>
+              <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Recebimento Consolidado</p>
+              <h4 class="text-emerald-400 font-headline text-2xl font-extrabold" id="ins-baixado-val">R$ 0,00</h4>
+              <p class="text-blue-100/60 text-[10px] mt-1 font-medium">Total de notas baixadas no período</p>
+            </div>
+          </div>
+          <div class="w-full flex-shrink-0 px-6 pb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div
+              class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative overflow-hidden group hover:bg-white/10 transition-colors flex flex-col justify-center">
+              <div class="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform"><span
+                  class="material-symbols-outlined text-7xl">hourglass_empty</span></div>
+              <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Valores a Receber (Rua)</p>
+              <h4 class="text-white font-headline text-2xl font-extrabold" id="ins-pendente-perc">0%</h4>
+              <p class="text-blue-100/60 text-[10px] mt-1 font-medium">Faturamento aguardando entrada</p>
+            </div>
+            <div
+              class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative overflow-hidden group hover:bg-white/10 transition-colors flex flex-col justify-center">
+              <div class="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform"><span
+                  class="material-symbols-outlined text-7xl">trending_down</span></div>
+              <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Índice de Inadimplência</p>
+              <h4 class="text-white font-headline text-2xl font-extrabold" id="ins-inadimp-perc">0%</h4>
+              <p class="text-blue-100/60 text-[10px] mt-1 font-medium">Do faturamento encontra-se vencido</p>
+            </div>
+            <div
+              class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md flex flex-col justify-between group hover:bg-white/10 transition-colors">
+              <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1"><span
+                  class="material-symbols-outlined text-[12px]">verified</span> Últimos Recebimentos</p>
+              <ul class="space-y-1.5" id="ins-ultimos-lista">
+                <li class="text-blue-100/50 text-xs italic">Carregando dados...</li>
+              </ul>
+            </div>
+          </div>
+          <div class="w-full flex-shrink-0 px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative overflow-hidden group hover:bg-white/10 transition-colors flex justify-between items-center">
+              <div class="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform"><span
+                  class="material-symbols-outlined text-7xl">date_range</span></div>
+              <div>
+                <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Comparativo Mês Atual x Mês
+                  Passado</p>
+                <h4 class="text-white font-headline text-2xl font-extrabold" id="ins-mom-atual">R$ 0,00</h4>
+                <p class="text-blue-100/60 text-[10px] mt-1 font-medium">Mês passado: <span id="ins-mom-prev">R$
+                    0,00</span></p>
+              </div>
+              <div class="text-right ml-4">
+                <span class="px-2 py-1 rounded font-bold text-xs flex items-center gap-1" id="ins-mom-diff-badge">
+                  <span class="material-symbols-outlined text-[14px]">remove</span> 0%
+                </span>
+              </div>
+            </div>
+            <div
+              class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative overflow-hidden group hover:bg-white/10 transition-colors flex justify-between items-center">
+              <div class="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform"><span
+                  class="material-symbols-outlined text-7xl">view_week</span></div>
+              <div>
+                <p class="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Semana Atual x Semana
+                  Passada (7 dias)</p>
+                <h4 class="text-white font-headline text-2xl font-extrabold" id="ins-wow-atual">R$ 0,00</h4>
+                <p class="text-blue-100/60 text-[10px] mt-1 font-medium">Semana passada: <span id="ins-wow-prev">R$
+                    0,00</span></p>
+              </div>
+              <div class="text-right ml-4">
+                <span class="px-2 py-1 rounded font-bold text-xs flex items-center gap-1" id="ins-wow-diff-badge">
+                  <span class="material-symbols-outlined text-[14px]">remove</span> 0%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button id="car-prev"
+          class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-[#002443]/50 hover:bg-[#002443] text-white rounded-full transition-colors opacity-0 hover:opacity-100 focus:opacity-100 group-hover:opacity-100 z-10 hidden md:flex"
+          style="transform: translateY(-80%);"><span
+            class="material-symbols-outlined text-lg">chevron_left</span></button>
+        <button id="car-next"
+          class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-[#002443]/50 hover:bg-[#002443] text-white rounded-full transition-colors opacity-0 hover:opacity-100 focus:opacity-100 group-hover:opacity-100 z-10 hidden md:flex"
+          style="transform: translateY(-80%);"><span
+            class="material-symbols-outlined text-lg">chevron_right</span></button>
+        <div class="flex justify-center gap-2 pb-4 pt-2" id="carousel-dots">
+          <button class="w-2 h-2 rounded-full bg-white transition-all transform scale-125" data-slide="0"></button>
+          <button class="w-2 h-2 rounded-full bg-white/30 hover:bg-white/60 transition-all" data-slide="1"></button>
+          <button class="w-2 h-2 rounded-full bg-white/30 hover:bg-white/60 transition-all" data-slide="2"></button>
+        </div>
+      </div>
+    </div>
 
     <section class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
       <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-variant/30 shadow-sm"><span
@@ -190,7 +304,7 @@
       <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-variant/30 shadow-sm"><span
           class="p-1 bg-cyan-50 text-cyan-600 rounded-lg inline-flex mb-1"><span
             class="material-symbols-outlined text-base">request_quote</span></span>
-        <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider mb-0.5">Valor Líquido</p>
+        <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider mb-0.5">Fat. Líquido</p>
         <h3 id="card-fat-liquido" class="text-base font-extrabold font-manrope text-on-surface">R$ 0,00</h3>
       </div>
 
@@ -271,10 +385,6 @@
           class="flex items-center gap-2 px-5 py-2.5 bg-white border border-surface-variant/30 text-secondary text-sm font-bold rounded-xl shadow-md hover:bg-surface-container transition-all">
           <span class="material-symbols-outlined text-lg">filter_alt</span> Filtros Avançados
         </button>
-        <button id="btn-abrir-exportar"
-          class="flex items-center gap-2 px-5 py-2.5 bg-white border border-green-600 text-green-700 text-sm font-extrabold rounded-xl hover:bg-green-50 transition-all">
-          <span class="material-symbols-outlined text-lg">download</span> Exportar Excel
-        </button>
         <button id="btn-importar-excel"
           class="flex items-center gap-2 px-5 py-2.5 bg-white border border-primary text-primary-fixed-dim text-sm font-extrabold rounded-xl hover:bg-primary/5 transition-all">
           <span class="material-symbols-outlined text-lg">upload_file</span> Importar Faturamento
@@ -329,7 +439,7 @@
                 Faturamento Bruto</th>
               <th
                 class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] text-cyan-600">
-                Valor Líquido</th>
+                Fat. Líquido</th>
               <th
                 class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
                 Fat. Real</th>
@@ -349,67 +459,6 @@
       </div>
     </div>
   </main>
-
-  <div id="modal-exportar"
-    class="fixed inset-0 z-[100] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="exportar-overlay"></div>
-    <div
-      class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative max-h-[95vh] flex flex-col">
-      <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4 shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-green-600 text-2xl">download</span>
-          <h3 class="font-headline text-xl font-bold text-slate-900">Exportar Relatório Detalhado</h3>
-        </div>
-        <button id="btn-fechar-exportar" class="text-slate-400 hover:text-slate-700 transition-colors"><span
-            class="material-symbols-outlined">close</span></button>
-      </div>
-
-      <div class="overflow-y-auto pr-2 custom-scroll space-y-6 flex-1">
-        <div>
-          <p class="text-xs text-slate-500 mb-3">Selecione o período de <strong>Emissão</strong> (Opcional):</p>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Data de Início</label>
-              <input type="date" id="exportar-inicio"
-                class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Data de Fim</label>
-              <input type="date" id="exportar-fim"
-                class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all">
-            </div>
-          </div>
-        </div>
-
-        <div class="border-t border-slate-100 pt-4">
-          <div class="flex justify-between items-center mb-3">
-            <label class="block text-sm font-bold text-slate-800">Colunas para Exportação da Base</label>
-            <label
-              class="flex items-center gap-1.5 text-xs cursor-pointer text-green-700 hover:text-green-800 font-bold bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg transition-colors">
-              <input type="checkbox" id="exportar-selecionar-todas" checked
-                class="rounded border-slate-300 text-green-600 focus:ring-green-500">
-              Selecionar Todas
-            </label>
-          </div>
-          <p class="text-[10px] text-slate-500 mb-3 font-medium">Selecione os campos que deseja extrair. O sistema
-            unificou todas as colunas dinâmicas encontradas na sua base de dados, além dos campos inteligentes
-            calculados.</p>
-
-          <div id="export-columns-container"
-            class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 bg-slate-50/50 p-3 border border-slate-200 rounded-xl custom-scroll">
-          </div>
-        </div>
-      </div>
-
-      <div class="flex justify-end gap-3 pt-5 mt-4 border-t border-slate-100 shrink-0">
-        <button id="btn-cancelar-exportar"
-          class="px-6 py-2.5 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-xl transition-all border border-slate-200">Cancelar</button>
-        <button id="btn-confirmar-exportar"
-          class="px-8 py-2.5 bg-green-600 text-white font-bold text-sm rounded-xl shadow-lg hover:bg-green-700 transition-all flex items-center gap-2"><span
-            class="material-symbols-outlined text-lg">download</span> Baixar Planilha Tratam.</button>
-      </div>
-    </div>
-  </div>
 
   <div id="modal-importar"
     class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
@@ -811,6 +860,7 @@
     </div>
   </div>
 
+  <!-- TAREFA 2: Modal de Revisão de Duplicatas -->
   <div id="modal-revisao-duplicatas"
     class="fixed inset-0 z-[65] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
     <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-revisao-overlay"></div>
@@ -886,12 +936,15 @@
             await signOut(auth);
             window.location.href = "../login.html";
           }
+
           renderSidebar(dadosUser.perfil);
         }
       } else {
         window.location.href = "../login.html";
       }
     });
+
+    // Evento de logout extraído para modulo externo
     async function registrarLog(acao, detalhes) {
       try {
         await addDoc(collection(db, "Logs"), {
@@ -903,6 +956,7 @@
         });
       } catch (e) { console.error("Falha ao gravar log:", e); }
     }
+
 
     let todasAsNotas = [];
     let paginaAtual = 1;
@@ -954,11 +1008,10 @@
           if (partes.length === 3 && partes[0].length === 4) return `${partes[2].padStart(2, '0')}/${partes[1].padStart(2, '0')}/${partes[0]}`;
         }
         return isoString;
-      } catch (err) {
-        return String(entrada || "-");
-      }
+      } catch (err) { return String(entrada || "-"); }
     }
 
+    // --- ATUALIZADO: Motor de Status com Prejuízo e Protesto ---
     function obterStatusReal(data, hojeData = new Date()) {
       hojeData.setHours(0, 0, 0, 0);
       const sRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
@@ -995,6 +1048,66 @@
       return "A VENCER";
     }
 
+    const btnToggleInsights = document.getElementById('btn-toggle-insights');
+    const contentInsights = document.getElementById('insights-content');
+    const iconToggle = document.getElementById('icon-toggle-insights');
+    const track = document.getElementById('carousel-track');
+    const btnPrev = document.getElementById('car-prev');
+    const btnNext = document.getElementById('car-next');
+    const dots = document.querySelectorAll('#carousel-dots button');
+    let currentSlide = 0;
+    const totalSlides = 3;
+    let autoSlideInterval;
+    function updateCarousel() {
+      if (!track) return;
+      track.style.transform = `translateX(-${currentSlide * 100}%)`;
+      dots.forEach((dot, index) => {
+        if (index === currentSlide) {
+          dot.classList.replace('bg-white/30', 'bg-white');
+          dot.classList.add('scale-125');
+        } else {
+          dot.classList.replace('bg-white', 'bg-white/30');
+          dot.classList.remove('scale-125');
+        }
+      });
+    }
+
+    function nextSlide() { currentSlide = (currentSlide + 1) % totalSlides; updateCarousel(); }
+    function prevSlide() { currentSlide = (currentSlide - 1 + totalSlides) % totalSlides; updateCarousel(); }
+    function startAutoSlide() { autoSlideInterval = setInterval(nextSlide, 7000); }
+    function stopAutoSlide() { clearInterval(autoSlideInterval); }
+
+    if (track) {
+      startAutoSlide();
+      const insightsContainer = document.getElementById('insights-container');
+      insightsContainer.addEventListener('mouseenter', stopAutoSlide);
+      insightsContainer.addEventListener('mouseleave', startAutoSlide);
+
+      if (btnNext) btnNext.addEventListener('click', () => { stopAutoSlide(); nextSlide(); startAutoSlide(); });
+      if (btnPrev) btnPrev.addEventListener('click', () => { stopAutoSlide(); prevSlide(); startAutoSlide(); });
+      dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+          currentSlide = index;
+          updateCarousel();
+          stopAutoSlide();
+          startAutoSlide();
+        });
+      });
+    }
+
+    if (btnToggleInsights && contentInsights && iconToggle) {
+      btnToggleInsights.addEventListener('click', () => {
+        contentInsights.classList.toggle('hidden');
+        if (contentInsights.classList.contains('hidden')) {
+          iconToggle.textContent = 'expand_more';
+          stopAutoSlide();
+        } else {
+          iconToggle.textContent = 'expand_less';
+          startAutoSlide();
+        }
+      });
+    }
+
     const modalVisualizar = document.getElementById('modal-visualizar');
     const modalVisualizarContent = document.getElementById('modal-visualizar-content');
     const btnFecharVisualizar = document.getElementById('btn-fechar-visualizar');
@@ -1017,6 +1130,7 @@
       const grid = document.getElementById('vis-detalhes-grid');
       if (grid) {
         grid.innerHTML = "";
+
         const tipoDiv = data.tipo_divergencia || '';
         const saldo = parseFloat(data.saldo_residual || 0);
         if (tipoDiv === "DEBITO") {
@@ -1036,7 +1150,7 @@
           grid.appendChild(divBanner);
         }
 
-        const ignorarChaves = ['id', 'tipo', 'data_importacao', 'data_criacao', 'data_edicao', 'origem', 'historico_comercial'];
+        const ignorarChaves = ['id', 'tipo', 'data_importacao', 'data_criacao', 'data_edicao', 'origem'];
         const chaves = Object.keys(data).filter(key => !ignorarChaves.includes(key)).sort();
         chaves.forEach(key => {
           let value = data[key];
@@ -1044,8 +1158,7 @@
 
           if (value === null || value === undefined || value === "") value = "-";
           else if (typeof value === 'object' && value.seconds) value = new Date(value.seconds * 1000).toLocaleDateString('pt-BR');
-          else if (typeof value === 'number' && (kLower.includes('dt ')
-            || kLower.includes('data') || kLower.includes('venc') || kLower.includes('emiss')))
+          else if (typeof value === 'number' && (kLower.includes('dt ') || kLower.includes('data') || kLower.includes('venc') || kLower.includes('emiss')))
             value = formatarDataBR(value);
           else if (typeof value === 'number' && (kLower.includes('valor') || kLower.includes('taxa'))) value = formatadorMoeda.format(value);
 
@@ -1112,147 +1225,6 @@
     if (btnCancelar) btnCancelar.addEventListener('click', fecharModal);
     if (overlay) overlay.addEventListener('click', fecharModal);
 
-    const btnAbrirExportar = document.getElementById('btn-abrir-exportar');
-    const modalExportar = document.getElementById('modal-exportar');
-    const btnFecharExportar = document.getElementById('btn-fechar-exportar');
-    const btnCancelarExportar = document.getElementById('btn-cancelar-exportar');
-    const btnConfirmarExportar = document.getElementById('btn-confirmar-exportar');
-    const exportarOverlay = document.getElementById('exportar-overlay');
-    function popularColunasExportacao() {
-      const container = document.getElementById('export-columns-container');
-      if (!container) return;
-      container.innerHTML = '';
-      const chavesSet = new Set();
-
-      const camposCalculados = [
-        "Calc: Empresa Atribuída",
-        "Calc: Faturamento Real",
-        "Calc: Status Atual",
-        "Calc: Mês Ref. Formatado"
-      ];
-      camposCalculados.forEach(c => chavesSet.add(c));
-
-      todasAsNotas.forEach(nota => {
-        Object.keys(nota).forEach(k => {
-          if (k !== 'historico_comercial' && k !== 'id') {
-            chavesSet.add(k);
-          }
-        });
-      });
-      const colunas = Array.from(chavesSet).sort();
-      let htmlContent = '';
-      colunas.forEach(col => {
-        htmlContent += `
-              <label class="flex items-center gap-2 text-[11px] text-slate-700 cursor-pointer truncate bg-white border border-slate-200 p-1.5 rounded hover:bg-green-50 hover:border-green-300 transition-colors" title="${col}">
-                  <input type="checkbox" value="${col}" class="export-col-checkbox rounded border-slate-300 text-green-600 focus:ring-green-500" checked>
-                  <span class="truncate select-none">${col}</span>
-              </label>
-          `;
-      });
-      container.innerHTML = htmlContent;
-
-      const checkAll = document.getElementById('exportar-selecionar-todas');
-      if (checkAll) checkAll.checked = true;
-    }
-
-    function abrirModalExportar() {
-      popularColunasExportacao();
-      modalExportar.classList.remove('opacity-0', 'pointer-events-none');
-      modalExportar.querySelector('.bg-white').classList.remove('scale-95');
-    }
-
-    function fecharModalExportar() {
-      modalExportar.classList.add('opacity-0', 'pointer-events-none');
-      modalExportar.querySelector('.bg-white').classList.add('scale-95');
-    }
-
-    if (btnAbrirExportar) btnAbrirExportar.addEventListener('click', abrirModalExportar);
-    if (btnFecharExportar) btnFecharExportar.addEventListener('click', fecharModalExportar);
-    if (btnCancelarExportar) btnCancelarExportar.addEventListener('click', fecharModalExportar);
-    if (exportarOverlay) exportarOverlay.addEventListener('click', fecharModalExportar);
-    const checkAllExport = document.getElementById('exportar-selecionar-todas');
-    if (checkAllExport) {
-      checkAllExport.addEventListener('change', (e) => {
-        const checkboxes = document.querySelectorAll('.export-col-checkbox');
-        checkboxes.forEach(cb => cb.checked = e.target.checked);
-      });
-    }
-
-    if (btnConfirmarExportar) {
-      btnConfirmarExportar.addEventListener('click', () => {
-        const selectedCols = Array.from(document.querySelectorAll('.export-col-checkbox:checked')).map(cb => cb.value);
-        if (selectedCols.length === 0) {
-          alert("Selecione pelo menos uma coluna para exportar.");
-          return;
-        }
-
-        const dtInicio = document.getElementById('exportar-inicio').value;
-        const dtFim = document.getElementById('exportar-fim').value;
-
-        let dadosFiltrados = todasAsNotas;
-        if (dtInicio || dtFim) {
-          dadosFiltrados = todasAsNotas.filter(data => {
-            let emissaoRaw = data['data_emissao'] || data['Dt Emissao'] || "";
-            let d = null;
-            if (emissaoRaw.toDate) d = emissaoRaw.toDate();
-            else if (emissaoRaw instanceof Date) d = emissaoRaw;
-            else if (typeof emissaoRaw === 'number') d = new Date((emissaoRaw - 25569) * 86400 * 1000);
-            else {
-              const s = String(emissaoRaw).trim();
-              if (s.includes('/')) d = new Date(`${s.split('/')[2]}-${s.split('/')[1]}-${s.split('/')[0]}`);
-              else d = new Date(s);
-            }
-
-            if (d && !isNaN(d.getTime())) {
-              const iso = d.toISOString().split('T')[0];
-              if (dtInicio && iso < dtInicio) return false;
-              if (dtFim && iso > dtFim) return false;
-              return true;
-            }
-            return false;
-          });
-        }
-
-        if (dadosFiltrados.length === 0) {
-          alert("Nenhum dado encontrado para o período selecionado.");
-          return;
-        }
-
-        const planData = dadosFiltrados.map(d => {
-          const obj = {};
-          const descContrato = d['descricao_contrato'] || d['Descrição Do Contrato'] || d['descricao'] || '-';
-          const vFaturaRaw = d['valor_fatura'] || d['Valor Fatura'] || d['valor'] || 0;
-          const vFatura = typeof vFaturaRaw === 'number' ? vFaturaRaw : parseFloat(String(vFaturaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-
-          const vTaxaRaw = d['taxa'] || d['Taxa'] || 0;
-          const vTaxa = typeof vTaxaRaw === 'number' ? vTaxaRaw : parseFloat(String(vTaxaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-
-          selectedCols.forEach(col => {
-            if (col === "Calc: Empresa Atribuída") obj[col] = calcularEmpresaAtribuida(descContrato);
-            else if (col === "Calc: Faturamento Real") obj[col] = calcularFaturamentoReal(descContrato, vFatura, vTaxa);
-            else if (col === "Calc: Status Atual") obj[col] = obterStatusReal(d, new Date());
-            else if (col === "Calc: Mês Ref. Formatado") obj[col] = formatarMesRef(formatarDataBR(d['data_emissao'] || d['Dt Emissao'] || ''));
-            else {
-              let val = d[col];
-              if (val && typeof val === 'object' && val.seconds) {
-                val = new Date(val.seconds * 1000).toLocaleDateString('pt-BR');
-              }
-              obj[col] = val !== undefined && val !== null ? val : "";
-            }
-          });
-          return obj;
-        });
-
-        const ws = XLSX.utils.json_to_sheet(planData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Base Exportada");
-        const nomeArquivo = `Relatorio_Faturamento_${dtInicio || 'total'}_a_${dtFim || 'total'}.xlsx`;
-        XLSX.writeFile(wb, nomeArquivo);
-
-        fecharModalExportar();
-      });
-    }
-
     const modalImportar = document.getElementById('modal-importar');
     const modalImportarContent = document.getElementById('modal-importar-content');
     const btnImportarExcel = document.getElementById('btn-importar-excel');
@@ -1261,6 +1233,7 @@
     const overlayImportar = document.getElementById('modal-importar-overlay');
     const dropZone = document.getElementById('drop-zone');
     const inputFileImport = document.getElementById('input-file-import');
+
     function abrirModalImportar() {
       if (modalImportar && modalImportarContent) {
         modalImportar.classList.remove('opacity-0', 'pointer-events-none');
@@ -1294,7 +1267,8 @@
       "Valor Descto.", "Vl. Líquido", "Pagto Parcial", "Dt Emissao", "Dt Vecto", "Dt Baixa", "Dt Credito",
       "Cliente", "CNPJ Cliente", "Cd.Cliente", "CTR", "TPF", "Descrição Do Contrato", "Centro Custo",
       "Tel.Cliente", "Cidade do Cliente", "Situação", "Região", "Comissionado 01", "Vendedor",
-      "Cpt.Primeiro Fat.", "Cpt.Primeiro Dup.", "Nº NF-e", "Cod.", "Grupo Econômico", "% ISS",
+      "Cpt.Primeiro Fat.",
+      "Cpt.Primeiro Dup.", "Nº NF-e", "Cod.", "Grupo Econômico", "% ISS",
       "Situação ISS", "Opções Cálculo ISS", "Percentual Tributo", "Perc.Fat.", "Centro Resultado",
       "Banco", "Status", "Valor Baixa", "Usuário Inclusão", "Obs. Emissão"
     ];
@@ -1360,10 +1334,6 @@
             const firstCellNormalized = String(row[0] || "").trim().toUpperCase();
             if (firstCellNormalized.includes('TEMPORÁRIO') || firstCellNormalized.includes('TEMPORARIO')) continue;
             if (firstCellNormalized === 'Nº NF' || firstCellNormalized === 'NF') continue;
-            // REGRA DE SEGURANÇA: IGNORAR TOTALIZADORES
-            if (firstCellNormalized.includes('TOTAL') || firstCellNormalized.includes('TOTAIS')) continue;
-            if (row.some(c => String(c).trim().toUpperCase().includes('TOTAL GERAL'))) continue;
-
             cleanedRows.push(row);
           }
 
@@ -1496,11 +1466,13 @@
             const cnpj = String(data['cnpj'] || data['CNPJ Cliente'] || "").trim();
             const emissaoRaw = data['data_emissao'] || data['Dt Emissao'] || "";
             const emissao = formatarDataBR(emissaoRaw);
+
             if (nf && cnpj) {
               const chave = `${nf}_${cnpj}_${emissao}`;
               mapExistentes.set(chave, { id: docSnap.id, ...data });
             }
           });
+
           const novosLancamentos = [];
           const lancamentosDuplicados = [];
 
@@ -1543,10 +1515,7 @@
             const chaveExcel = `${nfExcel}_${cnpjExcel}_${emissaoExcel}`;
 
             if (nfExcel && cnpjExcel && mapExistentes.has(chaveExcel)) {
-              const existente = mapExistentes.get(chaveExcel);
-              docData.idExistente = existente.id;
-              docData.comercialAntigo = existente['Comissionado 01'] || existente['Vendedor'];
-              docData.historico_comercial_existente = existente.historico_comercial || [];
+              docData.idExistente = mapExistentes.get(chaveExcel).id;
               lancamentosDuplicados.push(docData);
             } else {
               novosLancamentos.push(docData);
@@ -1586,6 +1555,7 @@
           }
 
           await processarSalvamentoImportacao(novosLancamentos, [], btnOriginalText);
+
         } catch (err) {
           exibirFeedback(`Erro inesperado ao carregar: ${err.message}`, 'erro');
           btnProcessar.disabled = false;
@@ -1603,8 +1573,6 @@
 
         for (const docData of novos) {
           delete docData.idExistente;
-          delete docData.comercialAntigo;
-          delete docData.historico_comercial_existente;
           await addDoc(collection(db, "Lancamentos"), docData);
         }
 
@@ -1620,20 +1588,6 @@
             'tipo_divergencia': docData.tipo_divergencia || "",
             data_edicao: new Date()
           };
-          const novoComercial = docData['Comissionado 01'] || docData['Vendedor'];
-          const antigoComercial = docData.comercialAntigo;
-          if (novoComercial && antigoComercial && novoComercial !== antigoComercial) {
-            updatePayload.historico_comercial = docData.historico_comercial_existente || [];
-            updatePayload.historico_comercial.push({
-              comercial_antigo: antigoComercial,
-              comercial_novo: novoComercial,
-              data_alteracao: new Date().toISOString()
-            });
-            updatePayload['Comissionado 01'] = novoComercial;
-          }
-
-          delete docData.comercialAntigo;
-          delete docData.historico_comercial_existente;
           if (docData['status']) updatePayload.status = docData.status;
 
           await updateDoc(doc(db, "Lancamentos", idDoc), updatePayload);
@@ -1685,7 +1639,6 @@
         }
         fecharModalImportar();
         limparFeedback();
-
         if (inputFileImport) inputFileImport.value = '';
         if (btnProcessar) {
           btnProcessar.disabled = true;
@@ -1719,7 +1672,6 @@
       const data_recebimento = document.getElementById('campo-data-recebimento').value;
       const mes_referencia = document.getElementById('campo-mes-referencia').value;
       const status = document.getElementById('campo-status').value;
-
       const empresa_atribuida = document.getElementById('campo-empresa-atribuida').value;
       const observacoes = document.getElementById('campo-observacoes').value;
 
@@ -1751,16 +1703,6 @@
           if (input.type === 'number') val = Number(val) || 0;
           payload[input.dataset.key] = val;
         });
-        const comercialNovo = payload['Comissionado 01'] || payload['Vendedor'] || "";
-        if (idParaEditar && window.comercialOriginalEdit && comercialNovo !== window.comercialOriginalEdit) {
-          payload.historico_comercial = window.historicoComercialEdit || [];
-          payload.historico_comercial.push({
-            comercial_antigo: window.comercialOriginalEdit,
-            comercial_novo: comercialNovo,
-            data_alteracao: new Date().toISOString()
-          });
-        }
-
         if (idParaEditar) {
           await setDoc(doc(db, "Lancamentos", idParaEditar), { ...payload, data_edicao: new Date() }, { merge: true });
           await registrarLog("ALTERAÇÃO", `Alterou os dados da Fatura NF ${nf} do cliente ${cliente}.`);
@@ -1789,22 +1731,10 @@
       if (!valor || valor === '-') return '-';
       const s = String(valor).trim();
       let mes = null, ano = null;
-      if (/^\d{4}-\d{2}$/.test(s)) {
-        const [a, m] = s.split('-'); mes = parseInt(m, 10);
-        ano = a;
-      }
-      else if (/^\d{2}\/\d{4}$/.test(s)) {
-        const [m, a] = s.split('/');
-        mes = parseInt(m, 10); ano = a;
-      }
-      else if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-        const partes = s.split('/');
-        mes = parseInt(partes[1], 10); ano = partes[2];
-      }
-      else if (/^\d{2}\/\d{2}$/.test(s)) {
-        const [m, a] = s.split('/');
-        mes = parseInt(m, 10); ano = '20' + a;
-      }
+      if (/^\d{4}-\d{2}$/.test(s)) { const [a, m] = s.split('-'); mes = parseInt(m, 10); ano = a; }
+      else if (/^\d{2}\/\d{4}$/.test(s)) { const [m, a] = s.split('/'); mes = parseInt(m, 10); ano = a; }
+      else if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const partes = s.split('/'); mes = parseInt(partes[1], 10); ano = partes[2]; }
+      else if (/^\d{2}\/\d{2}$/.test(s)) { const [m, a] = s.split('/'); mes = parseInt(m, 10); ano = '20' + a; }
       if (mes && mes >= 1 && mes <= 12 && ano) return NOMES_MESES[mes - 1] + '/' + ano.slice(-2);
       return s;
     }
@@ -1825,10 +1755,14 @@
     const inputBusca = document.getElementById('input-busca');
     const elCardTotalNotas = document.getElementById('card-total-notas');
     const elCardValorTotal = document.getElementById('card-valor-total');
+
+    // NOVO: Elementos de KPI
     const elCardFatLiquido = document.getElementById('card-fat-liquido');
     const elCardPrejuizo = document.getElementById('card-total-prejuizo');
     const elCardProtesto = document.getElementById('card-total-protesto');
+
     const elCardFatReal = document.getElementById('card-faturamento-real');
+    const elCardTotalPendente = document.getElementById('card-total-pendente');
     const elCardTotalAVencer = document.getElementById('card-total-a-vencer');
     const elCardTotalVencido = document.getElementById('card-total-vencido');
     const elCardTotalBaixado = document.getElementById('card-total-baixado');
@@ -1838,6 +1772,7 @@
     const modalFiltrosContent = document.getElementById('filtros-content');
     const btnFecharFiltros = document.getElementById('btn-fechar-filtros');
     const filtrosOverlay = document.getElementById('filtros-overlay');
+
     const getMultiValues = (id) => {
       const select = document.getElementById(id);
       if (!select) return ["Todos"];
@@ -1845,6 +1780,7 @@
       if (values.length === 0 || values.includes("Todos")) return ["Todos"];
       return values;
     };
+
     const btnAplicarFiltros = document.getElementById('btn-aplicar-filtros');
     const btnLimparFiltros = document.getElementById('btn-limpar-filtros');
 
@@ -1925,11 +1861,9 @@
       const bFim = getVal('filtro-baixa-fim');
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
-
       const docsFiltrados = todasAsNotas.filter(data => {
         try {
           const nf = String(data['NF'] || data['nf'] || "");
-          const rpsCalc = String(data.rps || data['Nº NF'] || data['NF'] || "");
           const cliente = String(data['cliente'] || data['Cliente'] || "");
           const codCliente = String(data['codigo_cliente'] || data['Cd.Cliente'] || "");
           const cnpj = String(data['cnpj'] || data['CNPJ Cliente'] || "");
@@ -1946,12 +1880,8 @@
           const empresaCalcBusca = calcularEmpresaAtribuida(tipoServico) || '';
           const nf_e_calc = String(data['Nº NF-e'] || data['nfe'] || "");
 
-          const bateBusca = !t || norm(nf).includes(t) || norm(rpsCalc).includes(t) || norm(cliente).includes(t) ||
-            norm(codCliente).includes(t) || norm(cnpj).includes(t) || norm(tipoServico).includes(t) ||
-            norm(mesRefRaw).includes(t) || norm(emissaoFormatada).includes(t) ||
-            norm(formatarDataBR(vencRaw)).includes(t) || norm(formatarDataBR(baixaRaw)).includes(t) || norm(String(vFaturaRaw)).includes(t) || norm(String(faturRealVal)).includes(t) || norm(empresaCalcBusca).includes(t) ||
-            norm(nf_e_calc).includes(t) || norm(statusReal).includes(t);
-
+          const bateBusca = !t || norm(nf).includes(t) || norm(cliente).includes(t) || norm(codCliente).includes(t) || norm(cnpj).includes(t) || norm(tipoServico).includes(t) ||
+            norm(mesRefRaw).includes(t) || norm(emissaoFormatada).includes(t) || norm(formatarDataBR(vencRaw)).includes(t) || norm(formatarDataBR(baixaRaw)).includes(t) || norm(String(vFaturaRaw)).includes(t) || norm(String(faturRealVal)).includes(t) || norm(empresaCalcBusca).includes(t) || norm(nf_e_calc).includes(t) || norm(statusReal).includes(t);
           let bateTipo = fTipoArr.includes("Todos") || fTipoArr.some(tipo => norm(tipoServico).includes(norm(tipo)));
           const checarPeriodo = (raw, inicio, fim) => {
             if (!inicio && !fim) return true;
@@ -1977,6 +1907,7 @@
           const bateVenc = checarPeriodo(vencRaw, vInicio, vFim);
           const bateEmissao = checarPeriodo(emissaoRaw, eInicio, eFim);
           const bateBaixa = checarPeriodo(baixaRaw, bInicio, bFim);
+
           let bateEmpresa = fEmpresaArr.includes("Todos") || fEmpresaArr.includes(empresaCalcBusca);
           let bateStatus = fStatusArr.includes("Todos") || fStatusArr.includes(statusReal);
           return bateBusca && bateTipo && bateStatus && bateEmpresa && bateVenc && bateEmissao && bateBaixa;
@@ -2024,6 +1955,7 @@
 
           const baixaRaw = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || '-';
           const baixa = formatarDataBR(baixaRaw);
+
           const vFaturaRaw = data['valor_fatura'] || data['Valor Fatura'] || data['valor'] || 0;
           const vFatura = typeof vFaturaRaw === 'number' ? vFaturaRaw : parseFloat(String(vFaturaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
 
@@ -2041,7 +1973,9 @@
           if (statusReal === "A VENCER") statusClass = "bg-indigo-50 text-indigo-600";
           if (statusReal === "PREJUÍZO") statusClass = "bg-red-900 text-white shadow-sm";
           if (statusReal === "PROTESTO") statusClass = "bg-orange-100 text-orange-800 border border-orange-200";
+
           const cellClass = "px-4 py-3 text-[10px] text-on-surface-variant font-medium border-r border-slate-100 last:border-r-0 shadow-[1px_0_0_rgba(0,0,0,0.02)]";
+
           tr.innerHTML = `
             <td class="${cellClass} font-bold text-[#002443] bg-slate-50">${empresaCalc}</td>
             <td class="${cellClass} font-bold text-[11px]">${rps}</td>
@@ -2074,6 +2008,7 @@
       elFooterCount.textContent = `Mostrando ${inicio + 1}-${Math.min(fim, totalItens)} de ${totalItens} faturas`;
       renderizarPaginacao(totalPaginas);
       atualizarMetrics(docsFiltrados);
+
       const btnLimparRapido = document.getElementById('btn-limpar-filtros-rapido');
       if (btnLimparRapido) {
         if (termo !== "" || !fTipoArr.includes("Todos") || !fStatusArr.includes("Todos") || vInicio || vFim || eInicio || eFim || bInicio || bFim) {
@@ -2120,6 +2055,15 @@
     function atualizarMetrics(docs) {
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
+      const limite7Dias = new Date(hoje); limite7Dias.setDate(limite7Dias.getDate() + 7);
+      const mesAtualInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      const mesAtualFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+      const mesPassadoInicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+      const mesPassadoFim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+      const ultimos7DiasInicio = new Date(hoje); ultimos7DiasInicio.setDate(ultimos7DiasInicio.getDate() - 6);
+      const prev7DiasInicio = new Date(ultimos7DiasInicio);
+      prev7DiasInicio.setDate(prev7DiasInicio.getDate() - 7);
+      const prev7DiasFim = new Date(ultimos7DiasInicio); prev7DiasFim.setDate(prev7DiasFim.getDate() - 1);
 
       let totalNotas = docs.length;
       let valorTotal = 0, totalFatReal = 0, totalPendente = 0, totalAVencer = 0, totalBaixado = 0;
@@ -2129,8 +2073,12 @@
       let totalPrejuizo = 0;
       let totalProtesto = 0;
 
+      let prox7DiasValor = 0, prox7DiasQtd = 0, vencidosQtd = 0;
+      let recebidosRecentes = [];
+      let momAtual = 0, momPrev = 0, wowAtual = 0, wowPrev = 0;
       docs.forEach(data => {
         const descContrato = data['descricao_contrato'] || data['Descrição Do Contrato'] || data['descricao'] || '-';
+        const cliente = data['cliente'] || data['Cliente'] || 'Desconhecido';
 
         const vFaturaRaw = data['valor_fatura'] || data['Valor Fatura'] || data['valor'] || 0;
         const vFatura = typeof vFaturaRaw === 'number' ? vFaturaRaw : parseFloat(String(vFaturaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
@@ -2146,16 +2094,41 @@
         valorTotal += Number(vFatura);
         totalFatReal += Number(faturReal);
         totalFatLiquido += Number(vLiquido);
-
         if (statusReal === "RECEBIDO") {
           totalBaixado += Number(faturReal);
           totalBaixadoLiquido += Number(vLiquido);
+          let dBaixa = null;
+          const baixaRaw = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || "";
+          if (baixaRaw) {
+            if (baixaRaw.toDate) dBaixa = baixaRaw.toDate();
+            else if (typeof baixaRaw === 'number') dBaixa = new Date((baixaRaw - 25569) * 86400 * 1000);
+            else { const s = String(baixaRaw).trim(); if (s.includes('/')) dBaixa = new Date(`${s.split('/')[2]}-${s.split('/')[1]}-${s.split('/')[0]}`); else dBaixa = new Date(s); }
+          }
+          if (dBaixa && !isNaN(dBaixa.getTime())) {
+            dBaixa.setHours(0, 0, 0, 0);
+            recebidosRecentes.push({ cliente, valor: faturReal, data: dBaixa });
+            if (dBaixa >= mesAtualInicio && dBaixa <= mesAtualFim) momAtual += faturReal;
+            if (dBaixa >= mesPassadoInicio && dBaixa <= mesPassadoFim) momPrev += faturReal;
+            if (dBaixa >= ultimos7DiasInicio && dBaixa <= hoje) wowAtual += faturReal;
+            if (dBaixa >= prev7DiasInicio && dBaixa <= prev7DiasFim) wowPrev += faturReal;
+          }
         } else if (statusReal === "VENCIDO") {
           totalPendente += Number(faturReal);
-          totalVencido += Number(faturReal);
+          totalVencido += Number(faturReal); vencidosQtd++;
         } else if (statusReal === "A VENCER") {
           totalPendente += Number(faturReal);
-          totalAVencer += Number(vLiquido);
+          totalAVencer += Number(faturReal);
+          const vencRaw = data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto'] || "";
+          let dVenc = null;
+          if (vencRaw) {
+            if (vencRaw.toDate) dVenc = vencRaw.toDate();
+            else if (typeof vencRaw === 'number') dVenc = new Date((vencRaw - 25569) * 86400 * 1000);
+            else { const s = String(vencRaw).trim(); if (s.includes('/')) dVenc = new Date(`${s.split('/')[2]}-${s.split('/')[1]}-${s.split('/')[0]}`); else dVenc = new Date(s); }
+          }
+          if (dVenc && !isNaN(dVenc.getTime())) {
+            dVenc.setHours(0, 0, 0, 0);
+            if (dVenc <= limite7Dias) { prox7DiasValor += Number(faturReal); prox7DiasQtd++; }
+          }
         } else if (statusReal === "PREJUÍZO") {
           totalPrejuizo += Number(faturReal);
         } else if (statusReal === "PROTESTO") {
@@ -2167,6 +2140,7 @@
       if (elCardValorTotal) elCardValorTotal.textContent = formatadorMoeda.format(valorTotal);
       if (elCardFatLiquido) elCardFatLiquido.textContent = formatadorMoeda.format(totalFatLiquido);
       if (elCardFatReal) elCardFatReal.textContent = formatadorMoeda.format(totalFatReal);
+      if (elCardTotalPendente) elCardTotalPendente.textContent = formatadorMoeda.format(totalPendente);
       if (elCardTotalAVencer) elCardTotalAVencer.textContent = formatadorMoeda.format(totalAVencer);
       if (elCardTotalVencido) elCardTotalVencido.textContent = formatadorMoeda.format(totalVencido);
       const elCardBaixadoReal = document.getElementById('card-baixado-real');
@@ -2175,6 +2149,71 @@
       if (elCardBaixadoLiquido) elCardBaixadoLiquido.textContent = formatadorMoeda.format(totalBaixadoLiquido);
       if (elCardPrejuizo) elCardPrejuizo.textContent = formatadorMoeda.format(totalPrejuizo);
       if (elCardProtesto) elCardProtesto.textContent = formatadorMoeda.format(totalProtesto);
+      const elPrevVal = document.getElementById('ins-prev7-val'); if (elPrevVal) elPrevVal.textContent = formatadorMoeda.format(prox7DiasValor);
+      const elPrevQtd = document.getElementById('ins-prev7-qtd');
+      if (elPrevQtd) elPrevQtd.textContent = `${prox7DiasQtd} faturas a vencer`;
+      const elAtrasoVal = document.getElementById('ins-atraso-val'); if (elAtrasoVal) elAtrasoVal.textContent = formatadorMoeda.format(totalVencido);
+      const elAtrasoQtd = document.getElementById('ins-atraso-qtd'); if (elAtrasoQtd) elAtrasoQtd.textContent = `${vencidosQtd} faturas vencidas`;
+      const elBaixadoVal = document.getElementById('ins-baixado-val'); if (elBaixadoVal) elBaixadoVal.textContent = formatadorMoeda.format(totalBaixado);
+      const inadimplencia = valorTotal > 0 ? (totalVencido / valorTotal) * 100 : 0;
+      const elInadimp = document.getElementById('ins-inadimp-perc');
+      if (elInadimp) elInadimp.textContent = `${inadimplencia.toFixed(1).replace('.', ',')}%`;
+
+      const pendencia = valorTotal > 0 ? (totalPendente / valorTotal) * 100 : 0;
+      const elPendente = document.getElementById('ins-pendente-perc'); if (elPendente) elPendente.textContent = `${pendencia.toFixed(1).replace('.', ',')}%`;
+
+      const elUltimos = document.getElementById('ins-ultimos-lista');
+      if (elUltimos) {
+        recebidosRecentes.sort((a, b) => b.data.getTime() - a.data.getTime());
+        const top3 = recebidosRecentes.slice(0, 3);
+        if (top3.length > 0) {
+          elUltimos.innerHTML = top3.map(item => `<li class="flex justify-between items-center gap-2 bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span class="text-white text-[11px] truncate max-w-[120px] font-medium" title="${item.cliente}">${item.cliente}</span><span class="font-extrabold text-emerald-400 text-xs">${formatadorMoeda.format(item.valor)}</span></li>`).join('');
+        } else { elUltimos.innerHTML = `<li class="text-blue-200/50 text-xs italic">Nenhum dado recente</li>`; }
+      }
+
+      const elMomAtual = document.getElementById('ins-mom-atual'); const elMomPrev = document.getElementById('ins-mom-prev');
+      const elMomBadge = document.getElementById('ins-mom-diff-badge');
+      if (elMomAtual) elMomAtual.textContent = formatadorMoeda.format(momAtual);
+      if (elMomPrev) elMomPrev.textContent = formatadorMoeda.format(momPrev);
+      if (elMomBadge) {
+        if (momPrev === 0) {
+          elMomBadge.innerHTML = `<span class="material-symbols-outlined text-[14px]">horizontal_rule</span> N/A`;
+          elMomBadge.className = "px-2 py-1 rounded font-bold text-xs flex items-center gap-1 bg-white/10 text-white";
+        }
+        else {
+          const momDiff = ((momAtual - momPrev) / momPrev) * 100;
+          if (momDiff > 0) {
+            elMomBadge.innerHTML = `<span class="material-symbols-outlined text-[14px]">arrow_upward</span> ${momDiff.toFixed(1).replace('.', ',')}%`;
+            elMomBadge.className = "px-2 py-1 rounded font-bold text-xs flex items-center gap-1 bg-emerald-400/20 text-emerald-400";
+          }
+          else {
+            elMomBadge.innerHTML = `<span class="material-symbols-outlined text-[14px]">arrow_downward</span> ${Math.abs(momDiff).toFixed(1).replace('.', ',')}%`;
+            elMomBadge.className = "px-2 py-1 rounded font-bold text-xs flex items-center gap-1 bg-red-400/20 text-red-400";
+          }
+        }
+      }
+
+      const elWowAtual = document.getElementById('ins-wow-atual');
+      const elWowPrev = document.getElementById('ins-wow-prev'); const elWowBadge = document.getElementById('ins-wow-diff-badge');
+      if (elWowAtual) elWowAtual.textContent = formatadorMoeda.format(wowAtual);
+      if (elWowPrev) elWowPrev.textContent = formatadorMoeda.format(wowPrev);
+      if (elWowBadge) {
+        if (wowPrev === 0) {
+          elWowBadge.innerHTML = `<span class="material-symbols-outlined text-[14px]">horizontal_rule</span> N/A`;
+          elWowBadge.className = "px-2 py-1 rounded font-bold text-xs flex items-center gap-1 bg-white/10 text-white";
+        }
+        else {
+          const wowDiff = ((wowAtual - wowPrev) / wowPrev) * 100;
+          if (wowDiff > 0) {
+            elWowBadge.innerHTML = `<span class="material-symbols-outlined text-[14px]">arrow_upward</span> ${wowDiff.toFixed(1).replace('.', ',')}%`;
+            elWowBadge.className = "px-2 py-1 rounded font-bold text-xs flex items-center gap-1 bg-emerald-400/20 text-emerald-400";
+          }
+          else {
+            elWowBadge.innerHTML = `<span class="material-symbols-outlined text-[14px]">arrow_downward</span> ${Math.abs(wowDiff).toFixed(1).replace('.', ',')}%`;
+            elWowBadge.className = "px-2 py-1 rounded font-bold text-xs flex items-center gap-1 bg-red-400/20 text-red-400";
+          }
+        }
+      }
     }
 
     const mExcluir = document.getElementById('modal-excluir-confirmacao');
@@ -2229,14 +2268,7 @@
       if (!data) return;
       try {
         idParaEditar = id;
-
-        window.comercialOriginalEdit = data['Comissionado 01'] || data['Vendedor'] || "";
-        window.historicoComercialEdit = data.historico_comercial || [];
-
-        const setVal = (fieldId, val) => {
-          const el = document.getElementById(fieldId);
-          if (el) el.value = val || "";
-        };
+        const setVal = (fieldId, val) => { const el = document.getElementById(fieldId); if (el) el.value = val || ""; };
         const nf = data['nf'] || data['Nº NF'] || data['Nº NF-e'] || data['NF'] || "";
         const descContrato = data['descricao_contrato'] || data['Descrição Do Contrato'] || data['descricao'] || "";
         const cliente = data['cliente'] || data['Cliente'] || "";
@@ -2284,7 +2316,7 @@
         const extraGrid = document.getElementById('campos-extras-dinamicos');
         if (extraGrid) {
           extraGrid.innerHTML = "";
-          const chavesFixas = ['nf', 'Nº NF', 'Nº NF-e', 'NF', 'descricao_contrato', 'Descrição Do Contrato', 'descricao', 'cliente', 'Cliente', 'status', 'Status', 'Situação', 'valor_fatura', 'Valor Fatura', 'valor', 'valor_liquido', 'Vl. Líquido', 'Vl Líquido', 'vencimento', 'Dt Vecto  ', 'Dt Vecto', 'data_recebimento', 'Dt Baixa', 'data_emissao', 'Dt Emissao', 'data_criacao', 'mes_referencia', 'empresa_atribuida', 'observacoes', 'Obs. Emissão', 'id', 'tipo', 'data_importacao', 'data_edicao', 'origem', 'historico_comercial'];
+          const chavesFixas = ['nf', 'Nº NF', 'Nº NF-e', 'NF', 'descricao_contrato', 'Descrição Do Contrato', 'descricao', 'cliente', 'Cliente', 'status', 'Status', 'Situação', 'valor_fatura', 'Valor Fatura', 'valor', 'valor_liquido', 'Vl. Líquido', 'Vl Líquido', 'vencimento', 'Dt Vecto  ', 'Dt Vecto', 'data_recebimento', 'Dt Baixa', 'data_emissao', 'Dt Emissao', 'data_criacao', 'mes_referencia', 'empresa_atribuida', 'observacoes', 'Obs. Emissão', 'id', 'tipo', 'data_importacao', 'data_edicao', 'origem'];
           let temExtra = false;
           Object.keys(data).sort().forEach(key => {
             if (!chavesFixas.includes(key)) {
