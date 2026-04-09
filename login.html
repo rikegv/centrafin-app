@@ -100,55 +100,70 @@
             <p class="text-blue-200/80 text-sm font-medium uppercase tracking-widest mt-2">Acesso Restrito</p>
         </div>
 
-        <div class="glass-card rounded-3xl shadow-2xl p-8 w-full">
-            <h2 class="font-headline text-xl font-bold text-slate-800 mb-6 text-center">Faça seu Login</h2>
-            <form id="form-login" class="space-y-5">
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">E-mail
-                        Corporativo</label>
-                    <div class="relative">
-                        <span
-                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">mail</span>
-                        <input type="email" id="campo-email" required
-                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-300"
-                            placeholder="nome@empresa.com.br">
+        <!-- Card de Login Premium -->
+        <div
+            class="bg-gradient-to-br from-[#aad12f] to-[#8eb025] shadow-[0_20px_60px_rgba(170,209,47,0.3)] border border-[#aad12f]/50 rounded-3xl p-8 w-full">
+            <h2 class="font-headline text-xl font-bold text-[#002443] mb-2 text-center text-secondary">Bem-vindo de
+                volta</h2>
+            <p class="text-[#002443]/70 text-center text-xs mb-8">Utilize sua conta corporativa para acessar o painel
+                financeiro.</p>
+
+            <div class="space-y-6">
+                <!-- Google Login Button (Elegante e Centralizado) -->
+                <button id="btn-google"
+                    class="w-fit mx-auto px-6 py-2.5 bg-white text-slate-700 font-bold text-sm rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3 active:scale-[0.98] outline-none group">
+                    <div class="bg-white p-0.5 rounded-sm shrink-0">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M19.642 10.2307C19.642 9.51279 19.5779 8.82048 19.4586 8.15381H10V12.0854H15.4037C15.1702 13.3444 14.4601 14.4111 13.3934 15.1246V17.6719H16.6502C18.5552 15.9179 19.642 13.3169 19.642 10.2307Z"
+                                fill="#4285F4" />
+                            <path
+                                d="M10 20.0001C12.7 20.0001 14.9634 19.1025 16.6502 17.6719L13.3934 15.1246C12.491 15.7289 11.3431 16.0855 10 16.0855C7.39002 16.0855 5.18247 14.3223 4.39487 11.9488H1.03757V14.5513C2.6974 17.8462 6.08027 20.0001 10 20.0001Z"
+                                fill="#34A853" />
+                            <path
+                                d="M4.39487 11.9488C4.19342 11.3444 4.0789 10.7023 4.0789 10.0385C4.0789 9.37467 4.19342 8.73256 4.39487 8.12817V5.52563H1.03757C0.375429 6.88458 0 8.41663 0 10.0385C0 11.6603 0.375429 13.1923 1.03757 14.5513L4.39487 11.9488Z"
+                                fill="#FBBC05" />
+                            <path
+                                d="M10 3.91459C11.4684 3.91459 12.7874 4.41843 13.8222 5.40827L16.7235 2.50699C14.9588 0.861111 12.6954 0 10 0C6.08027 0 2.6974 2.15385 1.03757 5.44872L4.39487 8.05128C5.18247 5.67778 7.39002 3.91459 10 3.91459Z"
+                                fill="#EA4335" />
+                        </svg>
                     </div>
-                </div>
-                <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">Senha</label>
-                        <a href="#"
-                            class="text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors">Esqueceu a
-                            senha?</a>
-                    </div>
-                    <div class="relative">
-                        <span
-                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
-                        <input type="password" id="campo-senha" required
-                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-300"
-                            placeholder="••••••••">
-                    </div>
-                </div>
-                <div id="mensagem-erro"
-                    class="hidden bg-red-50 border border-red-100 text-red-600 text-xs font-bold p-3 rounded-lg flex items-center gap-2">
-                    <span class="material-symbols-outlined text-base shrink-0">error</span>
-                    <span id="texto-erro">Usuário ou senha incorretos.</span>
-                </div>
-                <button type="submit" id="btn-entrar"
-                    class="w-full py-3.5 mt-2 bg-primary text-secondary font-extrabold rounded-xl shadow-lg shadow-primary/30 hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <span>Acessar Sistema</span>
-                    <span class="material-symbols-outlined text-lg" id="icon-entrar">login</span>
+                    <span class="tracking-tight">Continuar com o Google</span>
                 </button>
-            </form>
+
+                <div id="mensagem-erro"
+                    class="hidden bg-red-900/10 border border-red-900/20 text-red-900 text-[11px] font-bold p-4 rounded-xl flex items-start gap-3 fade-in-up">
+                    <span class="material-symbols-outlined text-lg shrink-0 mt-0.5">report</span>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="uppercase tracking-wider">Acesso Negado</span>
+                        <span id="texto-erro" class="font-medium text-red-900/80 normal-case">Seu e-mail não está
+                            cadastrado no sistema.</span>
+                    </div>
+                </div>
+
+                <div id="loading-state" class="hidden">
+                    <div
+                        class="flex items-center justify-center gap-2 text-secondary/60 text-xs font-bold uppercase tracking-widest animate-pulse">
+                        <span class="block w-2 h-2 bg-secondary rounded-full animate-bounce"></span>
+                        <span
+                            class="block w-2 h-2 bg-secondary rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                        <span
+                            class="block w-2 h-2 bg-secondary rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                        <span class="ml-2">Validando...</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <p class="text-center text-blue-200/50 text-[10px] mt-10 font-medium">&copy; 2026 CentraFin System. Todos os
-            direitos reservados.</p>
+        <!-- Rodapé Corporativo -->
+        <p class="text-center text-blue-200/50 text-[10px] mt-10 font-medium">
+            &copy; 2026 CentraFin System by Grupo Soulan. Todos os direitos reservados.
+        </p>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
@@ -162,68 +177,89 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
 
-        const formLogin = document.getElementById('form-login');
-        const btnEntrar = document.getElementById('btn-entrar');
-        const iconEntrar = document.getElementById('icon-entrar');
+        const btnGoogle = document.getElementById('btn-google');
         const msgErro = document.getElementById('mensagem-erro');
         const txtErro = document.getElementById('texto-erro');
+        const loadingState = document.getElementById('loading-state');
 
-        formLogin.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('campo-email').value.trim();
-            const senha = document.getElementById('campo-senha').value;
-
-            btnEntrar.disabled = true;
-            btnEntrar.classList.add('opacity-70');
-            iconEntrar.textContent = 'hourglass_empty';
+        btnGoogle.addEventListener('click', async () => {
+            // Reset state
             msgErro.classList.add('hidden');
+            btnGoogle.disabled = true;
+            btnGoogle.classList.add('opacity-50', 'cursor-not-allowed');
+            loadingState.classList.remove('hidden');
 
             try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, senha);
-                const user = userCredential.user;
-                const docRef = doc(db, "Usuarios", user.uid);
-                const docSnap = await getDoc(docRef);
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
 
-                iconEntrar.textContent = 'check_circle';
+                // Motor de Segurança: Validação no Firestore (doc ID = e-mail)
+                const emailKey = user.email.toLowerCase();
+                let docRef = doc(db, "Usuarios", emailKey);
+                let docSnap = await getDoc(docRef);
 
-                setTimeout(() => {
-                    if (docSnap.exists()) {
-                        const status = docSnap.data().status;
-                        if (status === 'inativo') {
-                            auth.signOut();
-                            msgErro.classList.remove('hidden');
-                            txtErro.textContent = "Acesso bloqueado. Contate o administrador.";
-                            btnEntrar.disabled = false;
-                            btnEntrar.classList.remove('opacity-70');
-                            iconEntrar.textContent = 'login';
-                            return;
-                        }
+                // AUTO-MIGRAÇÃO: Se não achou por e-mail, tenta pelo UID antigo e migra
+                if (!docSnap.exists()) {
+                    const uidRef = doc(db, "Usuarios", user.uid);
+                    const uidSnap = await getDoc(uidRef);
+                    if (uidSnap.exists()) {
+                        console.log("[MIGRAÇÃO] Migrando doc de UID para e-mail:", emailKey);
+                        const dados = uidSnap.data();
+                        dados.email = emailKey;
+                        dados.menus_permitidos = dados.menus_permitidos || [];
+                        await setDoc(doc(db, "Usuarios", emailKey), dados);
+                        await deleteDoc(uidRef);
+                        docSnap = await getDoc(docRef);
+                        console.log("[MIGRAÇÃO] Concluída com sucesso para:", emailKey);
+                    }
+                }
 
-                        if (docSnap.data().perfil === 'master') {
-                            window.location.href = "dashboard_master_desktop/code.html";
-                        } else {
-                            window.location.href = "contas_a_receber_desktop/code.html";
-                        }
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+
+                    // Verificação de Status
+                    if (userData.status === 'inativo') {
+                        await signOut(auth);
+                        showError("Sua conta está inativa. Contate o administrador.");
+                        return;
+                    }
+
+                    // Sucesso: Redirecionamento baseado no perfil
+                    if (userData.perfil === 'master' || userData.perfil === 'super_admin') {
+                        window.location.href = "dashboard_master_desktop/code.html";
                     } else {
                         window.location.href = "contas_a_receber_desktop/code.html";
                     }
-                }, 1000);
+                } else {
+                    // Usuário logou no Google mas NÃO existe no nosso Firestore
+                    await signOut(auth);
+                    showError("Acesso Negado. Fale com o Administrador");
+                }
 
             } catch (error) {
-                msgErro.classList.remove('hidden');
-                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                    txtErro.textContent = "E-mail ou senha incorretos.";
-                } else if (error.code === 'auth/operation-not-allowed') {
-                    txtErro.textContent = "O Login por E-mail/Senha não está ativado no Firebase Console!";
+                console.error("Erro na autenticação:", error);
+
+                if (error.code === 'auth/popup-closed-by-user') {
+                    // Usuário fechou a janela sem logar
                 } else {
-                    txtErro.textContent = `Erro do Servidor: ${error.code}`;
+                    showError(`Erro técnico: ${error.code}`);
                 }
-                btnEntrar.disabled = false;
-                btnEntrar.classList.remove('opacity-70');
-                iconEntrar.textContent = 'login';
+
+                btnGoogle.disabled = false;
+                btnGoogle.classList.remove('opacity-50', 'cursor-not-allowed');
+                loadingState.classList.add('hidden');
             }
         });
+
+        function showError(mensagem) {
+            txtErro.textContent = mensagem;
+            msgErro.classList.remove('hidden');
+            loadingState.classList.add('hidden');
+            btnGoogle.disabled = false;
+            btnGoogle.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
     </script>
 </body>
 

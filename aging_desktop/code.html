@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aging Financeiro - CentraFin</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300,1&display=swap"
+    rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Manrope', 'sans-serif'] },
+          colors: {
+            brandGreen: '#aad12f', brandDarkBlue: '#002443', brandMidBlue: '#1a4895',
+            brandLightBlue: '#59a4d8', brandPaleBlue: '#bfd7ea', brandAqua: '#89d5c9', brandOrange: '#ff8864'
+          }
+        }
+      }
+    }
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.45.2/apexcharts.min.js"></script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(26, 72, 149, 0.2);
+      border-radius: 4px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #59a4d8;
+      border-radius: 4px;
+    }
+
+    .skeleton-pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Separação Visual por Mês na Matriz */
+    #tbody-matriz-aging tr:nth-child(even) {
+      border-bottom: 4px solid #cbd5e1 !important;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex antialiased bg-slate-50">
+
+  <div id="sidebar-container"></div>
+
+  <main class="flex-1 ml-[80px] w-full min-h-screen flex flex-col transition-all duration-300">
+
+    <!-- HEADER -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 h-16 shadow-sm px-8 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <div class="flex flex-col">
+            <a href="../dashboard_master_desktop/code.html" class="flex items-center gap-2 text-slate-400 hover:text-brandDarkBlue transition-all group">
+              <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">arrow_back</span>
+              <span class="text-xs font-bold uppercase tracking-widest">Voltar</span>
+            </a>
+            <div class="flex items-center gap-1.5 mt-0.5 text-slate-400/80">
+                <span class="material-symbols-outlined text-[14px]">query_stats</span>
+                <span class="text-[9px] font-black uppercase tracking-wider">Aging Financeiro</span>
+            </div>
+        </div>
+        <div class="h-8 w-px bg-slate-200 mx-2"></div>
+        <div class="flex items-center gap-3">
+          <h1 class="text-lg font-extrabold tracking-tight text-brandDarkBlue uppercase">Painel de Indicadores</h1>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <button id="btn-limpar-filtros" onclick="window.limparFiltros()" class="hidden flex items-center gap-1 px-3 py-2 bg-red-500/10 text-red-500 rounded-lg text-sm hover:bg-red-500/20 transition-all active:scale-95">
+          <span class="material-symbols-outlined text-[18px]">filter_alt_off</span> Limpar
+        </button>
+        <button id="btn-abrir-filtros" onclick="window.toggleModal('modal-filtros-aging', true)" class="flex items-center gap-2 px-5 py-2.5 bg-brandDarkBlue text-white rounded-xl text-xs font-extrabold hover:bg-brandDarkBlue/90 transition-all shadow-lg shadow-brandDarkBlue/20 active:scale-95">
+          <span class="material-symbols-outlined text-brandGreen text-lg">filter_list</span> 
+          FILTROS DE ANÁLISE
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTEUDO PRINCIPAL -->
+    <div class="p-8 space-y-8">
+      
+      <!-- KPIs LUXO -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <!-- KPI 1 -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl p-6 shadow-2xl shadow-[#002443]/50 relative overflow-hidden group/card">
+          <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/5 rounded-full blur-2xl group-hover/card:bg-white/10 transition-all"></div>
+          <div class="flex justify-between items-start relative z-10 mb-4">
+            <span class="material-symbols-outlined text-slate-500/50 text-3xl">account_balance_wallet</span>
+            <div class="group relative">
+                <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[18px] transition-colors">info</span>
+                <div class="absolute bottom-full right-0 mb-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-48 p-3 bg-slate-900 border border-slate-700 text-white text-[10px] leading-relaxed rounded-xl shadow-2xl z-50 pointer-events-none">
+                  Soma da coluna Vl. Líquido considerando a Data de Vencimento (Dt Vecto) dentro do período filtrado.
+                  <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-900"></div>
+                </div>
+            </div>
+          </div>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Total a Receber</p>
+          <h3 class="text-3xl font-black text-white tracking-tight" id="kpi-valor-receber">R$ 0,00</h3>
+        </div>
+
+        <!-- KPI 2 -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl p-6 shadow-2xl shadow-[#002443]/50 relative overflow-hidden group/card">
+          <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandGreen/5 rounded-full blur-2xl group-hover/card:bg-brandGreen/10 transition-all"></div>
+          <div class="flex justify-between items-start relative z-10 mb-4">
+            <span class="material-symbols-outlined text-brandGreen/30 text-3xl">payments</span>
+            <div class="group relative">
+                <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[18px] transition-colors">info</span>
+                <div class="absolute bottom-full right-0 mb-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-48 p-3 bg-slate-900 border border-slate-700 text-white text-[10px] leading-relaxed rounded-xl shadow-2xl z-50 pointer-events-none">
+                  Soma da coluna Vl. Líquido considerando a Data de Pagamento (Dt Baixa) dentro do período filtrado.
+                  <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-900"></div>
+                </div>
+            </div>
+          </div>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Total Recebido</p>
+          <h3 class="text-3xl font-black text-brandGreen tracking-tight" id="kpi-valor-recebido">R$ 0,00</h3>
+        </div>
+
+        <!-- KPI 3 -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl p-6 shadow-2xl shadow-[#002443]/50 relative overflow-hidden group/card">
+          <div class="absolute -right-4 -top-4 w-20 h-20 bg-red-500/5 rounded-full blur-2xl group-hover/card:bg-red-500/10 transition-all"></div>
+          <div class="flex justify-between items-start relative z-10 mb-4">
+            <span class="material-symbols-outlined text-red-500/30 text-3xl">warning</span>
+            <div class="group relative">
+                <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[18px] transition-colors">info</span>
+                <div class="absolute bottom-full right-0 mb-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-48 p-3 bg-slate-900 border border-slate-700 text-white text-[10px] leading-relaxed rounded-xl shadow-2xl z-50 pointer-events-none">
+                  Do que já venceu até hoje no período, o que não tem Dt Baixa preenchida. (Média do mês isolado).
+                  <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-900"></div>
+                </div>
+            </div>
+          </div>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Taxa de Inadimplência</p>
+          <h3 class="text-3xl font-black text-red-500 tracking-tight" id="kpi-inadimplencia">0,00%</h3>
+        </div>
+
+        <!-- KPI 4 (Interativo) -->
+        <div onclick="window.toggleModal('modal-outras-competencias', true)" class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl p-6 shadow-2xl shadow-[#002443]/50 relative overflow-hidden group/card cursor-pointer hover:-translate-y-1 transition-all duration-300">
+          <div class="absolute -right-4 -top-4 w-20 h-20 bg-primary/10 rounded-full blur-2xl group-hover/card:bg-primary/20 transition-all"></div>
+          <div class="flex justify-between items-start relative z-10 mb-4">
+            <span class="material-symbols-outlined text-brandGreen/30 text-3xl">currency_exchange</span>
+            <div class="group relative">
+                <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[18px] transition-colors">info</span>
+                <div class="absolute bottom-full right-0 mb-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-48 p-3 bg-slate-900 border border-slate-700 text-white text-[10px] leading-relaxed rounded-xl shadow-2xl z-50 pointer-events-none">
+                  Valores pagos (Dt Baixa) no período, mas que estavam vencidos (Dt Vecto) em meses anteriores.
+                  <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-900"></div>
+                </div>
+            </div>
+          </div>
+          <p class="text-[10px] font-black text-brandGreen uppercase tracking-[0.15em] mb-2">Recebidos em Outras Competências</p>
+          <h3 class="text-3xl font-black text-white tracking-tight" id="kpi-recuperado">R$ 0,00</h3>
+        </div>
+      </div>
+
+      <!-- GRAFICO PRINCIPAL (LARGURA TOTAL) -->
+      <div class="bg-[#002443] border border-slate-700/50 rounded-xl shadow-2xl shadow-[#002443]/50 p-8 min-w-0">
+        <div class="flex items-center justify-between mb-8">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <span class="material-symbols-outlined text-brandGreen">bar_chart</span> Evolução Mensal: A Receber vs Recebido
+            </h3>
+        </div>
+        <div id="chart-evolucao-mensal" class="w-full h-[400px]"></div>
+      </div>
+
+      <!-- GRAFICO SECUNDARIO (AGORA LARGURA TOTAL) -->
+      <div class="bg-[#002443] border border-slate-700/50 rounded-xl shadow-2xl shadow-[#002443]/50 p-8 min-w-0">
+          <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 mb-8">
+              <span class="material-symbols-outlined text-red-500">trending_down</span> Índice de Inadimplência Mensal
+          </h3>
+          <div id="chart-inadimplencia-mensal" class="w-full h-[350px]"></div>
+      </div>
+
+      <!-- TABELA MATRIZ -->
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="p-8 border-b border-slate-200 flex justify-between items-center bg-slate-50/30">
+          <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest">Matriz Consolidada de Aging</h3>
+        </div>
+        <div class="overflow-x-auto w-full custom-scroll">
+          <table class="w-full text-sm text-left text-slate-600 min-w-[1000px]" id="tabela-matriz-aging">
+            <thead class="text-[10px] text-slate-400 uppercase tracking-widest bg-slate-50/50">
+              <tr>
+                <th scope="col" class="px-8 py-5 font-black text-center border-r border-slate-100">Mês</th>
+                <th scope="col" class="px-8 py-5 font-black text-center border-r border-slate-100">Status</th>
+                <th scope="col" class="px-8 py-5 font-bold text-right">SOULAN TEMPORARIO</th>
+                <th scope="col" class="px-8 py-5 font-bold text-right">SOULAN ADM</th>
+                <th scope="col" class="px-8 py-5 font-bold text-right">ESTAGIO</th>
+                <th scope="col" class="px-8 py-5 font-bold text-right">NEAT</th>
+                <th scope="col" class="px-8 py-5 font-black text-right bg-slate-50">Total Bruto</th>
+                <th scope="col" class="px-8 py-5 font-black text-center border-l border-slate-100">Inadimplência</th>
+                <th scope="col" class="px-8 py-5 font-black text-center border-l border-slate-100 bg-slate-50/80">Acumulado YTD</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-matriz-aging" class="divide-y divide-slate-50 text-xs">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL FILTROS AGING -->
+  <div id="modal-filtros-aging" class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
+    <div class="absolute inset-0 bg-brandDarkBlue/40 backdrop-blur-sm" onclick="window.toggleModal('modal-filtros-aging', false)"></div>
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300">
+        <div class="flex justify-between items-center mb-8">
+            <h3 class="text-xl font-extrabold text-brandDarkBlue flex items-center gap-2">
+                <span class="material-symbols-outlined text-brandGreen">filter_list</span>
+                Filtros de Análise
+            </h3>
+            <button onclick="window.toggleModal('modal-filtros-aging', false)" class="text-slate-400 hover:text-brandDarkBlue transition-all">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Ano de Competência</label>
+                    <select id="filtro-ano" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-brandDarkBlue outline-none focus:ring-2 focus:ring-brandGreen/20 transition-all">
+                        <option value="2026">2026</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+                
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Selecionar Meses (Multi-seleção)</label>
+                    <div id="container-filtro-mes" class="grid grid-cols-4 gap-2">
+                        <!-- Botões de mês injetados via script para facilitar manutenção -->
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Segmentos / Serviços</label>
+                <div id="container-filtro-servico" class="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scroll">
+                    <label class="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-brandGreen/40 transition-all group">
+                        <input type="checkbox" name="servico" value="temporarios" class="w-4 h-4 rounded border-slate-300 text-brandGreen focus:ring-brandGreen transition-all">
+                        <span class="text-xs font-bold text-brandDarkBlue group-hover:text-brandGreen">SOULAN TEMPORARIO</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-brandGreen/40 transition-all group">
+                        <input type="checkbox" name="servico" value="administracao" class="w-4 h-4 rounded border-slate-300 text-brandGreen focus:ring-brandGreen transition-all">
+                        <span class="text-xs font-bold text-brandDarkBlue group-hover:text-brandGreen">SOULAN ADM</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-brandGreen/40 transition-all group">
+                        <input type="checkbox" name="servico" value="central" class="w-4 h-4 rounded border-slate-300 text-brandGreen focus:ring-brandGreen transition-all">
+                        <span class="text-xs font-bold text-brandDarkBlue group-hover:text-brandGreen">ESTAGIO</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-brandGreen/40 transition-all group">
+                        <input type="checkbox" name="servico" value="neat" class="w-4 h-4 rounded border-slate-300 text-brandGreen focus:ring-brandGreen transition-all">
+                        <span class="text-xs font-bold text-brandDarkBlue group-hover:text-brandGreen">NEAT</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button onclick="window.aplicarFiltrosEFechar()" class="flex-1 py-4 bg-brandDarkBlue text-white rounded-2xl font-black text-xs shadow-lg shadow-brandDarkBlue/20 hover:brightness-110 active:scale-[0.98] transition-all tracking-widest uppercase">
+                    Aplicar Filtros
+                </button>
+                <button onclick="window.limparFiltros()" class="text-slate-400 hover:text-brandDarkBlue underline text-sm font-bold px-2 transition-all">
+                    Limpar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- MODAL RECEBIDOS EM OUTRAS COMPETENCIAS -->
+  <div id="modal-outras-competencias" class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
+    <div class="absolute inset-0 bg-brandDarkBlue/40 backdrop-blur-sm" onclick="window.toggleModal('modal-outras-competencias', false)"></div>
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-extrabold text-brandDarkBlue flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary">history</span>
+                Detalhamento de Recuperação
+            </h3>
+            <button onclick="window.toggleModal('modal-outras-competencias', false)" class="text-slate-400 hover:text-brandDarkBlue transition-all">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div class="overflow-x-auto max-h-[400px] custom-scroll">
+            <table class="w-full text-left text-sm" id="tabela-outras-competencias">
+                <thead class="sticky top-0 bg-white text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                    <tr>
+                        <th class="py-4 px-2">Mês do Recebimento</th>
+                        <th class="py-4 px-2">Mês de Origem (Vecto)</th>
+                        <th class="py-4 px-2 text-right">Valor Recuperado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50 text-xs font-bold text-slate-700">
+                    <!-- Injetado por JS se houver lógica, ou placeholder -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    // Funções globais de UI
+    window.toggleModal = (id, show) => {
+        const modal = document.getElementById(id);
+        if (show) {
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            modal.querySelector('div:last-child').classList.remove('scale-95');
+        } else {
+            modal.classList.add('pointer-events-none', 'opacity-0');
+            modal.querySelector('div:last-child').classList.add('scale-95');
+        }
+    };
+
+    window.aplicarFiltrosEFechar = () => {
+        window.toggleModal('modal-filtros-aging', false);
+        if (typeof window.processarDadosAging === 'function') window.processarDadosAging();
+    };
+
+    window.limparFiltros = () => {
+        document.getElementById('filtro-ano').value = new Date().getFullYear();
+        document.querySelectorAll('input[name="mes"]').forEach(i => i.checked = false);
+        document.querySelectorAll('input[name="servico"]').forEach(i => i.checked = false);
+        
+        // Esconde o botão e processa
+        const btnLimpar = document.getElementById('btn-limpar-filtros');
+        if (btnLimpar) btnLimpar.classList.add('hidden');
+        
+        if (typeof window.processarDadosAging === 'function') window.processarDadosAging();
+    };
+  </script>
+
+  <!-- FIREBASE + GUARDIAO + DADOS -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { renderSidebar } from "../sidebar.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+      authDomain: "centra-fin.firebaseapp.com",
+      projectId: "centra-fin",
+      storageBucket: "centra-fin.firebasestorage.app",
+      messagingSenderId: "666471089411",
+      appId: "1:666471089411:web:4630f5b2ced70ceb981536"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          let docRef = doc(db, "Usuarios", user.email.toLowerCase());
+          let docSnap = await getDoc(docRef);
+          // Fallback: tenta por UID antigo (periodo de migracao)
+          if (!docSnap.exists()) { docRef = doc(db, "Usuarios", user.uid); docSnap = await getDoc(docRef); }
+
+          if (docSnap.exists()) {
+            const dadosUser = docSnap.data();
+            const userProfile = dadosUser.perfil;
+
+            // GUARDIAO DE ROTA
+            const CHAVE_PAGINA = 'aging';
+            if (userProfile !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
+              await signOut(auth);
+              alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
+              window.location.href = "../login.html";
+              return;
+            }
+
+            // Renderizar sidebar com permissoes do usuario
+            renderSidebar(userProfile, dadosUser.menus_permitidos || []);
+            const elEmail = document.getElementById('display-user-email');
+            if (elEmail) elEmail.textContent = user.email;
+
+            // Carregar dados do Aging
+            await carregarDadosAging();
+
+          } else {
+            await signOut(auth);
+            window.location.href = "../login.html";
+          }
+        } catch (error) {
+          console.error("Erro Firebase:", error);
+        }
+      } else {
+        window.location.href = "../login.html";
+      }
+    });
+
+    // ==========================================
+    // CONSTANTES E HELPERS
+    // ==========================================
+    const MESES_LABEL = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const SERVICOS_COLUNAS = ['SOULAN TEMPORARIO', 'SOULAN ADM', 'ESTAGIO', 'NEAT'];
+
+    /**
+     * Converte Serial do Excel (ex: 46129) para Date do JavaScript.
+     * Retorna null se o valor for vazio, nulo ou invalido.
+     */
+    function excelToJSDate(serial) {
+      if (serial === null || serial === undefined || serial === '') return null;
+      const num = Number(serial);
+      if (isNaN(num) || num <= 0) return null;
+      const excelEpoch = new Date(1899, 11, 30);
+      excelEpoch.setDate(excelEpoch.getDate() + num);
+      return excelEpoch;
+    }
+
+    /**
+     * Extrai valor numerico de campos do Firestore (suporta numero, string BRL, etc).
+     */
+    function extrairNum(raw) {
+      if (typeof raw === 'number') return raw;
+      return parseFloat(String(raw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+    }
+
+    /**
+     * Normaliza o campo de servico do Firestore para a chave do filtro.
+     * Categorias exatas no banco: 'SOULAN TEMPORARIO', 'SOULAN ADM', 'ESTAGIO', 'NEAT'.
+     */
+    function normalizarServicoParaFiltro(nomeServico) {
+      const s = nomeServico.toUpperCase().trim();
+      if (s.includes('SOULAN') && s.includes('TEMPOR')) return 'temporarios';
+      if (s.includes('SOULAN') && s.includes('ADM')) return 'administracao';
+      if (s.includes('ESTAG') || s.includes('ESTAGIO')) return 'central';
+      if (s.includes('NEAT')) return 'neat';
+      return 'outros';
+    }
+
+    /**
+     * Mapeia o nome do servico para a coluna da tabela matriz.
+     */
+    function classificarServicoColuna(nomeServico) {
+      const chave = normalizarServicoParaFiltro(nomeServico);
+      const mapa = { temporarios: 'SOULAN TEMPORARIO', administracao: 'SOULAN ADM', central: 'ESTAGIO', neat: 'NEAT' };
+      return mapa[chave] || 'Outros';
+    }
+
+    /**
+     * Retorna o nome legivel da categoria de servico.
+     */
+    function nomeLegivelServico(chave) {
+      const mapa = { temporarios: 'SOULAN TEMPORARIO', administracao: 'SOULAN ADM', central: 'ESTAGIO', neat: 'NEAT' };
+      return mapa[chave] || chave;
+    }
+
+    function formatarMoeda(valor) {
+      return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatarMoedaCurta(valor) {
+      return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /**
+     * Formatter financeiro premium para gráficos.
+     * >= 1.000.000 → "2,50 mi"  |  >= 1.000 → "851,80 mil"  |  < 1.000 → valor com 2 casas
+     */
+    function formatarValorGrafico(val) {
+      if (val === null || val === undefined || val === 0) return '';
+      if (Math.abs(val) >= 1000000) {
+        return (val / 1000000).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' mi';
+      }
+      if (Math.abs(val) >= 1000) {
+        return (val / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' mil';
+      }
+      return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Instancias dos graficos para destruir antes de recriar
+    let chartEvolucaoInstance = null;
+    let chartInadimplenciaInstance = null;
+
+    // ==========================================
+    // FILTROS - EVENT LISTENERS E INJEÇÃO
+    // ==========================================
+    function inicializarFiltrosUI() {
+      const containerMes = document.getElementById('container-filtro-mes');
+      if (containerMes) {
+        containerMes.innerHTML = MESES_LABEL.map((label, index) => `
+          <label class="cursor-pointer group">
+            <input type="checkbox" name="mes" value="${index}" class="hidden peer" onchange="window.processarDadosAging()">
+            <div class="px-2 py-2 text-[10px] font-bold text-center border border-slate-200 rounded-lg text-slate-500 bg-white peer-checked:bg-brandGreen peer-checked:text-brandDarkBlue peer-checked:border-brandGreen transition-all group-hover:border-brandGreen/40 uppercase tracking-tighter">
+              ${label}
+            </div>
+          </label>
+        `).join('');
+      }
+
+      document.getElementById('filtro-ano').addEventListener('change', () => processarDadosAging());
+      
+      // Listeners para os checkboxes de servico
+      document.querySelectorAll('input[name="servico"]').forEach(input => {
+        input.addEventListener('change', () => processarDadosAging());
+      });
+    }
+
+    // Chamar inicializacao
+    inicializarFiltrosUI();
+
+    // ==========================================
+    // CARGA INICIAL (Firestore -> Array Global)
+    // ==========================================
+    async function carregarDadosAging() {
+      try {
+        const q = query(collection(db, "Lancamentos"), where("tipo", "==", "receita"));
+        const querySnapshot = await getDocs(q);
+
+        window._todosLancamentosAging = [];
+
+        querySnapshot.forEach(docSnap => {
+          const dados = docSnap.data();
+
+          // Filtro de lixo do Excel (subtotais que inflam valores)
+          const nfStr = String(dados['nf'] || dados['Nº NF'] || dados['Nº NF-e'] || dados['NF'] || "").toUpperCase().trim();
+          if (nfStr.includes('TOTAL') || nfStr.includes('TOTAIS')) return;
+
+          // ---- MAPEAMENTO EXATO DOS CAMPOS DO FIRESTORE ----
+          // Datas: Serial do Excel nos campos "Dt Vecto" e "Dt Baixa"
+          const dataVencimento = excelToJSDate(dados['Dt Vecto'] || dados['vencimento'] || dados['data_vencimento']);
+          const dataBaixa = excelToJSDate(dados['Dt Baixa'] || dados['data_baixa'] || dados['data_recebimento']);
+
+          // Valor: OBRIGATORIAMENTE "Vl. Líquido" como fonte primária
+          const valor = extrairNum(
+            dados['Vl. Líquido'] || dados['Vl Líquido'] || dados['valor_liquido'] ||
+            dados['valor_fatura'] || dados['Valor Fatura'] || dados['valor'] || 0
+          );
+
+          // Servico: normalização estrita para as 4 categorias do negócio
+          const servicoBruto = String(dados['Descrição Do Contrato'] || dados['descricao_contrato'] || dados['Serviço'] || dados['servico'] || dados['tipo_servico'] || '').toUpperCase().trim();
+          let servico = 'OUTROS';
+          if (servicoBruto.includes('TEMPOR')) servico = 'SOULAN TEMPORARIO';
+          else if (servicoBruto.includes('ADM') || servicoBruto.includes('ADMIN')) servico = 'SOULAN ADM';
+          else if (servicoBruto.includes('ESTAG')) servico = 'ESTAGIO';
+          else if (servicoBruto.includes('NEAT')) servico = 'NEAT';
+
+          // So inclui se tiver pelo menos uma data valida
+          if (!dataVencimento && !dataBaixa) return;
+
+          window._todosLancamentosAging.push({
+            _id: docSnap.id,
+            _dataVencimento: dataVencimento,
+            _dataBaixa: dataBaixa,
+            _servico: servico,
+            _valor: valor,
+            _nf: nfStr,
+            _cliente: String(dados['Cliente'] || dados['cliente'] || dados['Razão Social'] || dados['razao_social'] || '').trim()
+          });
+        });
+
+        console.log(`[Aging] Total de registros carregados: ${window._todosLancamentosAging.length}`);
+
+        // Atualizar timestamp
+        const agora = new Date();
+        const elTimestamp = document.getElementById('aging-ultima-atualizacao');
+        if (elTimestamp) elTimestamp.textContent = `Atualizado: ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+
+        // Processar com filtros atuais
+        processarDadosAging();
+
+      } catch (error) {
+        console.error("[Aging] Erro ao carregar dados:", error);
+      }
+    }
+
+    // ==========================================
+    // MOTOR PRINCIPAL - Processa filtros, KPIs, Gráficos e Tabela
+    // ==========================================
+    function processarDadosAging() {
+      const todos = window._todosLancamentosAging || [];
+      const anoSelecionado = parseInt(document.getElementById('filtro-ano').value);
+      
+      // Captura Multi-selecao
+      const mesesSelecionados = Array.from(document.querySelectorAll('input[name="mes"]:checked')).map(i => parseInt(i.value));
+      const servicosSelecionados = Array.from(document.querySelectorAll('input[name="servico"]:checked')).map(i => i.value);
+      
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      // Controle do Botão Limpar no Cabeçalho
+      const temFiltroAtivo = mesesSelecionados.length > 0 || servicosSelecionados.length > 0;
+      const btnLimpar = document.getElementById('btn-limpar-filtros');
+      if (btnLimpar) {
+        if (temFiltroAtivo) btnLimpar.classList.remove('hidden');
+        else btnLimpar.classList.add('hidden');
+      }
+
+      // ---- FILTRO POR SERVICO E MES ----
+      let registros = todos;
+      
+      // Filtro de Serviço (Multi)
+      if (servicosSelecionados.length > 0) {
+        registros = registros.filter(r => servicosSelecionados.includes(normalizarServicoParaFiltro(r._servico)));
+      }
+
+      // Filtro de Mês (afeta a base dos KPIs e Gráficos se não estiver vazio)
+      let registrosKpi = registros;
+      if (mesesSelecionados.length > 0) {
+        registrosKpi = registros.filter(r => {
+          const mIncr = r._dataVencimento ? r._dataVencimento.getMonth() : -1;
+          const mBaixa = r._dataBaixa ? r._dataBaixa.getMonth() : -1;
+          const yIncr = r._dataVencimento ? r._dataVencimento.getFullYear() : -1;
+          const yBaixa = r._dataBaixa ? r._dataBaixa.getFullYear() : -1;
+
+          return (mesesSelecionados.includes(mIncr) && yIncr === anoSelecionado) ||
+                 (mesesSelecionados.includes(mBaixa) && yBaixa === anoSelecionado);
+        });
+      }
+
+      // ---- SEPARACAO BASE PARA KPIs (Respeitando Mês se selecionado) ----
+      const receberKpi = registrosKpi.filter(r => r._dataVencimento && r._dataVencimento.getFullYear() === anoSelecionado);
+      const recebidoKpi = registrosKpi.filter(r => r._dataBaixa && r._dataBaixa.getFullYear() === anoSelecionado);
+
+      // ---- KPI: TOTAL A RECEBER ----
+      const totalReceber = receberKpi.reduce((s, r) => s + r._valor, 0);
+      document.getElementById('kpi-valor-receber').textContent = formatarMoeda(totalReceber);
+
+      // ---- KPI: TOTAL RECEBIDO ----
+      const totalRecebido = recebidoKpi.reduce((s, r) => s + r._valor, 0);
+      document.getElementById('kpi-valor-recebido').textContent = formatarMoeda(totalRecebido);
+
+      // ---- KPI: RECEITAS RECUPERADAS ----
+      const recuperado = recebidoKpi.reduce((s, r) => {
+        if (r._dataVencimento && r._dataBaixa) {
+          const mesVenc = r._dataVencimento.getFullYear() * 12 + r._dataVencimento.getMonth();
+          const mesBaixa = r._dataBaixa.getFullYear() * 12 + r._dataBaixa.getMonth();
+          if (mesVenc < mesBaixa) return s + r._valor;
+        }
+        return s;
+      }, 0);
+      document.getElementById('kpi-recuperado').textContent = formatarMoeda(recuperado);
+
+      // ---- KPI: INADIMPLENCIA REAL ----
+      const vencidosAteHoje = receberKpi.filter(r => r._dataVencimento && r._dataVencimento <= hoje);
+      const totalVencido = vencidosAteHoje.reduce((s, r) => s + r._valor, 0);
+      const naoPagoVencido = vencidosAteHoje.filter(r => !r._dataBaixa).reduce((s, r) => s + r._valor, 0);
+      const taxaInadimplencia = totalVencido > 0 ? (naoPagoVencido / totalVencido) * 100 : 0;
+      document.getElementById('kpi-inadimplencia').textContent = taxaInadimplencia.toFixed(2) + '%';
+
+      // ---- GRAFICOS (Baseados no Ano selecionado, mas filtrados se houver mês) ----
+      const baseReceberGrafico = (mesesSelecionados.length === 0) ? registros.filter(r => r._dataVencimento && r._dataVencimento.getFullYear() === anoSelecionado) : receberKpi;
+      const baseRecebidoGrafico = (mesesSelecionados.length === 0) ? registros.filter(r => r._dataBaixa && r._dataBaixa.getFullYear() === anoSelecionado) : recebidoKpi;
+
+      renderizarChartEvolucaoMensal(baseReceberGrafico, baseRecebidoGrafico, anoSelecionado);
+      renderizarChartInadimplenciaMensal(baseReceberGrafico, anoSelecionado);
+
+      // ---- TABELA MATRIZ (Sempre mostra o ano inteiro) ----
+      renderizarTabelaMatriz(registros, anoSelecionado);
+
+      // ---- MODAL OUTRAS COMPETENCIAS ----
+      popularTabelaOutrasCompetencias(registros, anoSelecionado);
+    }
+
+    // Expor no window para o botao do modal de filtros
+    window.processarDadosAging = processarDadosAging;
+
+    // ==========================================
+    // GRAFICO: Evolução Mensal (Colunas Emparelhadas)
+    // ==========================================
+    function renderizarChartEvolucaoMensal(receberDoAno, recebidoDoAno, ano) {
+      const receberPorMes = new Array(12).fill(0);
+      const recebidoPorMes = new Array(12).fill(0);
+
+      receberDoAno.forEach(r => {
+        if (r._dataVencimento) receberPorMes[r._dataVencimento.getMonth()] += r._valor;
+      });
+
+      recebidoDoAno.forEach(r => {
+        if (r._dataBaixa) recebidoPorMes[r._dataBaixa.getMonth()] += r._valor;
+      });
+
+      const options = {
+        series: [
+          { name: 'A Receber', data: receberPorMes },
+          { name: 'Recebido', data: recebidoPorMes }
+        ],
+        chart: {
+          type: 'bar',
+          height: 400,
+          fontFamily: 'Manrope, sans-serif',
+          toolbar: { show: false },
+          background: 'transparent'
+        },
+        theme: { mode: 'dark' },
+        colors: ['#59a4d8', '#aad12f'],
+        plotOptions: {
+          bar: { borderRadius: 6, columnWidth: '55%' }
+        },
+        dataLabels: {
+          enabled: true,
+          formatter: (val) => val > 0 ? formatarValorGrafico(val) : '',
+          style: { fontSize: '9px', fontWeight: 800, colors: ['#fff'] },
+          offsetY: -4
+        },
+        stroke: { show: true, width: 2, colors: ['transparent'] },
+        xaxis: {
+          categories: MESES_LABEL,
+          labels: { style: { fontSize: '11px', fontWeight: 700, colors: '#94a3b8' } },
+          axisBorder: { show: false },
+          axisTicks: { show: false }
+        },
+        yaxis: {
+          labels: {
+            style: { fontSize: '11px', colors: '#94a3b8' },
+            formatter: (val) => formatarValorGrafico(val)
+          }
+        },
+        grid: { borderColor: '#1e293b', strokeDashArray: 4, xaxis: { lines: { show: false } } },
+        tooltip: {
+          theme: 'dark',
+          y: { formatter: (val) => formatarMoeda(val) }
+        },
+        legend: {
+          position: 'top', horizontalAlign: 'right', fontWeight: 700, fontSize: '12px',
+          labels: { colors: '#cbd5e1' }, markers: { radius: 4 }
+        }
+      };
+
+      const el = document.querySelector('#chart-evolucao-mensal');
+      if (el) {
+        if (chartEvolucaoInstance) chartEvolucaoInstance.destroy();
+        el.innerHTML = '';
+        chartEvolucaoInstance = new ApexCharts(el, options);
+        chartEvolucaoInstance.render();
+      }
+    }
+
+    // ==========================================
+    // TABELA MATRIZ CONSOLIDADA DE AGING
+    // ==========================================
+    function renderizarTabelaMatriz(registros, anoSelecionado) {
+      const tbody = document.getElementById('tbody-matriz-aging');
+      if (!tbody) return;
+
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      let html = '';
+
+      // Acumuladores YTD (fora do loop)
+      let acumuladoVencidoYTD = 0;
+      let acumuladoAtrasadoYTD = 0;
+
+      for (let mes = 0; mes < 12; mes++) {
+        // ---- Dados "A Receber": vencimento neste mes/ano ----
+        const receberMes = registros.filter(r =>
+          r._dataVencimento &&
+          r._dataVencimento.getFullYear() === anoSelecionado &&
+          r._dataVencimento.getMonth() === mes
+        );
+
+        // ---- Dados "Recebido": baixa neste mes/ano ----
+        const recebidoMes = registros.filter(r =>
+          r._dataBaixa &&
+          r._dataBaixa.getFullYear() === anoSelecionado &&
+          r._dataBaixa.getMonth() === mes
+        );
+
+        // Somas por servico - A Receber
+        const receberPorServico = {};
+        SERVICOS_COLUNAS.forEach(s => receberPorServico[s] = 0);
+        let totalReceberLinha = 0;
+        receberMes.forEach(r => {
+          const col = classificarServicoColuna(r._servico);
+          if (receberPorServico[col] !== undefined) receberPorServico[col] += r._valor;
+          totalReceberLinha += r._valor;
+        });
+
+        // Somas por servico - Recebido
+        const recebidoPorServico = {};
+        SERVICOS_COLUNAS.forEach(s => recebidoPorServico[s] = 0);
+        let totalRecebidoLinha = 0;
+        recebidoMes.forEach(r => {
+          const col = classificarServicoColuna(r._servico);
+          if (recebidoPorServico[col] !== undefined) recebidoPorServico[col] += r._valor;
+          totalRecebidoLinha += r._valor;
+        });
+
+        // Inadimplencia da competencia:
+        // Das faturas com vencimento neste mes, quanto NAO foi pago?
+        const recebidoReferenteAoMes = receberMes.filter(r => r._dataBaixa).reduce((s, r) => s + r._valor, 0);
+        const atrasadoMes = totalReceberLinha - recebidoReferenteAoMes;
+
+        let inadimplenciaHtml = '';
+        let ytdHtml = '';
+        const primeiroDiaMesSeguinte = new Date(anoSelecionado, mes + 1, 1);
+
+        if (totalReceberLinha > 0 && hoje >= new Date(anoSelecionado, mes, 1)) {
+          // Acumular YTD (mes iniciado ou encerrado)
+          acumuladoVencidoYTD += totalReceberLinha;
+          acumuladoAtrasadoYTD += atrasadoMes;
+
+          const inadPerc = (atrasadoMes / totalReceberLinha) * 100;
+          const ytdPerc = acumuladoVencidoYTD > 0 ? (acumuladoAtrasadoYTD / acumuladoVencidoYTD) * 100 : 0;
+          const corYtd = ytdPerc > 10 ? 'text-red-500' : ytdPerc > 5 ? 'text-amber-500' : 'text-green-600';
+
+          if (hoje >= primeiroDiaMesSeguinte) {
+            // Mes ja encerrado
+            const corInad = inadPerc > 10 ? 'text-red-500' : inadPerc > 5 ? 'text-amber-500' : 'text-green-600';
+            inadimplenciaHtml = `<span class="font-extrabold ${corInad}">${inadPerc.toFixed(1)}%</span>`;
+          } else {
+            // Mes corrente
+            inadimplenciaHtml = `<span class="font-bold text-amber-400">${inadPerc.toFixed(1)}%</span><span class="text-[9px] text-slate-400 ml-1">parcial</span>`;
+          }
+
+          ytdHtml = `<span class="font-extrabold ${corYtd}">${ytdPerc.toFixed(1)}%</span>`;
+        } else if (totalReceberLinha > 0) {
+          // Mes futuro
+          inadimplenciaHtml = `<span class="text-slate-300 text-[10px] italic">pendente</span>`;
+          ytdHtml = `<span class="text-slate-300">-</span>`;
+        } else {
+          inadimplenciaHtml = `<span class="text-slate-300">-</span>`;
+          ytdHtml = `<span class="text-slate-300">-</span>`;
+        }
+
+        // ---- LINHA 1: A Receber ----
+        html += `<tr class="bg-slate-50/70 hover:bg-blue-50/50 transition-colors">
+          <td class="px-6 py-3 font-extrabold text-center text-brandDarkBlue border-r border-slate-200 text-xs" rowspan="2">${MESES_LABEL[mes]}</td>
+          <td class="px-6 py-3 text-center border-r border-slate-200">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold uppercase">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> A Receber
+            </span>
+          </td>
+          ${SERVICOS_COLUNAS.map(s => `<td class="px-6 py-3 text-right text-xs font-semibold text-slate-700">${formatarMoedaCurta(receberPorServico[s])}</td>`).join('')}
+          <td class="px-6 py-3 text-right text-xs font-extrabold text-brandDarkBlue bg-slate-100/80">${formatarMoedaCurta(totalReceberLinha)}</td>
+          <td class="px-6 py-3 text-center border-l border-slate-200" rowspan="2">${inadimplenciaHtml}</td>
+          <td class="px-6 py-3 text-center border-l border-slate-100 bg-slate-50/80" rowspan="2">${ytdHtml}</td>
+        </tr>`;
+
+        // ---- LINHA 2: Recebido ----
+        html += `<tr class="hover:bg-green-50/50 transition-colors">
+          <td class="px-6 py-3 text-center border-r border-slate-200">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-100 text-green-800 text-[10px] font-bold uppercase">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Recebido
+            </span>
+          </td>
+          ${SERVICOS_COLUNAS.map(s => `<td class="px-6 py-3 text-right text-xs font-semibold text-green-700">${formatarMoedaCurta(recebidoPorServico[s])}</td>`).join('')}
+          <td class="px-6 py-3 text-right text-xs font-extrabold text-green-700 bg-slate-100/80">${formatarMoedaCurta(totalRecebidoLinha)}</td>
+        </tr>`;
+      }
+
+      tbody.innerHTML = html;
+    }
+
+    // ==========================================
+    // GRAFICO: Inadimplência Mensal (Isolada + Acumulada YTD)
+    // ==========================================
+    function renderizarChartInadimplenciaMensal(receberDoAno, anoSelecionado) {
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      const inadIsolada = [];
+      const inadAcumulada = [];
+      let atrasadoAcum = 0;
+      let vencidoAcum = 0;
+
+      for (let mes = 0; mes < 12; mes++) {
+        // So calcula para meses ja iniciados
+        if (hoje < new Date(anoSelecionado, mes, 1)) {
+          inadIsolada.push(null);
+          inadAcumulada.push(null);
+          continue;
+        }
+
+        const receberMes = receberDoAno.filter(r =>
+          r._dataVencimento && r._dataVencimento.getMonth() === mes
+        );
+
+        const totalVencidoMes = receberMes.reduce((s, r) => s + r._valor, 0);
+        const totalPagoMes = receberMes.filter(r => r._dataBaixa).reduce((s, r) => s + r._valor, 0);
+        const atrasadoMes = totalVencidoMes - totalPagoMes;
+
+        // Inadimplência Isolada do Mês
+        if (totalVencidoMes > 0) {
+          inadIsolada.push(parseFloat(((atrasadoMes / totalVencidoMes) * 100).toFixed(2)));
+        } else {
+          inadIsolada.push(0);
+        }
+
+        // Inadimplência Acumulada YTD
+        atrasadoAcum += atrasadoMes;
+        vencidoAcum += totalVencidoMes;
+        if (vencidoAcum > 0) {
+          inadAcumulada.push(parseFloat(((atrasadoAcum / vencidoAcum) * 100).toFixed(2)));
+        } else {
+          inadAcumulada.push(0);
+        }
+      }
+
+      const options = {
+        series: [
+          { name: 'Inadimplência Mensal', data: inadIsolada },
+          { name: 'Acumulada YTD', data: inadAcumulada }
+        ],
+        chart: {
+          type: 'line',
+          height: 350,
+          fontFamily: 'Manrope, sans-serif',
+          toolbar: { show: false },
+          background: 'transparent'
+        },
+        theme: { mode: 'dark' },
+        colors: ['#ef4444', '#f59e0b'],
+        stroke: { curve: 'smooth', width: [3, 2], dashArray: [0, 5] },
+        markers: {
+          size: [5, 4],
+          strokeWidth: 0,
+          hover: { sizeOffset: 3 }
+        },
+        dataLabels: {
+          enabled: true,
+          enabledOnSeries: [0],
+          formatter: (val) => val !== null ? val.toFixed(1) + '%' : '',
+          style: { fontSize: '10px', fontWeight: 800, colors: ['#fff'] },
+          background: {
+            enabled: true, foreColor: '#ef4444', borderRadius: 4,
+            padding: 4, borderWidth: 0, opacity: 0.9,
+            dropShadow: { enabled: false }
+          }
+        },
+        xaxis: {
+          categories: MESES_LABEL,
+          labels: { style: { fontSize: '11px', fontWeight: 700, colors: '#94a3b8' } },
+          axisBorder: { show: false },
+          axisTicks: { show: false }
+        },
+        yaxis: {
+          min: 0,
+          labels: {
+            style: { fontSize: '11px', colors: '#94a3b8' },
+            formatter: (val) => val !== null ? val.toFixed(0) + '%' : ''
+          }
+        },
+        grid: { borderColor: '#1e293b', strokeDashArray: 4, xaxis: { lines: { show: false } } },
+        tooltip: {
+          theme: 'dark',
+          y: { formatter: (val) => val !== null ? val.toFixed(2) + '%' : 'N/A' }
+        },
+        legend: {
+          show: true, position: 'bottom', horizontalAlign: 'center', fontWeight: 700, fontSize: '12px',
+          labels: { colors: '#fff' }, markers: { radius: 12 },
+          itemMargin: { horizontal: 16, vertical: 8 }
+        },
+        fill: {
+          type: ['solid', 'solid'],
+          opacity: [1, 1]
+        }
+      };
+
+      const el = document.querySelector('#chart-inadimplencia-mensal');
+      if (el) {
+        if (chartInadimplenciaInstance) chartInadimplenciaInstance.destroy();
+        el.innerHTML = '';
+        chartInadimplenciaInstance = new ApexCharts(el, options);
+        chartInadimplenciaInstance.render();
+      }
+    }
+
+    // ==========================================
+    // TABELA: Recebidos em Outras Competências (Modal)
+    // ==========================================
+    function popularTabelaOutrasCompetencias(registros, anoSelecionado) {
+      const tbody = document.querySelector('#tabela-outras-competencias tbody');
+      if (!tbody) return;
+
+      // Filtra: dataBaixa no ano selecionado E mes/ano da baixa > mes/ano do vencimento
+      const recuperados = registros.filter(r => {
+        if (!r._dataBaixa || !r._dataVencimento) return false;
+        if (r._dataBaixa.getFullYear() !== anoSelecionado) return false;
+        const mesVenc = r._dataVencimento.getFullYear() * 12 + r._dataVencimento.getMonth();
+        const mesBaixa = r._dataBaixa.getFullYear() * 12 + r._dataBaixa.getMonth();
+        return mesBaixa > mesVenc;
+      });
+
+      // Ordena por data de baixa descendente
+      recuperados.sort((a, b) => b._dataBaixa - a._dataBaixa);
+
+      if (recuperados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-slate-400 text-sm italic">Nenhuma recuperação encontrada no período.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      recuperados.forEach(r => {
+        const mesBaixa = MESES_LABEL[r._dataBaixa.getMonth()] + '/' + r._dataBaixa.getFullYear();
+        const mesVecto = MESES_LABEL[r._dataVencimento.getMonth()] + '/' + r._dataVencimento.getFullYear();
+
+        html += `<tr class="hover:bg-slate-50/50 transition-colors">
+          <td class="py-3 px-2">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 text-green-800 text-[10px] font-bold">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> ${mesBaixa}
+            </span>
+          </td>
+          <td class="py-3 px-2">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> ${mesVecto}
+            </span>
+          </td>
+          <td class="py-3 px-2 text-right font-extrabold text-brandDarkBlue">${formatarMoeda(r._valor)}</td>
+        </tr>`;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    /**
+     * Classifica dias de atraso em faixas de aging padrao.
+     */
+    function classificarFaixa(dias) {
+      if (dias <= 30) return '1-30 dias';
+      if (dias <= 60) return '31-60 dias';
+      if (dias <= 90) return '61-90 dias';
+      if (dias <= 120) return '91-120 dias';
+      return '120+ dias';
+    }
+
+    // Logout via event delegation
+    document.addEventListener('click', async (e) => {
+      const logoutBtn = e.target.closest('#btn-logout');
+      if (logoutBtn) {
+        e.preventDefault();
+        await signOut(auth);
+        window.location.href = "../login.html";
+      }
+    });
+  </script>
+
+</body>
+
+</html>

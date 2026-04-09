@@ -161,13 +161,15 @@
     // 2. VALIDAÇÃO DE SESSÃO
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const docRef = doc(db, "Usuarios", user.uid);
-        const docSnap = await getDoc(docRef);
+        let docRef = doc(db, "Usuarios", user.email.toLowerCase());
+        let docSnap = await getDoc(docRef);
+        // Fallback: tenta por UID antigo (período de migração)
+        if (!docSnap.exists()) { docRef = doc(db, "Usuarios", user.uid); docSnap = await getDoc(docRef); }
 
         if (docSnap.exists()) {
           const dadosUser = docSnap.data();
           // Proteção de Rota (Se não for master, joga pro faturamento)
-          if (dadosUser.perfil !== 'master') {
+          if (dadosUser.perfil !== 'master' && dadosUser.perfil !== 'super_admin') {
             window.location.href = "../contas_a_receber_desktop/code.html";
             return;
           }

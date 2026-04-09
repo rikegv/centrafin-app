@@ -109,23 +109,65 @@
                             </div>
                             <div>
                                 <label
-                                    class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Senha
-                                    Provisória</label>
-                                <input type="text" id="cad-senha" required minlength="6"
-                                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-300"
-                                    placeholder="Mínimo 6 caracteres">
-                            </div>
-                            <div>
-                                <label
                                     class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Alocação
                                     de Acesso</label>
-                                <select id="cad-perfil" required
+                                <select id="campo-perfil-usuario" required
                                     class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-slate-50 font-medium">
-                                    <option value="menu1">Menu 1 (Apenas Contas a Receber)</option>
-                                    <option value="menu2">Menu 2 (Contas a Receber e a Pagar)</option>
-                                    <option value="master">Acesso Master (Total)</option>
+                                    <option value="comum">Usuário Padrão</option>
+                                    <option value="master">Usuário Master</option>
+                                    <option value="super_admin" id="opt-super-admin" class="hidden font-extrabold text-primary">Super Admin (Master dos Masters)</option>
                                 </select>
                             </div>
+                            
+                            <!-- Checkboxes de Módulos (Design Premium) -->
+                            <div class="col-span-full mt-6">
+                                <label class="block text-[10px] font-extrabold text-slate-500 mb-3 uppercase tracking-widest border-b border-slate-100 pb-2">Módulos Permitidos</label>
+                                <div class="grid grid-cols-1 gap-2.5" id="container-menus-permitidos-cadastro">
+                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                                        <input type="checkbox" value="dashboard_master" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Dashboard Master / Metas</span>
+                                            <span class="text-[9px] text-slate-400 font-medium">Visão executiva e acompanhamento de metas</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                                        <input type="checkbox" value="contas_receber" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Faturamento (CRF)</span>
+                                            <span class="text-[9px] text-slate-400 font-medium">Contas a Receber e faturamento consolidado</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                                        <input type="checkbox" value="contas_pagar" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Contas a Pagar</span>
+                                            <span class="text-[9px] text-slate-400 font-medium">Gestão de obrigações e pagamentos</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                                        <input type="checkbox" value="extrato" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Extrato Consolidado</span>
+                                            <span class="text-[9px] text-slate-400 font-medium">Visualização de transações e saldos</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                                        <input type="checkbox" value="usuarios" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Gestão de Usuários</span>
+                                            <span class="text-[9px] text-slate-400 font-medium">Controle de acessos e permissões (RBAC)</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                                        <input type="checkbox" value="aging" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Dashboard de AGING</span>
+                                            <span class="text-[9px] text-slate-400 font-medium">Saúde do fluxo de caixa e inadimplência</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div id="msg-cadastro"
                                 class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4"></div>
                             <button type="submit" id="btn-salvar-user"
@@ -210,10 +252,89 @@
 
     </main>
 
+    <!-- Modal de Edição Premium RBAC -->
+    <div id="modal-edicao-usuario" class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
+        <div class="absolute inset-0 bg-secondary/40 backdrop-blur-sm modal-overlay"></div>
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-3xl">edit_square</span>
+                    <div>
+                        <h3 class="font-headline text-xl font-extrabold text-secondary">Ajuste de Acessos</h3>
+                        <p class="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Configurações RBAC de Segurança</p>
+                    </div>
+                </div>
+                <button onclick="window.fecharModalEdicao()" class="text-slate-400 hover:text-secondary transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <form id="form-editar-usuario" class="space-y-6">
+                <input type="hidden" id="edit-id">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-1">
+                        <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome</label>
+                        <input type="text" id="edit-nome" class="w-full bg-slate-50 border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold text-slate-700 cursor-not-allowed" readonly>
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">E-mail</label>
+                        <input type="text" id="edit-email" class="w-full bg-slate-50 border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold text-slate-700 cursor-not-allowed" readonly>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Perfil de Acesso</label>
+                    <select id="edit-perfil" required class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-bold text-secondary">
+                        <option value="comum">Usuário Padrão</option>
+                        <option value="master">Usuário Master</option>
+                        <option value="super_admin" id="opt-super-admin-edit" class="hidden font-extrabold text-primary">Super Admin (Master dos Masters)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 mb-3 uppercase tracking-widest border-b border-slate-100 pb-2">Módulos Permitidos</label>
+                    <div class="grid grid-cols-1 gap-2.5" id="container-menus-permitidos-edicao">
+                        <!-- Módulos repetidos para edição -->
+                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                            <input type="checkbox" value="dashboard_master" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Dashboard Master / Metas</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                            <input type="checkbox" value="contas_receber" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Faturamento (CRF)</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                            <input type="checkbox" value="contas_pagar" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Contas a Pagar</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                            <input type="checkbox" value="extrato" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Extrato Consolidado</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                            <input type="checkbox" value="usuarios" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Gestão de Usuários</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
+                            <input type="checkbox" value="aging" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Dashboard de AGING</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="window.fecharModalEdicao()" class="px-6 py-2.5 text-xs font-extrabold text-slate-400 hover:text-secondary transition-all">Cancelar</button>
+                    <button type="submit" id="btn-atualizar-user" class="px-8 py-2.5 bg-primary text-secondary font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:brightness-105 transition-all text-xs">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, query, orderBy, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { renderSidebar } from "./sidebar.js";
 
         const firebaseConfig = { apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU", authDomain: "centra-fin.firebaseapp.com", projectId: "centra-fin", storageBucket: "centra-fin.firebasestorage.app", messagingSenderId: "666471089411", appId: "1:666471089411:web:4630f5b2ced70ceb981536" };
@@ -222,23 +343,53 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        let usuarioLogadoNome = "Sistema";
+        let usuarioLogadoPerfil = "";
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const docRef = doc(db, "Usuarios", user.uid);
-                const docSnap = await getDoc(docRef);
+                const emailKey = user.email.toLowerCase();
+                let docRef = doc(db, "Usuarios", emailKey);
+                let docSnap = await getDoc(docRef);
+                // Fallback: tenta por UID antigo (período de migração)
+                if (!docSnap.exists()) {
+                    docRef = doc(db, "Usuarios", user.uid);
+                    docSnap = await getDoc(docRef);
+                }
                 if (docSnap.exists()) {
                     const dadosUser = docSnap.data();
-                    renderSidebar(dadosUser.perfil);
+                    usuarioLogadoNome = dadosUser.nome || user.email;
+                    usuarioLogadoPerfil = dadosUser.perfil || "";
+
+                    // GUARDIÃO DE ROTA
+                    const CHAVE_PAGINA = 'usuarios';
+                    if (usuarioLogadoPerfil !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
+                        await signOut(auth);
+                        alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
+                        window.location.href = "login.html";
+                        return;
+                    }
+
+                    renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
+
+                    // RBAC: Só exibe a opção Super Admin se o usuário logado for Super Admin
+                    if (usuarioLogadoPerfil === 'super_admin') {
+                        document.querySelectorAll('[id^="opt-super-admin"]').forEach(opt => {
+                            opt.classList.remove('hidden');
+                        });
+                    }
+                } else {
+                    await signOut(auth);
+                    alert('Acesso Negado: Usuário não encontrado no sistema.');
+                    window.location.href = "login.html";
+                    return;
                 }
             } else {
                 window.location.href = "login.html";
             }
         });
 
-        const secondaryApp = initializeApp(firebaseConfig, "Secondary");
-        const secondaryAuth = getAuth(secondaryApp);
-
-        // CORREÇÃO: Lógica segura de navegação entre abas
+        // Lógica segura de navegação entre abas
         const btnUsers = document.getElementById('tab-users-btn');
         const btnLogs = document.getElementById('tab-logs-btn');
         const secUsers = document.getElementById('section-users');
@@ -261,7 +412,6 @@
                 btnUsers.className = "pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2";
             });
 
-            // Permite abrir a aba direto caso a URL contenha ?tab=logs
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('tab') === 'logs') {
                 btnLogs.click();
@@ -275,9 +425,18 @@
         formUser.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nome = document.getElementById('cad-nome').value.trim();
-            const email = document.getElementById('cad-email').value.trim();
-            const senha = document.getElementById('cad-senha').value;
-            const perfil = document.getElementById('cad-perfil').value;
+            const email = document.getElementById('cad-email').value.trim().toLowerCase();
+            const perfil = document.getElementById('campo-perfil-usuario').value;
+            
+            // CAPTURA RBAC: Coleta menus permitidos do formulário de cadastro
+            const menusSelecionados = Array.from(document.querySelectorAll('.menu-checkbox-cad:checked')).map(cb => cb.value);
+
+            if (perfil === 'super_admin' && usuarioLogadoPerfil !== 'super_admin') {
+                msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
+                msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">error</span> Apenas Super Admins podem criar usuários com perfil Super Admin.';
+                msgCadastro.classList.remove('hidden');
+                return;
+            }
 
             btnSalvarUser.disabled = true;
             btnSalvarUser.classList.add('opacity-50');
@@ -285,22 +444,33 @@
             msgCadastro.classList.add('hidden');
 
             try {
-                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, senha);
-                const uid = userCredential.user.uid;
-                await setDoc(doc(db, "Usuarios", uid), { nome: nome, email: email, perfil: perfil, status: 'ativo', data_criacao: serverTimestamp() });
-                await secondaryAuth.signOut();
+                const docRef = doc(db, "Usuarios", email);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
+                    msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">error</span> Este e-mail já está cadastrado no sistema.';
+                    msgCadastro.classList.remove('hidden');
+                    return;
+                }
+
+                await setDoc(docRef, {
+                    nome: nome,
+                    email: email,
+                    perfil: perfil,
+                    menus_permitidos: menusSelecionados, // Salva o array de menus
+                    status: 'ativo',
+                    data_criacao: serverTimestamp()
+                });
 
                 msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-emerald-50 text-emerald-700 border border-emerald-200';
                 msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">check_circle</span> Usuário criado e alocado com sucesso!';
                 msgCadastro.classList.remove('hidden');
                 formUser.reset();
-                registrarLogAutomático("Admin (Master)", "INCLUSÃO", "Cadastro de Usuários", `Criou o usuário ${email} com perfil ${perfil}.`);
+                registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Cadastro de Usuários", `Criou o usuário ${email} com perfil ${perfil}.`);
             } catch (error) {
+                console.error("Erro ao criar usuário:", error);
                 msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
-                let msg = "Erro ao criar usuário.";
-                if (error.code === 'auth/email-already-in-use') msg = "Este e-mail já está cadastrado.";
-                if (error.code === 'auth/weak-password') msg = "A senha deve ter pelo menos 6 caracteres.";
-                msgCadastro.innerHTML = `<span class="material-symbols-outlined text-base">error</span> ${msg}`;
+                msgCadastro.innerHTML = `<span class="material-symbols-outlined text-base">error</span> Erro ao criar usuário: ${error.message}`;
                 msgCadastro.classList.remove('hidden');
             } finally {
                 btnSalvarUser.disabled = false;
@@ -317,21 +487,102 @@
             if (snapshot.empty) { tabelaUsers.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-sm">Nenhum usuário cadastrado.</td></tr>`; return; }
             snapshot.forEach(docSnap => {
                 const data = docSnap.data(); count++;
-                const isAdmin = data.perfil === 'master'; const isAtivo = data.status !== 'inativo';
-                const badgePerfil = isAdmin ? `<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-purple-200 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">local_police</span> Master</span>` : `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-slate-200">${data.perfil === 'menu1' ? 'Menu 1' : 'Menu 2'}</span>`;
+                const isSuperAdmin = data.perfil === 'super_admin'; const isAdmin = data.perfil === 'master'; const isAtivo = data.status !== 'inativo';
+                let badgePerfil;
+                if (isSuperAdmin) {
+                    badgePerfil = `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-red-200 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">shield</span> Super Admin</span>`;
+                } else if (isAdmin) {
+                    badgePerfil = `<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-purple-200 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">local_police</span> Master</span>`;
+                } else {
+                    badgePerfil = `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-slate-200">Comum</span>`;
+                }
                 const badgeStatus = isAtivo ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-100">ATIVO</span>` : `<span class="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-100">INATIVO</span>`;
                 const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
-                tr.innerHTML = `<td class="px-6 py-4"><p class="font-bold text-slate-800 text-sm">${data.nome || 'Usuário'}</p><p class="text-[11px] text-slate-500">${data.email}</p></td><td class="px-6 py-4">${badgePerfil}</td><td class="px-6 py-4 text-center">${badgeStatus}</td><td class="px-6 py-4 text-right"><button onclick="window.alternarStatusUser('${docSnap.id}', '${isAtivo}')" class="text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${isAtivo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'}" title="${isAtivo ? 'Bloquear Acesso' : 'Liberar Acesso'}">${isAtivo ? 'Inativar' : 'Reativar'}</button></td>`;
+                
+                // TABELA: Adiciona botão de EDITAR (Premium)
+                tr.innerHTML = `
+                    <td class="px-6 py-4"><p class="font-bold text-slate-800 text-sm">${data.nome || 'Usuário'}</p><p class="text-[11px] text-slate-500">${data.email}</p></td>
+                    <td class="px-6 py-4">${badgePerfil}</td>
+                    <td class="px-6 py-4 text-center">${badgeStatus}</td>
+                    <td class="px-6 py-4 text-right flex items-center justify-end gap-2">
+                        <button onclick="window.abrirModalEdicao('${docSnap.id}')" class="p-2 text-slate-400 hover:text-primary transition-colors flex items-center" title="Editar Permissões">
+                            <span class="material-symbols-outlined text-lg">edit</span>
+                        </button>
+                        <button onclick="window.alternarStatusUser('${docSnap.id}', '${isAtivo}')" class="text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${isAtivo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'}" title="${isAtivo ? 'Bloquear Acesso' : 'Liberar Acesso'}">
+                            ${isAtivo ? 'Inativar' : 'Reativar'}
+                        </button>
+                    </td>`;
                 tabelaUsers.appendChild(tr);
             });
             badgeCount.textContent = `${count} usuário(s)`;
+        });
+
+        // --- LÓGICA DO MODAL DE EDIÇÃO RBAC ---
+        const modalEdicao = document.getElementById('modal-edicao-usuario');
+        const formEdicao = document.getElementById('form-editar-usuario');
+
+        window.abrirModalEdicao = async (id) => {
+            try {
+                const docSnap = await getDoc(doc(db, "Usuarios", id));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('edit-id').value = id;
+                    document.getElementById('edit-nome').value = data.nome || "";
+                    document.getElementById('edit-email').value = data.email || id;
+                    document.getElementById('edit-perfil').value = data.perfil || "comum";
+                    
+                    // PREENCHIMENTO RBAC: "Tica" os menus permitidos
+                    const menusPermitidos = data.menus_permitidos || [];
+                    document.querySelectorAll('.menu-checkbox-edit').forEach(cb => {
+                        cb.checked = menusPermitidos.includes(cb.value);
+                    });
+
+                    modalEdicao.classList.remove('pointer-events-none', 'opacity-0');
+                    modalEdicao.querySelector('div.bg-white').classList.remove('scale-95');
+                }
+            } catch (err) {
+                console.error("Erro ao carregar dados para edição:", err);
+                alert("Erro ao carregar dados do usuário.");
+            }
+        };
+
+        window.fecharModalEdicao = () => {
+            modalEdicao.classList.add('pointer-events-none', 'opacity-0');
+            modalEdicao.querySelector('div.bg-white').classList.add('scale-95');
+        };
+
+        formEdicao.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const perfil = document.getElementById('edit-perfil').value;
+            const menusSelecionados = Array.from(document.querySelectorAll('.menu-checkbox-edit:checked')).map(cb => cb.value);
+            const btnAtualizar = document.getElementById('btn-atualizar-user');
+
+            btnAtualizar.disabled = true;
+            btnAtualizar.classList.add('opacity-50');
+
+            try {
+                await updateDoc(doc(db, "Usuarios", id), {
+                    perfil: perfil,
+                    menus_permitidos: menusSelecionados
+                });
+                
+                registrarLogAutomático(usuarioLogadoNome, "ALTERAÇÃO", "Gestão de Usuários", `Editou permissões do usuário ${id}. Novo Perfil: ${perfil}.`);
+                window.fecharModalEdicao();
+            } catch (err) {
+                console.error("Erro ao salvar edição:", err);
+                alert("Erro ao atualizar usuário.");
+            } finally {
+                btnAtualizar.disabled = false;
+                btnAtualizar.classList.remove('opacity-50');
+            }
         });
 
         window.alternarStatusUser = async (id, isAtivoAtual) => {
             const novoStatus = isAtivoAtual === 'true' ? 'inativo' : 'ativo';
             try {
                 await updateDoc(doc(db, "Usuarios", id), { status: novoStatus });
-                registrarLogAutomático("Admin (Master)", "ALTERAÇÃO DE ACESSO", "Cadastro de Usuários", `O usuário ID ${id} teve seu status alterado para ${novoStatus.toUpperCase()}.`);
+                registrarLogAutomático(usuarioLogadoNome, "ALTERAÇÃO DE ACESSO", "Cadastro de Usuários", `O usuário ${id} teve seu status alterado para ${novoStatus.toUpperCase()}.`);
             } catch (e) {
                 console.error("Erro ao alterar status:", e);
                 alert("Erro ao modificar usuário.");

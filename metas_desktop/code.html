@@ -231,12 +231,29 @@
         // Autenticação
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const docRef = doc(db, "Usuarios", user.uid);
-                const docSnap = await getDoc(docRef);
+                let docRef = doc(db, "Usuarios", user.email.toLowerCase());
+                let docSnap = await getDoc(docRef);
+                // Fallback: tenta por UID antigo (período de migração)
+                if (!docSnap.exists()) { docRef = doc(db, "Usuarios", user.uid); docSnap = await getDoc(docRef); }
                 if (docSnap.exists()) {
-                    const userProfile = docSnap.data().perfil;
-                    renderSidebar(userProfile);
-                    if (userProfile !== 'master') window.location.href = "../contas_a_receber_desktop/code.html";
+                    const dadosUser = docSnap.data();
+                    const userProfile = dadosUser.perfil;
+
+                    // GUARDIÃO DE ROTA
+                    const CHAVE_PAGINA = 'metas';
+                    if (userProfile !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
+                        await signOut(auth);
+                        alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
+                        window.location.href = "../login.html";
+                        return;
+                    }
+
+                    renderSidebar(userProfile, dadosUser.menus_permitidos || []);
+                } else {
+                    await signOut(auth);
+                    alert('Acesso Negado: Usuário não encontrado no sistema.');
+                    window.location.href = "../login.html";
+                    return;
                 }
 
                 // Setup Inicial
