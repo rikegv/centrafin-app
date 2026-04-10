@@ -643,23 +643,19 @@
         registros = registros.filter(r => servicosSelecionados.includes(normalizarServicoParaFiltro(r._servico)));
       }
 
-      // Filtro de Mês (afeta a base dos KPIs e Gráficos se não estiver vazio)
-      let registrosKpi = registros;
-      if (mesesSelecionados.length > 0) {
-        registrosKpi = registros.filter(r => {
-          const mIncr = r._dataVencimento ? r._dataVencimento.getMonth() : -1;
-          const mBaixa = r._dataBaixa ? r._dataBaixa.getMonth() : -1;
-          const yIncr = r._dataVencimento ? r._dataVencimento.getFullYear() : -1;
-          const yBaixa = r._dataBaixa ? r._dataBaixa.getFullYear() : -1;
+      // ---- SEPARACAO BASE PARA KPIs (Filtra por mês separadamente para Receber e Recebido) ----
+      const arrayMesesFiltro = mesesSelecionados.length > 0 ? mesesSelecionados : [0,1,2,3,4,5,6,7,8,9,10,11];
 
-          return (mesesSelecionados.includes(mIncr) && yIncr === anoSelecionado) ||
-                 (mesesSelecionados.includes(mBaixa) && yBaixa === anoSelecionado);
-        });
-      }
-
-      // ---- SEPARACAO BASE PARA KPIs (Respeitando Mês se selecionado) ----
-      const receberKpi = registrosKpi.filter(r => r._dataVencimento && r._dataVencimento.getFullYear() === anoSelecionado);
-      const recebidoKpi = registrosKpi.filter(r => r._dataBaixa && r._dataBaixa.getFullYear() === anoSelecionado);
+      const receberKpi = registros.filter(r =>
+        r._dataVencimento &&
+        r._dataVencimento.getFullYear() === anoSelecionado &&
+        arrayMesesFiltro.includes(r._dataVencimento.getMonth())
+      );
+      const recebidoKpi = registros.filter(r =>
+        r._dataBaixa &&
+        r._dataBaixa.getFullYear() === anoSelecionado &&
+        arrayMesesFiltro.includes(r._dataBaixa.getMonth())
+      );
 
       // ---- KPI: TOTAL A RECEBER ----
       const totalReceber = receberKpi.reduce((s, r) => s + r._valor, 0);
@@ -687,15 +683,15 @@
       const taxaInadimplencia = totalVencido > 0 ? (naoPagoVencido / totalVencido) * 100 : 0;
       document.getElementById('kpi-inadimplencia').textContent = taxaInadimplencia.toFixed(2) + '%';
 
-      // ---- GRAFICOS (Baseados no Ano selecionado, mas filtrados se houver mês) ----
-      const baseReceberGrafico = (mesesSelecionados.length === 0) ? registros.filter(r => r._dataVencimento && r._dataVencimento.getFullYear() === anoSelecionado) : receberKpi;
-      const baseRecebidoGrafico = (mesesSelecionados.length === 0) ? registros.filter(r => r._dataBaixa && r._dataBaixa.getFullYear() === anoSelecionado) : recebidoKpi;
+      // ---- GRAFICOS (Baseados no Ano selecionado, filtrados por mês) ----
+      const baseReceberGrafico = registros.filter(r => r._dataVencimento && r._dataVencimento.getFullYear() === anoSelecionado);
+      const baseRecebidoGrafico = registros.filter(r => r._dataBaixa && r._dataBaixa.getFullYear() === anoSelecionado);
 
-      renderizarChartEvolucaoMensal(baseReceberGrafico, baseRecebidoGrafico, anoSelecionado);
-      renderizarChartInadimplenciaMensal(baseReceberGrafico, anoSelecionado);
+      renderizarChartEvolucaoMensal(baseReceberGrafico, baseRecebidoGrafico, anoSelecionado, arrayMesesFiltro);
+      renderizarChartInadimplenciaMensal(baseReceberGrafico, anoSelecionado, arrayMesesFiltro);
 
-      // ---- TABELA MATRIZ (Sempre mostra o ano inteiro) ----
-      renderizarTabelaMatriz(registros, anoSelecionado);
+      // ---- TABELA MATRIZ (Filtra por meses selecionados) ----
+      renderizarTabelaMatriz(registros, anoSelecionado, arrayMesesFiltro);
 
       // ---- MODAL OUTRAS COMPETENCIAS ----
       popularTabelaOutrasCompetencias(registros, anoSelecionado);
@@ -707,7 +703,7 @@
     // ==========================================
     // GRAFICO: Evolução Mensal (Colunas Emparelhadas)
     // ==========================================
-    function renderizarChartEvolucaoMensal(receberDoAno, recebidoDoAno, ano) {
+    function renderizarChartEvolucaoMensal(receberDoAno, recebidoDoAno, ano, arrayMesesFiltro) {
       const receberPorMes = new Array(12).fill(0);
       const recebidoPorMes = new Array(12).fill(0);
 
@@ -718,6 +714,14 @@
       recebidoDoAno.forEach(r => {
         if (r._dataBaixa) recebidoPorMes[r._dataBaixa.getMonth()] += r._valor;
       });
+
+      // Zera meses fora do filtro
+      for (let i = 0; i < 12; i++) {
+        if (!arrayMesesFiltro.includes(i)) {
+          receberPorMes[i] = 0;
+          recebidoPorMes[i] = 0;
+        }
+      }
 
       const options = {
         series: [
@@ -778,7 +782,7 @@
     // ==========================================
     // TABELA MATRIZ CONSOLIDADA DE AGING
     // ==========================================
-    function renderizarTabelaMatriz(registros, anoSelecionado) {
+    function renderizarTabelaMatriz(registros, anoSelecionado, arrayMesesFiltro) {
       const tbody = document.getElementById('tbody-matriz-aging');
       if (!tbody) return;
 
@@ -792,19 +796,21 @@
       let acumuladoAtrasadoYTD = 0;
 
       for (let mes = 0; mes < 12; mes++) {
+        // Se mês fora do filtro, zera as somas
+        const mesFiltrado = arrayMesesFiltro.includes(mes);
         // ---- Dados "A Receber": vencimento neste mes/ano ----
-        const receberMes = registros.filter(r =>
+        const receberMes = mesFiltrado ? registros.filter(r =>
           r._dataVencimento &&
           r._dataVencimento.getFullYear() === anoSelecionado &&
           r._dataVencimento.getMonth() === mes
-        );
+        ) : [];
 
         // ---- Dados "Recebido": baixa neste mes/ano ----
-        const recebidoMes = registros.filter(r =>
+        const recebidoMes = mesFiltrado ? registros.filter(r =>
           r._dataBaixa &&
           r._dataBaixa.getFullYear() === anoSelecionado &&
           r._dataBaixa.getMonth() === mes
-        );
+        ) : [];
 
         // Somas por servico - A Receber
         const receberPorServico = {};
@@ -895,7 +901,7 @@
     // ==========================================
     // GRAFICO: Inadimplência Mensal (Isolada + Acumulada YTD)
     // ==========================================
-    function renderizarChartInadimplenciaMensal(receberDoAno, anoSelecionado) {
+    function renderizarChartInadimplenciaMensal(receberDoAno, anoSelecionado, arrayMesesFiltro) {
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
 
@@ -905,6 +911,13 @@
       let vencidoAcum = 0;
 
       for (let mes = 0; mes < 12; mes++) {
+        // Zera meses fora do filtro
+        if (!arrayMesesFiltro.includes(mes)) {
+          inadIsolada.push(null);
+          inadAcumulada.push(null);
+          continue;
+        }
+
         // So calcula para meses ja iniciados
         if (hoje < new Date(anoSelecionado, mes, 1)) {
           inadIsolada.push(null);
@@ -960,14 +973,13 @@
         dataLabels: {
           enabled: true,
           enabledOnSeries: [0, 1],
-          offsetY: [-10, 15],
-          formatter: (val) => val !== null ? val.toFixed(1) + '%' : '',
-          style: { fontSize: '10px', fontWeight: 800, colors: ['#fff', '#fff'] },
-          background: {
-            enabled: true, foreColor: '#000', borderRadius: 2,
-            padding: 4, borderWidth: 0, opacity: 0.85,
-            dropShadow: { enabled: false }
-          }
+          offsetY: -8,
+          formatter: function (val) {
+            if (val === null || val === undefined || isNaN(val)) return "";
+            return Number(val).toFixed(1) + "%";
+          },
+          style: { colors: ['#fff'], fontSize: '10px' },
+          background: { enabled: true, foreColor: '#000', borderRadius: 2, padding: 4, borderWidth: 0 }
         },
         xaxis: {
           categories: MESES_LABEL,

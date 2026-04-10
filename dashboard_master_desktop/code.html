@@ -95,24 +95,7 @@
           </p>
         </div>
 
-        <div class="grid grid-cols-4 gap-6">
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Faturamento Bruto Total</p>
-            <h3 class="text-3xl font-extrabold text-brandDarkBlue" id="kpi-bruto-total">Carregando...</h3>
-          </div>
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Faturamento Realizado</p>
-            <h3 class="text-3xl font-extrabold text-brandGreen" id="kpi-real-total">Carregando...</h3>
-          </div>
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Faturamento Líquido</p>
-            <h3 class="text-3xl font-extrabold text-brandLightBlue" id="kpi-liquido-total">Carregando...</h3>
-          </div>
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Em Desenvolvimento</p>
-            <h3 class="text-3xl font-extrabold text-brandOrange">--</h3>
-          </div>
-        </div>
+
 
         <div class="grid grid-cols-4 gap-6">
           <div onclick="window.abrirModulo('tela-faturamento')"
@@ -219,6 +202,47 @@
               class="bg-brandDarkBlue text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-brandMidBlue transition-all flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px] text-brandGreen">tune</span> Filtros Avançados
             </button>
+          </div>
+        </div>
+
+        <div class="w-full h-px bg-gradient-to-r from-transparent via-slate-500/30 to-transparent my-6 shadow-[0_2px_10px_rgba(0,0,0,0.1)]"></div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Faturamento Bruto</p>
+              <div class="w-8 h-8 rounded-full bg-brandGreen/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-brandGreen text-[18px]">account_balance_wallet</span>
+              </div>
+            </div>
+            <h3 class="text-2xl font-extrabold text-[#002443]" id="kpi-fat-bruto">R$ 0,00</h3>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Faturamento Líquido</p>
+              <div class="w-8 h-8 rounded-full bg-brandLightBlue/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-brandLightBlue text-[18px]">request_quote</span>
+              </div>
+            </div>
+            <h3 class="text-2xl font-extrabold text-sky-600" id="kpi-fat-liquido">R$ 0,00</h3>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Faturamento Realizado</p>
+              <div class="w-8 h-8 rounded-full bg-brandGreen/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-brandGreen text-[18px]">verified</span>
+              </div>
+            </div>
+            <h3 class="text-2xl font-extrabold text-[#aad12f]" id="kpi-fat-realizado">R$ 0,00</h3>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Faturamento Atrasado</p>
+              <div class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-red-500 text-[18px]">warning</span>
+              </div>
+            </div>
+            <h3 class="text-2xl font-extrabold text-red-500" id="kpi-fat-atrasado">R$ 0,00</h3>
           </div>
         </div>
 
@@ -815,6 +839,7 @@
 
   <script>
     window.visaoAtivaFaturamento = 'soulan';
+    window.visaoKpiFaturamento = 'soulan';
     window.filtrosPorAba = {
       soulan: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
       thomas: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
@@ -1027,6 +1052,15 @@
       window.verificarFiltroAtivoNaAba();
       window.dispatchEvent(new Event('resize'));
       window.desenharMapaGeral();
+
+      // Atualiza visão dos KPIs ao trocar aba Soulan/Thomas
+      if (visao === 'soulan' || visao === 'thomas') {
+        window.visaoKpiFaturamento = visao;
+        window.processarEAtualizarGraficos(
+          window._ultimoArrayProcessado || window.dadosGlobaisFirestore,
+          window._ultimaAbaProcessada || 'todas'
+        );
+      }
     };
 
     window.extrairNum = function (raw) {
@@ -1134,6 +1168,10 @@
     window.processarEAtualizarGraficos = function (arrayDeDados, abaEspecifica = 'todas') {
       try {
         let fatBrutoGlobal = 0, fatRealGlobal = 0, fatLiquidoGlobal = 0;
+        let kpiFat = {
+          soulan: { bruto: 0, liquido: 0, realizado: 0, atrasado: 0 },
+          thomas: { bruto: 0, liquido: 0, realizado: 0, atrasado: 0 }
+        };
         let pivotSoulan = {}; let pivotThomas = {};
         let soulanBruto2026 = Array(12).fill(0), soulanBruto2025 = Array(12).fill(0);
         let soulanReal2026 = Array(12).fill(0), soulanReal2025 = Array(12).fill(0);
@@ -1150,6 +1188,7 @@
 
         let emissoesPorDia = {};
         let hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+        const anoCorrente = hoje.getFullYear();
 
         for (let i = 29; i >= 0; i--) {
           let d = new Date(hoje);
@@ -1176,8 +1215,10 @@
 
           const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
           const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-          const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") ||
-            statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
+          const baixaBruta = String(temBaixa || '').toUpperCase();
+          const isCancelado = statusRaw.includes("CANCELAD") || baixaBruta.includes("CANCELAD");
+          const isRecebido = !isCancelado && (statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") ||
+            statusRaw.includes("BAIXADO") || (temBaixa && baixaBruta.trim() !== "" && baixaBruta.trim() !== "-" && !baixaBruta.includes("CANCELAD")));
 
           let faturReal = 0;
           if (isRecebido) {
@@ -1191,7 +1232,27 @@
           fatBrutoGlobal += vFatura; fatRealGlobal += faturReal;
           fatLiquidoGlobal += vLiquido;
 
+          // Parse da data de emissão (usado para KPIs e demais cálculos)
           let dEmissao = window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
+          const anoEmissao = (dEmissao && !isNaN(dEmissao.getTime())) ? dEmissao.getFullYear() : null;
+
+          // Acumula KPIs por Visão (Soulan vs Thomas) — restrito ao ano corrente
+          const grupoKpi = empresa === 'NEAT' ? 'thomas' : 'soulan';
+          if (anoEmissao === anoCorrente) {
+            kpiFat[grupoKpi].bruto += vFatura;
+            kpiFat[grupoKpi].liquido += vLiquido;
+            kpiFat[grupoKpi].realizado += faturReal;
+          }
+
+          if (!isRecebido && !isCancelado) {
+            let dVencKpi = window.parseDataExt(data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto']);
+            if (dVencKpi && !isNaN(dVencKpi.getTime())) {
+              dVencKpi.setHours(0, 0, 0, 0);
+              if (dVencKpi < hoje && dVencKpi.getFullYear() === anoCorrente) {
+                kpiFat[grupoKpi].atrasado += vLiquido;
+              }
+            }
+          }
           if (dEmissao && !isNaN(dEmissao.getTime())) {
             let dCopy = new Date(dEmissao);
             dCopy.setHours(0, 0, 0, 0);
@@ -1401,10 +1462,29 @@
           }
         });
         if (abaEspecifica === 'todas') {
-          document.getElementById('kpi-bruto-total').innerText = window.formatMoedaFull(fatBrutoGlobal);
-          document.getElementById('kpi-real-total').innerText = window.formatMoedaFull(fatRealGlobal);
-          document.getElementById('kpi-liquido-total').innerText = window.formatMoedaFull(fatLiquidoGlobal);
+          const elBrutoTotal = document.getElementById('kpi-bruto-total');
+          const elRealTotal = document.getElementById('kpi-real-total');
+          const elLiquidoTotal = document.getElementById('kpi-liquido-total');
+          if (elBrutoTotal) elBrutoTotal.innerText = window.formatMoedaFull(fatBrutoGlobal);
+          if (elRealTotal) elRealTotal.innerText = window.formatMoedaFull(fatRealGlobal);
+          if (elLiquidoTotal) elLiquidoTotal.innerText = window.formatMoedaFull(fatLiquidoGlobal);
         }
+
+        // KPIs do Módulo Faturamento (respeitam aba Soulan/Thomas)
+        const visaoKpi = window.visaoKpiFaturamento || 'soulan';
+        const dadosKpi = kpiFat[visaoKpi];
+        const elFatBruto = document.getElementById('kpi-fat-bruto');
+        const elFatLiquido = document.getElementById('kpi-fat-liquido');
+        const elFatRealizado = document.getElementById('kpi-fat-realizado');
+        const elFatAtrasado = document.getElementById('kpi-fat-atrasado');
+        if (elFatBruto) elFatBruto.textContent = window.formatMoedaFull(dadosKpi.bruto);
+        if (elFatLiquido) elFatLiquido.textContent = window.formatMoedaFull(dadosKpi.liquido);
+        if (elFatRealizado) elFatRealizado.textContent = window.formatMoedaFull(dadosKpi.realizado);
+        if (elFatAtrasado) elFatAtrasado.textContent = window.formatMoedaFull(dadosKpi.atrasado);
+
+        // Salva referência do último dataset processado (para reprocessar ao trocar aba)
+        window._ultimoArrayProcessado = arrayDeDados;
+        window._ultimaAbaProcessada = abaEspecifica;
 
         if (abaEspecifica === 'todas' || abaEspecifica === 'emissoes') {
           let emissoesArr = Object.values(emissoesPorDia).sort((a, b) => a.date - b.date);
