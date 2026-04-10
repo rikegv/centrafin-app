@@ -145,7 +145,7 @@
               class="text-brandOrange text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
-          <a href="../aging_desktop/code.html" data-menu="aging" id="card-acesso-aging"
+          <a href="../aging_desktop/code.html" data-menu="AGING" id="card-acesso-aging"
             class="bg-brandDarkBlue rounded-xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-brandMidBlue/30 relative overflow-hidden group flex flex-col justify-between h-full cursor-pointer">
             <div
               class="absolute -right-8 -top-8 w-32 h-32 bg-brandGreen/10 rounded-full blur-3xl group-hover:bg-brandGreen/20 transition-all duration-500">
@@ -157,11 +157,13 @@
                   <span class="material-symbols-outlined text-brandGreen text-[28px]">query_stats</span>
                 </div>
                 <div>
-                  <h3 class="text-white font-extrabold text-lg tracking-wide">Aging Financeiro</h3>
-                  <p class="text-brandGreen/80 text-xs font-semibold uppercase tracking-wider">Saúde do Fluxo de Caixa</p>
+                  <h3 class="text-white font-extrabold text-lg tracking-wide">AGING Financeiro</h3>
+                  <p class="text-brandGreen/80 text-xs font-semibold uppercase tracking-wider">Saúde do Fluxo de Caixa
+                  </p>
                 </div>
               </div>
-              <p class="text-brandPaleBlue/70 text-sm leading-relaxed mb-6 font-medium">Análise executiva detalhada de Contas
+              <p class="text-brandPaleBlue/70 text-sm leading-relaxed mb-6 font-medium">Análise executiva detalhada de
+                Contas
                 a Receber, Recebidos e taxa real de inadimplência por competência e serviço.</p>
             </div>
             <div
@@ -176,8 +178,11 @@
             class="bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandAqua mb-4 block">track_changes</span>
             <h3 class="text-white text-xl font-extrabold mb-2">Metas Financeiras</h3>
-            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Gestão de metas anuais e acompanhamento de atingimento por produto.</p>
-            <span class="text-brandAqua text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
+            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Gestão de metas anuais e acompanhamento de atingimento por
+              produto.</p>
+            <span
+              class="text-brandAqua text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
+              Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
         </div>
       </div>
@@ -596,104 +601,139 @@
 
       <div id="tela-metas" class="view-tela hidden">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div>
-              <h2 class="text-2xl font-extrabold text-brandDarkBlue flex items-center gap-2"><span class="material-symbols-outlined text-brandAqua text-3xl">track_changes</span> Acompanhamento de Metas</h2>
-              <p class="text-slate-500 text-xs font-medium mt-1">Selecione os meses para ver o acumulado e a comparação detalhada.</p>
+          <div>
+            <h2 class="text-2xl font-extrabold text-brandDarkBlue flex items-center gap-2"><span
+                class="material-symbols-outlined text-brandAqua text-3xl">track_changes</span> Acompanhamento de Metas
+            </h2>
+            <p class="text-slate-500 text-xs font-medium mt-1">Selecione os meses para ver o acumulado e a comparação
+              detalhada.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 bg-slate-100/50 p-2 rounded-2xl border border-slate-200">
+            <div id="container-meses-metas" class="flex flex-wrap gap-1.5 mr-2">
+              <button onclick="window.toggleMesMetas(0)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Jan</button>
+              <button onclick="window.toggleMesMetas(1)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Fev</button>
+              <button onclick="window.toggleMesMetas(2)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Mar</button>
+              <button onclick="window.toggleMesMetas(3)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Abr</button>
+              <button onclick="window.toggleMesMetas(4)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Mai</button>
+              <button onclick="window.toggleMesMetas(5)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Jun</button>
+              <button onclick="window.toggleMesMetas(6)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Jul</button>
+              <button onclick="window.toggleMesMetas(7)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Ago</button>
+              <button onclick="window.toggleMesMetas(8)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Set</button>
+              <button onclick="window.toggleMesMetas(9)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Out</button>
+              <button onclick="window.toggleMesMetas(10)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Nov</button>
+              <button onclick="window.toggleMesMetas(11)"
+                class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Dez</button>
             </div>
-            <div class="flex flex-wrap items-center gap-2 bg-slate-100/50 p-2 rounded-2xl border border-slate-200">
-                <div id="container-meses-metas" class="flex flex-wrap gap-1.5 mr-2">
-                    <button onclick="window.toggleMesMetas(0)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Jan</button>
-                    <button onclick="window.toggleMesMetas(1)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Fev</button>
-                    <button onclick="window.toggleMesMetas(2)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Mar</button>
-                    <button onclick="window.toggleMesMetas(3)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Abr</button>
-                    <button onclick="window.toggleMesMetas(4)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Mai</button>
-                    <button onclick="window.toggleMesMetas(5)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Jun</button>
-                    <button onclick="window.toggleMesMetas(6)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Jul</button>
-                    <button onclick="window.toggleMesMetas(7)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Ago</button>
-                    <button onclick="window.toggleMesMetas(8)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Set</button>
-                    <button onclick="window.toggleMesMetas(9)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Out</button>
-                    <button onclick="window.toggleMesMetas(10)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Nov</button>
-                    <button onclick="window.toggleMesMetas(11)" class="btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white shadow-sm transition-all hover:bg-slate-50">Dez</button>
-                </div>
-                <div class="h-8 w-px bg-slate-300 mx-1"></div>
-                <button onclick="window.toggleTodosMesesMetas(true)" class="text-[10px] font-bold px-3 py-1.5 bg-brandDarkBlue text-white rounded-lg hover:bg-brandMidBlue transition-all">Todos</button>
-                <button onclick="window.limparFiltrosMetas()" class="text-[10px] font-bold px-3 py-1.5 bg-white text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">Limpar</button>
-                <select id="filtro-ano-dash-metas" onchange="window.processarDashMetas()" class="ml-2 bg-white border border-slate-200 text-brandDarkBlue text-xs font-bold rounded-lg px-3 py-1.5 outline-none focus:border-brandGreen cursor-pointer shadow-sm">
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                </select>
-            </div>
+            <div class="h-8 w-px bg-slate-300 mx-1"></div>
+            <button onclick="window.toggleTodosMesesMetas(true)"
+              class="text-[10px] font-bold px-3 py-1.5 bg-brandDarkBlue text-white rounded-lg hover:bg-brandMidBlue transition-all">Todos</button>
+            <button onclick="window.limparFiltrosMetas()"
+              class="text-[10px] font-bold px-3 py-1.5 bg-white text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">Limpar</button>
+            <select id="filtro-ano-dash-metas" onchange="window.processarDashMetas()"
+              class="ml-2 bg-white border border-slate-200 text-brandDarkBlue text-xs font-bold rounded-lg px-3 py-1.5 outline-none focus:border-brandGreen cursor-pointer shadow-sm">
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+            </select>
+          </div>
         </div>
 
         <!-- LINHA 1: Gauges -->
         <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-            <div onclick="window.filtrarPorProduto('GERAL')" class="bg-brandDarkBlue p-6 rounded-xl shadow-lg text-center transform hover:scale-[1.02] active:scale-95 transition-all outline outline-2 outline-brandGreen/30 min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-sm font-black text-brandGreen uppercase tracking-widest mb-1 group-hover:underline">META TOTAL GERAL</h3>
-              <div id="gauge-geral" class="flex justify-center mt-4 mb-2"></div>
-              <div id="lbl-meta-geral" class="text-[11px] font-bold text-white mt-2">R$ 0 / R$ 0</div>
-            </div>
-            <div onclick="window.filtrarPorProduto('Consultoria & RPO')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">Consultoria & RPO</h3>
-              <div id="gauge-cons-rpo" class="flex justify-center mt-4 mb-2"></div>
-              <div id="lbl-meta-cons-rpo" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
-            </div>
-            <div onclick="window.filtrarPorProduto('Estágio & Fopag')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">Estágio & Fopag</h3>
-              <div id="gauge-est-fopag" class="flex justify-center mt-4 mb-2"></div>
-              <div id="lbl-meta-est-fopag" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
-            </div>
-            <div onclick="window.filtrarPorProduto('THOMAS')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">THOMAS</h3>
-              <div id="gauge-thomas" class="flex justify-center mt-4 mb-2"></div>
-              <div id="lbl-meta-thomas" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
-            </div>
-            <div onclick="window.filtrarPorProduto('Temporário')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">Temporário</h3>
-              <div id="gauge-temporario" class="flex justify-center mt-4 mb-2"></div>
-              <div id="lbl-meta-temporario" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
-            </div>
-            <div onclick="window.filtrarPorProduto('Terceirizados')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
-              <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">Terceirizados</h3>
-              <div id="gauge-terceirizados" class="flex justify-center mt-4 mb-2"></div>
-              <div id="lbl-meta-terceirizados" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
-            </div>
+          <div onclick="window.filtrarPorProduto('GERAL')"
+            class="bg-brandDarkBlue p-6 rounded-xl shadow-lg text-center transform hover:scale-[1.02] active:scale-95 transition-all outline outline-2 outline-brandGreen/30 min-h-[240px] flex flex-col justify-between cursor-pointer group">
+            <h3 class="text-sm font-black text-brandGreen uppercase tracking-widest mb-1 group-hover:underline">META
+              TOTAL GERAL</h3>
+            <div id="gauge-geral" class="flex justify-center mt-4 mb-2"></div>
+            <div id="lbl-meta-geral" class="text-[11px] font-bold text-white mt-2">R$ 0 / R$ 0</div>
+          </div>
+          <div onclick="window.filtrarPorProduto('Consultoria & RPO')"
+            class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
+            <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">
+              Consultoria & RPO</h3>
+            <div id="gauge-cons-rpo" class="flex justify-center mt-4 mb-2"></div>
+            <div id="lbl-meta-cons-rpo" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+          </div>
+          <div onclick="window.filtrarPorProduto('Estágio & Fopag')"
+            class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
+            <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">
+              Estágio & Fopag</h3>
+            <div id="gauge-est-fopag" class="flex justify-center mt-4 mb-2"></div>
+            <div id="lbl-meta-est-fopag" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+          </div>
+          <div onclick="window.filtrarPorProduto('THOMAS')"
+            class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
+            <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">
+              THOMAS</h3>
+            <div id="gauge-thomas" class="flex justify-center mt-4 mb-2"></div>
+            <div id="lbl-meta-thomas" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+          </div>
+          <div onclick="window.filtrarPorProduto('Temporário')"
+            class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
+            <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">
+              Temporário</h3>
+            <div id="gauge-temporario" class="flex justify-center mt-4 mb-2"></div>
+            <div id="lbl-meta-temporario" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+          </div>
+          <div onclick="window.filtrarPorProduto('Terceirizados')"
+            class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center hover:shadow-md active:scale-95 transition-all min-h-[240px] flex flex-col justify-between cursor-pointer group">
+            <h3 class="text-sm font-black text-brandDarkBlue uppercase tracking-widest group-hover:text-brandMidBlue">
+              Terceirizados</h3>
+            <div id="gauge-terceirizados" class="flex justify-center mt-4 mb-2"></div>
+            <div id="lbl-meta-terceirizados" class="text-[11px] font-bold text-slate-400 mt-2">R$ 0 / R$ 0</div>
+          </div>
         </div>
 
         <!-- LINHA 2: Gráfico Anual vs Faturamento -->
         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
-            <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-4"><span class="material-symbols-outlined text-brandAqua">bar_chart</span> Meta vs Faturamento Realizado (Global)</h3>
-            <div id="chart-meta-anual-fat" class="w-full h-[250px]"></div>
+          <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-4"><span
+              class="material-symbols-outlined text-brandAqua">bar_chart</span> Meta vs Faturamento Realizado (Global)
+          </h3>
+          <div id="chart-meta-anual-fat" class="w-full h-[250px]"></div>
         </div>
 
         <!-- LINHA 3: Gráfico Mensal Consolidado -->
         <div class="grid grid-cols-1 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-                <div class="absolute top-0 left-0 w-1.5 h-full bg-brandOrange"></div>
-                <h3 id="titulo-grafico-metas-mensal" class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-6">
-                    <span class="material-symbols-outlined text-brandOrange">monitoring</span> Acompanhamento Mensal de Grupos
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div class="absolute top-0 left-0 w-1.5 h-full bg-brandOrange"></div>
+            <h3 id="titulo-grafico-metas-mensal"
+              class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-6">
+              <span class="material-symbols-outlined text-brandOrange">monitoring</span> Acompanhamento Mensal de Grupos
+            </h3>
+            <div id="chart-metas-mensal" class="w-full h-[350px]"></div>
+          </div>
+
+          <!-- Novo: Extrato de Performance Mensal (Card Independente Premium) -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+            <div class="absolute top-0 left-0 w-1.5 h-full bg-brandGreen"></div>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <div>
+                <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2">
+                  <span class="material-symbols-outlined text-brandGreen">verified</span> Status de Atingimento Mensal
                 </h3>
-                <div id="chart-metas-mensal" class="w-full h-[350px]"></div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Comparativo de performance
+                  por período selecionado</p>
+              </div>
             </div>
 
-            <!-- Novo: Extrato de Performance Mensal (Card Independente Premium) -->
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
-                <div class="absolute top-0 left-0 w-1.5 h-full bg-brandGreen"></div>
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                    <div>
-                        <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2">
-                            <span class="material-symbols-outlined text-brandGreen">verified</span> Status de Atingimento Mensal
-                        </h3>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Comparativo de performance por período selecionado</p>
-                    </div>
-                </div>
-                
-                <div id="extrato-performance-meses" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-3">
-                    <!-- Cards de meses serão gerados via JS -->
-                </div>
+            <div id="extrato-performance-meses"
+              class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-3">
+              <!-- Cards de meses serão gerados via JS -->
             </div>
+          </div>
         </div>
       </div>
-      </div>
+    </div>
     </div>
   </main>
 
@@ -1844,56 +1884,56 @@
 
     window.graficosGauges = {};
     window.mesesSelecionadosMetas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; // Inicia com visão anual (todos)
-    
-    window.inicializarBadgesMesesMetas = function() {
-        const btns = document.querySelectorAll('.btn-mes-meta');
-        btns.forEach((btn, idx) => {
-            const ativo = window.mesesSelecionadosMetas.includes(idx);
-            if(ativo) {
-                btn.className = "btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-brandGreen text-brandDarkBlue border-brandGreen shadow-sm transition-all";
-            } else {
-                btn.className = "btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white text-slate-500 border-slate-200 shadow-sm transition-all hover:bg-slate-50";
-            }
-        });
-    };
 
-    window.toggleMesMetas = function(idx) {
-        if(window.mesesSelecionadosMetas.includes(idx)) {
-            window.mesesSelecionadosMetas = window.mesesSelecionadosMetas.filter(m => m !== idx);
+    window.inicializarBadgesMesesMetas = function () {
+      const btns = document.querySelectorAll('.btn-mes-meta');
+      btns.forEach((btn, idx) => {
+        const ativo = window.mesesSelecionadosMetas.includes(idx);
+        if (ativo) {
+          btn.className = "btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-brandGreen text-brandDarkBlue border-brandGreen shadow-sm transition-all";
         } else {
-            window.mesesSelecionadosMetas.push(idx);
-            window.mesesSelecionadosMetas.sort((a, b) => a - b);
+          btn.className = "btn-mes-meta text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-white text-slate-500 border-slate-200 shadow-sm transition-all hover:bg-slate-50";
         }
-        window.renderizarUXMetas();
+      });
     };
 
-    window.toggleTodosMesesMetas = function(selecionar) {
-        window.mesesSelecionadosMetas = selecionar ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] : [];
-        window.renderizarUXMetas();
+    window.toggleMesMetas = function (idx) {
+      if (window.mesesSelecionadosMetas.includes(idx)) {
+        window.mesesSelecionadosMetas = window.mesesSelecionadosMetas.filter(m => m !== idx);
+      } else {
+        window.mesesSelecionadosMetas.push(idx);
+        window.mesesSelecionadosMetas.sort((a, b) => a - b);
+      }
+      window.renderizarUXMetas();
     };
 
-    window.limparFiltrosMetas = function() {
-        window.mesesSelecionadosMetas = [];
-        window.produtoFiltroMetas = null;
-        window.renderizarUXMetas();
+    window.toggleTodosMesesMetas = function (selecionar) {
+      window.mesesSelecionadosMetas = selecionar ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] : [];
+      window.renderizarUXMetas();
     };
 
-    window.renderizarUXMetas = function() {
-        window.inicializarBadgesMesesMetas();
-        window.processarDashMetas();
+    window.limparFiltrosMetas = function () {
+      window.mesesSelecionadosMetas = [];
+      window.produtoFiltroMetas = null;
+      window.renderizarUXMetas();
+    };
+
+    window.renderizarUXMetas = function () {
+      window.inicializarBadgesMesesMetas();
+      window.processarDashMetas();
     };
 
     window.produtoFiltroMetas = null;
-    window.filtrarPorProduto = function(produto) {
-        if (window.produtoFiltroMetas === produto) {
-            window.produtoFiltroMetas = null;
-        } else {
-            window.produtoFiltroMetas = produto;
-        }
-        window.processarDashMetas();
+    window.filtrarPorProduto = function (produto) {
+      if (window.produtoFiltroMetas === produto) {
+        window.produtoFiltroMetas = null;
+      } else {
+        window.produtoFiltroMetas = produto;
+      }
+      window.processarDashMetas();
     };
 
-    window.inicializarGraficosMetas = function() {
+    window.inicializarGraficosMetas = function () {
       const gaugeOpt = {
         chart: { height: 200, type: 'radialBar', sparkline: { enabled: true } },
         plotOptions: { radialBar: { startAngle: -90, endAngle: 90, track: { background: "#e2e8f0", strokeWidth: '97%', margin: 5, dropShadow: { enabled: true, top: 2, left: 0, color: '#999', opacity: 1, blur: 2 } }, dataLabels: { name: { show: false }, value: { offsetY: -5, fontSize: '14px', fontWeight: 'bold', color: '#002443', formatter: function (val) { return val.toFixed(1) + "%"; } } } } },
@@ -1910,200 +1950,200 @@
       ];
 
       mapGauges.forEach(g => {
-        if(document.querySelector(g.id)) {
-            window.graficosGauges[g.key] = new ApexCharts(document.querySelector(g.id), { ...gaugeOpt, series: [0], colors: [g.color] });
-            window.graficosGauges[g.key].render();
+        if (document.querySelector(g.id)) {
+          window.graficosGauges[g.key] = new ApexCharts(document.querySelector(g.id), { ...gaugeOpt, series: [0], colors: [g.color] });
+          window.graficosGauges[g.key].render();
         }
       });
 
-      if(document.querySelector("#chart-meta-anual-fat")) {
-          window.chartMetaAnualFat = new ApexCharts(document.querySelector("#chart-meta-anual-fat"), {
-              chart: { height: 250, type: 'bar', toolbar: { show: false } },
-              plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 8, dataLabels: { position: 'top' } } },
-              colors: ['#002443', '#aad12f'],
-              series: [{ name: 'Meta Total', data: [0] }, { name: 'Faturamento Real', data: [0] }],
-              xaxis: { categories: ['Total Acumulado'], labels: { show: false } },
-              dataLabels: { enabled: true, formatter: function(val) { return window.formatMoedaFull(val); }, style: { colors: ['#fff'] }, offsetX: -20 },
-              tooltip: { shared: true, intersect: false, y: { formatter: function(val) { return window.formatMoedaFull(val); } } },
-              legend: { position: 'top' }
-          });
-          window.chartMetaAnualFat.render();
+      if (document.querySelector("#chart-meta-anual-fat")) {
+        window.chartMetaAnualFat = new ApexCharts(document.querySelector("#chart-meta-anual-fat"), {
+          chart: { height: 250, type: 'bar', toolbar: { show: false } },
+          plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 8, dataLabels: { position: 'top' } } },
+          colors: ['#002443', '#aad12f'],
+          series: [{ name: 'Meta Total', data: [0] }, { name: 'Faturamento Real', data: [0] }],
+          xaxis: { categories: ['Total Acumulado'], labels: { show: false } },
+          dataLabels: { enabled: true, formatter: function (val) { return window.formatMoedaFull(val); }, style: { colors: ['#fff'] }, offsetX: -20 },
+          tooltip: { shared: true, intersect: false, y: { formatter: function (val) { return window.formatMoedaFull(val); } } },
+          legend: { position: 'top' }
+        });
+        window.chartMetaAnualFat.render();
       }
 
-      if(document.querySelector("#chart-metas-mensal")) {
-          window.chartMetasMensal = new ApexCharts(document.querySelector("#chart-metas-mensal"), {
-            chart: { height: 350, type: 'bar', toolbar: { show: false } },
-            series: [
-                { name: 'Meta Mensal', type: 'column', data: [] },
-                { name: 'Realizado', type: 'column', data: [] }
-            ],
-            plotOptions: { bar: { horizontal: false, columnWidth: '80%', borderRadius: 4, dataLabels: { position: 'top' } } },
-            colors: ['#aad12f', '#002443'],
-            dataLabels: { 
-                enabled: true, 
-                formatter: function (val) { return window.formatMil(val); },
-                style: { fontSize: '9px', colors: ['#fff'] },
-                offsetY: 20
-            },
-            xaxis: { categories: [], labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 'bold' } } },
-            yaxis: { labels: { show: false } },
-            tooltip: { 
-                shared: true, 
-                intersect: false, 
-                y: { formatter: function (val) { return window.formatMoedaFull(val); } } 
-            },
-            legend: { show: true, position: 'top', fontWeight: 'bold' }
-          });
-          window.chartMetasMensal.render();
+      if (document.querySelector("#chart-metas-mensal")) {
+        window.chartMetasMensal = new ApexCharts(document.querySelector("#chart-metas-mensal"), {
+          chart: { height: 350, type: 'bar', toolbar: { show: false } },
+          series: [
+            { name: 'Meta Mensal', type: 'column', data: [] },
+            { name: 'Realizado', type: 'column', data: [] }
+          ],
+          plotOptions: { bar: { horizontal: false, columnWidth: '80%', borderRadius: 4, dataLabels: { position: 'top' } } },
+          colors: ['#aad12f', '#002443'],
+          dataLabels: {
+            enabled: true,
+            formatter: function (val) { return window.formatMil(val); },
+            style: { fontSize: '9px', colors: ['#fff'] },
+            offsetY: 20
+          },
+          xaxis: { categories: [], labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 'bold' } } },
+          yaxis: { labels: { show: false } },
+          tooltip: {
+            shared: true,
+            intersect: false,
+            y: { formatter: function (val) { return window.formatMoedaFull(val); } }
+          },
+          legend: { show: true, position: 'top', fontWeight: 'bold' }
+        });
+        window.chartMetasMensal.render();
       }
       window.inicializarBadgesMesesMetas();
     };
 
-    window.processarDashMetas = function() {
-        if(!window.dadosGlobaisFirestore || !window.dadosMetasGlobais) return;
-        
-        const anoFiltro = document.getElementById('filtro-ano-dash-metas').value;
-        const mesesFiltro = window.mesesSelecionadosMetas; // Array de meses selecionados [0, 1, 2...]
-        
-        // 1. Processar Lançamentos (Realizado em todos os meses para o ano)
-        let faturamentoPorMesProduto = {
-            'Consultoria & RPO': Array(12).fill(0),
-            'Estágio & Fopag': Array(12).fill(0),
-            'THOMAS': Array(12).fill(0),
-            'Temporário': Array(12).fill(0),
-            'Terceirizados': Array(12).fill(0)
-        };
+    window.processarDashMetas = function () {
+      if (!window.dadosGlobaisFirestore || !window.dadosMetasGlobais) return;
 
-        window.dadosGlobaisFirestore.forEach(data => {
-            const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
-            const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-            const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
-            
-            if(!isRecebido) return;
-            
-            let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
-            if(!dRef || dRef.getFullYear() != anoFiltro) return;
+      const anoFiltro = document.getElementById('filtro-ano-dash-metas').value;
+      const mesesFiltro = window.mesesSelecionadosMetas; // Array de meses selecionados [0, 1, 2...]
 
-            const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
-            const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
-            const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+      // 1. Processar Lançamentos (Realizado em todos os meses para o ano)
+      let faturamentoPorMesProduto = {
+        'Consultoria & RPO': Array(12).fill(0),
+        'Estágio & Fopag': Array(12).fill(0),
+        'THOMAS': Array(12).fill(0),
+        'Temporário': Array(12).fill(0),
+        'Terceirizados': Array(12).fill(0)
+      };
 
-            let faturReal = 0;
-            let grupoMeta = null;
+      window.dadosGlobaisFirestore.forEach(data => {
+        const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
+        const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
+        const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
 
-            if (tipoServicoRaw.includes("TEMPORA")) { faturReal = vTaxa; grupoMeta = 'Temporário'; }
-            else if (tipoServicoRaw.includes("TERCEIROS")) { faturReal = vTaxa; grupoMeta = 'Terceirizados'; }
-            else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) { faturReal = vTaxa; grupoMeta = 'Estágio & Fopag'; }
-            else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) { faturReal = vTaxa; grupoMeta = 'Consultoria & RPO'; }
-            else if (empresa === "NEAT") { faturReal = vTaxa * 0.55; grupoMeta = 'THOMAS'; }
+        if (!isRecebido) return;
 
-            if(grupoMeta) faturamentoPorMesProduto[grupoMeta][dRef.getMonth()] += faturReal;
+        let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
+        if (!dRef || dRef.getFullYear() != anoFiltro) return;
+
+        const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
+        const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
+        const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+
+        let faturReal = 0;
+        let grupoMeta = null;
+
+        if (tipoServicoRaw.includes("TEMPORA")) { faturReal = vTaxa; grupoMeta = 'Temporário'; }
+        else if (tipoServicoRaw.includes("TERCEIROS")) { faturReal = vTaxa; grupoMeta = 'Terceirizados'; }
+        else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) { faturReal = vTaxa; grupoMeta = 'Estágio & Fopag'; }
+        else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) { faturReal = vTaxa; grupoMeta = 'Consultoria & RPO'; }
+        else if (empresa === "NEAT") { faturReal = vTaxa * 0.55; grupoMeta = 'THOMAS'; }
+
+        if (grupoMeta) faturamentoPorMesProduto[grupoMeta][dRef.getMonth()] += faturReal;
+      });
+
+      // 2. Processar Metas e Cálculo Acumulado
+      const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+      const nomesMesesFull = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+      let metaTotalPeriodo = 0;
+      let realTotalPeriodo = 0;
+
+      let serieMetaMensal = Array(12).fill(0);
+      let serieRealMensal = Array(12).fill(0);
+      let categoriasX = [];
+
+      // Calcular valores para todos os 12 meses (extrato) e acumulados do período (filtros)
+      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(mIdx => {
+        let somaRealMes = 0;
+        let somaMetaMes = 0;
+
+        Object.keys(faturamentoPorMesProduto).forEach(grupo => {
+          // Para o cálculo dos meses individuais, não filtramos por grupo se estiver no Geral
+          if (window.produtoFiltroMetas && window.produtoFiltroMetas !== 'GERAL' && window.produtoFiltroMetas !== grupo) {
+            return;
+          }
+
+          somaRealMes += faturamentoPorMesProduto[grupo][mIdx];
+          const metaDoc = window.dadosMetasGlobais.find(m => m.ano == anoFiltro && m.produto === grupo);
+          if (metaDoc && metaDoc.meses) {
+            somaMetaMes += (metaDoc.meses[refMeses[mIdx]] || 0);
+          }
         });
 
-        // 2. Processar Metas e Cálculo Acumulado
-        const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-        const nomesMesesFull = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-        
-        let metaTotalPeriodo = 0;
-        let realTotalPeriodo = 0;
-        
-        let serieMetaMensal = Array(12).fill(0);
-        let serieRealMensal = Array(12).fill(0);
-        let categoriasX = [];
+        serieRealMensal[mIdx] = somaRealMes;
+        serieMetaMensal[mIdx] = somaMetaMes;
 
-        // Calcular valores para todos os 12 meses (extrato) e acumulados do período (filtros)
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(mIdx => {
-            let somaRealMes = 0;
-            let somaMetaMes = 0;
+        // Se o mês estiver selecionado no filtro, adiciona ao gráfico e ao acumulado global
+        if (mesesFiltro.includes(mIdx)) {
+          categoriasX.push(nomesMesesFull[mIdx]);
+          realTotalPeriodo += somaRealMes;
+          metaTotalPeriodo += somaMetaMes;
+        }
+      });
 
-            Object.keys(faturamentoPorMesProduto).forEach(grupo => {
-                // Para o cálculo dos meses individuais, não filtramos por grupo se estiver no Geral
-                if (window.produtoFiltroMetas && window.produtoFiltroMetas !== 'GERAL' && window.produtoFiltroMetas !== grupo) {
-                    return;
-                }
-                
-                somaRealMes += faturamentoPorMesProduto[grupo][mIdx];
-                const metaDoc = window.dadosMetasGlobais.find(m => m.ano == anoFiltro && m.produto === grupo);
-                if (metaDoc && metaDoc.meses) {
-                    somaMetaMes += (metaDoc.meses[refMeses[mIdx]] || 0);
-                }
-            });
-
-            serieRealMensal[mIdx] = somaRealMes;
-            serieMetaMensal[mIdx] = somaMetaMes;
-            
-            // Se o mês estiver selecionado no filtro, adiciona ao gráfico e ao acumulado global
-            if (mesesFiltro.includes(mIdx)) {
-                categoriasX.push(nomesMesesFull[mIdx]);
-                realTotalPeriodo += somaRealMes;
-                metaTotalPeriodo += somaMetaMes;
-            }
-        });
-
-        // 5. Atualizar Gráfico Mensal Dinâmico
-        if(window.chartMetasMensal) {
-            const tituloEl = document.getElementById('titulo-grafico-metas-mensal');
-            if(tituloEl) {
-                tituloEl.innerHTML = `<span class="material-symbols-outlined text-brandOrange">monitoring</span> Acompanhamento Mensal: ${window.produtoFiltroMetas && window.produtoFiltroMetas !== 'GERAL' ? window.produtoFiltroMetas : 'Grupos'}`;
-            }
-
-            window.chartMetasMensal.updateOptions({ xaxis: { categories: categoriasX } });
-            window.chartMetasMensal.updateSeries([
-                { name: 'Meta Mensal', data: serieMetaMensal.filter((_, i) => mesesFiltro.includes(i)) },
-                { name: 'Realizado', data: serieRealMensal.filter((_, i) => mesesFiltro.includes(i)) }
-            ]);
+      // 5. Atualizar Gráfico Mensal Dinâmico
+      if (window.chartMetasMensal) {
+        const tituloEl = document.getElementById('titulo-grafico-metas-mensal');
+        if (tituloEl) {
+          tituloEl.innerHTML = `<span class="material-symbols-outlined text-brandOrange">monitoring</span> Acompanhamento Mensal: ${window.produtoFiltroMetas && window.produtoFiltroMetas !== 'GERAL' ? window.produtoFiltroMetas : 'Grupos'}`;
         }
 
-        // 4. Extrato de Performance Mensal (Design Premium)
-        const extratoContainer = document.getElementById('extrato-performance-meses');
-        if(extratoContainer) {
-            const hoje = new Date();
-            const mesAtual = hoje.getMonth();
-            const anoAtual = hoje.getFullYear();
+        window.chartMetasMensal.updateOptions({ xaxis: { categories: categoriasX } });
+        window.chartMetasMensal.updateSeries([
+          { name: 'Meta Mensal', data: serieMetaMensal.filter((_, i) => mesesFiltro.includes(i)) },
+          { name: 'Realizado', data: serieRealMensal.filter((_, i) => mesesFiltro.includes(i)) }
+        ]);
+      }
 
-            extratoContainer.innerHTML = nomesMesesFull.map((mes, idx) => {
-                const atingiu = serieRealMensal[idx] >= serieMetaMensal[idx] && serieMetaMensal[idx] > 0;
-                const semMeta = serieMetaMensal[idx] === 0;
-                const estaNoFiltro = mesesFiltro.includes(idx);
-                
-                // Determinar se é passado, presente ou futuro
-                const isPassado = (anoFiltro < anoAtual) || (anoFiltro == anoAtual && idx < mesAtual);
-                const isFuturoOuAtual = (anoFiltro > anoAtual) || (anoFiltro == anoAtual && idx >= mesAtual);
+      // 4. Extrato de Performance Mensal (Design Premium)
+      const extratoContainer = document.getElementById('extrato-performance-meses');
+      if (extratoContainer) {
+        const hoje = new Date();
+        const mesAtual = hoje.getMonth();
+        const anoAtual = hoje.getFullYear();
 
-                let cardClass = "";
-                let icon = "";
-                let iconColor = "";
-                let statusTxt = "";
-                let clickEv = "";
-                
-                if (atingiu) {
-                    cardClass = "bg-green-50/50 border-green-100 hover:bg-green-100/50 cursor-pointer";
-                    icon = "check_circle";
-                    iconColor = "text-brandGreen";
-                    statusTxt = "SALDO OK";
-                    clickEv = `onclick="window.abrirModalMetaBatida(${idx}, ${anoFiltro})"`;
-                } else if (semMeta) {
-                    cardClass = "bg-slate-50 border-slate-100 opacity-40";
-                    icon = "block";
-                    iconColor = "text-slate-300";
-                    statusTxt = "-";
-                } else {
-                    if (isPassado) {
-                        cardClass = "bg-red-50 border-red-100";
-                        icon = "cancel"; // Sinal negativo para passado não atingido
-                        iconColor = "text-red-500";
-                        statusTxt = "NÃO ATINGIDA";
-                    } else {
-                        cardClass = "bg-slate-50/80 border-slate-200";
-                        icon = "error"; // Ícone de alerta/pendente para futuro/atual
-                        iconColor = "text-slate-400";
-                        statusTxt = "PENDENTE";
-                    }
-                }
+        extratoContainer.innerHTML = nomesMesesFull.map((mes, idx) => {
+          const atingiu = serieRealMensal[idx] >= serieMetaMensal[idx] && serieMetaMensal[idx] > 0;
+          const semMeta = serieMetaMensal[idx] === 0;
+          const estaNoFiltro = mesesFiltro.includes(idx);
 
-                if(estaNoFiltro) cardClass += " ring-2 ring-brandMidBlue/20 shadow-sm";
+          // Determinar se é passado, presente ou futuro
+          const isPassado = (anoFiltro < anoAtual) || (anoFiltro == anoAtual && idx < mesAtual);
+          const isFuturoOuAtual = (anoFiltro > anoAtual) || (anoFiltro == anoAtual && idx >= mesAtual);
 
-                return `
+          let cardClass = "";
+          let icon = "";
+          let iconColor = "";
+          let statusTxt = "";
+          let clickEv = "";
+
+          if (atingiu) {
+            cardClass = "bg-green-50/50 border-green-100 hover:bg-green-100/50 cursor-pointer";
+            icon = "check_circle";
+            iconColor = "text-brandGreen";
+            statusTxt = "SALDO OK";
+            clickEv = `onclick="window.abrirModalMetaBatida(${idx}, ${anoFiltro})"`;
+          } else if (semMeta) {
+            cardClass = "bg-slate-50 border-slate-100 opacity-40";
+            icon = "block";
+            iconColor = "text-slate-300";
+            statusTxt = "-";
+          } else {
+            if (isPassado) {
+              cardClass = "bg-red-50 border-red-100";
+              icon = "cancel"; // Sinal negativo para passado não atingido
+              iconColor = "text-red-500";
+              statusTxt = "NÃO ATINGIDA";
+            } else {
+              cardClass = "bg-slate-50/80 border-slate-200";
+              icon = "error"; // Ícone de alerta/pendente para futuro/atual
+              iconColor = "text-slate-400";
+              statusTxt = "PENDENTE";
+            }
+          }
+
+          if (estaNoFiltro) cardClass += " ring-2 ring-brandMidBlue/20 shadow-sm";
+
+          return `
                     <div class="flex flex-col items-center justify-center p-3 rounded-xl border transition-all hover:scale-105 ${cardClass}" ${clickEv}>
                         <span class="text-[10px] font-extrabold text-brandDarkBlue mb-2">${mes.toUpperCase()}</span>
                         <span class="material-symbols-outlined text-[20px] ${iconColor}">${icon}</span>
@@ -2112,114 +2152,114 @@
                         </div>
                     </div>
                 `;
-            }).join('');
-        }
+        }).join('');
+      }
 
-        // 5. Atualizar Gráfico GLOBAL Acumulado e Gauge GERAL
-        if (window.chartMetaAnualFat) {
-            window.chartMetaAnualFat.updateSeries([
-                { name: 'Meta Total', data: [metaTotalPeriodo] },
-                { name: 'Faturamento Real', data: [realTotalPeriodo] }
-            ]);
-        }
+      // 5. Atualizar Gráfico GLOBAL Acumulado e Gauge GERAL
+      if (window.chartMetaAnualFat) {
+        window.chartMetaAnualFat.updateSeries([
+          { name: 'Meta Total', data: [metaTotalPeriodo] },
+          { name: 'Faturamento Real', data: [realTotalPeriodo] }
+        ]);
+      }
 
-        if(window.graficosGauges['GERAL']) {
-            let percGeral = metaTotalPeriodo > 0 ? (realTotalPeriodo / metaTotalPeriodo) * 100 : 0;
-            if(percGeral > 100) percGeral = 100;
-            window.graficosGauges['GERAL'].updateSeries([percGeral]);
+      if (window.graficosGauges['GERAL']) {
+        let percGeral = metaTotalPeriodo > 0 ? (realTotalPeriodo / metaTotalPeriodo) * 100 : 0;
+        if (percGeral > 100) percGeral = 100;
+        window.graficosGauges['GERAL'].updateSeries([percGeral]);
 
-            const lblGeral = document.getElementById('lbl-meta-geral');
-            if(lblGeral) {
-                let faltaGeral = metaTotalPeriodo - realTotalPeriodo;
-                
-                let percAtingido = percGeral.toFixed(1);
-                let percFaltaTotal = faltaGeral > 0 ? ((faltaGeral / metaTotalPeriodo) * 100).toFixed(1) : 0;
-                
-                lblGeral.innerHTML = `
+        const lblGeral = document.getElementById('lbl-meta-geral');
+        if (lblGeral) {
+          let faltaGeral = metaTotalPeriodo - realTotalPeriodo;
+
+          let percAtingido = percGeral.toFixed(1);
+          let percFaltaTotal = faltaGeral > 0 ? ((faltaGeral / metaTotalPeriodo) * 100).toFixed(1) : 0;
+
+          lblGeral.innerHTML = `
                     <div class="text-xl font-black text-brandGreen mb-1">${percAtingido}% <span class="text-[10px] font-normal text-slate-300">atingido</span></div>
                     <div class="flex justify-center items-center gap-1 text-[11px]"><span class="text-white font-extrabold">${window.formatMil(realTotalPeriodo)}</span> / <span class="text-slate-400">${window.formatMil(metaTotalPeriodo)}</span></div>
                     <hr class="border-white/20 my-1 w-1/2 mx-auto">
                     <span class="text-white text-[10px] block font-extrabold uppercase tracking-tight">${faltaGeral > 0 ? `Falta: ${window.formatMil(faltaGeral)} <span class="text-brandOrange">(${percFaltaTotal}%)</span>` : '<span class="text-brandGreen">Meta Superada!</span>'}</span>
                 `;
-            }
         }
+      }
 
-        // Atualizar Gauges Individuais baseado no selecionado
-        Object.keys(faturamentoPorMesProduto).forEach(grupo => {
-            let realAcumulado = 0;
-            let metaAcumulada = 0;
-            const metaDoc = window.dadosMetasGlobais.find(m => m.ano == anoFiltro && m.produto === grupo);
-            
-            mesesFiltro.forEach(mIdx => {
-                realAcumulado += faturamentoPorMesProduto[grupo][mIdx];
-                if(metaDoc && metaDoc.meses) metaAcumulada += (metaDoc.meses[refMeses[mIdx]] || 0);
-            });
+      // Atualizar Gauges Individuais baseado no selecionado
+      Object.keys(faturamentoPorMesProduto).forEach(grupo => {
+        let realAcumulado = 0;
+        let metaAcumulada = 0;
+        const metaDoc = window.dadosMetasGlobais.find(m => m.ano == anoFiltro && m.produto === grupo);
 
-            let perc = metaAcumulada > 0 ? (realAcumulado / metaAcumulada) * 100 : 0;
-            if(perc > 100) perc = 100;
-            if(window.graficosGauges[grupo]) window.graficosGauges[grupo].updateSeries([perc]);
+        mesesFiltro.forEach(mIdx => {
+          realAcumulado += faturamentoPorMesProduto[grupo][mIdx];
+          if (metaDoc && metaDoc.meses) metaAcumulada += (metaDoc.meses[refMeses[mIdx]] || 0);
+        });
 
-            let lblMap = { 'Consultoria & RPO': 'lbl-meta-cons-rpo', 'Estágio & Fopag': 'lbl-meta-est-fopag', 'THOMAS': 'lbl-meta-thomas', 'Temporário': 'lbl-meta-temporario', 'Terceirizados': 'lbl-meta-terceirizados' };
-            let lblEl = document.getElementById(lblMap[grupo]);
-            if(lblEl) {
-                let falta = metaAcumulada - realAcumulado;
-                let percFalta = metaAcumulada > 0 ? (falta / metaAcumulada) * 100 : 0;
-                let txtFalta = falta > 0 ? `Falta: ${window.formatMil(falta)} (${percFalta.toFixed(1)}%)` : `<span class="text-brandGreen">Meta Superada!</span>`;
-                lblEl.innerHTML = `
+        let perc = metaAcumulada > 0 ? (realAcumulado / metaAcumulada) * 100 : 0;
+        if (perc > 100) perc = 100;
+        if (window.graficosGauges[grupo]) window.graficosGauges[grupo].updateSeries([perc]);
+
+        let lblMap = { 'Consultoria & RPO': 'lbl-meta-cons-rpo', 'Estágio & Fopag': 'lbl-meta-est-fopag', 'THOMAS': 'lbl-meta-thomas', 'Temporário': 'lbl-meta-temporario', 'Terceirizados': 'lbl-meta-terceirizados' };
+        let lblEl = document.getElementById(lblMap[grupo]);
+        if (lblEl) {
+          let falta = metaAcumulada - realAcumulado;
+          let percFalta = metaAcumulada > 0 ? (falta / metaAcumulada) * 100 : 0;
+          let txtFalta = falta > 0 ? `Falta: ${window.formatMil(falta)} (${percFalta.toFixed(1)}%)` : `<span class="text-brandGreen">Meta Superada!</span>`;
+          lblEl.innerHTML = `
                     <div class="flex justify-center items-center gap-1"><span class="text-brandDarkBlue">${window.formatMil(realAcumulado)}</span> / ${window.formatMil(metaAcumulada)}</div>
                     <hr class="border-slate-200 my-1 w-1/2 mx-auto">
                     <span class="text-orange-500 text-[10px] block font-extrabold uppercase tracking-tight">${txtFalta}</span>
                 `;
-            }
-        });
-
-        // 3. Atualizar Gauge GERAL
-        if(window.graficosGauges['GERAL']) {
-            // (Lógica de cálculo para os Gauges não mudou, apenas movi o bloco para depois do gráfico consolidado para manter a ordem lógica)
-            // ... (rest of code)
         }
+      });
+
+      // 3. Atualizar Gauge GERAL
+      if (window.graficosGauges['GERAL']) {
+        // (Lógica de cálculo para os Gauges não mudou, apenas movi o bloco para depois do gráfico consolidado para manter a ordem lógica)
+        // ... (rest of code)
+      }
     };
 
-    window.abrirModalMetaBatida = function(mesIdx, ano) {
-        // Recalcula faturamento e metas especificamente para o mês clicado
-        if(!window.dadosGlobaisFirestore || !window.dadosMetasGlobais) return;
-        
-        const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-        const nomesMesesFull = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-        
-        let faturMes = { 'Consultoria & RPO': 0, 'Estágio & Fopag': 0, 'THOMAS': 0, 'Temporário': 0, 'Terceirizados': 0 };
-        
-        window.dadosGlobaisFirestore.forEach(data => {
-            const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
-            const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-            const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
-            if(!isRecebido) return;
-            
-            let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
-            if(!dRef || dRef.getFullYear() != ano || dRef.getMonth() != mesIdx) return;
+    window.abrirModalMetaBatida = function (mesIdx, ano) {
+      // Recalcula faturamento e metas especificamente para o mês clicado
+      if (!window.dadosGlobaisFirestore || !window.dadosMetasGlobais) return;
 
-            const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
-            const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
-            const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+      const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+      const nomesMesesFull = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-            let grupoMeta = null;
-            if (tipoServicoRaw.includes("TEMPORA")) grupoMeta = 'Temporário';
-            else if (tipoServicoRaw.includes("TERCEIROS")) grupoMeta = 'Terceirizados';
-            else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) grupoMeta = 'Estágio & Fopag';
-            else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) grupoMeta = 'Consultoria & RPO';
-            else if (empresa === "NEAT") grupoMeta = 'THOMAS';
+      let faturMes = { 'Consultoria & RPO': 0, 'Estágio & Fopag': 0, 'THOMAS': 0, 'Temporário': 0, 'Terceirizados': 0 };
 
-            if(grupoMeta) faturMes[grupoMeta] += (grupoMeta === 'THOMAS' ? vTaxa * 0.55 : vTaxa);
-        });
+      window.dadosGlobaisFirestore.forEach(data => {
+        const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
+        const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
+        const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
+        if (!isRecebido) return;
 
-        let listHtml = "";
-        Object.keys(faturMes).forEach(produto => {
-            const real = faturMes[produto];
-            const metaDoc = window.dadosMetasGlobais.find(m => m.ano == ano && m.produto === produto);
-            const meta = metaDoc ? (metaDoc.meses[refMeses[mesIdx]] || 0) : 0;
-            
-            if(meta > 0 && real >= meta) {
-                listHtml += `
+        let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
+        if (!dRef || dRef.getFullYear() != ano || dRef.getMonth() != mesIdx) return;
+
+        const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
+        const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
+        const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+
+        let grupoMeta = null;
+        if (tipoServicoRaw.includes("TEMPORA")) grupoMeta = 'Temporário';
+        else if (tipoServicoRaw.includes("TERCEIROS")) grupoMeta = 'Terceirizados';
+        else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) grupoMeta = 'Estágio & Fopag';
+        else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) grupoMeta = 'Consultoria & RPO';
+        else if (empresa === "NEAT") grupoMeta = 'THOMAS';
+
+        if (grupoMeta) faturMes[grupoMeta] += (grupoMeta === 'THOMAS' ? vTaxa * 0.55 : vTaxa);
+      });
+
+      let listHtml = "";
+      Object.keys(faturMes).forEach(produto => {
+        const real = faturMes[produto];
+        const metaDoc = window.dadosMetasGlobais.find(m => m.ano == ano && m.produto === produto);
+        const meta = metaDoc ? (metaDoc.meses[refMeses[mesIdx]] || 0) : 0;
+
+        if (meta > 0 && real >= meta) {
+          listHtml += `
                     <div class="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-100 shadow-sm animate-fade-in list-item-stagger">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-brandGreen text-brandDarkBlue flex items-center justify-center font-bold shadow-sm">
@@ -2236,27 +2276,27 @@
                         </div>
                     </div>
                 `;
-            }
-        });
+        }
+      });
 
-        const modal = document.getElementById('modal-detalhe-meta');
-        const content = document.getElementById('modal-detalhe-meta-content');
-        document.getElementById('modal-detalhe-meta-titulo').innerText = `Detalhamento de Sucesso: ${nomesMesesFull[mesIdx]} / ${ano}`;
-        document.getElementById('modal-detalhe-meta-lista').innerHTML = listHtml || `
+      const modal = document.getElementById('modal-detalhe-meta');
+      const content = document.getElementById('modal-detalhe-meta-content');
+      document.getElementById('modal-detalhe-meta-titulo').innerText = `Detalhamento de Sucesso: ${nomesMesesFull[mesIdx]} / ${ano}`;
+      document.getElementById('modal-detalhe-meta-lista').innerHTML = listHtml || `
             <div class="text-center py-10 opacity-50">
                 <span class="material-symbols-outlined text-4xl mb-2">info</span>
                 <p class="text-xs font-bold">Nenhum produto individual superou a meta consolidada neste mês.</p>
             </div>
         `;
-        
-        modal.classList.remove('hidden'); modal.classList.add('flex');
-        setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+
+      modal.classList.remove('hidden'); modal.classList.add('flex');
+      setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
     };
 
-    window.fecharModalMetaBatida = function() {
-        const m = document.getElementById('modal-detalhe-meta');
-        const c = document.getElementById('modal-detalhe-meta-content');
-        m.classList.add('opacity-0'); c.classList.add('scale-95'); setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
+    window.fecharModalMetaBatida = function () {
+      const m = document.getElementById('modal-detalhe-meta');
+      const c = document.getElementById('modal-detalhe-meta-content');
+      m.classList.add('opacity-0'); c.classList.add('scale-95'); setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
     };
   </script>
 
@@ -2304,7 +2344,7 @@
             const menusPermitidos = dadosUser.menus_permitidos || [];
             if (userProfile !== 'super_admin') {
               const cardAging = document.getElementById('card-acesso-aging');
-              if (cardAging && !menusPermitidos.includes('aging')) {
+              if (cardAging && !menusPermitidos.includes('AGING')) {
                 cardAging.style.display = 'none';
               }
             }
@@ -2337,13 +2377,13 @@
           const metasSnapshot = await getDocs(collection(db, "MetasFinanceiras"));
           window.dadosMetasGlobais = [];
           metasSnapshot.forEach(doc => {
-             window.dadosMetasGlobais.push(doc.data());
+            window.dadosMetasGlobais.push(doc.data());
           });
-          
+
           // Renderizar Metas
           setTimeout(() => {
-             if(typeof window.inicializarGraficosMetas === 'function') window.inicializarGraficosMetas();
-             if(typeof window.processarDashMetas === 'function') window.processarDashMetas();
+            if (typeof window.inicializarGraficosMetas === 'function') window.inicializarGraficosMetas();
+            if (typeof window.processarDashMetas === 'function') window.processarDashMetas();
           }, 500);
 
         } catch (error) {
@@ -2366,26 +2406,30 @@
   </script>
 
   <!-- Novo Modal: Detalhamento de Meta Batida -->
-  <div id="modal-detalhe-meta" class="fixed inset-0 z-[200] bg-black/60 hidden items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-sm px-4">
-    <div id="modal-detalhe-meta-content" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-2xl w-full max-w-lg transform scale-95 transition-transform duration-300 relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-1.5 bg-brandGreen"></div>
-        
-        <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-            <h3 id="modal-detalhe-meta-titulo" class="text-brandDarkBlue font-extrabold text-sm flex items-center gap-2">
-                <span class="material-symbols-outlined text-brandGreen">verified</span> Detalhamento de Sucesso
-            </h3>
-            <button onclick="window.fecharModalMetaBatida()" class="text-slate-400 hover:text-brandOrange transition-colors">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
+  <div id="modal-detalhe-meta"
+    class="fixed inset-0 z-[200] bg-black/60 hidden items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-sm px-4">
+    <div id="modal-detalhe-meta-content"
+      class="bg-white border border-slate-200 p-6 rounded-2xl shadow-2xl w-full max-w-lg transform scale-95 transition-transform duration-300 relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-full h-1.5 bg-brandGreen"></div>
 
-        <div id="modal-detalhe-meta-lista" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
-            <!-- Itens injetados via JS -->
-        </div>
+      <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+        <h3 id="modal-detalhe-meta-titulo" class="text-brandDarkBlue font-extrabold text-sm flex items-center gap-2">
+          <span class="material-symbols-outlined text-brandGreen">verified</span> Detalhamento de Sucesso
+        </h3>
+        <button onclick="window.fecharModalMetaBatida()"
+          class="text-slate-400 hover:text-brandOrange transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
 
-        <div class="mt-8 flex gap-3 pt-6 border-t border-slate-100">
-            <button onclick="window.fecharModalMetaBatida()" class="flex-1 bg-brandDarkBlue text-white py-2.5 rounded-xl font-bold hover:bg-opacity-90 transition shadow-lg">Entendido</button>
-        </div>
+      <div id="modal-detalhe-meta-lista" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
+        <!-- Itens injetados via JS -->
+      </div>
+
+      <div class="mt-8 flex gap-3 pt-6 border-t border-slate-100">
+        <button onclick="window.fecharModalMetaBatida()"
+          class="flex-1 bg-brandDarkBlue text-white py-2.5 rounded-xl font-bold hover:bg-opacity-90 transition shadow-lg">Entendido</button>
+      </div>
     </div>
   </div>
 </body>
