@@ -470,7 +470,11 @@
             } catch (error) {
                 console.error("Erro ao criar usuário:", error);
                 msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
-                msgCadastro.innerHTML = `<span class="material-symbols-outlined text-base">error</span> Erro ao criar usuário: ${error.message}`;
+                if (error.code === 'permission-denied') {
+                    msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">error</span> Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.';
+                } else {
+                    msgCadastro.innerHTML = `<span class="material-symbols-outlined text-base">error</span> Erro ao criar usuário: ${error.message}`;
+                }
                 msgCadastro.classList.remove('hidden');
             } finally {
                 btnSalvarUser.disabled = false;
@@ -571,7 +575,11 @@
                 window.fecharModalEdicao();
             } catch (err) {
                 console.error("Erro ao salvar edição:", err);
-                alert("Erro ao atualizar usuário.");
+                if (err.code === 'permission-denied') {
+                    alert("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.");
+                } else {
+                    alert("Erro ao atualizar usuário.");
+                }
             } finally {
                 btnAtualizar.disabled = false;
                 btnAtualizar.classList.remove('opacity-50');
@@ -585,7 +593,11 @@
                 registrarLogAutomático(usuarioLogadoNome, "ALTERAÇÃO DE ACESSO", "Cadastro de Usuários", `O usuário ${id} teve seu status alterado para ${novoStatus.toUpperCase()}.`);
             } catch (e) {
                 console.error("Erro ao alterar status:", e);
-                alert("Erro ao modificar usuário.");
+                if (e.code === 'permission-denied') {
+                    alert("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.");
+                } else {
+                    alert("Erro ao modificar usuário.");
+                }
             }
         };
 

@@ -431,7 +431,11 @@
                 window.carregarMetas();
             } catch (error) {
                 console.error("Erro ao salvar:", error);
-                window.mostrarAlerta("Erro ao salvar a meta.");
+                if (error.code === 'permission-denied') {
+                    window.mostrarAlerta("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.");
+                } else {
+                    window.mostrarAlerta("Erro ao salvar a meta.");
+                }
             }
 
             btn.innerHTML = `Salvar Meta Financeira`;
@@ -445,7 +449,11 @@
                     window.carregarMetas();
                 } catch (error) {
                     console.error("Erro ao excluir:", error);
-                    alert("Erro ao excluir meta.");
+                    if (error.code === 'permission-denied') {
+                        window.mostrarAlerta("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.");
+                    } else {
+                        alert("Erro ao excluir meta.");
+                    }
                 }
             }
         };

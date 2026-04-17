@@ -470,8 +470,18 @@
 
     document.getElementById('btn-excluir-confirmar').onclick = async () => {
         if (!idParaExcluir) return;
-        await deleteDoc(doc(db, "Lancamentos", idParaExcluir));
-        document.getElementById('btn-excluir-cancelar').click();
+        try {
+            await deleteDoc(doc(db, "Lancamentos", idParaExcluir));
+            document.getElementById('btn-excluir-cancelar').click();
+        } catch (err) {
+            console.error("Erro ao excluir:", err);
+            document.getElementById('btn-excluir-cancelar').click();
+            if (err.code === 'permission-denied') {
+                alert("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.");
+            } else {
+                alert("Erro ao excluir registro.");
+            }
+        }
     };
 
     // FORM SUBMIT
@@ -504,7 +514,11 @@
             setTimeout(() => { window.fecharModal(); }, 1500);
         } catch (err) {
             console.error(err);
-            alert("Erro ao salvar dados.");
+            if (err.code === 'permission-denied') {
+                alert("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.");
+            } else {
+                alert("Erro ao salvar dados.");
+            }
         } finally {
             btnSalvar.disabled = false;
             btnSalvar.classList.remove('opacity-50');

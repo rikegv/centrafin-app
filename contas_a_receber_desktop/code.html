@@ -316,51 +316,66 @@
         <table class="w-full text-left border-collapse">
           <thead class="bg-surface-container-low border-b border-surface-variant/20 text-[9px]">
             <tr>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Empresa</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                RPS</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Tipo de Serviço</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] text-indigo-700">
-                Nº NF-e</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Cliente</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Cod. Cliente</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                CNPJ</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Mês Ref.</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Emissão</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Vencimento</th>
-              <th
-                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Data da Baixa</th>
-              <th
-                class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Faturamento Bruto</th>
-              <th
-                class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] text-cyan-600">
-                Valor Líquido</th>
-              <th
-                class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Fat. Real</th>
-              <th
-                class="px-4 py-4 text-center font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)]">
-                Status</th>
+              <th onclick="window.ordenarTabelaCRF('empresa')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">Empresa<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-empresa">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('rps')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">RPS<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-rps">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('servico')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">Tipo de Serviço<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-servico">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('nfe')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] text-indigo-700 cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">Nº NF-e<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-nfe">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('cliente')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">Cliente<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-cliente">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('cod_cliente')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">Cod. Cliente<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-cod_cliente">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('cnpj')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">CNPJ<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-cnpj">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('mes_ref')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">Mês Ref.<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-mes_ref">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('emissao')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">Emissão<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-emissao">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('vencimento')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">Vencimento<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-vencimento">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('baixa')"
+                class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center gap-1">Data da Baixa<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-baixa">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('valor_fatura')"
+                class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center justify-end gap-1">Faturamento Bruto<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-valor_fatura">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('valor_liquido')"
+                class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] text-cyan-600 cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center justify-end gap-1">Valor Líquido<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-valor_liquido">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('fat_real')"
+                class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center justify-end gap-1">Fat. Real<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-fat_real">unfold_more</span></div>
+              </th>
+              <th onclick="window.ordenarTabelaCRF('status')"
+                class="px-4 py-4 text-center font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
+                <div class="flex items-center justify-center gap-1">Status<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-status">unfold_more</span></div>
+              </th>
               <th class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest">Ações</th>
             </tr>
           </thead>
@@ -1755,7 +1770,11 @@
         btnProcessar.textContent = btnOriginalText;
         btnProcessar.classList.remove('opacity-70');
       } catch (err) {
-        exibirFeedback(`Erro inesperado ao salvar os dados: ${err.message}`, 'erro');
+        if (err.code === 'permission-denied') {
+          exibirFeedback("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.", 'erro');
+        } else {
+          exibirFeedback(`Erro inesperado ao salvar os dados: ${err.message}`, 'erro');
+        }
         btnProcessar.disabled = false;
         btnProcessar.textContent = btnOriginalText;
         btnProcessar.classList.remove('opacity-70');
@@ -1883,7 +1902,11 @@
         console.error("❌ Erro ao salvar lançamento:", error);
         const mErro = document.getElementById('modal-erro');
         const mErroMsg = document.getElementById('modal-erro-mensagem');
-        if (mErroMsg) mErroMsg.textContent = "Erro ao salvar no banco de dados. Verifique sua conexão.";
+        if (error.code === 'permission-denied') {
+          if (mErroMsg) mErroMsg.textContent = "Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.";
+        } else {
+          if (mErroMsg) mErroMsg.textContent = "Erro ao salvar no banco de dados. Verifique sua conexão.";
+        }
         if (mErro) mErro.classList.remove('opacity-0', 'pointer-events-none');
       } finally {
         btnSalvar.disabled = false;
@@ -2060,6 +2083,117 @@
         }
       });
     }
+
+    window.colunaAtualSort = '';
+    window.direcaoSort = 'asc';
+
+    function parseDataSortCRF(raw) {
+      if (raw === null || raw === undefined || raw === '' || raw === '-') return null;
+      try {
+        let d = null;
+        if (raw && typeof raw === 'object' && raw.toDate) d = raw.toDate();
+        else if (raw instanceof Date) d = raw;
+        else if (typeof raw === 'number') d = new Date((raw - 25569) * 86400 * 1000);
+        else {
+          const s = String(raw).trim();
+          if (s.includes('/')) {
+            const p = s.split('/');
+            if (p.length === 3) d = new Date(`${p[2]}-${p[1]}-${p[0]}`);
+          } else {
+            d = new Date(s);
+          }
+        }
+        return (d && !isNaN(d.getTime())) ? d.getTime() : null;
+      } catch (e) { return null; }
+    }
+
+    function parseMoneySortCRF(raw) {
+      if (raw === null || raw === undefined || raw === '') return 0;
+      if (typeof raw === 'number') return raw;
+      const n = parseFloat(String(raw).replace(/[R$\s.]/g, '').replace(',', '.'));
+      return isNaN(n) ? 0 : n;
+    }
+
+    function obterValorSortCRF(data, coluna) {
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      const descContrato = data['descricao_contrato'] || data['Descrição Do Contrato'] || data['descricao'] || '';
+      switch (coluna) {
+        case 'empresa':
+          return { tipo: 'texto', valor: String(calcularEmpresaAtribuida(descContrato) || '') };
+        case 'rps':
+          return { tipo: 'texto', valor: String(data.rps || data['Nº NF'] || data['NF'] || '') };
+        case 'servico':
+          return { tipo: 'texto', valor: String(descContrato) };
+        case 'nfe':
+          return { tipo: 'texto', valor: String(data.numero_nfe || data['Nº NF-e'] || '') };
+        case 'cliente':
+          return { tipo: 'texto', valor: String(data['cliente'] || data['Cliente'] || '') };
+        case 'cod_cliente':
+          return { tipo: 'texto', valor: String(data['codigo_cliente'] || data['Cd.Cliente'] || '') };
+        case 'cnpj':
+          return { tipo: 'texto', valor: String(data['cnpj'] || data['CNPJ Cliente'] || '') };
+        case 'mes_ref': {
+          const emissaoRaw = data['data_emissao'] || data['Dt Emissao'] || '';
+          const mesRef = data['mes_referencia'] || '';
+          if (mesRef) return { tipo: 'texto', valor: String(mesRef) };
+          return { tipo: 'data', valor: parseDataSortCRF(emissaoRaw) };
+        }
+        case 'emissao':
+          return { tipo: 'data', valor: parseDataSortCRF(data['data_emissao'] || data['Dt Emissao']) };
+        case 'vencimento':
+          return { tipo: 'data', valor: parseDataSortCRF(data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto']) };
+        case 'baixa':
+          return { tipo: 'data', valor: parseDataSortCRF(data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento']) };
+        case 'valor_fatura':
+          return { tipo: 'numero', valor: parseMoneySortCRF(data['valor_fatura'] || data['Valor Fatura'] || data['valor']) };
+        case 'valor_liquido':
+          return { tipo: 'numero', valor: parseMoneySortCRF(data['valor_liquido'] || data['Vl. Líquido'] || data['Vl Líquido']) };
+        case 'fat_real': {
+          const vF = parseMoneySortCRF(data['valor_fatura'] || data['Valor Fatura'] || data['valor']);
+          const vT = parseMoneySortCRF(data['taxa'] || data['Taxa']);
+          return { tipo: 'numero', valor: parseMoneySortCRF(calcularFaturamentoReal(descContrato, vF, vT)) };
+        }
+        case 'status':
+          return { tipo: 'texto', valor: String(obterStatusReal(data, hoje) || '') };
+        default:
+          return { tipo: 'texto', valor: '' };
+      }
+    }
+
+    window.ordenarTabelaCRF = function (coluna) {
+      if (!coluna) return;
+      if (window.colunaAtualSort === coluna) {
+        window.direcaoSort = window.direcaoSort === 'asc' ? 'desc' : 'asc';
+      } else {
+        window.colunaAtualSort = coluna;
+        window.direcaoSort = 'asc';
+      }
+
+      document.querySelectorAll('[id^="icone-sort-"]').forEach(el => { el.textContent = 'unfold_more'; });
+      const iconeAtivo = document.getElementById('icone-sort-' + coluna);
+      if (iconeAtivo) iconeAtivo.textContent = window.direcaoSort === 'asc' ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
+
+      const fator = window.direcaoSort === 'asc' ? 1 : -1;
+      if (Array.isArray(todasAsNotas)) {
+        todasAsNotas.sort((a, b) => {
+          const va = obterValorSortCRF(a, coluna);
+          const vb = obterValorSortCRF(b, coluna);
+          if (va.tipo === 'data') {
+            const na = va.valor, nb = vb.valor;
+            if (na === null && nb === null) return 0;
+            if (na === null) return 1;
+            if (nb === null) return -1;
+            return (na - nb) * fator;
+          }
+          if (va.tipo === 'numero') {
+            return ((va.valor || 0) - (vb.valor || 0)) * fator;
+          }
+          return String(va.valor).localeCompare(String(vb.valor), 'pt-BR', { numeric: true, sensitivity: 'base' }) * fator;
+        });
+      }
+
+      if (typeof aplicarFiltros === 'function') aplicarFiltros();
+    };
 
     function aplicarFiltros() {
       const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -2371,7 +2505,14 @@
         } catch (err) {
           console.error("Erro ao excluir:", err);
           idParaExcluir = null;
-          alert("Erro ao excluir registro.");
+          if (err.code === 'permission-denied') {
+            const mErro = document.getElementById('modal-erro');
+            const mErroMsg = document.getElementById('modal-erro-mensagem');
+            if (mErroMsg) mErroMsg.textContent = "Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.";
+            if (mErro) mErro.classList.remove('opacity-0', 'pointer-events-none');
+          } else {
+            alert("Erro ao excluir registro.");
+          }
         }
       });
     }

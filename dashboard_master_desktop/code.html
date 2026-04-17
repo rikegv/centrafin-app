@@ -62,6 +62,22 @@
       color: #f5f5f5 !important;
       font-weight: bold !important;
     }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card-entry-anim {
+      opacity: 0;
+      animation: fadeInUp 0.6s ease-out forwards;
+    }
   </style>
 </head>
 
@@ -98,8 +114,8 @@
 
 
         <div class="grid grid-cols-4 gap-6">
-          <div onclick="window.abrirModulo('tela-faturamento')"
-            class="bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+          <div onclick="window.abrirModulo('tela-faturamento')" style="animation-delay: 0.1s;"
+            class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandGreen mb-4 block">payments</span>
             <h3 class="text-white text-xl font-extrabold mb-2">Módulo Faturamento</h3>
             <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Análises detalhadas de bruto vs realizado, performance
@@ -108,8 +124,8 @@
               class="text-brandGreen text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
-          <div onclick="window.abrirModulo('tela-fluxo')"
-            class="bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+          <div onclick="window.abrirModulo('tela-fluxo')" style="animation-delay: 0.2s;"
+            class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandLightBlue mb-4 block">account_balance</span>
             <h3 class="text-white text-xl font-extrabold mb-2">Fluxo de Caixa</h3>
             <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Acompanhamento executivo de entradas, saídas e projeções
@@ -118,8 +134,8 @@
               class="text-brandLightBlue text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
-          <div onclick="window.abrirModulo('tela-rh')"
-            class="bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+          <div onclick="window.abrirModulo('tela-rh')" style="animation-delay: 0.3s;"
+            class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandOrange mb-4 block">groups</span>
             <h3 class="text-white text-xl font-extrabold mb-2">FORECAST</h3>
             <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Calculadora de headcount, provisões e impacto financeiro.
@@ -128,8 +144,8 @@
               class="text-brandOrange text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
-          <a href="../aging_desktop/code.html" data-menu="AGING" id="card-acesso-aging"
-            class="bg-brandDarkBlue rounded-xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-brandMidBlue/30 relative overflow-hidden group flex flex-col justify-between h-full cursor-pointer">
+          <a href="../aging_desktop/code.html" data-menu="aging" id="card-acesso-aging" style="animation-delay: 0.4s;"
+            class="hidden card-entry-anim bg-brandDarkBlue rounded-xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-brandMidBlue/30 relative overflow-hidden group flex flex-col justify-between h-full cursor-pointer">
             <div
               class="absolute -right-8 -top-8 w-32 h-32 bg-brandGreen/10 rounded-full blur-3xl group-hover:bg-brandGreen/20 transition-all duration-500">
             </div>
@@ -157,8 +173,8 @@
         </div>
 
         <div class="grid grid-cols-4 gap-6">
-          <div onclick="window.abrirModulo('tela-metas')"
-            class="bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+          <div onclick="window.abrirModulo('tela-metas')" style="animation-delay: 0.5s;"
+            class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandAqua mb-4 block">track_changes</span>
             <h3 class="text-white text-xl font-extrabold mb-2">Metas Financeiras</h3>
             <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Gestão de metas anuais e acompanhamento de atingimento por
@@ -208,7 +224,7 @@
         <div class="w-full h-px bg-gradient-to-r from-transparent via-slate-500/30 to-transparent my-6 shadow-[0_2px_10px_rgba(0,0,0,0.1)]"></div>
         
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
+          <div id="card-wrapper-bruto" class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
             <div class="flex items-center justify-between mb-4">
               <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Faturamento Bruto</p>
               <div class="w-8 h-8 rounded-full bg-brandGreen/10 flex items-center justify-center">
@@ -217,7 +233,7 @@
             </div>
             <h3 class="text-2xl font-extrabold text-[#002443]" id="kpi-fat-bruto">R$ 0,00</h3>
           </div>
-          <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
+          <div id="card-wrapper-liquido" class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
             <div class="flex items-center justify-between mb-4">
               <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Faturamento Líquido</p>
               <div class="w-8 h-8 rounded-full bg-brandLightBlue/10 flex items-center justify-center">
@@ -226,7 +242,7 @@
             </div>
             <h3 class="text-2xl font-extrabold text-sky-600" id="kpi-fat-liquido">R$ 0,00</h3>
           </div>
-          <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
+          <div id="card-wrapper-realizado" class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
             <div class="flex items-center justify-between mb-4">
               <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Faturamento Realizado</p>
               <div class="w-8 h-8 rounded-full bg-brandGreen/10 flex items-center justify-center">
@@ -235,7 +251,7 @@
             </div>
             <h3 class="text-2xl font-extrabold text-[#aad12f]" id="kpi-fat-realizado">R$ 0,00</h3>
           </div>
-          <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
+          <div id="card-wrapper-atrasado" class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
             <div class="flex items-center justify-between mb-4">
               <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Faturamento Atrasado</p>
               <div class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center">
@@ -1053,6 +1069,23 @@
       window.dispatchEvent(new Event('resize'));
       window.desenharMapaGeral();
 
+      // Oculta cards de KPI nas abas Emissões e Fechamento
+      const idsOcultarPorAba = [
+          'card-wrapper-atrasado',
+          'card-wrapper-prejuizo',
+          'card-wrapper-protesto',
+          'card-wrapper-bruto',
+          'card-wrapper-liquido',
+          'card-wrapper-realizado'
+      ];
+
+      idsOcultarPorAba.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+              el.style.display = (visao === 'emissoes' || visao === 'fechamento') ? 'none' : 'block';
+          }
+      });
+
       // Atualiza visão dos KPIs ao trocar aba Soulan/Thomas
       if (visao === 'soulan' || visao === 'thomas') {
         window.visaoKpiFaturamento = visao;
@@ -1069,17 +1102,62 @@
     };
 
     window.parseDataExt = function (raw) {
-      if (!raw) return null;
+      if (!raw || raw === "" || raw === "-" || String(raw).toUpperCase().includes("CANCELAD")) return null;
       if (raw.toDate) return raw.toDate();
       if (raw instanceof Date) return raw;
-      if (typeof raw === 'number') return new Date((raw - 25569) * 86400 * 1000);
+
+      // Se for string no formato DD/MM/YYYY (com ou sem hora)
+      if (typeof raw === 'string' && raw.includes('/')) {
+        const partes = raw.trim().split(' ')[0].split('/');
+        if (partes.length === 3) {
+          return new Date(partes[2], partes[1] - 1, partes[0]);
+        }
+      }
+
+      // Se for Serial do Excel
+      const num = Number(raw);
+      if (!isNaN(num) && num > 10000) {
+        const excelEpoch = new Date(1899, 11, 30);
+        excelEpoch.setDate(excelEpoch.getDate() + num);
+        return excelEpoch;
+      }
+
+      // ISO format (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss)
       const s = String(raw).trim();
-      if (s.includes('/')) return new Date(s.split('/')[2], s.split('/')[1] - 1, s.split('/')[0]);
       if (s.includes('-') && s.length >= 10) {
         let p = s.split('T')[0].split('-');
         return new Date(p[0], p[1] - 1, p[2]);
       }
+
       return null;
+    };
+
+    window.obterStatusReal = function (data, hojeData = new Date()) {
+      hojeData.setHours(0, 0, 0, 0);
+      const sRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
+      const baixaRawStr = String(data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || '').toUpperCase();
+
+      if (sRaw.includes("CANC") || baixaRawStr.includes("CANC")) return "Cancelada";
+      if (sRaw.includes("PREJUÍZO") || sRaw.includes("PREJUIZO")) return "PREJUÍZO";
+      if (sRaw.includes("PROTESTO")) return "PROTESTO";
+      if (sRaw.includes("PAGO") || sRaw.includes("RECEBIDO") || sRaw.includes("BAIXADO")) return "RECEBIDO";
+
+      const baixaRaw = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
+      if (baixaRaw && String(baixaRaw).trim() !== "" && String(baixaRaw).trim() !== "-") {
+        return "RECEBIDO";
+      }
+
+      const vencRaw = data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto'] || "";
+      const dVenc = window.parseDataExt(vencRaw);
+
+      if (dVenc && !isNaN(dVenc.getTime())) {
+        dVenc.setHours(0, 0, 0, 0);
+        if (dVenc < hojeData) return "VENCIDO";
+        return "A VENCER";
+      }
+
+      if (sRaw.includes("VENCIDO") || sRaw.includes("ATRASADO")) return "VENCIDO";
+      return "A VENCER";
     };
 
     window.calcEmpresaExcel = function (desc) {
@@ -1213,12 +1291,18 @@
           const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
           const servicoAgrupado = window.calcServicoAgrupado(tipoServicoRaw);
 
-          const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
-          const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-          const baixaBruta = String(temBaixa || '').toUpperCase();
+          const statusRaw = String(data['status'] || data['Status'] || data['STATUS'] || data['Situação'] || '').toUpperCase().trim();
+          const rawBaixa = data['data_baixa'] || data['Dt Baixa'] || data['Data da Baixa'] || data['DATA DA BAIXA'] || data['data_recebimento'] || null;
+          const baixaBruta = String(rawBaixa || '').toUpperCase().trim();
           const isCancelado = statusRaw.includes("CANCELAD") || baixaBruta.includes("CANCELAD");
-          const isRecebido = !isCancelado && (statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") ||
-            statusRaw.includes("BAIXADO") || (temBaixa && baixaBruta.trim() !== "" && baixaBruta.trim() !== "-" && !baixaBruta.includes("CANCELAD")));
+
+          // Parse rigoroso da Dt Baixa — só é "pago" se gerar uma Date JS válida
+          const dtBaixaJS = (!isCancelado && rawBaixa && baixaBruta !== "" && baixaBruta !== "-")
+            ? window.parseDataExt(rawBaixa)
+            : null;
+          const isPago = dtBaixaJS !== null && !isNaN(dtBaixaJS.getTime());
+
+          const isRecebido = !isCancelado && (isPago || statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO"));
 
           let faturReal = 0;
           if (isRecebido) {
@@ -1244,15 +1328,32 @@
             kpiFat[grupoKpi].realizado += faturReal;
           }
 
-          if (!isRecebido && !isCancelado) {
-            let dVencKpi = window.parseDataExt(data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto']);
-            if (dVencKpi && !isNaN(dVencKpi.getTime())) {
-              dVencKpi.setHours(0, 0, 0, 0);
-              if (dVencKpi < hoje && dVencKpi.getFullYear() === anoCorrente) {
-                kpiFat[grupoKpi].atrasado += vLiquido;
-              }
+          // --- INÍCIO DA REGRA EXATA DO CRF (VENCIDO) ---
+          // 1. Calcula o Faturamento Real da nota independente de estar paga
+          let faturRealParaAtraso = 0;
+          const g1Atraso = ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "CONSULTORIA", "RPO", "ESTÁGIO"];
+          const g2Atraso = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
+
+          if (g1Atraso.some(g => tipoServicoRaw.includes(g))) {
+            faturRealParaAtraso = vTaxa;
+          } else if (g2Atraso.some(g => tipoServicoRaw.includes(g))) {
+            faturRealParaAtraso = vTaxa * 0.55;
+          } else {
+            faturRealParaAtraso = vFatura;
+          }
+
+          // 2. Chama a função espelho do CRF
+          const hojeParaAtraso = new Date();
+          hojeParaAtraso.setHours(0, 0, 0, 0);
+          const statusRealNota = window.obterStatusReal(data, hojeParaAtraso);
+
+          // 3. Soma apenas se for "VENCIDO"
+          if (statusRealNota === "VENCIDO") {
+            if (kpiFat[grupoKpi] && typeof kpiFat[grupoKpi].atrasado !== 'undefined') {
+              kpiFat[grupoKpi].atrasado += faturRealParaAtraso;
             }
           }
+          // --- FIM DA REGRA EXATA DO CRF ---
           if (dEmissao && !isNaN(dEmissao.getTime())) {
             let dCopy = new Date(dEmissao);
             dCopy.setHours(0, 0, 0, 0);
@@ -1317,10 +1418,10 @@
           }
 
           if (isRecebido) {
-            let dRef = temBaixa ?
-              window.parseDataExt(temBaixa) : null;
+            let dRef = rawBaixa ?
+              window.parseDataExt(rawBaixa) : null;
             if (!dRef || isNaN(dRef.getTime())) {
-              let dVencFallback = window.parseDataExt(data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto']);
+              let dVencFallback = window.parseDataExt(data['Vencimento'] || data['VENCIMENTO'] || data['Dt Vecto'] || data['Dt Vecto  '] || data['vencimento'] || data['Data de Vencimento']);
               dRef = (dVencFallback && !isNaN(dVencFallback.getTime())) ? dVencFallback : dEmissao;
             }
 
@@ -2420,12 +2521,12 @@
 
             renderSidebar(userProfile, dadosUser.menus_permitidos || []);
 
-            // Ocultação de cards analíticos por permissão RBAC
+            // Exibição de cards analíticos por permissão RBAC
             const menusPermitidos = dadosUser.menus_permitidos || [];
-            if (userProfile !== 'super_admin') {
-              const cardAging = document.getElementById('card-acesso-aging');
-              if (cardAging && !menusPermitidos.includes('AGING')) {
-                cardAging.style.display = 'none';
+            const cardAging = document.getElementById('card-acesso-aging');
+            if (cardAging) {
+              if (userProfile === 'super_admin' || menusPermitidos.includes('aging')) {
+                cardAging.classList.remove('hidden');
               }
             }
           } else {
