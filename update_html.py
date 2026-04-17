@@ -9,13 +9,6 @@ desktop_files = [
     "gest_o_de_cadastros_ajuste_de_cores/code.html"
 ]
 
-mobile_files = [
-    "dashboard_master_mobile/code.html",
-    "contas_a_pagar_mobile/code.html",
-    "contas_a_receber_mobile/code.html",
-    "gest_o_de_cadastros_mobile_ajustado/code.html"
-]
-
 new_title = "<title>CentraFin | Gestão Financeira</title>"
 new_aside = """<aside class=\"fixed left-0 top-0 h-full z-50 flex flex-col py-6 bg-[#002443] w-64 shadow-xl\">
 <div class=\"p-4 mb-8 w-full flex items-center justify-center bg-[#002443]\">
@@ -51,24 +44,18 @@ new_aside = """<aside class=\"fixed left-0 top-0 h-full z-50 flex flex-col py-6 
 
 base_dir = r"c:\Users\Henrique\Desktop\centrafin-app"
 
-all_files = desktop_files + mobile_files
-
-for f in all_files:
+for f in desktop_files:
     path = os.path.join(base_dir, f)
     if not os.path.exists(path):
         print(f"File not found: {path}")
         continue
     with open(path, "r", encoding="utf-8") as file:
         content = file.read()
-    
-    # Replace title everywhere
+
     content = re.sub(r"<title>.*?</title>", new_title, content, flags=re.DOTALL)
-    
-    # Replace aside only in desktop files
-    if f in desktop_files:
-        content = re.sub(r"<aside.*?</aside>", new_aside, content, flags=re.DOTALL)
-        
+    content = re.sub(r"<aside.*?</aside>", new_aside, content, flags=re.DOTALL)
+
     with open(path, "w", encoding="utf-8") as file:
         file.write(content)
 
-print(f"Done modifying {len(all_files)} files.")
+print(f"Done modifying {len(desktop_files)} files.")

@@ -1,7 +1,7 @@
 export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     const currentPath = window.location.pathname;
     // Detecção robusta do prefixo do caminho (se estamos na raiz ou subpasta)
-    const isInSubfolder = currentPath.split('/').filter(p => p).length > 2 || currentPath.includes('_desktop') || currentPath.includes('_mobile');
+    const isInSubfolder = currentPath.split('/').filter(p => p).length > 2 || currentPath.includes('_desktop');
     const prefix = isInSubfolder ? '../' : './';
     
     // Classes de Estilo
@@ -10,8 +10,8 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
 
     // Definição de estados ativos
     const isMasterActive = currentPath.includes('dashboard_master_desktop') ? activeClass : inactiveClass;
-    const isFatActive = (currentPath.includes('contas_a_receber_desktop') || currentPath.includes('contas_a_receber_mobile')) ? activeClass : inactiveClass;
-    const isPagarActive = (currentPath.includes('contas_a_pagar_desktop') || currentPath.includes('contas_a_pagar_mobile')) ? activeClass : inactiveClass;
+    const isFatActive = currentPath.includes('contas_a_receber_desktop') ? activeClass : inactiveClass;
+    const isPagarActive = currentPath.includes('contas_a_pagar_desktop') ? activeClass : inactiveClass;
     const isParceirosActive = (currentPath.includes('gest_o_de_cadastros')) ? activeClass : inactiveClass;
     const isExtratoActive = (currentPath.includes('extrato_desktop')) ? activeClass : inactiveClass;
     const isMetasActive = currentPath.includes('metas_desktop') ? activeClass : inactiveClass;
