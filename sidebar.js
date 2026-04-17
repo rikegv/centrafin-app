@@ -13,7 +13,6 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     const isFatActive = currentPath.includes('contas_a_receber_desktop') ? activeClass : inactiveClass;
     const isPagarActive = currentPath.includes('contas_a_pagar_desktop') ? activeClass : inactiveClass;
     const isParceirosActive = (currentPath.includes('gest_o_de_cadastros')) ? activeClass : inactiveClass;
-    const isExtratoActive = (currentPath.includes('extrato_desktop')) ? activeClass : inactiveClass;
     const isMetasActive = currentPath.includes('metas_desktop') ? activeClass : inactiveClass;
     const isUsuariosActive = currentPath.includes('master.html') && !currentPath.includes('tab=logs') ? activeClass : inactiveClass;
     const isAuditoriaActive = currentPath.includes('tab=logs') ? activeClass : inactiveClass;
@@ -77,10 +76,6 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Gestão de Parceiros</span>
                 </a>
 
-                <a data-menu="extrato" class="${isExtratoActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer" href="${prefix}extrato_desktop/code.html">
-                    <span class="material-symbols-outlined shrink-0 text-[20px]">receipt_long</span>
-                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Extrato Geral</span>
-                </a>
                 ` : ''}
             </nav>
 

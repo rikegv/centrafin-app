@@ -5,7 +5,6 @@ desktop_files = [
     "dashboard_master_desktop/code.html",
     "contas_a_pagar_desktop/code.html",
     "contas_a_receber_desktop/code.html",
-    "extrato_desktop/code.html",
     "gest_o_de_cadastros_ajuste_de_cores/code.html"
 ]
 
@@ -34,10 +33,6 @@ new_aside = """<aside class=\"fixed left-0 top-0 h-full z-50 flex flex-col py-6 
 <a class=\"text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200\" href=\"../gest_o_de_cadastros_ajuste_de_cores/code.html\">
 <span class=\"material-symbols-outlined\" data-icon=\"group\">group</span>
 <span class=\"font-inter text-sm font-semibold tracking-wide\">Clientes</span>
-</a>
-<a class=\"text-blue-100/70 hover:text-white mx-2 px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all duration-200\" href=\"../extrato_desktop/code.html\">
-<span class=\"material-symbols-outlined\" data-icon=\"receipt_long\">receipt_long</span>
-<span class=\"font-inter text-sm font-semibold tracking-wide\">Extrato/Auditoria</span>
 </a>
 </nav>
 </aside>"""
