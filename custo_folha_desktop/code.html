@@ -480,23 +480,33 @@
     // Chaves fora dos 5 buckets = "Outros valores importados" (amber no Olho).
 
     // Bucket 1 — Vencimentos Mensais (proventos da empresa).
-    const SET_VENC = new Set([
-        'SALARIO_Valor', 'SALARIO_BRUTO_MENSAL_Valor',
-        'PRO_LABORE_C_FGTS_Valor', 'PRO_LABORE_Valor',
-        'DIAS_TRABALHADOS_Valor', 'SALARIO_FAMILIA_Valor',
-        'DSR_S_HORAS_EXTRAS_Valor', 'AUXILIO_CRECHE_Valor',
-        'COMISSOES_Valor', 'DSR_S_COMISSOES_Valor',
-        'BANCO_DE_HORAS_50_Valor', 'ARREDONDAMENTO_Valor',
-        'REEMBOLSO_VALE_TRANSPORTE_Valor', 'AVISO_PREVIO_INDENIZADO_Valor',
-        'MEDIA_H_EXTRA_S_AVISO_Valor', 'FERIAS_INDENIZADAS_Valor',
-        '1_3_FERIAS_INDENIZADAS_Valor', 'ADICIONAL_DE_FERIAS_INDENIZADAS_Valor',
-        '1_3_ADIC_S_FERIAS_INDENIZADAS_Valor', 'EMPRESTIMO_SALDO_NEGATIVO_Valor',
-        '13O_SALARIO_INDENIZADO_Valor', '13O_SALARIO_PROP_SOBRE_AVISO_PREVIO_Valor',
-        'FERIAS_INDENIZADAS_SOBRE_AVISO_PREVIO_Valor',
-        '1_3_FERIAS_INDENIZADAS_SOBRE_AVISO_PREVIO_Valor',
-        'AJUDA_DE_CUSTO_Valor', 'MEDIA_DO_13O_SALARIO_Valor',
-        'SALDO_DE_SALARIOS_NA_RESCISAO_Valor',
-    ]);
+    // Estratégia flexível: uma função validadora que casa por SUBSTRING em vez
+    // de lista fechada. Isso captura variações que o Set antigo deixava escapar
+    // (SALARIO_Valor, SALARIO_BASE_Valor, SALARIO_BRUTO_MENSAL_Valor, etc.).
+    //
+    // Blindagem (prioridade alta): chaves de Encargos/Descontos/Base são rejeitadas
+    // antes de checar palavras-raiz — garante que INSS_PATRONAL, FGTS, BASE_*, etc.
+    // continuem indo para o bucket correto mesmo que contivessem palavras-chave.
+    function isVencimento(k) {
+        const key = String(k || '').toUpperCase();
+
+        // 1. Blindagem: rejeita Encargos, Descontos de Folha e Bases de cálculo.
+        if (key.includes('INSS') || key.includes('IRRF') || key.includes('DESCONTO') ||
+            key.includes('EDUCACAO') || key.includes('FGTS') || key.includes('BASE_')) {
+            return false;
+        }
+
+        // 2. Palavras-chave raízes de proventos da folha.
+        const keywords = [
+            'SALARIO', 'PRO_LABORE', 'DIAS_TRABALHADOS', 'DSR', 'CRECHE',
+            'COMISSAO', 'BANCO_DE_HORAS', 'ARREDONDAMENTO', 'REEMBOLSO',
+            'AVISO_PREVIO', 'FERIAS', '1_3', 'EMPRESTIMO_SALDO_NEGATIVO',
+            '13O', 'AJUDA_DE_CUSTO', 'RESCISAO', 'HORA_EXTRA',
+        ];
+
+        // 3. Se contém qualquer raiz acima, é Vencimento.
+        return keywords.some(word => key.includes(word));
+    }
 
     // Bucket 2 — Encargos Sociais (custo extra patronal).
     // Importante: NUNCA incluir BASE_FGTS / BASE_INSS (base de cálculo, não pagamento).
@@ -532,11 +542,13 @@
         for (const k of Object.keys(reg || {})) {
             const raw = reg[k];
             if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
-            if (SET_VENC.has(k))       { vencimentos += raw; continue; }
+            // Precedência: Encargos/Bnf têm Sets estritos ANTES da checagem flexível
+            // de Vencimentos — assim VALOR_FGTS e similares não "vazam" para Venc.
             if (SET_ENCARGOS.has(k))   { encargos += raw; continue; }
             if (k.startsWith('Bnf_'))  { beneficios += raw; continue; }
             if (SET_BNF_PAGO.has(k))   { beneficios += raw; continue; }
             if (SET_BNF_DESC.has(k))   { descontosBnf += raw; continue; }
+            if (isVencimento(k))       { vencimentos += raw; continue; }
             // Descontos Folha (Bucket 5 / SET_DESC_FOLHA_INFO) e chaves desconhecidas
             // não entram na soma — aparecem só no modal Olho.
         }
@@ -843,11 +855,13 @@
         if (IDENT_KEYS.has(k)) return 'identificacao';
         if (META_KEYS.has(k)) return 'metadados';
         if (typeof raw === 'number' && Number.isFinite(raw)) {
-            if (SET_VENC.has(k))             return 'vencimentos';
+            // Mesma ordem do calcularTotais: Encargos/Bnf estritos ANTES da checagem
+            // flexível de Vencimentos, para evitar vazamentos.
             if (SET_ENCARGOS.has(k))         return 'encargos';
             if (k.startsWith('Bnf_'))        return 'beneficios';
             if (SET_BNF_PAGO.has(k))         return 'beneficios';
             if (SET_BNF_DESC.has(k))         return 'descontos_bnf';
+            if (isVencimento(k))             return 'vencimentos';
             if (SET_DESC_FOLHA_INFO.has(k))  return 'descontos_folha'; // informativo
             if (k.endsWith('_Qtde'))         return 'quantidades';
             return 'outros_valores';
