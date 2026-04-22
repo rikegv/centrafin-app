@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>CentraFin | Custo de Folha</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#aad12f",
+                        "secondary": "#002443",
+                        "surface-container-low": "#f3f4f6",
+                        "on-surface": "#191c1e",
+                        "on-surface-variant": "#584237",
+                        "surface-container-highest": "#e1e2e4",
+                        "surface-container-lowest": "#ffffff",
+                        "error": "#ba1a1a",
+                        "tertiary": "#006398"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .editorial-shadow { box-shadow: 0px 20px 40px rgba(25, 28, 30, 0.06); }
+        .backdrop-blur-sm { backdrop-filter: blur(4px); }
+        .spin { animation: spin 0.9s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .dropzone { transition: all 0.2s ease; }
+        .dropzone.has-file { border-color: #aad12f; background-color: #f7fbe8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-on-surface font-body antialiased">
+
+<div id="sidebar-container"></div>
+
+<main class="ml-20 min-h-screen">
+    <header class="bg-white shadow-sm sticky top-0 z-40 flex justify-between items-center w-full px-8 py-4">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-extrabold tracking-tight text-slate-900 font-headline">CentraFin</h1>
+            <div class="h-6 w-px bg-slate-200 mx-2"></div>
+            <span class="text-slate-500 font-medium text-sm">Custo de Folha</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right">
+                <p id="user-nome" class="text-xs font-bold text-slate-900">—</p>
+                <p id="user-perfil" class="text-[10px] text-slate-500 font-medium">—</p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-sm ring-2 ring-white" id="user-avatar">--</div>
+        </div>
+    </header>
+
+    <div class="p-8 space-y-8 max-w-6xl">
+        <!-- TÍTULO / CONTEXTO -->
+        <section class="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+                <h2 class="font-headline text-2xl font-extrabold text-secondary tracking-tight">Importar Custo de Folha</h2>
+                <p class="text-sm text-slate-500 mt-1 max-w-2xl">
+                    Envie os relatórios de <strong>Folha + Encargos</strong> e <strong>Benefícios</strong> referentes a uma competência.
+                    O sistema faz a limpeza, cruza os dados por CPF e grava tudo consolidado na coleção
+                    <code class="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-secondary font-mono">CustosFolha</code>.
+                </p>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-slate-400">
+                <span class="material-symbols-outlined text-base text-primary">verified</span>
+                ETL + Firestore
+            </div>
+        </section>
+
+        <!-- CARD FORMULÁRIO -->
+        <section class="bg-white rounded-2xl editorial-shadow p-8 border border-slate-100">
+            <form id="form-importar" class="space-y-6">
+
+                <!-- Linha 1: Competência + Empresa -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Competência (Mês/Ano)</label>
+                        <input id="campo-competencia" type="month" required
+                               class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Empresa / Filial</label>
+                        <select id="campo-empresa" required
+                                class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white">
+                            <option value="">Selecione a empresa...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Linha 2: Arquivos -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <label class="dropzone block border-2 border-dashed border-slate-200 rounded-xl p-5 cursor-pointer hover:border-primary hover:bg-slate-50" data-target="file-folha">
+                        <div class="flex items-center gap-4">
+                            <div class="w-11 h-11 rounded-xl bg-secondary/5 flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-secondary">description</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold text-secondary">Folha + Encargos</p>
+                                <p id="label-file-folha" class="text-[11px] text-slate-500 mt-0.5 font-medium truncate">Clique para selecionar (.xlsx, .xls, .csv)</p>
+                            </div>
+                        </div>
+                        <input id="file-folha" type="file" accept=".xlsx,.xls,.csv" class="hidden" required />
+                    </label>
+
+                    <label class="dropzone block border-2 border-dashed border-slate-200 rounded-xl p-5 cursor-pointer hover:border-primary hover:bg-slate-50" data-target="file-beneficios">
+                        <div class="flex items-center gap-4">
+                            <div class="w-11 h-11 rounded-xl bg-secondary/5 flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-secondary">card_travel</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold text-secondary">Benefícios</p>
+                                <p id="label-file-beneficios" class="text-[11px] text-slate-500 mt-0.5 font-medium truncate">Clique para selecionar (.xlsx, .xls, .csv)</p>
+                            </div>
+                        </div>
+                        <input id="file-beneficios" type="file" accept=".xlsx,.xls,.csv" class="hidden" required />
+                    </label>
+                </div>
+
+                <!-- Barra de Ação -->
+                <div class="flex items-center justify-between gap-4 pt-2 border-t border-slate-100 mt-2">
+                    <p class="text-[11px] text-slate-400 font-medium">
+                        <span class="material-symbols-outlined text-[14px] align-middle">info</span>
+                        Reimportar a mesma competência e empresa <strong>substitui</strong> os registros existentes.
+                    </p>
+                    <button type="submit" id="btn-processar"
+                            class="flex items-center gap-2 px-7 py-2.5 bg-primary text-[#341100] rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none">
+                        <span class="material-symbols-outlined text-lg" id="icon-btn">auto_awesome</span>
+                        <span id="label-btn">Processar e Importar</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- CARD FEEDBACK -->
+        <section id="card-feedback" class="bg-white rounded-2xl editorial-shadow p-8 border border-slate-100 hidden">
+            <div class="flex items-center gap-3 mb-5">
+                <span class="material-symbols-outlined text-primary">monitoring</span>
+                <h3 class="font-headline text-base font-bold text-secondary">Diagnóstico da Importação</h3>
+            </div>
+            <div id="feedback-body" class="space-y-3 text-sm text-slate-700"></div>
+        </section>
+
+    </div>
+</main>
+
+<!-- Modal Premium de Sucesso -->
+<div id="modal-sucesso" class="fixed inset-0 z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-sucesso-overlay"></div>
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100" id="modal-sucesso-content">
+        <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <span class="material-symbols-outlined text-4xl text-primary">check_circle</span>
+        </div>
+        <h3 class="font-headline text-2xl font-bold text-secondary mb-3 tracking-tight">Importação Concluída</h3>
+        <p id="modal-sucesso-msg" class="text-slate-500 text-[13px] mb-8 font-medium">Os dados foram atualizados no CentraFin.</p>
+        <button id="btn-sucesso-ok" class="w-full py-3.5 bg-primary text-[#341100] rounded-xl text-xs font-bold shadow-lg shadow-primary/40 hover:brightness-105 active:scale-95 transition-all">OK</button>
+    </div>
+</div>
+
+<!-- Modal Premium de Erro -->
+<div id="modal-erro" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-erro-overlay"></div>
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100" id="modal-erro-content">
+        <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <span class="material-symbols-outlined text-4xl text-red-500">error</span>
+        </div>
+        <h3 class="font-headline text-2xl font-bold text-secondary mb-3 tracking-tight">Atenção</h3>
+        <p id="modal-erro-mensagem" class="text-slate-500 text-[13px] mb-8 font-medium leading-relaxed">Ocorreu um erro inesperado. Tente novamente.</p>
+        <button id="btn-erro-fechar" class="w-full py-3.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">FECHAR</button>
+    </div>
+</div>
+
+<script type="module">
+    import { renderSidebar } from "../sidebar.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import {
+        getFirestore, collection, query, where, getDocs, writeBatch, doc, serverTimestamp, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { importarCustoFolha } from "../importacao_folha.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+        authDomain: "centra-fin.firebaseapp.com",
+        projectId: "centra-fin",
+        storageBucket: "centra-fin.firebasestorage.app",
+        messagingSenderId: "666471089411",
+        appId: "1:666471089411:web:4630f5b2ced70ceb981536",
+        measurementId: "G-CJJX2T2HT8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // ── CONSTANTES ───────────────────────────────────────────────────────────
+    const CHAVE_PAGINA = 'custo_folha';
+    const COLECAO = 'CustosFolha';
+    const CHUNK_SIZE = 450;
+
+    // ── ELEMENTOS UI ─────────────────────────────────────────────────────────
+    const form = document.getElementById('form-importar');
+    const inputCompetencia = document.getElementById('campo-competencia');
+    const selectEmpresa = document.getElementById('campo-empresa');
+    const inputFolha = document.getElementById('file-folha');
+    const inputBeneficios = document.getElementById('file-beneficios');
+    const labelFolha = document.getElementById('label-file-folha');
+    const labelBeneficios = document.getElementById('label-file-beneficios');
+    const btnProcessar = document.getElementById('btn-processar');
+    const iconBtn = document.getElementById('icon-btn');
+    const labelBtn = document.getElementById('label-btn');
+    const cardFeedback = document.getElementById('card-feedback');
+    const feedbackBody = document.getElementById('feedback-body');
+
+    // ── AUTH / SIDEBAR / GUARDIÃO ────────────────────────────────────────────
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "../login.html"; return; }
+        try {
+            const { getDoc, doc: docFn } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+            let dref = docFn(db, "Usuarios", user.email.toLowerCase());
+            let dsnap = await getDoc(dref);
+            if (!dsnap.exists()) { dref = docFn(db, "Usuarios", user.uid); dsnap = await getDoc(dref); }
+            if (!dsnap.exists()) {
+                await signOut(auth);
+                alert('Acesso Negado: Usuário não encontrado no sistema.');
+                window.location.href = "../login.html";
+                return;
+            }
+            const dadosUser = dsnap.data();
+            if (dadosUser.status === 'inativo') {
+                await signOut(auth);
+                window.location.href = "../login.html";
+                return;
+            }
+            if (dadosUser.perfil !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
+                await signOut(auth);
+                alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
+                window.location.href = "../login.html";
+                return;
+            }
+            renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
+
+            // Header user info
+            const nome = dadosUser.nome || user.email;
+            document.getElementById('user-nome').textContent = nome;
+            document.getElementById('user-perfil').textContent = (dadosUser.perfil || '').replace('_', ' ');
+            document.getElementById('user-avatar').textContent = String(nome).trim().slice(0, 2).toUpperCase();
+        } catch (err) {
+            console.error('Falha na autenticação:', err);
+            window.location.href = "../login.html";
+        }
+    });
+
+    // ── POPULAR DROPDOWN DE EMPRESAS ─────────────────────────────────────────
+    onSnapshot(collection(db, "Base_Empresas"), (snap) => {
+        const valAtual = selectEmpresa.value;
+        selectEmpresa.innerHTML = '<option value="">Selecione a empresa...</option>';
+        const lista = [];
+        snap.forEach(d => lista.push(d.id));
+        lista.sort((a, b) => a.localeCompare(b));
+        for (const id of lista) {
+            const opt = document.createElement('option');
+            opt.value = id; opt.textContent = id;
+            selectEmpresa.appendChild(opt);
+        }
+        selectEmpresa.value = valAtual;
+    });
+
+    // ── UI: DROPZONES → abrir input ao clicar no label ───────────────────────
+    // (O <label for> nativo já faria isso, mas como o input está dentro do label,
+    //  basta garantir o feedback visual ao selecionar arquivo.)
+    inputFolha.addEventListener('change', () => {
+        const f = inputFolha.files?.[0];
+        labelFolha.textContent = f ? f.name : 'Clique para selecionar (.xlsx, .xls, .csv)';
+        labelFolha.parentElement.parentElement.classList.toggle('has-file', !!f);
+    });
+    inputBeneficios.addEventListener('change', () => {
+        const f = inputBeneficios.files?.[0];
+        labelBeneficios.textContent = f ? f.name : 'Clique para selecionar (.xlsx, .xls, .csv)';
+        labelBeneficios.parentElement.parentElement.classList.toggle('has-file', !!f);
+    });
+
+    // ── MODAIS ───────────────────────────────────────────────────────────────
+    function abrirModal(id) {
+        const m = document.getElementById(id);
+        m.classList.remove('opacity-0', 'pointer-events-none');
+        m.querySelector('[id$="-content"]')?.classList.remove('scale-95');
+    }
+    function fecharModal(id) {
+        const m = document.getElementById(id);
+        m.classList.add('opacity-0', 'pointer-events-none');
+        m.querySelector('[id$="-content"]')?.classList.add('scale-95');
+    }
+    function mostrarSucesso(msg) {
+        document.getElementById('modal-sucesso-msg').textContent = msg || 'Os dados foram atualizados no CentraFin.';
+        abrirModal('modal-sucesso');
+    }
+    function mostrarErro(msg) {
+        document.getElementById('modal-erro-mensagem').textContent = msg || 'Ocorreu um erro inesperado.';
+        abrirModal('modal-erro');
+    }
+    document.getElementById('btn-sucesso-ok').onclick = () => fecharModal('modal-sucesso');
+    document.getElementById('modal-sucesso-overlay').onclick = () => fecharModal('modal-sucesso');
+    document.getElementById('btn-erro-fechar').onclick = () => fecharModal('modal-erro');
+    document.getElementById('modal-erro-overlay').onclick = () => fecharModal('modal-erro');
+
+    // ── ESTADO DO BOTÃO (spinner) ────────────────────────────────────────────
+    function setLoading(estado, texto) {
+        btnProcessar.disabled = !!estado;
+        form.querySelectorAll('input, select').forEach(el => { el.disabled = !!estado; });
+        if (estado) {
+            iconBtn.textContent = 'progress_activity';
+            iconBtn.classList.add('spin');
+            labelBtn.textContent = texto || 'Processando...';
+        } else {
+            iconBtn.textContent = 'auto_awesome';
+            iconBtn.classList.remove('spin');
+            labelBtn.textContent = 'Processar e Importar';
+        }
+    }
+
+    // ── DIAGNÓSTICO NA TELA ─────────────────────────────────────────────────
+    function renderDiagnostico(diag, empresa, competenciaBR) {
+        cardFeedback.classList.remove('hidden');
+        const linha = (icon, label, valor, cor = 'text-secondary') => `
+            <div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+                <div class="flex items-center gap-2 text-slate-600 text-xs font-medium">
+                    <span class="material-symbols-outlined text-base ${cor}">${icon}</span>
+                    ${label}
+                </div>
+                <span class="text-sm font-bold ${cor}">${valor}</span>
+            </div>`;
+        feedbackBody.innerHTML = `
+            <div class="mb-2 text-[11px] uppercase tracking-widest font-bold text-slate-400">
+                Competência ${competenciaBR} · ${empresa}
+            </div>
+            ${linha('table_view', 'Linhas lidas da Folha', diag.totalFolha)}
+            ${linha('card_travel', 'Linhas lidas de Benefícios', diag.totalBeneficios)}
+            ${linha('merge', 'Funcionários unificados (gravados)', diag.totalUnificado, 'text-primary')}
+            ${linha('link', 'Com dados em ambas as bases', diag.ambas)}
+            ${linha('swap_horiz', 'Apenas na Folha', diag.somenteFolha, 'text-tertiary')}
+            ${linha('swap_horiz', 'Apenas em Benefícios', diag.somenteBeneficios, 'text-tertiary')}`;
+    }
+
+    // ── SUBMIT ───────────────────────────────────────────────────────────────
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const competenciaMes = inputCompetencia.value; // "YYYY-MM"
+        const empresa = selectEmpresa.value.trim();
+        const fileFolha = inputFolha.files?.[0];
+        const fileBeneficios = inputBeneficios.files?.[0];
+
+        if (!competenciaMes) return mostrarErro('Selecione a competência (mês/ano).');
+        if (!empresa) return mostrarErro('Selecione a empresa/filial.');
+        if (!fileFolha) return mostrarErro('Selecione a planilha de Folha + Encargos.');
+        if (!fileBeneficios) return mostrarErro('Selecione a planilha de Benefícios.');
+
+        const [ano, mes] = competenciaMes.split('-');
+        const competenciaBR = `${mes}/${ano}`;
+
+        // 1) ETL
+        setLoading(true, 'Lendo planilhas...');
+        let unificado, diagnostico;
+        try {
+            const r = await importarCustoFolha({
+                fileFolha, fileBeneficios, competencia: competenciaBR, empresa
+            });
+            unificado = r.unificado;
+            diagnostico = r.diagnostico;
+            if (!unificado.length) throw new Error('Nenhum funcionário válido foi identificado após o cruzamento das bases.');
+        } catch (err) {
+            console.error('[ETL] falhou:', err);
+            setLoading(false);
+            return mostrarErro(err.message || 'Não foi possível processar as planilhas. Verifique o formato.');
+        }
+
+        // 2) DROP — apaga registros anteriores dessa competência+empresa
+        setLoading(true, 'Removendo registros antigos...');
+        try {
+            await apagarRegistrosAntigos(competenciaMes, empresa);
+        } catch (err) {
+            console.error('[DROP] falhou:', err);
+            setLoading(false);
+            if (err.code === 'permission-denied') {
+                return mostrarErro('Acesso Negado: seu perfil não tem permissão para sobrescrever registros existentes.');
+            }
+            return mostrarErro('Falha ao limpar registros anteriores: ' + (err.message || 'erro desconhecido'));
+        }
+
+        // 3) REPLACE — grava o novo lote em batches de 450
+        setLoading(true, 'Gravando novos registros...');
+        try {
+            await gravarUnificado(unificado, competenciaMes, competenciaBR, empresa);
+        } catch (err) {
+            console.error('[REPLACE] falhou:', err);
+            setLoading(false);
+            if (err.code === 'permission-denied') {
+                return mostrarErro('Acesso Negado: seu perfil não tem permissão para gravar em CustosFolha.');
+            }
+            return mostrarErro('Falha ao gravar os novos registros: ' + (err.message || 'erro desconhecido'));
+        }
+
+        // Sucesso
+        renderDiagnostico(diagnostico, empresa, competenciaBR);
+        setLoading(false);
+        form.reset();
+        labelFolha.textContent = 'Clique para selecionar (.xlsx, .xls, .csv)';
+        labelBeneficios.textContent = 'Clique para selecionar (.xlsx, .xls, .csv)';
+        document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('has-file'));
+        mostrarSucesso(`${diagnostico.totalUnificado} funcionários gravados na competência ${competenciaBR} (${empresa}).`);
+    });
+
+    // ── HELPERS: DROP & REPLACE ──────────────────────────────────────────────
+    async function apagarRegistrosAntigos(competenciaRef, empresa) {
+        const q = query(
+            collection(db, COLECAO),
+            where('competencia_ref', '==', competenciaRef),
+            where('empresa_atribuida', '==', empresa)
+        );
+        const snap = await getDocs(q);
+        if (snap.empty) return 0;
+
+        const ids = [];
+        snap.forEach(d => ids.push(d.id));
+
+        for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+            const batch = writeBatch(db);
+            const fatia = ids.slice(i, i + CHUNK_SIZE);
+            for (const id of fatia) batch.delete(doc(db, COLECAO, id));
+            await batch.commit();
+        }
+        return ids.length;
+    }
+
+    async function gravarUnificado(lista, competenciaRef, competenciaBR, empresa) {
+        const totalChunks = Math.ceil(lista.length / CHUNK_SIZE);
+        for (let c = 0; c < totalChunks; c++) {
+            const inicio = c * CHUNK_SIZE;
+            const fim = Math.min(inicio + CHUNK_SIZE, lista.length);
+            const batch = writeBatch(db);
+            for (let i = inicio; i < fim; i++) {
+                const reg = lista[i];
+                const ref = doc(collection(db, COLECAO));
+                batch.set(ref, {
+                    ...reg,
+                    competencia: competenciaBR,
+                    competencia_ref: competenciaRef,
+                    empresa_atribuida: empresa,
+                    dataImportacao: serverTimestamp()
+                });
+            }
+            await batch.commit();
+            setLoading(true, `Gravando ${Math.min(fim, lista.length)}/${lista.length}...`);
+        }
+    }
+
+</script>
+</body>
+</html>

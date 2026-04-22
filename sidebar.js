@@ -14,6 +14,7 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     const isPagarActive = currentPath.includes('contas_a_pagar_desktop') ? activeClass : inactiveClass;
     const isParceirosActive = (currentPath.includes('gest_o_de_cadastros')) ? activeClass : inactiveClass;
     const isMetasActive = currentPath.includes('metas_desktop') ? activeClass : inactiveClass;
+    const isCustoFolhaActive = currentPath.includes('custo_folha_desktop') ? activeClass : inactiveClass;
     const isUsuariosActive = currentPath.includes('master.html') && !currentPath.includes('tab=logs') ? activeClass : inactiveClass;
     const isAuditoriaActive = currentPath.includes('tab=logs') ? activeClass : inactiveClass;
 
@@ -63,6 +64,13 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
                 <a data-menu="contas_receber" class="${isFatActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer" href="${prefix}contas_a_receber_desktop/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('contas_a_receber_desktop') ? 'text-primary' : ''}">payments</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Faturamento - Contas a receber</span>
+                </a>
+
+                <p class="text-[9px] font-bold text-blue-200/40 uppercase tracking-widest px-4 mt-3 mb-2 hidden group-hover:block transition-all duration-300">Lançamentos / Custos</p>
+
+                <a data-menu="custo_folha" class="${isCustoFolhaActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer" href="${prefix}custo_folha_desktop/code.html">
+                    <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('custo_folha_desktop') ? 'text-primary' : ''}">receipt_long</span>
+                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Custo de Folha</span>
                 </a>
 
                 ${showProductionMenus ? `

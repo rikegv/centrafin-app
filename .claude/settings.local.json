@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python \"c:/Users/Henrique/Desktop/centrafin-app/_fix_escape.py\")",
+      "Bash(node --check \"c:/Users/Henrique/Desktop/centrafin-app/importacao_folha.js\")",
+      "Bash(node _smoke_test_folha.mjs)",
+      "Bash(firebase --version)",
+      "Bash(firebase projects:list)",
+      "Bash(firebase deploy *)"
+    ]
+  }
+}

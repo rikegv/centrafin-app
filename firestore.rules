@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Função auxiliar: verifica se o perfil do usuário é admin
+    function isAdmin() {
+      let perfil = get(/databases/$(database)/documents/Usuarios/$(request.auth.token.email)).data.perfil;
+      return perfil == "master" || perfil == "super_admin";
+    }
+
+    // Função auxiliar: verifica se o usuário tem permissão para um menu específico ou se é admin
+    function hasMenu(menuName) {
+      let userData = get(/databases/$(database)/documents/Usuarios/$(request.auth.token.email)).data;
+      return userData.perfil == "master" || userData.perfil == "super_admin" ||
+             (userData.menus_permitidos != null && menuName in userData.menus_permitidos);
+    }
+
+    // LANCAMENTOS
+    match /Lancamentos/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // METAS FINANCEIRAS
+    match /MetasFinanceiras/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // USUARIOS
+    match /Usuarios/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // LOGS
+    match /Logs/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // CUSTOS FOLHA — Leitura e Escrita protegidas pelo controle de acesso (Drop & Replace)
+    match /CustosFolha/{docId} {
+      allow read, write: if request.auth != null && hasMenu('custo_folha');
+    }
+  }
+}
