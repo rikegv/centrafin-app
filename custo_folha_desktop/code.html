@@ -98,7 +98,7 @@
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">CPF</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Centro de Custo</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Vencimentos</th>
-                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Desc. Folha</th>
+                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Encargos Sociais</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Benef. Pagos</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Desc. Benef.</th>
                             <th class="px-4 py-3 text-right font-bold text-secondary uppercase tracking-widest">Custo Total</th>
@@ -110,7 +110,7 @@
                         <tr class="text-[11px] font-extrabold text-secondary">
                             <td class="px-4 py-3" colspan="3">Totais</td>
                             <td id="tot-vencimentos" class="px-4 py-3 text-right">—</td>
-                            <td id="tot-descontos-folha" class="px-4 py-3 text-right text-red-600">—</td>
+                            <td id="tot-encargos" class="px-4 py-3 text-right">—</td>
                             <td id="tot-beneficios" class="px-4 py-3 text-right">—</td>
                             <td id="tot-descontos-bnf" class="px-4 py-3 text-right text-red-600">—</td>
                             <td id="tot-total" class="px-4 py-3 text-right">—</td>
@@ -465,68 +465,83 @@
         }
     });
 
-    // ── WHITELISTS DE CLASSIFICAÇÃO (spec oficial do usuário) ────────────────
-    // Cada label é slugificado com a mesma função do ETL, gerando a chave _Valor
-    // esperada. Benefícios incluem tanto o formato _Valor (vindo da Folha) quanto
-    // Bnf_* (vindo do arquivo de Benefícios).
+    // ── WHITELISTS DE CLASSIFICAÇÃO — 5 buckets contábeis (spec definitiva) ──
+    // As chaves abaixo são os slugs EXATOS gerados pelo ETL a partir das colunas
+    // do relatório gerencial. Ordem de precedência na classificação:
+    //     Vencimentos > Encargos > Bnf_* (prefixo) > BnfPago > BnfDesc > DescFolhaInfo.
     //
-    // Chaves que não caírem em nenhuma whitelist são IGNORADAS pelo cálculo mas
-    // permanecem gravadas no doc e aparecem no modal "Olho".
+    // Fórmula contábil:
+    //     Custo Total = Vencimentos + Encargos + Benefícios Pagos − Desc. Benefícios
     //
-    // ⚠ Limitação conhecida: "Arredondamento (+)" e "Arredondamento (-)" colidem
-    //    no slug atual (ambos viram ARREDONDAMENTO). Incluído só em Vencimentos.
-    const WL_VENCIMENTOS = [
-        'Dias Trabalhados', 'Salario Familia', 'DSR S/ Horas Extras', 'Auxilio Creche',
-        'Comissoes', 'DSR S/ Comissoes', 'BANCO DE HORAS 50%', 'Arredondamento (+)',
-        'Reembolso Vale transporte', 'Aviso Previo Indenizado', 'Media H. Extra S/ Aviso',
-        'Ferias Indenizadas', '1/3 Ferias Indenizadas', 'Adicional de Ferias Indenizadas',
-        '1/3 Adic. S/Ferias Indenizadas', 'Emprestimo Saldo Negativo',
-        '13o. Salario Indenizado', '13o. Salario Prop. Sobre Aviso Previo',
-        'Ferias Indenizadas sobre Aviso Previo', '1/3 Ferias Indenizadas sobre Aviso Previo',
-        'Ajuda de Custo', 'Media do 13o. Salario', 'Saldo de Salarios na Rescisao',
-    ];
-    const WL_DESCONTOS_FOLHA = [
-        'Contribuicao Assistencial', 'Arredondamento (-)', 'INSS', 'IRRF',
-        'INSS s/ 13o.Salario', 'INSS s/ 13o. Salario', // com e sem espaço após o ponto
-        'Multa Art. 480 CLT', 'HORAS NAO COMPENSADAS',
-        'DESC. EMPRESTIMO CONSIGNADO FGTS', 'DESCONTO EMPRESTIMO CONSIGNADO FGTS',
-    ];
-    const WL_BENEFICIOS_PAGOS = [
-        'Vale Transporte', 'Vale Refeicao', 'Assistencia Medica',
-        'Assistencia Odontologica', 'Vale Alimentacao',
-    ];
-    const WL_DESCONTOS_BNF = [
-        'Seguro de Vida', 'Descto de Vale Transporte', 'Devolucao de VR Nao Utilizado',
-        'Descto de Vale Refeicao', 'Descto de Assistencia Medica',
-    ];
+    // Descontos de Folha (INSS, IRRF, etc.) NÃO entram no cálculo de custo — já
+    // estão embutidos no bruto de SALARIO/PRO_LABORE. Mantidos apenas como
+    // informativo no modal "Olho".
+    //
+    // Chaves fora dos 5 buckets = "Outros valores importados" (amber no Olho).
 
-    const keyValor = (label) => slugEvento(label) + '_Valor';
-
-    const SET_VENC = new Set(WL_VENCIMENTOS.map(keyValor));
-    const SET_DESC_FOLHA = new Set(WL_DESCONTOS_FOLHA.map(keyValor));
-    // Benefícios pagos: pode vir da Folha (_Valor) ou do arquivo de Benefícios (Bnf_*).
-    const SET_BNF_PAGO = new Set([
-        ...WL_BENEFICIOS_PAGOS.map(keyValor),
-        'Bnf_VT', 'Bnf_VR', 'Bnf_VA', 'Bnf_PlanoSaude', 'Bnf_Odonto',
+    // Bucket 1 — Vencimentos Mensais (proventos da empresa).
+    const SET_VENC = new Set([
+        'SALARIO_Valor', 'SALARIO_BRUTO_MENSAL_Valor',
+        'PRO_LABORE_C_FGTS_Valor', 'PRO_LABORE_Valor',
+        'DIAS_TRABALHADOS_Valor', 'SALARIO_FAMILIA_Valor',
+        'DSR_S_HORAS_EXTRAS_Valor', 'AUXILIO_CRECHE_Valor',
+        'COMISSOES_Valor', 'DSR_S_COMISSOES_Valor',
+        'BANCO_DE_HORAS_50_Valor', 'ARREDONDAMENTO_Valor',
+        'REEMBOLSO_VALE_TRANSPORTE_Valor', 'AVISO_PREVIO_INDENIZADO_Valor',
+        'MEDIA_H_EXTRA_S_AVISO_Valor', 'FERIAS_INDENIZADAS_Valor',
+        '1_3_FERIAS_INDENIZADAS_Valor', 'ADICIONAL_DE_FERIAS_INDENIZADAS_Valor',
+        '1_3_ADIC_S_FERIAS_INDENIZADAS_Valor', 'EMPRESTIMO_SALDO_NEGATIVO_Valor',
+        '13O_SALARIO_INDENIZADO_Valor', '13O_SALARIO_PROP_SOBRE_AVISO_PREVIO_Valor',
+        'FERIAS_INDENIZADAS_SOBRE_AVISO_PREVIO_Valor',
+        '1_3_FERIAS_INDENIZADAS_SOBRE_AVISO_PREVIO_Valor',
+        'AJUDA_DE_CUSTO_Valor', 'MEDIA_DO_13O_SALARIO_Valor',
+        'SALDO_DE_SALARIOS_NA_RESCISAO_Valor',
     ]);
+
+    // Bucket 2 — Encargos Sociais (custo extra patronal).
+    // Importante: NUNCA incluir BASE_FGTS / BASE_INSS (base de cálculo, não pagamento).
+    const SET_ENCARGOS = new Set([
+        'INSS_PATRONAL_Valor', 'VALOR_FGTS_Valor', 'FGTS_Valor', 'TERCEIROS_Valor',
+    ]);
+
+    // Bucket 3 — Benefícios Pagos (custo de benefício ao empregado).
+    // Em adição: qualquer k.startsWith('Bnf_') também entra aqui (arquivo de Benefícios).
+    const SET_BNF_PAGO = new Set([
+        'VALE_TRANSPORTE_Valor', 'VALE_REFEICAO_Valor',
+        'ASSISTENCIA_MEDICA_Valor', 'ASSISTENCIA_ODONTOLOGICA_Valor',
+        'VALE_ALIMENTACAO_Valor',
+    ]);
+
+    // Bucket 4 — Descontos de Benefícios (coparticipação do empregado).
     const SET_BNF_DESC = new Set([
-        ...WL_DESCONTOS_BNF.map(keyValor),
-        'Bnf_Seguro',
+        'SEGURO_DE_VIDA_Valor', 'DESCTO_DE_VALE_TRANSPORTE_Valor',
+        'DEVOLUCAO_DE_VR_NAO_UTILIZADO_Valor',
+        'DESCTO_DE_VALE_REFEICAO_Valor',
+        'DESCTO_DE_ASSISTENCIA_MEDICA_Valor',
+    ]);
+
+    // Bucket 5 — Descontos Folha (INFORMATIVO — não entra na soma, só aparece no Olho).
+    const SET_DESC_FOLHA_INFO = new Set([
+        'INSS_Valor', 'IRRF_Valor', 'CONTRIBUICAO_ASSISTENCIAL_Valor',
+        'INSS_S_13OSALARIO_Valor', 'MULTA_ART_480_CLT_Valor',
+        'HORAS_NAO_COMPENSADAS_Valor', 'DESC_EMPRESTIMO_CONSIGNADO_FGTS_Valor',
     ]);
 
     function calcularTotais(reg) {
-        let vencimentos = 0, descontosFolha = 0, beneficios = 0, descontosBnf = 0;
+        let vencimentos = 0, encargos = 0, beneficios = 0, descontosBnf = 0;
         for (const k of Object.keys(reg || {})) {
             const raw = reg[k];
             if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
-            if (SET_VENC.has(k))        { vencimentos += raw; continue; }
-            if (SET_DESC_FOLHA.has(k))  { descontosFolha += raw; continue; }
-            if (SET_BNF_PAGO.has(k))    { beneficios += raw; continue; }
-            if (SET_BNF_DESC.has(k))    { descontosBnf += raw; continue; }
-            // Chave não mapeada: ignorada pelo cálculo, visível no modal "Olho".
+            if (SET_VENC.has(k))       { vencimentos += raw; continue; }
+            if (SET_ENCARGOS.has(k))   { encargos += raw; continue; }
+            if (k.startsWith('Bnf_'))  { beneficios += raw; continue; }
+            if (SET_BNF_PAGO.has(k))   { beneficios += raw; continue; }
+            if (SET_BNF_DESC.has(k))   { descontosBnf += raw; continue; }
+            // Descontos Folha (Bucket 5 / SET_DESC_FOLHA_INFO) e chaves desconhecidas
+            // não entram na soma — aparecem só no modal Olho.
         }
-        const total = vencimentos - descontosFolha + beneficios - descontosBnf;
-        return { vencimentos, descontosFolha, beneficios, descontosBnf, total };
+        const total = vencimentos + encargos + beneficios - descontosBnf;
+        return { vencimentos, encargos, beneficios, descontosBnf, total };
     }
 
     function escapeHTML(s) {
@@ -570,10 +585,10 @@
         histVazio.classList.add('hidden');
         histRodape.classList.remove('hidden');
 
-        let sV = 0, sDF = 0, sB = 0, sDB = 0, sT = 0;
+        let sV = 0, sE = 0, sB = 0, sDB = 0, sT = 0;
         const linhas = registros.map(r => {
             const t = calcularTotais(r);
-            sV += t.vencimentos; sDF += t.descontosFolha;
+            sV += t.vencimentos; sE += t.encargos;
             sB += t.beneficios; sDB += t.descontosBnf; sT += t.total;
             const nome = r.nome || '—';
             const cc = r.centro_custo || '—';
@@ -583,7 +598,7 @@
                     <td class="px-4 py-3 text-xs text-slate-500 font-mono">${fmtCPF(r.cpf)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(cc)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.vencimentos)}</td>
-                    <td class="px-4 py-3 text-xs text-right font-semibold text-red-600">${t.descontosFolha ? '-' + fmtBRL.format(t.descontosFolha) : fmtBRL.format(0)}</td>
+                    <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.encargos)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.beneficios)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-red-600">${t.descontosBnf ? '-' + fmtBRL.format(t.descontosBnf) : fmtBRL.format(0)}</td>
                     <td class="px-4 py-3 text-xs text-right font-extrabold text-secondary">${fmtBRL.format(t.total)}</td>
@@ -601,7 +616,7 @@
         });
         histCorpo.innerHTML = linhas.join('');
         document.getElementById('tot-vencimentos').textContent = fmtBRL.format(sV);
-        document.getElementById('tot-descontos-folha').textContent = sDF ? '-' + fmtBRL.format(sDF) : fmtBRL.format(0);
+        document.getElementById('tot-encargos').textContent = fmtBRL.format(sE);
         document.getElementById('tot-beneficios').textContent = fmtBRL.format(sB);
         document.getElementById('tot-descontos-bnf').textContent = sDB ? '-' + fmtBRL.format(sDB) : fmtBRL.format(0);
         document.getElementById('tot-total').textContent = fmtBRL.format(sT);
@@ -828,11 +843,13 @@
         if (IDENT_KEYS.has(k)) return 'identificacao';
         if (META_KEYS.has(k)) return 'metadados';
         if (typeof raw === 'number' && Number.isFinite(raw)) {
-            if (SET_VENC.has(k))       return 'vencimentos';
-            if (SET_DESC_FOLHA.has(k)) return 'descontos_folha';
-            if (SET_BNF_PAGO.has(k))   return 'beneficios';
-            if (SET_BNF_DESC.has(k))   return 'descontos_bnf';
-            if (k.endsWith('_Qtde'))   return 'quantidades';
+            if (SET_VENC.has(k))             return 'vencimentos';
+            if (SET_ENCARGOS.has(k))         return 'encargos';
+            if (k.startsWith('Bnf_'))        return 'beneficios';
+            if (SET_BNF_PAGO.has(k))         return 'beneficios';
+            if (SET_BNF_DESC.has(k))         return 'descontos_bnf';
+            if (SET_DESC_FOLHA_INFO.has(k))  return 'descontos_folha'; // informativo
+            if (k.endsWith('_Qtde'))         return 'quantidades';
             return 'outros_valores';
         }
         return 'outros';
@@ -866,9 +883,9 @@
             `${fmtCPF(reg.cpf)} · ${reg.centro_custo || '—'} · ${reg.competencia || '—'} · ${reg.empresa_atribuida || '—'}`;
 
         const grupos = {
-            identificacao: [], vencimentos: [], descontos_folha: [],
-            beneficios: [], descontos_bnf: [], quantidades: [],
-            outros_valores: [], metadados: [], outros: [],
+            identificacao: [], vencimentos: [], encargos: [],
+            beneficios: [], descontos_bnf: [], descontos_folha: [],
+            quantidades: [], outros_valores: [], metadados: [], outros: [],
         };
         for (const k of Object.keys(reg)) {
             const raw = reg[k];
@@ -897,10 +914,12 @@
         const body = document.getElementById('visualizar-body');
         body.innerHTML =
             secao('Identificação', 'badge', 'text-secondary', grupos.identificacao) +
-            secao('Vencimentos (Folha)', 'trending_up', 'text-primary', grupos.vencimentos) +
-            secao('Descontos (Folha)', 'trending_down', 'text-red-500', grupos.descontos_folha) +
+            secao('Vencimentos Mensais', 'trending_up', 'text-primary', grupos.vencimentos) +
+            secao('Encargos Sociais', 'account_balance', 'text-secondary', grupos.encargos) +
             secao('Benefícios Pagos', 'card_travel', 'text-tertiary', grupos.beneficios) +
             secao('Descontos em Benefícios', 'card_travel', 'text-red-500', grupos.descontos_bnf) +
+            secao('Descontos de Folha', 'trending_down', 'text-slate-500', grupos.descontos_folha,
+                  ` <span class="normal-case text-slate-400 font-normal">— informativo, não entra no Custo Total</span>`) +
             secao('Quantidades', 'functions', 'text-slate-500', grupos.quantidades) +
             secao('Outros valores importados', 'help', 'text-amber-500', grupos.outros_valores,
                   ` <span class="normal-case text-slate-400 font-normal">— não mapeados no cálculo</span>`) +
