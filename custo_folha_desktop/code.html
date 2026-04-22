@@ -682,7 +682,8 @@
         const compRef = filtroCompetencia.value;
         const emp = filtroEmpresa.value.trim();
         const filtroKey = `${compRef}|${emp}`;
-        atualizarChipFiltros(compRef, emp);
+        // NB: o chip "Filtros ativos" NÃO é atualizado aqui — ele só aparece quando o
+        // usuário aplica filtros explicitamente pelo modal "Filtros Avançados".
 
         // Sem filtro nenhum: mostra o que sobrou em memória mas não assina novo listener.
         if (!compRef && !emp) {
@@ -935,6 +936,8 @@
         else localStorage.removeItem(LS_COMP);
         if (filtroEmpresa.value) localStorage.setItem(LS_EMP, filtroEmpresa.value);
         else localStorage.removeItem(LS_EMP);
+        // Mostra o chip SÓ quando o usuário aplica filtros explicitamente.
+        atualizarChipFiltros(filtroCompetencia.value, filtroEmpresa.value.trim());
         carregarDadosTabela();
         fecharModal('modal-filtros');
     };
@@ -943,6 +946,7 @@
         filtroEmpresa.value = '';
         localStorage.removeItem(LS_COMP);
         localStorage.removeItem(LS_EMP);
+        atualizarChipFiltros('', ''); // esconde o chip
         carregarDadosTabela();
         fecharModal('modal-filtros');
     };
@@ -1096,6 +1100,8 @@
         filtroEmpresa.value = empresa;
         localStorage.setItem(LS_COMP, competenciaMes);
         localStorage.setItem(LS_EMP, empresa);
+        // Import não é "Aplicar" — mantém o chip escondido para tela limpa.
+        atualizarChipFiltros('', '');
 
         // Invalida o cache de disponíveis (há novos dados).
         disponiveisCache = null;
