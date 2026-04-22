@@ -155,20 +155,9 @@
   <div id="sidebar-container"></div>
 
   <main class="flex-1 ml-20 p-8">
-    <header class="flex justify-between items-center mb-6 border-b border-slate-200 pb-4">
+    <header class="flex items-center mb-6 border-b border-slate-200 pb-4">
       <div>
         <h1 class="text-lg font-extrabold text-brandDarkBlue font-manrope uppercase tracking-wider">Gerenciador CRF</h1>
-      </div>
-      <div class="flex items-center gap-4">
-        <button class="p-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full">
-          <span class="material-symbols-outlined" data-icon="notifications">notifications</span>
-        </button>
-        <div
-          class="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm cursor-pointer">
-          <span class="material-symbols-outlined text-primary">account_circle</span>
-          <span class="font-bold text-sm text-secondary truncate max-w-[120px]"
-            id="user-display-name">Carregando...</span>
-        </div>
       </div>
     </header>
 
@@ -968,7 +957,6 @@
         if (docSnap.exists()) {
           const dadosUser = docSnap.data();
           usuarioLogadoNome = dadosUser.nome || user.email;
-          document.getElementById('user-display-name').textContent = usuarioLogadoNome;
 
           if (dadosUser.status === 'inativo') {
             await signOut(auth);

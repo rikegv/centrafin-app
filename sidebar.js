@@ -18,18 +18,22 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     const isUsuariosActive = currentPath.includes('master.html') && !currentPath.includes('tab=logs') ? activeClass : inactiveClass;
     const isAuditoriaActive = currentPath.includes('tab=logs') ? activeClass : inactiveClass;
 
+    // Classe comum aplicada a cada link do menu — inclui borda sutil para dar aspecto premium.
+    // `last:border-0` zera a borda do último item de cada seção (relativo ao seu pai direto).
+    const menuLinkClass = 'mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all border-b border-white/[0.06] last:border-0';
+
     let adminMenuHtml = '';
     if (userProfile === 'master' || userProfile === 'super_admin') {
         adminMenuHtml = `
-            <div class="border-t border-white/10 mt-2 pt-4 px-2">
-                <p class="text-[9px] font-bold text-blue-200/40 uppercase tracking-widest px-2 mb-2 hidden group-hover:block transition-all duration-300">Administração</p>
-                
-                <a data-menu="usuarios" class="${isUsuariosActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all" href="${prefix}master.html">
+            <div class="mt-2 pt-4 px-2">
+                <p class="text-[9px] font-bold text-blue-200/40 uppercase tracking-widest px-2 mb-2 hidden group-hover:block transition-all duration-300">Segurança e Privacidade</p>
+
+                <a data-menu="usuarios" class="${isUsuariosActive} ${menuLinkClass}" href="${prefix}master.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px]">manage_accounts</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Usuários</span>
                 </a>
 
-                <a data-menu="auditoria" class="${isAuditoriaActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all" href="${prefix}master.html?tab=logs">
+                <a data-menu="auditoria" class="${isAuditoriaActive} ${menuLinkClass}" href="${prefix}master.html?tab=logs">
                     <span class="material-symbols-outlined shrink-0 text-[20px] text-blue-400">policy</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Auditoria (Logs)</span>
                 </a>
@@ -50,40 +54,37 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
             <!-- MENU PRINCIPAL -->
             <nav class="flex-1 flex flex-col gap-1 px-2 border-b border-white/10 pb-4 mb-4 overflow-y-auto no-scrollbar">
                 <p class="text-[9px] font-bold text-blue-200/40 uppercase tracking-widest px-4 mb-2 hidden group-hover:block transition-all duration-300">Menu Financeiro</p>
-                
-                <a data-menu="dashboard_master" class="${isMasterActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all" href="${prefix}dashboard_master_desktop/code.html">
+
+                <a data-menu="dashboard_master" class="${isMasterActive} ${menuLinkClass}" href="${prefix}dashboard_master_desktop/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('dashboard_master_desktop') ? 'text-primary' : ''}">dashboard</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Dashboard Geral</span>
                 </a>
 
-                <a data-menu="metas" class="${isMetasActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all" href="${prefix}metas_desktop/code.html">
+                <a data-menu="metas" class="${isMetasActive} ${menuLinkClass}" href="${prefix}metas_desktop/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('metas_desktop') ? 'text-primary' : ''}">track_changes</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Metas Financeiras</span>
                 </a>
 
-                <a data-menu="contas_receber" class="${isFatActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer" href="${prefix}contas_a_receber_desktop/code.html">
+                <a data-menu="contas_receber" class="${isFatActive} ${menuLinkClass} cursor-pointer" href="${prefix}contas_a_receber_desktop/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('contas_a_receber_desktop') ? 'text-primary' : ''}">payments</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Faturamento - Contas a receber</span>
                 </a>
 
-                <p class="text-[9px] font-bold text-blue-200/40 uppercase tracking-widest px-4 mt-3 mb-2 hidden group-hover:block transition-all duration-300">Lançamentos / Custos</p>
-
-                <a data-menu="custo_folha" class="${isCustoFolhaActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer" href="${prefix}custo_folha_desktop/code.html">
+                <a data-menu="custo_folha" class="${isCustoFolhaActive} ${menuLinkClass} cursor-pointer" href="${prefix}custo_folha_desktop/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('custo_folha_desktop') ? 'text-primary' : ''}">receipt_long</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Custo de Folha</span>
                 </a>
 
                 ${showProductionMenus ? `
-                <a data-menu="contas_pagar" class="${isPagarActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer" href="${prefix}contas_a_pagar_desktop/code.html">
+                <a data-menu="contas_pagar" class="${isPagarActive} ${menuLinkClass} cursor-pointer" href="${prefix}contas_a_pagar_desktop/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px]">account_balance_wallet</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Contas a Pagar</span>
                 </a>
 
-                <a data-menu="gestao_parceiros" class="${isParceirosActive} mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer" href="${prefix}gest_o_de_cadastros_ajuste_de_cores/code.html">
+                <a data-menu="gestao_parceiros" class="${isParceirosActive} ${menuLinkClass} cursor-pointer" href="${prefix}gest_o_de_cadastros_ajuste_de_cores/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px]">group</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Gestão de Parceiros</span>
                 </a>
-
                 ` : ''}
             </nav>
 

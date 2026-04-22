@@ -40,6 +40,34 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // BASES DE REFERÊNCIA — cadastros compartilhados (empresas, fornecedores, clientes, categorias)
+    // Leitura: qualquer autenticado (usado para preencher dropdowns).
+    // Escrita: apenas admin (CRUD vive em Gestão de Parceiros / master).
+    match /Base_Empresas/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+    match /Base_Fornecedores/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+    match /Base_Clientes/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+    match /Base_Categorias/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+    match /Base_Areas/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+    match /Base_Responsaveis/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
     // CUSTOS FOLHA — Leitura e Escrita protegidas pelo controle de acesso (Drop & Replace)
     match /CustosFolha/{docId} {
       allow read, write: if request.auth != null && hasMenu('custo_folha');

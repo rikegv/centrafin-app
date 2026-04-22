@@ -47,36 +47,22 @@
 <div id="sidebar-container"></div>
 
 <main class="ml-20 min-h-screen">
-    <header class="bg-white shadow-sm sticky top-0 z-40 flex justify-between items-center w-full px-8 py-4">
+    <header class="bg-white shadow-sm sticky top-0 z-40 flex items-center w-full px-8 py-4">
         <div class="flex items-center gap-4">
             <h1 class="text-xl font-extrabold tracking-tight text-slate-900 font-headline">CentraFin</h1>
             <div class="h-6 w-px bg-slate-200 mx-2"></div>
             <span class="text-slate-500 font-medium text-sm">Custo de Folha</span>
         </div>
-        <div class="flex items-center gap-4">
-            <div class="text-right">
-                <p id="user-nome" class="text-xs font-bold text-slate-900">—</p>
-                <p id="user-perfil" class="text-[10px] text-slate-500 font-medium">—</p>
-            </div>
-            <div class="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-sm ring-2 ring-white" id="user-avatar">--</div>
-        </div>
     </header>
 
-    <div class="p-8 space-y-8 max-w-6xl">
+    <div class="p-8 space-y-8">
         <!-- TÍTULO / CONTEXTO -->
-        <section class="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-                <h2 class="font-headline text-2xl font-extrabold text-secondary tracking-tight">Importar Custo de Folha</h2>
-                <p class="text-sm text-slate-500 mt-1 max-w-2xl">
-                    Envie os relatórios de <strong>Folha + Encargos</strong> e <strong>Benefícios</strong> referentes a uma competência.
-                    O sistema faz a limpeza, cruza os dados por CPF e grava tudo consolidado na coleção
-                    <code class="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-secondary font-mono">CustosFolha</code>.
-                </p>
-            </div>
-            <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-slate-400">
-                <span class="material-symbols-outlined text-base text-primary">verified</span>
-                ETL + Firestore
-            </div>
+        <section>
+            <h2 class="font-headline text-2xl font-extrabold text-secondary tracking-tight">Importar Custo de Folha</h2>
+            <p class="text-sm text-slate-500 mt-1 max-w-3xl">
+                Envie os relatórios de <strong>Folha + Encargos</strong> e <strong>Benefícios</strong> referentes a uma competência.
+                O sistema faz a limpeza, cruza os dados por CPF e grava tudo consolidado.
+            </p>
         </section>
 
         <!-- CARD FORMULÁRIO -->
@@ -152,8 +138,74 @@
             <div id="feedback-body" class="space-y-3 text-sm text-slate-700"></div>
         </section>
 
+        <!-- CARD HISTÓRICO DA COMPETÊNCIA -->
+        <section class="bg-white rounded-2xl editorial-shadow border border-slate-100 overflow-hidden">
+            <div class="flex items-center justify-between gap-4 px-8 py-6 border-b border-slate-100 flex-wrap">
+                <div>
+                    <h3 class="font-headline text-base font-bold text-secondary">Histórico da Competência</h3>
+                    <p id="hist-subtitulo" class="text-[11px] text-slate-400 font-medium mt-0.5">Selecione competência e empresa para visualizar.</p>
+                </div>
+                <div id="hist-contador" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"></div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-100 text-[10px]">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Nome</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">CPF</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Centro de Custo</th>
+                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Salários</th>
+                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Encargos</th>
+                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Benefícios</th>
+                            <th class="px-4 py-3 text-right font-bold text-secondary uppercase tracking-widest">Custo Full</th>
+                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hist-corpo" class="divide-y divide-slate-50"></tbody>
+                    <tfoot id="hist-rodape" class="bg-slate-50/50 border-t border-slate-100 hidden">
+                        <tr class="text-[11px] font-extrabold text-secondary">
+                            <td class="px-4 py-3" colspan="3">Totais</td>
+                            <td id="tot-salarios" class="px-4 py-3 text-right">—</td>
+                            <td id="tot-encargos" class="px-4 py-3 text-right">—</td>
+                            <td id="tot-beneficios" class="px-4 py-3 text-right">—</td>
+                            <td id="tot-full" class="px-4 py-3 text-right">—</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div id="hist-vazio" class="px-8 py-16 text-center">
+                <span class="material-symbols-outlined text-4xl text-slate-300">table_view</span>
+                <p class="text-sm text-slate-400 font-medium mt-2">Sem dados para exibir.</p>
+                <p class="text-[11px] text-slate-300 mt-1">Escolha competência e empresa — ou faça uma importação.</p>
+            </div>
+        </section>
+
     </div>
 </main>
+
+<!-- Modal placeholder de Edição (próxima iteração) -->
+<div id="modal-editar" class="fixed inset-0 z-[75] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-editar-overlay"></div>
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100" id="modal-editar-content">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center">
+                <span class="material-symbols-outlined text-secondary">edit_note</span>
+            </div>
+            <div>
+                <h3 class="font-headline text-base font-bold text-secondary">Editar Custo Individual</h3>
+                <p class="text-[11px] text-slate-400 font-medium">Em breve.</p>
+            </div>
+        </div>
+        <p class="text-sm text-slate-500 leading-relaxed">
+            A edição individual de eventos (salário, encargos, benefícios) do funcionário <strong id="modal-editar-nome" class="text-secondary">—</strong> será liberada na próxima iteração.
+        </p>
+        <pre id="modal-editar-payload" class="mt-4 text-[10px] bg-slate-50 border border-slate-100 rounded-lg p-3 max-h-60 overflow-auto text-slate-500 font-mono"></pre>
+        <div class="flex justify-end mt-5">
+            <button id="btn-editar-fechar" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">FECHAR</button>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Premium de Sucesso -->
 <div id="modal-sucesso" class="fixed inset-0 z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
@@ -223,6 +275,20 @@
     const cardFeedback = document.getElementById('card-feedback');
     const feedbackBody = document.getElementById('feedback-body');
 
+    // Histórico
+    const histCorpo = document.getElementById('hist-corpo');
+    const histVazio = document.getElementById('hist-vazio');
+    const histRodape = document.getElementById('hist-rodape');
+    const histSubtitulo = document.getElementById('hist-subtitulo');
+    const histContador = document.getElementById('hist-contador');
+
+    // Formatadores
+    const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const fmtCPF = (c) => {
+        const s = String(c || '').replace(/\D/g, '').padStart(11, '0');
+        return s.length === 11 ? `${s.slice(0,3)}.${s.slice(3,6)}.${s.slice(6,9)}-${s.slice(9,11)}` : (c || '—');
+    };
+
     // ── AUTH / SIDEBAR / GUARDIÃO ────────────────────────────────────────────
     onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "../login.html"; return; }
@@ -250,21 +316,33 @@
                 return;
             }
             renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
-
-            // Header user info
-            const nome = dadosUser.nome || user.email;
-            document.getElementById('user-nome').textContent = nome;
-            document.getElementById('user-perfil').textContent = (dadosUser.perfil || '').replace('_', ' ');
-            document.getElementById('user-avatar').textContent = String(nome).trim().slice(0, 2).toUpperCase();
         } catch (err) {
             console.error('Falha na autenticação:', err);
             window.location.href = "../login.html";
         }
     });
 
+    // ── PERSISTÊNCIA DOS FILTROS (localStorage) ──────────────────────────────
+    const LS_COMP = 'centrafin.custofolha.competencia';
+    const LS_EMP  = 'centrafin.custofolha.empresa';
+
+    // Competência inicial: última salva → senão, mês corrente.
+    (function setarCompetenciaInicial() {
+        const salvo = localStorage.getItem(LS_COMP);
+        if (salvo && /^\d{4}-\d{2}$/.test(salvo)) {
+            inputCompetencia.value = salvo;
+            return;
+        }
+        const hoje = new Date();
+        inputCompetencia.value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    })();
+
     // ── POPULAR DROPDOWN DE EMPRESAS ─────────────────────────────────────────
+    const empresaSalva = localStorage.getItem(LS_EMP) || '';
+    let empresaJaRestaurada = false;
+
     onSnapshot(collection(db, "Base_Empresas"), (snap) => {
-        const valAtual = selectEmpresa.value;
+        const valAtual = selectEmpresa.value || (empresaJaRestaurada ? '' : empresaSalva);
         selectEmpresa.innerHTML = '<option value="">Selecione a empresa...</option>';
         const lista = [];
         snap.forEach(d => lista.push(d.id));
@@ -274,8 +352,196 @@
             opt.value = id; opt.textContent = id;
             selectEmpresa.appendChild(opt);
         }
-        selectEmpresa.value = valAtual;
+        // Restaura a empresa anterior só se ela ainda existir na base.
+        if (valAtual && lista.includes(valAtual)) {
+            selectEmpresa.value = valAtual;
+            if (!empresaJaRestaurada) {
+                empresaJaRestaurada = true;
+                carregarDadosTabela(); // agora temos ambos os filtros → dispara a query
+            }
+        }
     });
+
+    // ── HISTÓRICO: classificação de chaves ETL ───────────────────────────────
+    // Ordem dos filtros aplicados a cada chave numérica de cada documento:
+    //   A) RX_IGNORAR → descarta bases de cálculo, totalizadores, deduções do empregado,
+    //                  contribuições e seguros (já embutidos no bruto ou auxiliares).
+    //   B) Bnf_<x>   → BENEFÍCIOS (VT, VR, VA, PlanoSaude, Odonto, Seguro).
+    //   C) _Valor + RX_ENCARGOS → ENCARGOS (custo patronal).
+    //   D) _Valor restante     → SALÁRIOS (proventos líquidos: salário, HE, comissão, etc.).
+    //   E) Fallback: se SALÁRIOS ficou em zero e `salario_base` existe como number,
+    //                assume-o como salário (caso de estagiário só-benefícios).
+    //
+    // Lookahead negativo `(?!PATRONAL)` em INSS_/CONTRIBUICAO_ impede que o passo A
+    // engula encargos legítimos (`INSS_PATRONAL_Valor`) que devem cair no passo C.
+    // O ETL remove pontos em slugEvento — "I.N.S.S." vira "INSS" — por isso a regex
+    // usa `INSS_` e `IRRF_` e não `I_N_S_S_` / `I_R_R_F_`.
+    const RX_IGNORAR  = /^(BASE_|TOT_|TOTAL_|LIQUIDO|INSS_(?!PATRONAL)|IRRF_|DESCTO_|DESCONTO_|CONTRIBUICAO_(?!PATRONAL)|SEGURO_)/i;
+    const RX_ENCARGOS = /(PATRONAL|FGTS|SEST|SENAT|RAT|TERCEIROS|SALARIO_EDUCACAO|FAP|INCRA|SEBRAE)/i;
+
+    function calcularTotais(reg) {
+        let salarios = 0, encargos = 0, beneficios = 0;
+        for (const k of Object.keys(reg || {})) {
+            const raw = reg[k];
+            // Gate numérico: só somamos Number finito nativo. Strings, Timestamps, null,
+            // undefined, NaN, Infinity, arrays e objetos caem fora sem coerção.
+            if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
+
+            // A) Peneira: bases, totalizadores, deduções do empregado, contrib., seguros.
+            if (RX_IGNORAR.test(k)) continue;
+
+            // B) Benefícios
+            if (k.startsWith('Bnf_')) { beneficios += raw; continue; }
+
+            // C) Encargos patronais (precisa terminar em _Valor E casar com RX_ENCARGOS)
+            if (k.endsWith('_Valor') && RX_ENCARGOS.test(k)) { encargos += raw; continue; }
+
+            // D) Qualquer _Valor que sobreviveu aos passos A-C é provento → Salários.
+            if (k.endsWith('_Valor')) { salarios += raw; continue; }
+            // Chaves numéricas fora desse contrato (ex.: *_Qtde) ficam de fora.
+        }
+
+        // E) Fallback: nenhum provento somado + salario_base disponível → usa como salário.
+        if (salarios === 0
+            && typeof reg.salario_base === 'number'
+            && Number.isFinite(reg.salario_base)) {
+            salarios += reg.salario_base;
+        }
+
+        return { salarios, encargos, beneficios, full: salarios + encargos + beneficios };
+    }
+
+    // ── HISTÓRICO: listener reativo aos filtros ──────────────────────────────
+    let unsubHistorico = null;
+    let ultimoFiltroKey = '';
+    let cacheRegistros = [];
+
+    function competenciaBRfromRef(ref) {
+        if (!ref || !/^\d{4}-\d{2}$/.test(ref)) return ref || '';
+        const [y, m] = ref.split('-'); return `${m}/${y}`;
+    }
+
+    function renderHistorico(registros) {
+        cacheRegistros = registros;
+        if (!registros.length) {
+            histCorpo.innerHTML = '';
+            histVazio.classList.remove('hidden');
+            histRodape.classList.add('hidden');
+            histContador.textContent = '';
+            return;
+        }
+        histVazio.classList.add('hidden');
+        histRodape.classList.remove('hidden');
+
+        let somaS = 0, somaE = 0, somaB = 0, somaF = 0;
+        const linhas = registros.map(r => {
+            const t = calcularTotais(r);
+            somaS += t.salarios; somaE += t.encargos; somaB += t.beneficios; somaF += t.full;
+            const nome = r.nome || '—';
+            const cc = r.centro_custo || '—';
+            return `
+                <tr class="hover:bg-slate-50 transition-colors group">
+                    <td class="px-4 py-3 text-xs font-bold text-slate-900">${escapeHTML(nome)}</td>
+                    <td class="px-4 py-3 text-xs text-slate-500 font-mono">${fmtCPF(r.cpf)}</td>
+                    <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(cc)}</td>
+                    <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.salarios)}</td>
+                    <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.encargos)}</td>
+                    <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.beneficios)}</td>
+                    <td class="px-4 py-3 text-xs text-right font-extrabold text-secondary">${fmtBRL.format(t.full)}</td>
+                    <td class="px-4 py-3 text-right">
+                        <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button data-acao="editar" data-id="${r._id}" class="p-1.5 rounded-lg hover:bg-slate-100 hover:text-primary transition-colors" title="Editar">
+                                <span class="material-symbols-outlined text-base">edit</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        });
+        histCorpo.innerHTML = linhas.join('');
+        document.getElementById('tot-salarios').textContent = fmtBRL.format(somaS);
+        document.getElementById('tot-encargos').textContent = fmtBRL.format(somaE);
+        document.getElementById('tot-beneficios').textContent = fmtBRL.format(somaB);
+        document.getElementById('tot-full').textContent = fmtBRL.format(somaF);
+        histContador.textContent = `${registros.length} funcionário${registros.length === 1 ? '' : 's'}`;
+    }
+
+    function escapeHTML(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function carregarDadosTabela() {
+        const compRef = inputCompetencia.value;
+        const emp = selectEmpresa.value.trim();
+        const filtroKey = `${compRef}|${emp}`;
+
+        // Estado "aguardando seleção": limpa listener, volta ao estado vazio.
+        if (!compRef || !emp) {
+            if (unsubHistorico) { unsubHistorico(); unsubHistorico = null; }
+            ultimoFiltroKey = '';
+            histSubtitulo.textContent = 'Selecione competência e empresa para visualizar.';
+            renderHistorico([]);
+            return;
+        }
+        if (filtroKey === ultimoFiltroKey) return; // nada mudou; evita resubscribe duplicado
+        ultimoFiltroKey = filtroKey;
+
+        if (unsubHistorico) { unsubHistorico(); unsubHistorico = null; }
+        histSubtitulo.textContent = `Competência ${competenciaBRfromRef(compRef)} · ${emp}`;
+
+        const q = query(
+            collection(db, COLECAO),
+            where('competencia_ref', '==', compRef),
+            where('empresa_atribuida', '==', emp)
+        );
+        unsubHistorico = onSnapshot(q, (snap) => {
+            const regs = [];
+            snap.forEach(d => regs.push({ _id: d.id, ...d.data() }));
+            regs.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+            renderHistorico(regs);
+        }, (err) => {
+            console.error('[Histórico] listener falhou:', err);
+            if (err.code === 'permission-denied') {
+                histSubtitulo.textContent = 'Sem permissão para ler CustosFolha.';
+            } else {
+                histSubtitulo.textContent = 'Falha ao carregar histórico.';
+            }
+            renderHistorico([]);
+        });
+    }
+
+    inputCompetencia.addEventListener('change', () => {
+        localStorage.setItem(LS_COMP, inputCompetencia.value);
+        carregarDadosTabela();
+    });
+    selectEmpresa.addEventListener('change', () => {
+        localStorage.setItem(LS_EMP, selectEmpresa.value);
+        carregarDadosTabela();
+    });
+
+    // Gatilho inicial: se a competência já vier preenchida (default/salva) e a empresa
+    // ainda não tiver sido restaurada, isto mostra o estado de espera certo. Quando a
+    // listagem de empresas chega via onSnapshot, `carregarDadosTabela()` é chamada lá.
+    carregarDadosTabela();
+
+    // ── BOTÃO EDITAR (placeholder — lógica na próxima iteração) ──────────────
+    histCorpo.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-acao="editar"]');
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        const reg = cacheRegistros.find(r => r._id === id);
+        const modal = document.getElementById('modal-editar');
+        document.getElementById('modal-editar-nome').textContent = reg?.nome || '—';
+        document.getElementById('modal-editar-payload').textContent = JSON.stringify(reg, null, 2);
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        document.getElementById('modal-editar-content').classList.remove('scale-95');
+    });
+    const fecharEditar = () => {
+        const modal = document.getElementById('modal-editar');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        document.getElementById('modal-editar-content').classList.add('scale-95');
+    };
+    document.getElementById('btn-editar-fechar').onclick = fecharEditar;
+    document.getElementById('modal-editar-overlay').onclick = fecharEditar;
 
     // ── UI: DROPZONES → abrir input ao clicar no label ───────────────────────
     // (O <label for> nativo já faria isso, mas como o input está dentro do label,
@@ -411,13 +677,18 @@
             return mostrarErro('Falha ao gravar os novos registros: ' + (err.message || 'erro desconhecido'));
         }
 
-        // Sucesso
+        // Sucesso — mantém competência/empresa preenchidas pra tabela de histórico refletir o que foi gravado.
         renderDiagnostico(diagnostico, empresa, competenciaBR);
         setLoading(false);
-        form.reset();
+        inputFolha.value = '';
+        inputBeneficios.value = '';
         labelFolha.textContent = 'Clique para selecionar (.xlsx, .xls, .csv)';
         labelBeneficios.textContent = 'Clique para selecionar (.xlsx, .xls, .csv)';
         document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('has-file'));
+        // Persiste o par escolhido e refresca a tabela (filtros já estão nos inputs).
+        localStorage.setItem(LS_COMP, inputCompetencia.value);
+        localStorage.setItem(LS_EMP, selectEmpresa.value);
+        carregarDadosTabela();
         mostrarSucesso(`${diagnostico.totalUnificado} funcionários gravados na competência ${competenciaBR} (${empresa}).`);
     });
 
