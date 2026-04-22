@@ -6,9 +6,19 @@
     "public": ".",
     "ignore": [
       "firebase.json",
+      "firestore.rules",
       "**/.*",
       "**/node_modules/**",
-      "firestore.rules"
+      "populador.html",
+      "**/*.mjs",
+      "**/*.ps1",
+      "**/*.py",
+      "**/tmp_*.js",
+      "**/clean_*.js",
+      "**/*.md",
+      "package.json",
+      "package-lock.json",
+      "centrafin-app.code-workspace"
     ]
   }
 }
