@@ -7,7 +7,17 @@
       "Bash(node _smoke_test_folha.mjs)",
       "Bash(firebase --version)",
       "Bash(firebase projects:list)",
-      "Bash(firebase deploy *)"
+      "Bash(firebase deploy *)",
+      "Bash(node --check \"c:/Users/Henrique/Desktop/centrafin-app/sidebar.js\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(awk '{print $NF}')",
+      "Bash(grep -v '^$')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' https://centra-fin.web.app/__TRACKED_VAR__)",
+      "Bash(node _diag_custos_folha.mjs)",
+      "Bash(where gcloud *)",
+      "Bash(node _smoke_wl.mjs)"
     ]
   }
 }
