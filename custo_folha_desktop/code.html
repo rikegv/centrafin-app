@@ -178,6 +178,7 @@
                 <span class="material-symbols-outlined text-4xl text-slate-300">table_view</span>
                 <p class="text-sm text-slate-400 font-medium mt-2">Sem dados para exibir.</p>
                 <p class="text-[11px] text-slate-300 mt-1">Escolha competência e empresa — ou faça uma importação.</p>
+                <div id="hist-disponiveis" class="mt-6"></div>
             </div>
         </section>
 
@@ -237,7 +238,7 @@
     import { renderSidebar } from "../sidebar.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import {
-        getFirestore, collection, query, where, getDocs, writeBatch, doc, serverTimestamp, onSnapshot
+        getFirestore, collection, query, where, getDocs, writeBatch, doc, serverTimestamp, onSnapshot, limit
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { importarCustoFolha } from "../importacao_folha.js";
@@ -421,6 +422,64 @@
         const [y, m] = ref.split('-'); return `${m}/${y}`;
     }
 
+    // ── DESCOBERTA: combinações (competencia_ref × empresa) presentes na coleção ──
+    // Faz um único getDocs (sem filtro, com teto de 2000 docs) por sessão. O resultado
+    // alimenta as "chips" clicáveis no estado vazio, pra quem esqueceu qual competência
+    // já foi importada não fique adivinhando.
+    let disponiveisCache = null;
+    let disponiveisPromise = null;
+
+    async function descobrirDisponiveis() {
+        if (disponiveisCache) return disponiveisCache;
+        if (disponiveisPromise) return disponiveisPromise;
+        disponiveisPromise = (async () => {
+            try {
+                const snap = await getDocs(query(collection(db, COLECAO), limit(2000)));
+                const mapa = new Map();
+                snap.forEach(d => {
+                    const dd = d.data();
+                    const ref = dd.competencia_ref || '';
+                    const emp = dd.empresa_atribuida || '';
+                    const k = `${ref}|${emp}`;
+                    const prev = mapa.get(k) || { ref, emp, count: 0 };
+                    prev.count++;
+                    mapa.set(k, prev);
+                });
+                disponiveisCache = [...mapa.values()].sort((a, b) =>
+                    (b.ref || '').localeCompare(a.ref || '') ||
+                    (a.emp || '').localeCompare(b.emp || '')
+                );
+            } catch (err) {
+                console.error('[Disponíveis] falhou:', err);
+                disponiveisCache = [];
+            }
+            return disponiveisCache;
+        })();
+        return disponiveisPromise;
+    }
+
+    async function renderDisponiveis() {
+        const alvo = document.getElementById('hist-disponiveis');
+        if (!alvo) return;
+        alvo.innerHTML = '<p class="text-[11px] text-slate-300">carregando combinações...</p>';
+        const disp = await descobrirDisponiveis();
+        if (!disp || !disp.length) {
+            alvo.innerHTML = '<p class="text-[11px] text-slate-300 italic">Nenhuma importação encontrada na coleção.</p>';
+            return;
+        }
+        const chips = disp.slice(0, 24).map(d => {
+            const label = `${d.ref ? competenciaBRfromRef(d.ref) : '?'} · ${escapeHTML(d.emp) || '?'}`;
+            return `<button type="button"
+                data-ref="${escapeHTML(d.ref)}" data-emp="${escapeHTML(d.emp)}"
+                class="text-[11px] font-bold bg-slate-100 hover:bg-primary hover:text-[#341100] text-slate-600 px-3 py-1.5 rounded-full transition-colors">
+                ${label} <span class="opacity-60 ml-1">·${d.count}</span>
+            </button>`;
+        }).join(' ');
+        alvo.innerHTML = `
+            <p class="text-[11px] text-slate-400 font-medium mb-2">Competências com dados gravados — clique para abrir:</p>
+            <div class="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto">${chips}</div>`;
+    }
+
     function renderHistorico(registros) {
         cacheRegistros = registros;
         if (!registros.length) {
@@ -428,6 +487,8 @@
             histVazio.classList.remove('hidden');
             histRodape.classList.add('hidden');
             histContador.textContent = '';
+            // Fire-and-forget: popula a lista de competências disponíveis no estado vazio.
+            renderDisponiveis();
             return;
         }
         histVazio.classList.add('hidden');
@@ -515,6 +576,23 @@
     });
     selectEmpresa.addEventListener('change', () => {
         localStorage.setItem(LS_EMP, selectEmpresa.value);
+        carregarDadosTabela();
+    });
+
+    // Clique nas chips de competências disponíveis (no estado vazio) → aplica o filtro.
+    document.getElementById('hist-disponiveis').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-ref]');
+        if (!btn) return;
+        const ref = btn.getAttribute('data-ref');
+        const emp = btn.getAttribute('data-emp');
+        if (ref && /^\d{4}-\d{2}$/.test(ref)) {
+            inputCompetencia.value = ref;
+            localStorage.setItem(LS_COMP, ref);
+        }
+        if (emp && [...selectEmpresa.options].some(o => o.value === emp)) {
+            selectEmpresa.value = emp;
+            localStorage.setItem(LS_EMP, emp);
+        }
         carregarDadosTabela();
     });
 
