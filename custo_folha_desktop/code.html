@@ -47,38 +47,40 @@
 <div id="sidebar-container"></div>
 
 <main class="ml-20 min-h-screen">
-    <header class="bg-white shadow-sm sticky top-0 z-40 flex items-center w-full px-8 py-4">
-        <div class="flex items-center gap-4">
-            <h1 class="text-xl font-extrabold tracking-tight text-slate-900 font-headline">CentraFin</h1>
-            <div class="h-6 w-px bg-slate-200 mx-2"></div>
-            <span class="text-slate-500 font-medium text-sm">Custo de Folha</span>
-        </div>
-    </header>
-
     <div class="p-8 space-y-6">
-        <!-- TÍTULO / CONTEXTO -->
-        <section>
-            <h2 class="font-headline text-2xl font-extrabold text-secondary tracking-tight">Custo de Folha</h2>
-            <p id="hist-subtitulo" class="text-sm text-slate-500 mt-1">Carregando última competência importada…</p>
+        <!-- TÍTULO / CONTEXTO (premium header do módulo) -->
+        <section class="bg-white rounded-2xl editorial-shadow border border-slate-100">
+            <div class="flex items-center gap-4 px-8 py-6 border-b border-slate-100">
+                <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-primary text-[32px] leading-none">payments</span>
+                </div>
+                <div class="min-w-0 flex flex-col justify-center">
+                    <h1 class="font-headline text-3xl font-extrabold text-slate-800 tracking-tight leading-tight [text-shadow:0_1px_2px_rgba(15,23,42,0.08)]">Custo de Folha</h1>
+                    <p class="text-[12px] text-slate-400 font-medium mt-1">Importação, histórico e análise consolidada dos custos com pessoal.</p>
+                </div>
+            </div>
         </section>
 
         <!-- CARD HISTÓRICO + TOPBAR DE TABELA -->
         <section class="bg-white rounded-2xl editorial-shadow border border-slate-100 overflow-hidden">
-            <!-- Topbar: busca · filtros · importar -->
+            <!-- Topbar: busca · [filtros · importar] -->
             <div class="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-100 flex-wrap">
                 <div class="flex items-center gap-3 flex-1 min-w-[280px]">
                     <div class="relative flex-1 max-w-md">
                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">search</span>
-                        <input id="input-busca" type="text" placeholder="Buscar por nome, CPF ou centro de custo…"
+                        <input id="input-busca" type="text" placeholder="Buscar por nome, CPF, centro de custo ou empresa…"
                                class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
                     </div>
+                </div>
+                <div class="flex items-center gap-3">
                     <button id="btn-abrir-filtros" type="button" class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold transition-colors">
                         <span class="material-symbols-outlined text-base">tune</span>
                         Filtros Avançados
                     </button>
-                </div>
-                <div class="flex items-center gap-4">
-                    <span id="hist-contador" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"></span>
+                    <button id="btn-limpar-filtros-topbar" type="button" class="hidden items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-lg text-xs font-bold transition-colors">
+                        <span class="material-symbols-outlined text-base">filter_alt_off</span>
+                        Limpar Filtros
+                    </button>
                     <button id="btn-abrir-importar" type="button" class="flex items-center gap-2 px-5 py-2 bg-primary text-[#341100] rounded-lg text-sm font-bold shadow-sm hover:brightness-105 active:scale-95 transition-all">
                         <span class="material-symbols-outlined text-lg">upload_file</span>
                         Importar
@@ -94,8 +96,10 @@
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 border-b border-slate-100 text-[10px]">
                         <tr>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Competência</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Nome</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">CPF</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Empresa</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Centro de Custo</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Vencimentos</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Encargos Sociais</th>
@@ -106,17 +110,6 @@
                         </tr>
                     </thead>
                     <tbody id="hist-corpo" class="divide-y divide-slate-50"></tbody>
-                    <tfoot id="hist-rodape" class="bg-slate-50/50 border-t border-slate-100 hidden">
-                        <tr class="text-[11px] font-extrabold text-secondary">
-                            <td class="px-4 py-3" colspan="3">Totais</td>
-                            <td id="tot-vencimentos" class="px-4 py-3 text-right">—</td>
-                            <td id="tot-encargos" class="px-4 py-3 text-right">—</td>
-                            <td id="tot-beneficios" class="px-4 py-3 text-right">—</td>
-                            <td id="tot-descontos-bnf" class="px-4 py-3 text-right text-red-600">—</td>
-                            <td id="tot-total" class="px-4 py-3 text-right">—</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
             <div id="hist-vazio" class="px-8 py-16 text-center">
@@ -198,11 +191,18 @@
                         <span class="material-symbols-outlined text-[14px] align-middle">info</span>
                         Reimportar mesma competência e empresa <strong>substitui</strong> os registros.
                     </p>
-                    <button type="submit" id="btn-processar"
-                            class="flex items-center gap-2 px-7 py-2.5 bg-primary text-[#341100] rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none">
-                        <span class="material-symbols-outlined text-lg" id="icon-btn">auto_awesome</span>
-                        <span id="label-btn">Processar e Importar</span>
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <button type="button" id="btn-abrir-gerenciar-empresas"
+                                class="flex items-center gap-2 px-5 py-2.5 bg-white text-secondary border border-slate-200 hover:bg-slate-50 rounded-xl text-sm font-bold transition-all">
+                            <span class="material-symbols-outlined text-lg">apartment</span>
+                            Gerenciar Empresas
+                        </button>
+                        <button type="submit" id="btn-processar"
+                                class="flex items-center gap-2 px-7 py-2.5 bg-primary text-[#341100] rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none">
+                            <span class="material-symbols-outlined text-lg" id="icon-btn">auto_awesome</span>
+                            <span id="label-btn">Processar e Importar</span>
+                        </button>
+                    </div>
                 </div>
             </form>
 
@@ -247,6 +247,14 @@
                     <option value="">Todas…</option>
                 </select>
             </div>
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Centro de Custo</label>
+                <select id="filtro_centro_custo"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="">Todos</option>
+                </select>
+                <p class="text-[10px] text-slate-400 font-medium mt-1.5">Alimentado automaticamente pelas importações.</p>
+            </div>
         </div>
         <div class="mt-8 flex gap-3">
             <button id="btn-filtros-limpar" type="button" class="flex-1 px-5 py-2.5 text-slate-500 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all">Limpar</button>
@@ -280,25 +288,89 @@
     </div>
 </div>
 
-<!-- Modal placeholder de Edição (próxima iteração) -->
+<!-- Modal de Edição Cadastral -->
 <div id="modal-editar" class="fixed inset-0 z-[75] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
     <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-editar-overlay"></div>
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100" id="modal-editar-content">
-        <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center">
-                <span class="material-symbols-outlined text-secondary">edit_note</span>
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[90vh] overflow-hidden flex flex-col" id="modal-editar-content">
+        <div class="flex justify-between items-start gap-4 px-8 pt-8 pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-primary">edit_note</span>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="font-headline text-base font-bold text-secondary">Editar Cadastro</h3>
+                    <p id="editar-subtitulo" class="text-[11px] text-slate-400 font-medium truncate">—</p>
+                </div>
             </div>
-            <div>
-                <h3 class="font-headline text-base font-bold text-secondary">Editar Custo Individual</h3>
-                <p class="text-[11px] text-slate-400 font-medium">Em breve.</p>
-            </div>
+            <button id="btn-editar-fechar" type="button" class="text-slate-400 hover:text-slate-700 transition-colors shrink-0">
+                <span class="material-symbols-outlined">close</span>
+            </button>
         </div>
-        <p class="text-sm text-slate-500 leading-relaxed">
-            A edição individual de eventos (salário, encargos, benefícios) do funcionário <strong id="modal-editar-nome" class="text-secondary">—</strong> será liberada na próxima iteração.
-        </p>
-        <pre id="modal-editar-payload" class="mt-4 text-[10px] bg-slate-50 border border-slate-100 rounded-lg p-3 max-h-60 overflow-auto text-slate-500 font-mono"></pre>
-        <div class="flex justify-end mt-5">
-            <button id="btn-editar-fechar" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">FECHAR</button>
+
+        <form id="form-editar" class="overflow-y-auto flex-1 px-8 py-6 space-y-5">
+            <!-- Campos cadastrais -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Nome</label>
+                    <input id="editar-nome" type="text" required
+                           class="w-full border border-slate-200 rounded-lg py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">CPF <span class="text-slate-400 font-normal normal-case">(chave, não editável)</span></label>
+                    <input id="editar-cpf" type="text" readonly
+                           class="w-full border border-slate-200 rounded-lg py-2.5 px-3.5 text-sm font-mono font-medium bg-slate-50 text-slate-500 cursor-not-allowed outline-none" />
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Empresa</label>
+                    <select id="editar-empresa" required
+                            class="w-full border border-slate-200 rounded-lg py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                        <option value="">Selecione…</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Centro de Custo</label>
+                    <input id="editar-cc" type="text"
+                           class="w-full border border-slate-200 rounded-lg py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                </div>
+            </div>
+
+            <!-- Resumo Financeiro Atual (readonly) -->
+            <div class="mt-2">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-base text-tertiary">query_stats</span>
+                    <h4 class="text-[11px] font-bold text-tertiary uppercase tracking-widest">Resumo Financeiro Atual</h4>
+                </div>
+                <div class="bg-slate-50/60 border border-slate-100 rounded-lg px-4 py-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Vencimentos</p>
+                        <p id="editar-tot-vencimentos" class="text-sm font-extrabold text-slate-800 mt-0.5">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Encargos</p>
+                        <p id="editar-tot-encargos" class="text-sm font-extrabold text-slate-800 mt-0.5">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Benefícios</p>
+                        <p id="editar-tot-beneficios" class="text-sm font-extrabold text-slate-800 mt-0.5">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Desc. Benef.</p>
+                        <p id="editar-tot-descontos" class="text-sm font-extrabold text-red-600 mt-0.5">—</p>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400 font-medium italic mt-2">
+                    <span class="material-symbols-outlined text-[13px] align-middle">info</span>
+                    Para alterar valores financeiros, reimporte a planilha corrigida.
+                </p>
+            </div>
+        </form>
+
+        <div class="px-8 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button id="btn-editar-cancelar" type="button" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">CANCELAR</button>
+            <button id="btn-editar-salvar" type="button" class="flex items-center gap-2 px-6 py-2.5 bg-primary text-[#341100] rounded-lg text-xs font-bold shadow-lg shadow-primary/30 hover:brightness-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                <span class="material-symbols-outlined text-base" id="editar-salvar-icon">save</span>
+                <span id="editar-salvar-label">SALVAR ALTERAÇÕES</span>
+            </button>
         </div>
     </div>
 </div>
@@ -329,11 +401,84 @@
     </div>
 </div>
 
+<!-- Modal Premium de Confirmação (substitui window.confirm e window.alert) -->
+<div id="modal-confirmar" class="fixed inset-0 z-[90] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-confirmar-overlay"></div>
+    <div class="bg-white w-full max-w-md rounded-xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100" id="modal-confirmar-content">
+        <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+            <span id="modal-confirmar-icone" class="material-symbols-outlined text-4xl text-red-500">warning</span>
+        </div>
+        <h3 id="modal-confirmar-titulo" class="font-headline text-xl font-bold text-secondary mb-2 tracking-tight">Confirmar ação</h3>
+        <p id="modal-confirmar-mensagem" class="text-slate-500 text-[13px] font-medium leading-relaxed whitespace-pre-line">Tem certeza?</p>
+        <div class="flex items-center gap-3 mt-7">
+            <button id="btn-confirmar-cancelar" type="button" class="flex-1 px-5 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">Cancelar</button>
+            <button id="btn-confirmar-ok" type="button" class="flex-1 px-5 py-2.5 bg-red-600 text-white rounded-lg text-xs font-bold shadow-lg shadow-red-600/20 hover:brightness-105 active:scale-95 transition-all">Sim, Excluir</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gerenciar Empresas (CRUD Base_Empresas) -->
+<div id="modal-gerenciar-empresas" class="fixed inset-0 z-[78] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-gerenciar-empresas-overlay"></div>
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[90vh] overflow-hidden flex flex-col" id="modal-gerenciar-empresas-content">
+        <div class="flex justify-between items-start gap-4 px-8 pt-8 pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-secondary">apartment</span>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="font-headline text-base font-bold text-secondary">Gerenciar Empresas</h3>
+                </div>
+            </div>
+            <button id="btn-fechar-gerenciar-empresas" type="button" class="text-slate-400 hover:text-slate-700 transition-colors shrink-0">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="px-8 py-5 overflow-y-auto flex-1 space-y-4">
+            <!-- Banner de atenção -->
+            <div class="flex items-start gap-3 bg-yellow-50 border border-yellow-400 text-yellow-800 rounded-xl px-4 py-3">
+                <span class="material-symbols-outlined text-yellow-600 mt-0.5">warning</span>
+                <p class="text-[12px] leading-relaxed font-medium">
+                    <strong>Atenção:</strong> A edição ou exclusão de uma empresa afetará os dados históricos de todos os módulos que a utilizam.
+                </p>
+            </div>
+
+            <!-- Form de Adicionar -->
+            <div class="flex items-end gap-2">
+                <div class="flex-1">
+                    <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Nova empresa</label>
+                    <input id="input-nova-empresa" type="text" placeholder="Nome fantasia…"
+                           class="w-full border border-slate-200 rounded-lg py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                </div>
+                <button id="btn-adicionar-empresa" type="button" class="flex items-center gap-1.5 px-4 py-2.5 bg-primary text-[#341100] rounded-lg text-xs font-bold shadow-sm hover:brightness-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined text-base">add</span>
+                    Adicionar
+                </button>
+            </div>
+
+            <!-- Lista de empresas -->
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Empresas cadastradas</h4>
+                    <span id="gerenciar-empresas-contador" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">—</span>
+                </div>
+                <ul id="gerenciar-empresas-lista" class="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden bg-white"></ul>
+                <p id="gerenciar-empresas-vazio" class="hidden text-[11px] text-slate-400 italic text-center py-8">Nenhuma empresa cadastrada ainda.</p>
+            </div>
+        </div>
+
+        <div class="px-8 py-4 border-t border-slate-100 flex justify-end">
+            <button id="btn-gerenciar-empresas-ok" type="button" class="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">FECHAR</button>
+        </div>
+    </div>
+</div>
+
 <script type="module">
     import { renderSidebar } from "../sidebar.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import {
-        getFirestore, collection, query, where, getDocs, writeBatch, doc, serverTimestamp, onSnapshot, limit, orderBy
+        getFirestore, collection, query, where, getDocs, writeBatch, doc, serverTimestamp, onSnapshot, limit, orderBy, updateDoc, addDoc, setDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { importarCustoFolha, slugEvento } from "../importacao_folha.js";
@@ -375,7 +520,9 @@
     // Filtros de visualização (modal "Filtros Avançados")
     const filtroCompetencia = document.getElementById('filtro-competencia');
     const filtroEmpresa = document.getElementById('filtro-empresa');
+    const filtroCc = document.getElementById('filtro_centro_custo'); // <select>
     const chipFiltrosAtivos = document.getElementById('chip-filtros-ativos');
+    let filtroCcValor = ''; // filtro client-side aplicado sobre cacheRegistros
 
     // Top bar da tabela
     const inputBusca = document.getElementById('input-busca');
@@ -383,12 +530,10 @@
     // Histórico
     const histCorpo = document.getElementById('hist-corpo');
     const histVazio = document.getElementById('hist-vazio');
-    const histRodape = document.getElementById('hist-rodape');
-    const histSubtitulo = document.getElementById('hist-subtitulo');
-    const histContador = document.getElementById('hist-contador');
 
     // Formatadores
     const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const fmtDataBR = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const fmtCPF = (c) => {
         const s = String(c || '').replace(/\D/g, '').padStart(11, '0');
         return s.length === 11 ? `${s.slice(0,3)}.${s.slice(3,6)}.${s.slice(6,9)}-${s.slice(9,11)}` : (c || '—');
@@ -403,8 +548,14 @@
             let dsnap = await getDoc(dref);
             if (!dsnap.exists()) { dref = docFn(db, "Usuarios", user.uid); dsnap = await getDoc(dref); }
             if (!dsnap.exists()) {
+                await confirmarAcao({
+                    titulo: 'Acesso Negado',
+                    mensagem: 'Sua sessão expirou ou você não tem permissão para esta tela.',
+                    labelConfirmar: 'Entendido',
+                    labelCancelar: null,
+                    tom: 'erro',
+                });
                 await signOut(auth);
-                alert('Acesso Negado: Usuário não encontrado no sistema.');
                 window.location.href = "../login.html";
                 return;
             }
@@ -415,8 +566,14 @@
                 return;
             }
             if (dadosUser.perfil !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
+                await confirmarAcao({
+                    titulo: 'Acesso Negado',
+                    mensagem: 'Sua sessão expirou ou você não tem permissão para esta tela.',
+                    labelConfirmar: 'Entendido',
+                    labelCancelar: null,
+                    tom: 'erro',
+                });
                 await signOut(auth);
-                alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
                 window.location.href = "../login.html";
                 return;
             }
@@ -430,6 +587,7 @@
     // ── PERSISTÊNCIA DOS FILTROS (localStorage) ──────────────────────────────
     const LS_COMP = 'centrafin.custofolha.competencia';
     const LS_EMP  = 'centrafin.custofolha.empresa';
+    const LS_CC   = 'centrafin.custofolha.centrocusto';
 
     // ── POPULAR DROPDOWNS DE EMPRESAS (Import + Filtros) ─────────────────────
     let empresasDisponiveis = [];
@@ -437,8 +595,14 @@
     let onEmpresasCarregadas = null; // callback opcional disparado na primeira carga
 
     onSnapshot(collection(db, "Base_Empresas"), (snap) => {
+        // Retrocompat: docs legados usam o ID como nome; novos docs (cadastro rápido)
+        // usam `nome_fantasia`. Preferimos `nome_fantasia` quando presente.
         const lista = [];
-        snap.forEach(d => lista.push(d.id));
+        snap.forEach(d => {
+            const data = d.data() || {};
+            const nome = (data.nome_fantasia || d.id || '').trim();
+            if (nome) lista.push(nome);
+        });
         lista.sort((a, b) => a.localeCompare(b));
         empresasDisponiveis = lista;
 
@@ -463,6 +627,35 @@
                 cb();
             }
         }
+    });
+
+    // ── POPULAR DROPDOWN DE CENTROS DE CUSTO (Base_Centros_Custo) ────────────
+    // A base é alimentada automaticamente pelo ETL (sincronizarCentrosDeCusto).
+    onSnapshot(collection(db, "Base_Centros_Custo"), (snap) => {
+        const nomes = [];
+        snap.forEach(d => {
+            const nome = String((d.data() || {}).nome || '').trim();
+            if (nome) nomes.push(nome);
+        });
+        nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const valAtual = filtroCc.value;
+        filtroCc.innerHTML = '<option value="">Todos</option>';
+        for (const n of nomes) {
+            const opt = document.createElement('option');
+            opt.value = n; opt.textContent = n;
+            filtroCc.appendChild(opt);
+        }
+        // Preserva a seleção atual se ela ainda existir; senão mantém um fantasma
+        // para não perder o filtro ativo quando a base ainda não refletiu.
+        if (valAtual && !nomes.includes(valAtual)) {
+            const opt = document.createElement('option');
+            opt.value = valAtual;
+            opt.textContent = `${valAtual} (não cadastrado)`;
+            filtroCc.appendChild(opt);
+        }
+        filtroCc.value = valAtual || '';
+    }, (err) => {
+        console.warn('[Base_Centros_Custo] listener falhou:', err?.code || err?.message);
     });
 
     // ── WHITELISTS DE CLASSIFICAÇÃO — 5 buckets contábeis (spec definitiva) ──
@@ -490,18 +683,26 @@
     function isVencimento(k) {
         const key = String(k || '').toUpperCase();
 
-        // 1. Blindagem: rejeita Encargos, Descontos de Folha e Bases de cálculo.
+        // 1. Blindagem: rejeita Quantidades (contadores de dias/horas, não R$),
+        //    Encargos, Descontos de Folha e Bases de cálculo.
+        if (key.endsWith('_QTDE')) return false;
         if (key.includes('INSS') || key.includes('IRRF') || key.includes('DESCONTO') ||
             key.includes('EDUCACAO') || key.includes('FGTS') || key.includes('BASE_')) {
             return false;
         }
 
         // 2. Palavras-chave raízes de proventos da folha.
+        //    DIAS_TRABALHADOS fica fora: é quantidade (vai pro bucket _Qtde),
+        //    não um provento em R$ — evita "valor fantasma" casando por substring.
+        //    BONUS/PREMIO/PREMIACAO/GRATIFICACAO: pagamentos eventuais que ainda
+        //    são custo de pessoal — compõem o Custo Total via Vencimentos.
         const keywords = [
-            'SALARIO', 'PRO_LABORE', 'DIAS_TRABALHADOS', 'DSR', 'CRECHE',
+            'SALARIO', 'PRO_LABORE', 'DSR', 'CRECHE',
             'COMISSAO', 'BANCO_DE_HORAS', 'ARREDONDAMENTO', 'REEMBOLSO',
             'AVISO_PREVIO', 'FERIAS', '1_3', 'EMPRESTIMO_SALDO_NEGATIVO',
             '13O', 'AJUDA_DE_CUSTO', 'RESCISAO', 'HORA_EXTRA',
+            'PARTICIPACAO', 'LUCRO',
+            'BONUS', 'PREMIO', 'PREMIACAO', 'GRATIFICACAO',
         ];
 
         // 3. Se contém qualquer raiz acima, é Vencimento.
@@ -572,12 +773,19 @@
     let termoBusca = '';          // filtro client-side (input #input-busca)
 
     function aplicarBusca(registros) {
-        if (!termoBusca) return registros;
+        let out = registros;
+        // Filtro client-side por Centro de Custo (dropdown) — match EXATO.
+        if (filtroCcValor) {
+            out = out.filter(r => String(r.centro_custo || '') === filtroCcValor);
+        }
+        if (!termoBusca) return out;
         const t = termoBusca.toLowerCase();
-        return registros.filter(r =>
+        const tDigitos = t.replace(/\D/g, '');
+        return out.filter(r =>
             String(r.nome || '').toLowerCase().includes(t) ||
-            String(r.cpf || '').includes(t.replace(/\D/g, '')) ||
-            String(r.centro_custo || '').toLowerCase().includes(t)
+            (tDigitos && String(r.cpf || '').replace(/\D/g, '').includes(tDigitos)) ||
+            String(r.centro_custo || '').toLowerCase().includes(t) ||
+            String(r.empresa_atribuida || '').toLowerCase().includes(t)
         );
     }
 
@@ -586,8 +794,6 @@
         if (!registros.length) {
             histCorpo.innerHTML = '';
             histVazio.classList.remove('hidden');
-            histRodape.classList.add('hidden');
-            histContador.textContent = '';
             // Se a query base veio vazia, mostra as combinações disponíveis.
             // Se é só a busca que filtrou tudo, não mostra chips (confunde).
             if (!cacheRegistros.length) renderDisponiveis();
@@ -595,19 +801,21 @@
             return;
         }
         histVazio.classList.add('hidden');
-        histRodape.classList.remove('hidden');
 
-        let sV = 0, sE = 0, sB = 0, sDB = 0, sT = 0;
         const linhas = registros.map(r => {
             const t = calcularTotais(r);
-            sV += t.vencimentos; sE += t.encargos;
-            sB += t.beneficios; sDB += t.descontosBnf; sT += t.total;
             const nome = r.nome || '—';
             const cc = r.centro_custo || '—';
+            const emp = r.empresa_atribuida || '—';
+            const comp = r.competencia_ref
+                ? competenciaBRfromRef(r.competencia_ref)
+                : (r.competencia || '—');
             return `
-                <tr class="hover:bg-slate-50 transition-colors group">
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3 text-xs text-slate-500 font-mono">${escapeHTML(comp)}</td>
                     <td class="px-4 py-3 text-xs font-bold text-slate-900">${escapeHTML(nome)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 font-mono">${fmtCPF(r.cpf)}</td>
+                    <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(emp)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(cc)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.vencimentos)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.encargos)}</td>
@@ -615,11 +823,11 @@
                     <td class="px-4 py-3 text-xs text-right font-semibold text-red-600">${t.descontosBnf ? '-' + fmtBRL.format(t.descontosBnf) : fmtBRL.format(0)}</td>
                     <td class="px-4 py-3 text-xs text-right font-extrabold text-secondary">${fmtBRL.format(t.total)}</td>
                     <td class="px-4 py-3 text-right">
-                        <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button data-acao="visualizar" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg hover:bg-slate-100 hover:text-tertiary transition-colors" title="Visualizar dados completos">
+                        <div class="flex justify-end gap-1">
+                            <button data-acao="visualizar" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-tertiary transition-colors" title="Visualizar dados completos">
                                 <span class="material-symbols-outlined text-base">visibility</span>
                             </button>
-                            <button data-acao="editar" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg hover:bg-slate-100 hover:text-primary transition-colors" title="Editar">
+                            <button data-acao="editar" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors" title="Editar">
                                 <span class="material-symbols-outlined text-base">edit</span>
                             </button>
                         </div>
@@ -627,16 +835,6 @@
                 </tr>`;
         });
         histCorpo.innerHTML = linhas.join('');
-        document.getElementById('tot-vencimentos').textContent = fmtBRL.format(sV);
-        document.getElementById('tot-encargos').textContent = fmtBRL.format(sE);
-        document.getElementById('tot-beneficios').textContent = fmtBRL.format(sB);
-        document.getElementById('tot-descontos-bnf').textContent = sDB ? '-' + fmtBRL.format(sDB) : fmtBRL.format(0);
-        document.getElementById('tot-total').textContent = fmtBRL.format(sT);
-        const contadorBase = `${registros.length} funcionário${registros.length === 1 ? '' : 's'}`;
-        const extra = (termoBusca && registros.length < cacheRegistros.length)
-            ? ` · filtrados de ${cacheRegistros.length}`
-            : '';
-        histContador.textContent = contadorBase + extra;
     }
 
     // ── DESCOBERTA: combinações (competencia_ref × empresa) presentes ────────
@@ -695,101 +893,84 @@
     }
 
     // ── CARREGAR DADOS DA TABELA ─────────────────────────────────────────────
-    function atualizarChipFiltros(compRef, emp) {
-        if (!compRef && !emp) { chipFiltrosAtivos.classList.add('hidden'); chipFiltrosAtivos.classList.remove('flex'); chipFiltrosAtivos.innerHTML = ''; return; }
+    function atualizarChipFiltros(compRef, emp, cc) {
+        if (!compRef && !emp && !cc) { chipFiltrosAtivos.classList.add('hidden'); chipFiltrosAtivos.classList.remove('flex'); chipFiltrosAtivos.innerHTML = ''; return; }
         const partes = [];
         if (compRef) partes.push(`<span class="inline-flex items-center gap-1 bg-secondary/5 text-secondary px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">event</span> ${competenciaBRfromRef(compRef)}</span>`);
         if (emp) partes.push(`<span class="inline-flex items-center gap-1 bg-secondary/5 text-secondary px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">apartment</span> ${escapeHTML(emp)}</span>`);
+        if (cc) partes.push(`<span class="inline-flex items-center gap-1 bg-secondary/5 text-secondary px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">account_tree</span> ${escapeHTML(cc)}</span>`);
         chipFiltrosAtivos.innerHTML = `<span class="text-slate-400">Filtros ativos:</span> ${partes.join(' ')}`;
         chipFiltrosAtivos.classList.remove('hidden');
         chipFiltrosAtivos.classList.add('flex');
     }
 
+    // Limite do histórico global (somente quando nenhum filtro de competência/empresa
+    // está aplicado) — evita baixar a coleção inteira em cenários de volume.
+    const HIST_GLOBAL_LIMIT = 1000;
+
     function carregarDadosTabela() {
         const compRef = filtroCompetencia.value;
         const emp = filtroEmpresa.value.trim();
         const filtroKey = `${compRef}|${emp}`;
-        // NB: o chip "Filtros ativos" NÃO é atualizado aqui — ele só aparece quando o
-        // usuário aplica filtros explicitamente pelo modal "Filtros Avançados".
-
-        // Sem filtro nenhum: mostra o que sobrou em memória mas não assina novo listener.
-        if (!compRef && !emp) {
-            if (unsubHistorico) { unsubHistorico(); unsubHistorico = null; }
-            ultimoFiltroKey = '';
-            histSubtitulo.textContent = 'Selecione competência e/ou empresa em Filtros Avançados para visualizar.';
-            cacheRegistros = [];
-            renderHistorico();
-            return;
-        }
         if (filtroKey === ultimoFiltroKey) return;
         ultimoFiltroKey = filtroKey;
 
         if (unsubHistorico) { unsubHistorico(); unsubHistorico = null; }
-        const partesSubtitulo = [];
-        if (compRef) partesSubtitulo.push(`Competência ${competenciaBRfromRef(compRef)}`);
-        if (emp) partesSubtitulo.push(emp);
-        histSubtitulo.textContent = partesSubtitulo.join(' · ') || 'Todos os registros';
 
-        const condicoes = [];
-        if (compRef) condicoes.push(where('competencia_ref', '==', compRef));
-        if (emp) condicoes.push(where('empresa_atribuida', '==', emp));
-        const q = query(collection(db, COLECAO), ...condicoes);
+        // Monta a query Firestore conforme o que estiver selecionado. Se nada estiver,
+        // traz o histórico global ordenado por dataImportacao desc.
+        let q;
+        if (compRef && emp) {
+            q = query(collection(db, COLECAO),
+                where('competencia_ref', '==', compRef),
+                where('empresa_atribuida', '==', emp));
+        } else if (compRef) {
+            q = query(collection(db, COLECAO),
+                where('competencia_ref', '==', compRef));
+        } else if (emp) {
+            q = query(collection(db, COLECAO),
+                where('empresa_atribuida', '==', emp));
+        } else {
+            q = query(collection(db, COLECAO),
+                orderBy('dataImportacao', 'desc'),
+                limit(HIST_GLOBAL_LIMIT));
+        }
 
         unsubHistorico = onSnapshot(q, (snap) => {
             const regs = [];
             snap.forEach(d => regs.push({ _id: d.id, ...d.data() }));
-            regs.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+            // Ordem estável: quando houver competência/empresa, ordena por nome;
+            // no histórico global a ordem já vem do Firestore (dataImportacao desc),
+            // mas fazemos um sort secundário por nome dentro de cada importação.
+            if (compRef || emp) {
+                regs.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+            }
             cacheRegistros = regs;
             renderHistorico();
         }, (err) => {
             console.error('[Histórico] listener falhou:', err);
-            if (err.code === 'permission-denied') {
-                histSubtitulo.textContent = 'Sem permissão para ler CustosFolha.';
-            } else {
-                histSubtitulo.textContent = 'Falha ao carregar histórico.';
-            }
             cacheRegistros = [];
             renderHistorico();
         });
     }
 
-    // ── AUTO-LOAD: última competência importada (ou localStorage) ────────────
-    async function resolverFiltroInicial() {
-        // 1) Prioriza valores salvos pelo usuário.
-        const compSalvo = localStorage.getItem(LS_COMP);
-        const empSalva = localStorage.getItem(LS_EMP) || '';
-        if (compSalvo && /^\d{4}-\d{2}$/.test(compSalvo)) {
-            return { compRef: compSalvo, emp: empSalva };
-        }
-        // 2) Senão, busca o doc mais recentemente importado.
-        try {
-            const snap = await getDocs(query(
-                collection(db, COLECAO),
-                orderBy('dataImportacao', 'desc'),
-                limit(1)
-            ));
-            if (!snap.empty) {
-                const dd = snap.docs[0].data();
-                return { compRef: dd.competencia_ref || '', emp: dd.empresa_atribuida || '' };
-            }
-        } catch (err) {
-            console.warn('[Auto-load] não localizou competência recente:', err?.code || err?.message);
-        }
-        // 3) Fallback: mês corrente, sem empresa.
-        const hoje = new Date();
-        return {
-            compRef: `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`,
-            emp: '',
-        };
-    }
-
+    // ── AUTO-LOAD: restaura filtros salvos (opcionais) e dispara o histórico.
+    //    A competência NÃO é mais obrigatória: sem filtros, o histórico global
+    //    (ordenado por dataImportacao desc) é carregado.
     (async function bootstrap() {
-        const { compRef, emp } = await resolverFiltroInicial();
-        filtroCompetencia.value = compRef || '';
-        // Empresa precisa esperar o dropdown ser populado pelo Base_Empresas snapshot.
+        const compSalvo = localStorage.getItem(LS_COMP) || '';
+        const empSalva  = localStorage.getItem(LS_EMP) || '';
+        const ccSalvo   = localStorage.getItem(LS_CC) || '';
+        if (/^\d{4}-\d{2}$/.test(compSalvo)) filtroCompetencia.value = compSalvo;
+        filtroCc.value = ccSalvo;
+        filtroCcValor = ccSalvo;
         const aplicar = () => {
-            if (emp && empresasDisponiveis.includes(emp)) filtroEmpresa.value = emp;
+            if (empSalva && empresasDisponiveis.includes(empSalva)) filtroEmpresa.value = empSalva;
+            if (compSalvo || empSalva || ccSalvo) {
+                atualizarChipFiltros(filtroCompetencia.value, filtroEmpresa.value.trim(), ccSalvo);
+            }
             carregarDadosTabela();
+            verificarVisibilidadeBotaoLimpar();
         };
         if (empresasCarregadas) aplicar();
         else onEmpresasCarregadas = aplicar;
@@ -835,48 +1016,229 @@
         else if (acao === 'editar') abrirEditar(reg);
     });
 
+    // ── MODAL EDITAR: cadastro (nome/empresa/cc) — valores financeiros são readonly.
+    // CPF é a chave funcional do registro e fica travado. Valores vêm do recálculo
+    // pela calcularTotais(reg), mesma lógica usada na tabela e no Olho.
+    let editandoId = null;
+    const editarNome     = document.getElementById('editar-nome');
+    const editarCpf      = document.getElementById('editar-cpf');
+    const editarEmpresa  = document.getElementById('editar-empresa');
+    const editarCc       = document.getElementById('editar-cc');
+    const editarSubtitulo = document.getElementById('editar-subtitulo');
+    const btnEditarSalvar = document.getElementById('btn-editar-salvar');
+    const editarSalvarIcon = document.getElementById('editar-salvar-icon');
+    const editarSalvarLabel = document.getElementById('editar-salvar-label');
+
+    function popularEditarEmpresa(empSelecionada) {
+        editarEmpresa.innerHTML = '<option value="">Selecione…</option>';
+        for (const id of empresasDisponiveis) {
+            const opt = document.createElement('option');
+            opt.value = id; opt.textContent = id;
+            editarEmpresa.appendChild(opt);
+        }
+        // Se a empresa atual não estiver no Base_Empresas, injeta opção "fantasma"
+        // para não perder o valor exibido.
+        if (empSelecionada && !empresasDisponiveis.includes(empSelecionada)) {
+            const opt = document.createElement('option');
+            opt.value = empSelecionada;
+            opt.textContent = `${empSelecionada} (fora da base)`;
+            editarEmpresa.appendChild(opt);
+        }
+        editarEmpresa.value = empSelecionada || '';
+    }
+
     function abrirEditar(reg) {
-        document.getElementById('modal-editar-nome').textContent = reg.nome || '—';
-        document.getElementById('modal-editar-payload').textContent = JSON.stringify(reg, null, 2);
+        editandoId = reg._id;
+        editarNome.value    = reg.nome || '';
+        editarCpf.value     = fmtCPF(reg.cpf);
+        editarCc.value      = reg.centro_custo || '';
+        popularEditarEmpresa(reg.empresa_atribuida || '');
+        editarSubtitulo.textContent =
+            `${fmtCPF(reg.cpf)} · ${reg.competencia || '—'} · ${reg.empresa_atribuida || '—'}`;
+
+        const t = calcularTotais(reg);
+        document.getElementById('editar-tot-vencimentos').textContent = fmtBRL.format(t.vencimentos);
+        document.getElementById('editar-tot-encargos').textContent    = fmtBRL.format(t.encargos);
+        document.getElementById('editar-tot-beneficios').textContent  = fmtBRL.format(t.beneficios);
+        document.getElementById('editar-tot-descontos').textContent   = t.descontosBnf ? '-' + fmtBRL.format(t.descontosBnf) : fmtBRL.format(0);
+
         abrirModal('modal-editar');
     }
-    document.getElementById('btn-editar-fechar').onclick = () => fecharModal('modal-editar');
-    document.getElementById('modal-editar-overlay').onclick = () => fecharModal('modal-editar');
+
+    function setEditarLoading(estado) {
+        btnEditarSalvar.disabled = estado;
+        if (estado) {
+            editarSalvarIcon.textContent = 'progress_activity';
+            editarSalvarIcon.classList.add('spin');
+            editarSalvarLabel.textContent = 'SALVANDO…';
+        } else {
+            editarSalvarIcon.textContent = 'save';
+            editarSalvarIcon.classList.remove('spin');
+            editarSalvarLabel.textContent = 'SALVAR ALTERAÇÕES';
+        }
+    }
+
+    async function salvarEdicao() {
+        if (!editandoId) return;
+        const nome = editarNome.value.trim();
+        const emp  = editarEmpresa.value.trim();
+        const cc   = editarCc.value.trim();
+        if (!nome) return mostrarErro('Informe o nome do funcionário.');
+        if (!emp)  return mostrarErro('Selecione a empresa.');
+
+        setEditarLoading(true);
+        try {
+            await updateDoc(doc(db, COLECAO, editandoId), {
+                nome,
+                empresa_atribuida: emp,
+                centro_custo: cc,
+            });
+            // Atualiza o cache em memória para refletir imediatamente na tabela,
+            // sem esperar o ciclo do onSnapshot.
+            const idx = cacheRegistros.findIndex(r => r._id === editandoId);
+            if (idx >= 0) {
+                cacheRegistros[idx] = { ...cacheRegistros[idx], nome, empresa_atribuida: emp, centro_custo: cc };
+                renderHistorico();
+            }
+            fecharModal('modal-editar');
+            editandoId = null;
+            mostrarSucesso('Cadastro atualizado.');
+        } catch (err) {
+            console.error('[Editar] updateDoc falhou:', err);
+            if (err.code === 'permission-denied') {
+                mostrarErro('Acesso Negado: seu perfil não tem permissão para editar CustosFolha.');
+            } else {
+                mostrarErro('Falha ao salvar: ' + (err.message || 'erro desconhecido'));
+            }
+        } finally {
+            setEditarLoading(false);
+        }
+    }
+
+    document.getElementById('btn-editar-fechar').onclick    = () => { fecharModal('modal-editar'); editandoId = null; };
+    document.getElementById('btn-editar-cancelar').onclick  = () => { fecharModal('modal-editar'); editandoId = null; };
+    document.getElementById('modal-editar-overlay').onclick = () => { fecharModal('modal-editar'); editandoId = null; };
+    btnEditarSalvar.onclick = salvarEdicao;
+    document.getElementById('form-editar').addEventListener('submit', (e) => {
+        e.preventDefault();
+        salvarEdicao();
+    });
 
     // ── MODAL VISUALIZAR: itera TODAS as chaves do doc, agrupadas ───────────
-    // Categorias de exibição:
-    //   Identificação, Vencimentos, Descontos Folha, Benefícios Pagos,
-    //   Descontos Benefícios, Outros Valores (chaves numéricas sem mapeamento),
-    //   Quantidades (*_Qtde) e Metadados (competencia*, empresa_*, dataImportacao…)
-    const IDENT_KEYS = new Set(['nome','cpf','codigo','centro_custo','funcao','departamento','admissao','filial']);
-    const META_KEYS = new Set(['competencia','competencia_ref','empresa_atribuida','tipo','dataImportacao','_id','_origens','_origem']);
+    // Roteamento mutuamente exclusivo (if/else if) na ordem:
+    //   1. Datas e Prazos   — substring DT/DATA/VECTO/PRORROGACAO/ADMISSAO
+    //   2. Qtde e Índices   — endsWith _Qtde OU substring DIAS/PERCENTUAL OU endsWith %
+    //   3. Identificação    — chaves literais (IDENT_KEYS)
+    //   4. Log de Importação — chaves literais (META_KEYS)
+    //   5. Buckets contábeis — Encargos / Bnf / Vencimentos / Desc Folha (apenas números)
+    //   6. Outros valores (Amber) — números restantes (ex.: _Valor não mapeado)
+    //   7. Outros — strings/objetos restantes (seção residual discreta)
+    const IDENT_KEYS = new Set(['nome','cpf','codigo','centro_custo','funcao','departamento','filial']);
+    const META_KEYS = new Set(['competencia','competencia_ref','empresa_atribuida','tipo','_id','_origens','_origem']);
+    const RGX_DATA = /(?:DT|DATA|VECTO|PRORROGACAO|ADMISSAO)/;
+    const RGX_QTDE_IDX = /DIAS|PERCENTUAL/;
+
+    // Chaves da planilha que são puramente informativas/ruidosas e não devem
+    // aparecer no Modal Olho. Lista extensível — manter comentário de origem.
+    //   HORARIO / HORARIO_*: serial de tempo do Excel (ex.: 9:00:18 → 9001800),
+    //   não é valor em R$ e não tem função no cálculo.
+    const RGX_SUPRIMIDAS_NO_OLHO = /HORARIO/;
+    function ehChaveSuprimidaNoOlho(k) {
+        return RGX_SUPRIMIDAS_NO_OLHO.test(String(k).toUpperCase());
+    }
+
+    function ehChaveData(k) {
+        return RGX_DATA.test(String(k).toUpperCase());
+    }
+    function ehChaveQtdeIdx(k) {
+        const KU = String(k).toUpperCase();
+        return KU.endsWith('_QTDE') || RGX_QTDE_IDX.test(KU) || k.endsWith('%');
+    }
+    function ehChavePercentual(k) {
+        return k.endsWith('%') || String(k).toUpperCase().includes('PERCENTUAL');
+    }
 
     function classificarChave(k, raw) {
+        // A) Datas e Prazos — prioridade máxima.
+        if (ehChaveData(k)) return 'datas';
+        // B) Quantidades e Índices.
+        if (ehChaveQtdeIdx(k)) return 'quantidades';
+        // C) Identificação & Log de Importação — chaves literais.
         if (IDENT_KEYS.has(k)) return 'identificacao';
         if (META_KEYS.has(k)) return 'metadados';
+        // Buckets contábeis (apenas números finitos).
         if (typeof raw === 'number' && Number.isFinite(raw)) {
-            // Mesma ordem do calcularTotais: Encargos/Bnf estritos ANTES da checagem
-            // flexível de Vencimentos, para evitar vazamentos.
             if (SET_ENCARGOS.has(k))         return 'encargos';
             if (k.startsWith('Bnf_'))        return 'beneficios';
             if (SET_BNF_PAGO.has(k))         return 'beneficios';
             if (SET_BNF_DESC.has(k))         return 'descontos_bnf';
             if (isVencimento(k))             return 'vencimentos';
             if (SET_DESC_FOLHA_INFO.has(k))  return 'descontos_folha'; // informativo
-            if (k.endsWith('_Qtde'))         return 'quantidades';
+            // D) Amber — só o que sobrou E é número (dinheiro não mapeado).
             return 'outros_valores';
         }
+        // Resto (strings/objetos sem encaixe) — seção residual discreta.
         return 'outros';
+    }
+
+    function formatarData(raw) {
+        if (raw === null || raw === undefined || raw === '') return '—';
+        const pad = (n) => String(n).padStart(2, '0');
+        // Normaliza ano de 2 dígitos (convenção janela 00–29 → 2000–2029; 30–99 → 1930–1999).
+        const normalizarAno = (y) => {
+            const s = String(y);
+            const n = Number(s);
+            if (!Number.isFinite(n)) return s;
+            if (s.length <= 2) return n <= 29 ? 2000 + n : 1900 + n;
+            return n;
+        };
+        // Firestore Timestamp
+        if (raw && typeof raw === 'object' && typeof raw.seconds === 'number') {
+            return fmtDataBR.format(new Date(raw.seconds * 1000));
+        }
+        if (raw instanceof Date && !isNaN(raw)) return fmtDataBR.format(raw);
+        if (typeof raw === 'string') {
+            const s = raw.trim();
+            // ISO YYYY-MM-DD[...]
+            const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (iso) return `${pad(iso[3])}/${pad(iso[2])}/${iso[1]}`;
+            // BR D/M/YY[YY] ou D-M-YY[YY] ou D.M.YY[YY] — normaliza pra DD/MM/AAAA
+            const br = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
+            if (br) return `${pad(br[1])}/${pad(br[2])}/${normalizarAno(br[3])}`;
+            return s; // formato desconhecido — devolve como veio
+        }
+        // Excel serial date (epoch 1899-12-30)
+        if (typeof raw === 'number' && Number.isFinite(raw)) {
+            const d = new Date(Date.UTC(1899, 11, 30) + raw * 86400000);
+            return fmtDataBR.format(d);
+        }
+        return String(raw);
     }
 
     function formatarValor(k, raw) {
         if (raw === null || raw === undefined || raw === '') return '—';
+        // Parse amigável da origem da importação (folha/benefícios) — antes de qualquer
+        // formatação genérica de objeto, para não virar JSON bruto.
+        if (k === '_origens' && raw && typeof raw === 'object' && !Array.isArray(raw)) {
+            const f = !!raw.folha, b = !!raw.beneficios;
+            if (f && b) return 'Folha e Benefícios';
+            if (f)      return 'Apenas Folha';
+            if (b)      return 'Apenas Benefícios';
+            return '—';
+        }
+        // Datas: se a chave for de data (e não caiu no bucket _origens acima).
+        if (ehChaveData(k)) return formatarData(raw);
         if (typeof raw === 'number') {
-            if (k.endsWith('_Qtde') || k === 'codigo') return String(raw);
+            if (ehChavePercentual(k)) {
+                return raw.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+            }
+            if (k.endsWith('_Qtde') || RGX_QTDE_IDX.test(String(k).toUpperCase()) || k === 'codigo') {
+                return String(raw);
+            }
             return fmtBRL.format(raw);
         }
         if (raw && typeof raw === 'object' && typeof raw.seconds === 'number') {
-            // Firestore Timestamp
+            // Firestore Timestamp em chaves não-data — mostra data/hora completa.
             return new Date(raw.seconds * 1000).toLocaleString('pt-BR');
         }
         if (raw && typeof raw === 'object') return JSON.stringify(raw);
@@ -897,12 +1259,20 @@
             `${fmtCPF(reg.cpf)} · ${reg.centro_custo || '—'} · ${reg.competencia || '—'} · ${reg.empresa_atribuida || '—'}`;
 
         const grupos = {
-            identificacao: [], vencimentos: [], encargos: [],
+            identificacao: [], datas: [], vencimentos: [], encargos: [],
             beneficios: [], descontos_bnf: [], descontos_folha: [],
             quantidades: [], outros_valores: [], metadados: [], outros: [],
         };
         for (const k of Object.keys(reg)) {
             const raw = reg[k];
+            // Limpeza dinâmica: campos numéricos exatamente zero não agregam
+            // informação — escondidos em todas as seções. Se o grupo inteiro
+            // ficar vazio, a própria função secao() não renderiza o card.
+            if (typeof raw === 'number' && Number.isFinite(raw) && raw === 0) continue;
+            // Chaves suprimidas da visualização (não afetam o cálculo — que só
+            // soma os 4 buckets contábeis). HORARIO vem como serial de tempo do
+            // Excel (ex.: 9:00:18 → 9.001.800), não é valor em R$.
+            if (ehChaveSuprimidaNoOlho(k)) continue;
             grupos[classificarChave(k, raw)].push({ k, raw });
         }
         // Ordena cada grupo por chave.
@@ -912,7 +1282,7 @@
             if (!items.length) return '';
             const linhas = items.map(({ k, raw }) => `
                 <div class="flex items-baseline justify-between gap-3 py-1.5 border-b border-slate-50 last:border-0">
-                    <span class="text-[11px] text-slate-500 font-medium truncate" title="${escapeHTML(k)}">${escapeHTML(rotuloBonitoChave(k))}</span>
+                    <span class="text-[11px] text-slate-500 font-medium uppercase tracking-wide truncate" title="${escapeHTML(k)}">${escapeHTML(rotuloBonitoChave(k))}</span>
                     <span class="text-xs font-semibold text-slate-800 text-right shrink-0">${escapeHTML(formatarValor(k, raw))}</span>
                 </div>`).join('');
             return `
@@ -928,16 +1298,17 @@
         const body = document.getElementById('visualizar-body');
         body.innerHTML =
             secao('Identificação', 'badge', 'text-secondary', grupos.identificacao) +
+            secao('Datas e Prazos', 'event', 'text-tertiary', grupos.datas) +
             secao('Vencimentos Mensais', 'trending_up', 'text-primary', grupos.vencimentos) +
             secao('Encargos Sociais', 'account_balance', 'text-secondary', grupos.encargos) +
             secao('Benefícios Pagos', 'card_travel', 'text-tertiary', grupos.beneficios) +
             secao('Descontos em Benefícios', 'card_travel', 'text-red-500', grupos.descontos_bnf) +
             secao('Descontos de Folha', 'trending_down', 'text-slate-500', grupos.descontos_folha,
                   ` <span class="normal-case text-slate-400 font-normal">— informativo, não entra no Custo Total</span>`) +
-            secao('Quantidades', 'functions', 'text-slate-500', grupos.quantidades) +
+            secao('Quantidades e Índices', 'functions', 'text-slate-500', grupos.quantidades) +
             secao('Outros valores importados', 'help', 'text-amber-500', grupos.outros_valores,
                   ` <span class="normal-case text-slate-400 font-normal">— não mapeados no cálculo</span>`) +
-            secao('Metadados', 'info', 'text-slate-400', grupos.metadados) +
+            secao('Log de Importação', 'info', 'text-slate-400', grupos.metadados) +
             secao('Outros', 'more_horiz', 'text-slate-400', grupos.outros);
 
         abrirModal('modal-visualizar');
@@ -969,20 +1340,210 @@
         else localStorage.removeItem(LS_COMP);
         if (filtroEmpresa.value) localStorage.setItem(LS_EMP, filtroEmpresa.value);
         else localStorage.removeItem(LS_EMP);
+        // Centro de Custo é filtro client-side puro — não dispara nova query Firestore.
+        filtroCcValor = filtroCc.value.trim();
+        if (filtroCcValor) localStorage.setItem(LS_CC, filtroCcValor);
+        else localStorage.removeItem(LS_CC);
         // Mostra o chip SÓ quando o usuário aplica filtros explicitamente.
-        atualizarChipFiltros(filtroCompetencia.value, filtroEmpresa.value.trim());
+        atualizarChipFiltros(filtroCompetencia.value, filtroEmpresa.value.trim(), filtroCcValor);
         carregarDadosTabela();
+        renderHistorico(); // re-render para aplicar CC sobre o cache atual
+        verificarVisibilidadeBotaoLimpar();
         fecharModal('modal-filtros');
     };
-    document.getElementById('btn-filtros-limpar').onclick = () => {
+    // Visibilidade inteligente do botão "Limpar Filtros" externo: só aparece quando
+    // há pelo menos um filtro ativo (competência, empresa ou centro de custo).
+    function verificarVisibilidadeBotaoLimpar() {
+        const btn = document.getElementById('btn-limpar-filtros-topbar');
+        if (!btn) return;
+        const algumAtivo = !!(filtroCompetencia.value || filtroEmpresa.value.trim() || filtroCcValor);
+        if (algumAtivo) {
+            btn.classList.remove('hidden');
+            btn.classList.add('flex');
+        } else {
+            btn.classList.add('hidden');
+            btn.classList.remove('flex');
+        }
+    }
+
+    // Reseta todos os filtros (modal Filtros Avançados + chip + LS) e volta ao
+    // histórico global. Compartilhado entre o botão "Limpar" do modal e o botão
+    // "Limpar Filtros" externo da topbar da tabela.
+    function limparTodosFiltros() {
         filtroCompetencia.value = '';
         filtroEmpresa.value = '';
+        filtroCc.value = '';
+        filtroCcValor = '';
         localStorage.removeItem(LS_COMP);
         localStorage.removeItem(LS_EMP);
-        atualizarChipFiltros('', ''); // esconde o chip
+        localStorage.removeItem(LS_CC);
+        atualizarChipFiltros('', '', '');
         carregarDadosTabela();
+        renderHistorico();
+        verificarVisibilidadeBotaoLimpar();
+    }
+    document.getElementById('btn-filtros-limpar').onclick = () => {
+        limparTodosFiltros();
         fecharModal('modal-filtros');
     };
+    document.getElementById('btn-limpar-filtros-topbar').onclick = () => limparTodosFiltros();
+
+    // ── MODAL GERENCIAR EMPRESAS (CRUD Base_Empresas) ────────────────────────
+    // Assina o próprio snapshot — assim mudanças de outra aba também refletem aqui.
+    // docs sem nome_fantasia (legados com ID usado como nome) são listados com
+    // ID=nome para retrocompat.
+    const listaEmpresasEl = document.getElementById('gerenciar-empresas-lista');
+    const vazioEmpresasEl = document.getElementById('gerenciar-empresas-vazio');
+    const contadorEmpresasEl = document.getElementById('gerenciar-empresas-contador');
+    const inputNovaEmpresa = document.getElementById('input-nova-empresa');
+    const btnAdicionarEmpresa = document.getElementById('btn-adicionar-empresa');
+    let empresasCrud = [];         // [{id, nome}]
+    let editandoEmpresaId = null;  // id em edição inline
+
+    function renderListaEmpresasCrud() {
+        contadorEmpresasEl.textContent = `${empresasCrud.length} ${empresasCrud.length === 1 ? 'empresa' : 'empresas'}`;
+        if (!empresasCrud.length) {
+            listaEmpresasEl.innerHTML = '';
+            vazioEmpresasEl.classList.remove('hidden');
+            return;
+        }
+        vazioEmpresasEl.classList.add('hidden');
+        listaEmpresasEl.innerHTML = empresasCrud.map(({ id, nome }) => {
+            const emEdicao = id === editandoEmpresaId;
+            if (emEdicao) {
+                return `
+                <li class="flex items-center gap-2 px-4 py-2.5">
+                    <input data-empresa-edit-input="${escapeHTML(id)}" value="${escapeHTML(nome)}"
+                           class="flex-1 border border-primary/60 rounded-lg py-1.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 outline-none" />
+                    <button data-empresa-acao="salvar" data-id="${escapeHTML(id)}" class="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors" title="Salvar">
+                        <span class="material-symbols-outlined text-base">check</span>
+                    </button>
+                    <button data-empresa-acao="cancelar" data-id="${escapeHTML(id)}" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors" title="Cancelar">
+                        <span class="material-symbols-outlined text-base">close</span>
+                    </button>
+                </li>`;
+            }
+            return `
+            <li class="flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 transition-colors">
+                <span class="flex-1 text-sm font-medium text-slate-700 truncate">${escapeHTML(nome)}</span>
+                <button data-empresa-acao="editar" data-id="${escapeHTML(id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-tertiary transition-colors" title="Editar">
+                    <span class="material-symbols-outlined text-base">edit</span>
+                </button>
+                <button data-empresa-acao="excluir" data-id="${escapeHTML(id)}" data-nome="${escapeHTML(nome)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir">
+                    <span class="material-symbols-outlined text-base">delete</span>
+                </button>
+            </li>`;
+        }).join('');
+    }
+
+    // Assinatura do CRUD — sempre lê com id do doc para poder update/delete.
+    onSnapshot(collection(db, 'Base_Empresas'), (snap) => {
+        const itens = [];
+        snap.forEach(d => {
+            const data = d.data() || {};
+            const nome = (data.nome_fantasia || d.id || '').trim();
+            if (nome) itens.push({ id: d.id, nome });
+        });
+        itens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        empresasCrud = itens;
+        renderListaEmpresasCrud();
+    }, (err) => {
+        console.warn('[Base_Empresas CRUD] snapshot falhou:', err?.code || err?.message);
+    });
+
+    document.getElementById('btn-abrir-gerenciar-empresas').onclick = () => {
+        editandoEmpresaId = null;
+        inputNovaEmpresa.value = '';
+        renderListaEmpresasCrud();
+        abrirModal('modal-gerenciar-empresas');
+    };
+    document.getElementById('btn-fechar-gerenciar-empresas').onclick = () => fecharModal('modal-gerenciar-empresas');
+    document.getElementById('btn-gerenciar-empresas-ok').onclick = () => fecharModal('modal-gerenciar-empresas');
+    document.getElementById('modal-gerenciar-empresas-overlay').onclick = () => fecharModal('modal-gerenciar-empresas');
+
+    btnAdicionarEmpresa.onclick = async () => {
+        const nome = inputNovaEmpresa.value.trim();
+        if (!nome) return mostrarErro('Informe o nome da empresa.');
+        if (empresasCrud.some(e => e.nome.toLowerCase() === nome.toLowerCase())) {
+            return mostrarErro(`A empresa "${nome}" já está cadastrada.`);
+        }
+        btnAdicionarEmpresa.disabled = true;
+        try {
+            await addDoc(collection(db, 'Base_Empresas'), { nome_fantasia: nome });
+            inputNovaEmpresa.value = '';
+        } catch (err) {
+            console.error('[Base_Empresas] addDoc falhou:', err);
+            if (err.code === 'permission-denied') {
+                mostrarErro('Acesso Negado: apenas administradores podem cadastrar empresas.');
+            } else {
+                mostrarErro('Falha ao cadastrar: ' + (err.message || 'erro desconhecido'));
+            }
+        } finally {
+            btnAdicionarEmpresa.disabled = false;
+        }
+    };
+    inputNovaEmpresa.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); btnAdicionarEmpresa.click(); }
+    });
+
+    listaEmpresasEl.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-empresa-acao]');
+        if (!btn) return;
+        const acao = btn.getAttribute('data-empresa-acao');
+        const id = btn.getAttribute('data-id');
+        const alvo = empresasCrud.find(x => x.id === id);
+        if (!alvo) return;
+
+        if (acao === 'editar') {
+            editandoEmpresaId = id;
+            renderListaEmpresasCrud();
+            const input = listaEmpresasEl.querySelector(`[data-empresa-edit-input="${CSS.escape(id)}"]`);
+            if (input) { input.focus(); input.select(); }
+            return;
+        }
+        if (acao === 'cancelar') {
+            editandoEmpresaId = null;
+            renderListaEmpresasCrud();
+            return;
+        }
+        if (acao === 'salvar') {
+            const input = listaEmpresasEl.querySelector(`[data-empresa-edit-input="${CSS.escape(id)}"]`);
+            const novo = String(input?.value || '').trim();
+            if (!novo) return mostrarErro('O nome não pode ficar em branco.');
+            if (novo === alvo.nome) { editandoEmpresaId = null; renderListaEmpresasCrud(); return; }
+            if (empresasCrud.some(x => x.id !== id && x.nome.toLowerCase() === novo.toLowerCase())) {
+                return mostrarErro(`Já existe uma empresa chamada "${novo}".`);
+            }
+            try {
+                await updateDoc(doc(db, 'Base_Empresas', id), { nome_fantasia: novo });
+                editandoEmpresaId = null;
+            } catch (err) {
+                console.error('[Base_Empresas] updateDoc falhou:', err);
+                if (err.code === 'permission-denied') mostrarErro('Acesso Negado: apenas administradores podem editar empresas.');
+                else mostrarErro('Falha ao salvar: ' + (err.message || 'erro desconhecido'));
+            }
+            return;
+        }
+        if (acao === 'excluir') {
+            const ok = await confirmarAcao({
+                titulo: `Excluir "${alvo.nome}"?`,
+                mensagem:
+                    'Esta ação NÃO apaga registros históricos já vinculados a ela, ' +
+                    'mas a empresa deixará de aparecer nos dropdowns de Importação e Filtros.',
+                labelConfirmar: 'Sim, Excluir',
+                labelCancelar: 'Cancelar',
+                tom: 'perigo',
+            });
+            if (!ok) return;
+            try {
+                await deleteDoc(doc(db, 'Base_Empresas', id));
+            } catch (err) {
+                console.error('[Base_Empresas] deleteDoc falhou:', err);
+                if (err.code === 'permission-denied') mostrarErro('Acesso Negado: apenas administradores podem excluir empresas.');
+                else mostrarErro('Falha ao excluir: ' + (err.message || 'erro desconhecido'));
+            }
+        }
+    });
 
     // ── UI: DROPZONES → abrir input ao clicar no label ───────────────────────
     // (O <label for> nativo já faria isso, mas como o input está dentro do label,
@@ -1021,6 +1582,73 @@
     document.getElementById('modal-sucesso-overlay').onclick = () => fecharModal('modal-sucesso');
     document.getElementById('btn-erro-fechar').onclick = () => fecharModal('modal-erro');
     document.getElementById('modal-erro-overlay').onclick = () => fecharModal('modal-erro');
+
+    // ── CONFIRMAÇÃO / AVISO PREMIUM (substitui window.confirm e window.alert) ─
+    // Uso:
+    //   const ok = await confirmarAcao({ titulo, mensagem, labelConfirmar, labelCancelar, tom });
+    // Tons suportados: 'perigo' (default, vermelho), 'erro' (alias de perigo com
+    // ícone 'block'), 'neutro' (primary). Para modo AVISO (1 botão só), passe
+    // labelCancelar: null — o botão Cancelar some e o overlay não fecha por clique
+    // acidental, forçando o usuário a confirmar a leitura.
+    const btnConfirmarOk     = document.getElementById('btn-confirmar-ok');
+    const btnConfirmarCancel = document.getElementById('btn-confirmar-cancelar');
+    const overlayConfirmar   = document.getElementById('modal-confirmar-overlay');
+    let _resolverConfirmacao = null;
+    let _avisoPuro = false; // quando true, overlay não dispensa o modal
+
+    function confirmarAcao({
+        titulo = 'Confirmar ação',
+        mensagem = 'Tem certeza?',
+        labelConfirmar = 'Sim, Excluir',
+        labelCancelar = 'Cancelar',
+        tom = 'perigo',
+    } = {}) {
+        document.getElementById('modal-confirmar-titulo').textContent = titulo;
+        document.getElementById('modal-confirmar-mensagem').textContent = mensagem;
+        btnConfirmarOk.textContent = labelConfirmar;
+
+        _avisoPuro = (labelCancelar === null || labelCancelar === undefined);
+        if (_avisoPuro) {
+            btnConfirmarCancel.classList.add('hidden');
+        } else {
+            btnConfirmarCancel.classList.remove('hidden');
+            btnConfirmarCancel.textContent = labelCancelar;
+        }
+
+        const icone = document.getElementById('modal-confirmar-icone');
+        const wrap  = icone.parentElement;
+        // Reset classes de tom
+        wrap.classList.remove('bg-red-50','bg-primary/10','bg-tertiary/10');
+        icone.classList.remove('text-red-500','text-primary','text-tertiary');
+        btnConfirmarOk.classList.remove(
+            'bg-primary','text-[#341100]','shadow-primary/20',
+            'bg-red-600','text-white','shadow-red-600/20',
+        );
+
+        if (tom === 'perigo' || tom === 'erro') {
+            wrap.classList.add('bg-red-50');
+            icone.classList.add('text-red-500');
+            icone.textContent = tom === 'erro' ? 'block' : 'warning';
+            btnConfirmarOk.classList.add('bg-red-600','text-white','shadow-red-600/20');
+        } else {
+            wrap.classList.add('bg-primary/10');
+            icone.classList.add('text-primary');
+            icone.textContent = 'help';
+            btnConfirmarOk.classList.add('bg-primary','text-[#341100]','shadow-primary/20');
+        }
+        abrirModal('modal-confirmar');
+        return new Promise((resolve) => { _resolverConfirmacao = resolve; });
+    }
+    function _fecharConfirmacao(resposta) {
+        fecharModal('modal-confirmar');
+        const r = _resolverConfirmacao;
+        _resolverConfirmacao = null;
+        _avisoPuro = false;
+        if (typeof r === 'function') r(resposta);
+    }
+    btnConfirmarOk.onclick     = () => _fecharConfirmacao(true);
+    btnConfirmarCancel.onclick = () => _fecharConfirmacao(false);
+    overlayConfirmar.onclick   = () => { if (!_avisoPuro) _fecharConfirmacao(false); };
 
     // ── ESTADO DO BOTÃO (spinner) ────────────────────────────────────────────
     function setLoading(estado, texto) {
@@ -1118,6 +1746,11 @@
             return mostrarErro('Falha ao gravar os novos registros: ' + (err.message || 'erro desconhecido'));
         }
 
+        // 4) Sincroniza a base de Centros de Custo (não-crítico — falhas ficam no console).
+        setLoading(true, 'Atualizando Centros de Custo...');
+        try { await sincronizarCentrosDeCusto(unificado); }
+        catch (err) { console.warn('[Base_Centros_Custo] sync geral falhou:', err); }
+
         // Sucesso — exibe diagnóstico no modal, sincroniza filtros com o que foi gravado,
         // invalida cache de "disponíveis" (pois a lista mudou) e fecha o modal após o OK.
         renderDiagnostico(diagnostico, empresa, competenciaBR);
@@ -1192,6 +1825,43 @@
             await batch.commit();
             setLoading(true, `Gravando ${Math.min(fim, lista.length)}/${lista.length}...`);
         }
+    }
+
+    // Extrai centros de custo únicos da lista importada e grava em Base_Centros_Custo
+    // usando o próprio nome (slugificado) como ID do doc — merge:true evita duplicata.
+    // Falhas aqui NÃO devem derrubar a importação: são registradas no console.
+    async function sincronizarCentrosDeCusto(lista) {
+        const nomes = new Set();
+        for (const reg of lista) {
+            const cc = String(reg?.centro_custo || '').trim();
+            if (cc) nomes.add(cc);
+        }
+        if (!nomes.size) return 0;
+
+        const idDe = (nome) => nome
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .toUpperCase()
+            .replace(/[^A-Z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .slice(0, 120) || 'CC';
+
+        let gravados = 0, falhas = 0;
+        // Grava em paralelo com limite leve — o volume de CC únicos é baixo.
+        const tarefas = [...nomes].map(async (nome) => {
+            try {
+                await setDoc(doc(db, 'Base_Centros_Custo', idDe(nome)), {
+                    nome,
+                    atualizadoEm: serverTimestamp(),
+                }, { merge: true });
+                gravados++;
+            } catch (err) {
+                falhas++;
+                console.warn('[Base_Centros_Custo] falha em', nome, err?.code || err?.message);
+            }
+        });
+        await Promise.all(tarefas);
+        if (falhas) console.warn(`[Base_Centros_Custo] ${gravados}/${nomes.size} ok, ${falhas} falhas (provavelmente permissão — seguir).`);
+        return gravados;
     }
 
 </script>

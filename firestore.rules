@@ -67,6 +67,12 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if request.auth != null && isAdmin();
     }
+    // Base alimentada automaticamente pelo ETL de Custo de Folha — por isso a
+    // escrita é liberada para usuários com o menu custo_folha (além de admin).
+    match /Base_Centros_Custo/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (isAdmin() || hasMenu('custo_folha'));
+    }
 
     // CUSTOS FOLHA — Leitura e Escrita protegidas pelo controle de acesso (Drop & Replace)
     match /CustosFolha/{docId} {

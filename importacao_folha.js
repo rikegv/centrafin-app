@@ -32,8 +32,14 @@ export function cpfPareceValido(cpfLimpo) {
 }
 
 /**
- * Converte valores brasileiros ("1.234,56") ou anglicizados ("1234.56")
- * para Number. Aceita também números já parseados. Strings vazias -> 0.
+ * Converte valores brasileiros ("1.234,56"), anglicizados ("1,234.56") ou
+ * puros ("1234.56" / "1234,56") para Number. Aceita também números já parseados.
+ *
+ * Regra: o ÚLTIMO separador (ponto ou vírgula) é o decimal; separadores anteriores
+ * são tratados como agrupadores de milhar e descartados. Isso blinda o parser
+ * contra planilhas que o Excel exporta com format-code en-US mesmo em ambiente
+ * pt-BR (ex.: "2,912.28" chegava como 2.91228 no parser antigo, resultando em
+ * valores 1000× menores na folha).
  */
 export function parseNumeroBR(v) {
     if (v === null || v === undefined || v === '') return 0;
@@ -47,13 +53,38 @@ export function parseNumeroBR(v) {
     const negativo = s.startsWith('-');
     if (negativo) s = s.slice(1);
 
-    let n;
-    if (s.includes(',')) {
-        // Formato BR: pontos são milhar, vírgula é decimal.
-        n = parseFloat(s.replace(/\./g, '').replace(',', '.'));
+    const ultPonto   = s.lastIndexOf('.');
+    const ultVirgula = s.lastIndexOf(',');
+    let numStr;
+    if (ultPonto !== -1 && ultVirgula !== -1) {
+        // Tem os dois: o ÚLTIMO a aparecer é o decimal.
+        if (ultPonto > ultVirgula) {
+            // Decimal é ponto (en-US) — descarta vírgulas (milhar).
+            numStr = s.replace(/,/g, '');
+        } else {
+            // Decimal é vírgula (pt-BR) — descarta pontos (milhar), troca vírgula por ponto.
+            numStr = s.replace(/\./g, '').replace(',', '.');
+        }
+    } else if (ultVirgula !== -1) {
+        // Só vírgula — decimal BR ("1234,56").
+        numStr = s.replace(',', '.');
+    } else if (ultPonto !== -1) {
+        // Só ponto — AMBÍGUO (pode ser decimal "2.91" ou milhar "2.912").
+        // Desambiguação: se há mais de um ponto, todos são milhar; se há exatamente
+        // um com 3 dígitos depois e sem outros separadores, tratamos como MILHAR
+        // (convenção pt-BR: 2.912 = 2912). Caso contrário, é decimal.
+        const qtdePontos = (s.match(/\./g) || []).length;
+        const depois = s.length - ultPonto - 1;
+        if (qtdePontos >= 2 || depois === 3) {
+            numStr = s.replace(/\./g, '');
+        } else {
+            numStr = s; // decimal
+        }
     } else {
-        n = parseFloat(s);
+        numStr = s; // só dígitos
     }
+
+    const n = parseFloat(numStr);
     if (!isFinite(n)) return 0;
     return negativo ? -n : n;
 }
