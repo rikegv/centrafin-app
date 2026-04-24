@@ -1,7 +1,9 @@
 export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     const currentPath = window.location.pathname;
     // Detecção robusta do prefixo do caminho (se estamos na raiz ou subpasta)
-    const isInSubfolder = currentPath.split('/').filter(p => p).length > 2 || currentPath.includes('_desktop');
+    const isInSubfolder = currentPath.split('/').filter(p => p).length > 2
+        || currentPath.includes('_desktop')
+        || currentPath.includes('custo_folha_dash');
     const prefix = isInSubfolder ? '../' : './';
     
     // Classes de Estilo

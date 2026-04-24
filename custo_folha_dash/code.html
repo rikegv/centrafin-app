@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Custo de Folha - CentraFin</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300,1&display=swap"
+    rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.45.2/apexcharts.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Manrope', 'sans-serif'] },
+          colors: {
+            brandGreen: '#aad12f', brandDarkBlue: '#002443', brandMidBlue: '#1a4895',
+            brandLightBlue: '#59a4d8', brandPaleBlue: '#bfd7ea', brandAqua: '#89d5c9', brandOrange: '#ff8864'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(26, 72, 149, 0.2);
+      border-radius: 4px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #59a4d8;
+      border-radius: 4px;
+    }
+
+    .skeleton-pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex antialiased bg-slate-50">
+
+  <div id="sidebar-container"></div>
+
+  <main class="flex-1 ml-[80px] w-full min-h-screen flex flex-col transition-all duration-300">
+
+    <!-- HEADER (PADRÃO MASTER) -->
+    <div class="px-8 pt-5 pb-0">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-xl font-bold text-slate-800 tracking-tight">Dashboard Master</span>
+                <span class="text-slate-300">/</span>
+                <a href="../dashboard_master_desktop/code.html" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">arrow_back</span> Voltar ao Início
+                </a>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="btn-limpar-filtros" onclick="window.limparFiltrosCustoFolha()" class="hidden items-center gap-1 px-3 py-2 bg-red-500/10 text-red-500 rounded-lg text-sm hover:bg-red-500/20 transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-[18px]">filter_alt_off</span> Limpar
+                </button>
+                <button id="btn-abrir-filtros" onclick="window.toggleModal('modal-filtros-custofolha', true)" class="flex items-center gap-2 px-5 py-2.5 bg-brandDarkBlue text-white rounded-xl text-xs font-extrabold hover:bg-brandDarkBlue/90 transition-all shadow-lg shadow-brandDarkBlue/20 active:scale-95">
+                    <span class="material-symbols-outlined text-brandGreen text-lg">filter_list</span>
+                    FILTROS DE ANÁLISE
+                </button>
+            </div>
+        </div>
+
+        <hr class="my-4 border-slate-200">
+
+        <div class="flex items-center gap-4">
+            <span class="material-symbols-outlined text-4xl text-brandOrange">receipt_long</span>
+            <div class="flex flex-col">
+                <h1 class="text-3xl font-extrabold text-brandDarkBlue tracking-tight uppercase leading-none">Custo de Folha</h1>
+                <p class="text-slate-500 text-sm max-w-3xl mt-1">
+                    Visão consolidada de Vencimentos, Encargos, Benefícios e Custo Total por competência, empresa e centro de custo.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTEUDO PRINCIPAL -->
+    <div class="px-8 py-6 space-y-6">
+
+      <!-- KPIs LUXO — 6 cards (Colaboradores · Custo Total · Vencimentos · Salário Bruto · Encargos · Benefícios) -->
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+
+        <!-- KPI 1: TOTAL COLABORADORES -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
+          <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+            <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandAqua/10 rounded-full blur-2xl group-hover/card:bg-brandAqua/20 transition-all"></div>
+          </div>
+          <div class="flex justify-between items-start relative z-10">
+            <span class="material-symbols-outlined text-brandAqua/40 text-[26px]">groups</span>
+            <div class="group relative">
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
+                CPFs únicos no período. Um colaborador em vários meses/empresas conta 1 vez.
+                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+          </div>
+          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Colaboradores</p>
+            <h3 class="text-3xl xl:text-4xl font-black text-brandAqua tracking-tight truncate leading-none" id="kpi-colaboradores">0</h3>
+          </div>
+        </div>
+
+        <!-- KPI 2: CUSTO TOTAL (DESTAQUE PRINCIPAL) -->
+        <div class="bg-brandDarkBlue border border-brandGreen/30 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card ring-1 ring-brandGreen/20 flex flex-col">
+          <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+            <div class="absolute -right-4 -top-4 w-28 h-28 bg-brandGreen/15 rounded-full blur-2xl group-hover/card:bg-brandGreen/25 transition-all"></div>
+          </div>
+          <div class="flex justify-between items-start relative z-10">
+            <span class="material-symbols-outlined text-brandGreen text-[26px]">savings</span>
+            <div class="group relative">
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
+                Custo Total = Vencimentos + Encargos + Benefícios Pagos − Descontos.
+                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+          </div>
+          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
+            <p class="text-[10px] font-black text-brandGreen uppercase tracking-[0.12em] mb-1">Custo Total</p>
+            <h3 class="text-2xl xl:text-3xl font-black text-white tracking-tight truncate leading-none" id="kpi-custo-total">R$ 0,00</h3>
+          </div>
+        </div>
+
+        <!-- KPI 3: TOTAL VENCIMENTOS -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
+          <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+            <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/5 rounded-full blur-2xl group-hover/card:bg-white/10 transition-all"></div>
+          </div>
+          <div class="flex justify-between items-start relative z-10">
+            <span class="material-symbols-outlined text-slate-500/50 text-[26px]">payments</span>
+            <div class="group relative">
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
+                Proventos: Salário, DSR, Férias, 13º, Horas Extras, Rescisões, Bônus, Prêmios, Comissões.
+                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+          </div>
+          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Total Vencimentos</p>
+            <h3 class="text-2xl xl:text-3xl font-black text-white tracking-tight truncate leading-none" id="kpi-vencimentos">R$ 0,00</h3>
+            <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-vencimentos-pct">0% do Custo Total</p>
+          </div>
+        </div>
+
+        <!-- KPI 4: TOTAL SALÁRIO BRUTO (subset estrito dentro de Vencimentos) -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
+          <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+            <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandPaleBlue/10 rounded-full blur-2xl group-hover/card:bg-brandPaleBlue/20 transition-all"></div>
+          </div>
+          <div class="flex justify-between items-start relative z-10">
+            <span class="material-symbols-outlined text-brandPaleBlue/60 text-[26px]">badge</span>
+            <div class="group relative">
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
+                Apenas chaves estritas de salário base: SALARIO, SALARIO_BRUTO_MENSAL, SALARIO_BASE, PRO_LABORE. Subset dos Vencimentos, sem bônus/férias/rescisões.
+                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+          </div>
+          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Salário Bruto</p>
+            <h3 class="text-2xl xl:text-3xl font-black text-brandPaleBlue tracking-tight truncate leading-none" id="kpi-salario-bruto">R$ 0,00</h3>
+            <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-salario-bruto-pct">0% dos Vencimentos</p>
+          </div>
+        </div>
+
+        <!-- KPI 5: TOTAL ENCARGOS -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
+          <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+            <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandLightBlue/5 rounded-full blur-2xl group-hover/card:bg-brandLightBlue/10 transition-all"></div>
+          </div>
+          <div class="flex justify-between items-start relative z-10">
+            <span class="material-symbols-outlined text-brandLightBlue/40 text-[26px]">account_balance</span>
+            <div class="group relative">
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
+                INSS Patronal, FGTS, Valor FGTS e Terceiros (SAT/SESI/SESC).
+                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+          </div>
+          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Total Encargos</p>
+            <h3 class="text-2xl xl:text-3xl font-black text-brandLightBlue tracking-tight truncate leading-none" id="kpi-encargos">R$ 0,00</h3>
+            <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-encargos-pct">0% do Custo Total</p>
+          </div>
+        </div>
+
+        <!-- KPI 6: CUSTO BENEFICIOS -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card">
+          <div class="absolute inset-0 rounded-2xl pointer-events-none overflow-hidden">
+            <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandOrange/10 rounded-full blur-2xl group-hover/card:bg-brandOrange/20 transition-all"></div>
+          </div>
+          <div class="flex justify-between items-start relative z-10 mb-2">
+            <span class="material-symbols-outlined text-brandOrange/40 text-[26px]">card_travel</span>
+            <div class="group relative">
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
+                Pagos (VT, VR, VA, Planos) − Descontos (coparticipação, seguro de vida, descontos VT/VR).
+                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+          </div>
+          <div class="relative z-10 flex flex-col gap-2 min-w-0">
+            <div class="min-w-0">
+              <p class="text-[10px] font-black text-brandOrange uppercase tracking-[0.12em] mb-1">Benefícios</p>
+              <h3 class="text-xl xl:text-2xl font-black text-white tracking-tight truncate leading-none" id="kpi-custo-beneficios">R$ 0,00</h3>
+              <p class="text-[9px] text-slate-400 mt-0.5 font-semibold uppercase tracking-wider">Pagos − Descontos</p>
+            </div>
+            <div class="h-px bg-slate-600/40"></div>
+            <div class="grid grid-cols-2 gap-2 min-w-0">
+              <div class="min-w-0">
+                <p class="text-[9px] font-black text-emerald-300 uppercase tracking-wider mb-0.5">Pagos</p>
+                <h4 class="text-sm xl:text-base font-extrabold text-white truncate" id="kpi-beneficios-pagos">R$ 0,00</h4>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[9px] font-black text-red-400 uppercase tracking-wider mb-0.5">Descontos</p>
+                <h4 class="text-sm xl:text-base font-extrabold text-white truncate" id="kpi-descontos-beneficios">R$ 0,00</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOVO: Custo Total Mensal (colunas simples, largura total) -->
+      <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
+        <div class="flex items-center mb-4">
+          <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <span class="material-symbols-outlined text-brandGreen">insights</span> Custo Total Mensal
+          </h3>
+        </div>
+        <div id="chart-custo-total-mensal" class="w-full h-[280px]"></div>
+      </div>
+
+      <!-- ANÁLISES GRÁFICAS — LINHA 1 -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Evolução mensal (col-span-2) -->
+        <div class="lg:col-span-2 bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandGreen">stacked_bar_chart</span> Evolução Mês a Mês
+            </h3>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Vencimentos · Encargos · Benefícios Pagos</p>
+          </div>
+          <div id="chart-evolucao-custo" class="w-full h-[380px]"></div>
+        </div>
+
+        <!-- Donut por empresa (col-span-1) -->
+        <div class="lg:col-span-1 bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandOrange">donut_large</span> Custo por Empresa
+            </h3>
+          </div>
+          <div id="chart-empresa" class="w-full h-[380px] flex items-center justify-center"></div>
+        </div>
+      </div>
+
+      <!-- ANÁLISES GRÁFICAS — MÉDIAS MENSAIS (per capita) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Salário Médio / Mês -->
+        <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandPaleBlue">badge</span> Salário Médio / Mês
+            </h3>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Por CPF</p>
+          </div>
+          <div id="chart-salario-medio" class="w-full h-[260px]"></div>
+        </div>
+
+        <!-- Vencimento Médio / Mês -->
+        <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <span class="material-symbols-outlined text-white">payments</span> Vencimento Médio / Mês
+            </h3>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Por CPF</p>
+          </div>
+          <div id="chart-vencimento-medio" class="w-full h-[260px]"></div>
+        </div>
+
+        <!-- Custo Médio / Mês -->
+        <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandGreen">savings</span> Custo Médio / Mês
+            </h3>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Por CPF</p>
+          </div>
+          <div id="chart-custo-medio" class="w-full h-[260px]"></div>
+        </div>
+      </div>
+
+      <!-- ANÁLISES GRÁFICAS — LINHA DE COMPOSIÇÃO + RANKING -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Custo por Centro de Custo -->
+        <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-8 min-w-0 flex flex-col">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandLightBlue">bar_chart</span> Custo por Centro de Custo
+            </h3>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Ordem decrescente</p>
+          </div>
+          <!-- flex-1: o chart cresce pra ocupar o espaço restante do card (que
+               por sua vez é esticado pela grid row ao lado do Top 10). -->
+          <div id="chart-centro-custo" class="w-full flex-1 min-h-[420px]"></div>
+        </div>
+
+        <!-- Ranking de Colaboradores (lista completa com scroll) -->
+        <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-8 min-w-0 flex flex-col">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandGreen">leaderboard</span> Ranking de Colaboradores
+            </h3>
+            <p id="ranking-colaboradores-contagem" class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">—</p>
+          </div>
+          <!-- max-h + overflow-y-auto: lista completa com scroll interno, alinha
+               visualmente com o chart de Centro de Custo ao lado. -->
+          <div id="ranking-colaboradores" class="flex-1 max-h-[560px] overflow-y-auto custom-scroll pr-2 divide-y divide-white/5 min-h-[380px]">
+            <div class="text-center text-slate-500 text-sm py-12 font-medium">Carregando…</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL FILTROS -->
+  <div id="modal-filtros-custofolha" class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
+    <div class="absolute inset-0 bg-brandDarkBlue/40 backdrop-blur-sm" onclick="window.toggleModal('modal-filtros-custofolha', false)"></div>
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300">
+        <div class="flex justify-between items-center mb-8">
+            <h3 class="text-xl font-extrabold text-brandDarkBlue flex items-center gap-2">
+                <span class="material-symbols-outlined text-brandGreen">filter_list</span>
+                Filtros de Análise
+            </h3>
+            <button onclick="window.toggleModal('modal-filtros-custofolha', false)" class="text-slate-400 hover:text-brandDarkBlue transition-all">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Mês Inicial</label>
+                    <input id="filtro-mes-inicial" type="month" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-brandDarkBlue outline-none focus:ring-2 focus:ring-brandGreen/20 transition-all" />
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Mês Final</label>
+                    <input id="filtro-mes-final" type="month" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-brandDarkBlue outline-none focus:ring-2 focus:ring-brandGreen/20 transition-all" />
+                </div>
+            </div>
+
+            <div class="relative" id="ms-empresa" data-placeholder="Todas as empresas…">
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Empresa / Filial</label>
+                <button type="button" data-trigger class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-brandDarkBlue outline-none focus:ring-2 focus:ring-brandGreen/20 transition-all text-left flex items-center justify-between hover:border-brandGreen/40">
+                    <span data-label class="truncate">Todas as empresas…</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px] transition-transform shrink-0 ml-2" data-chevron>expand_more</span>
+                </button>
+                <div data-panel class="hidden absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto custom-scroll p-2"></div>
+            </div>
+
+            <div class="relative" id="ms-centro-custo" data-placeholder="Todos os centros de custo…">
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Centro de Custo</label>
+                <button type="button" data-trigger class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-brandDarkBlue outline-none focus:ring-2 focus:ring-brandGreen/20 transition-all text-left flex items-center justify-between hover:border-brandGreen/40">
+                    <span data-label class="truncate">Todos os centros de custo…</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px] transition-transform shrink-0 ml-2" data-chevron>expand_more</span>
+                </button>
+                <div data-panel class="hidden absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto custom-scroll p-2"></div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button onclick="window.aplicarFiltrosCustoFolha()" class="flex-1 py-4 bg-brandDarkBlue text-white rounded-2xl font-black text-xs shadow-lg shadow-brandDarkBlue/20 hover:brightness-110 active:scale-[0.98] transition-all tracking-widest uppercase">
+                    Aplicar Filtros
+                </button>
+                <button onclick="window.limparFiltrosCustoFolha()" class="text-slate-400 hover:text-brandDarkBlue underline text-sm font-bold px-2 transition-all">
+                    Limpar
+                </button>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE AVISO (substitui window.alert) -->
+  <div id="modal-aviso-cf" class="fixed inset-0 z-[80] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
+    <div class="absolute inset-0 bg-brandDarkBlue/50 backdrop-blur-sm" onclick="window.fecharAvisoCF()"></div>
+    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300">
+      <div class="flex flex-col items-center text-center">
+        <div id="modal-aviso-cf-icon-wrap" class="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
+          <span id="modal-aviso-cf-icon" class="material-symbols-outlined text-red-500 text-[32px]">warning</span>
+        </div>
+        <h3 id="modal-aviso-cf-titulo" class="text-lg font-extrabold text-brandDarkBlue mb-2">Atenção</h3>
+        <p id="modal-aviso-cf-mensagem" class="text-sm text-slate-600 font-medium mb-6">—</p>
+        <button onclick="window.fecharAvisoCF()" class="w-full py-3 bg-brandDarkBlue text-white rounded-xl font-black text-xs tracking-widest uppercase hover:brightness-110 transition-all">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.toggleModal = (id, show) => {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        if (show) {
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            modal.querySelector('div:last-child').classList.remove('scale-95');
+        } else {
+            modal.classList.add('pointer-events-none', 'opacity-0');
+            modal.querySelector('div:last-child').classList.add('scale-95');
+        }
+    };
+
+    // Modal de aviso — substitui window.alert (padrão Tailwind do projeto)
+    window._avisoCFResolver = null;
+    window.mostrarAvisoCF = ({ titulo = 'Atenção', mensagem = '', tom = 'erro' } = {}) => {
+        document.getElementById('modal-aviso-cf-titulo').textContent = titulo;
+        document.getElementById('modal-aviso-cf-mensagem').textContent = mensagem;
+        const iconWrap = document.getElementById('modal-aviso-cf-icon-wrap');
+        const icon = document.getElementById('modal-aviso-cf-icon');
+        iconWrap.className = 'w-14 h-14 rounded-full flex items-center justify-center mb-4 ' + (tom === 'aviso' ? 'bg-amber-50' : 'bg-red-50');
+        icon.className = 'material-symbols-outlined text-[32px] ' + (tom === 'aviso' ? 'text-amber-500' : 'text-red-500');
+        icon.textContent = tom === 'aviso' ? 'info' : 'warning';
+        window.toggleModal('modal-aviso-cf', true);
+        return new Promise((resolve) => { window._avisoCFResolver = resolve; });
+    };
+    window.fecharAvisoCF = () => {
+        window.toggleModal('modal-aviso-cf', false);
+        const r = window._avisoCFResolver;
+        window._avisoCFResolver = null;
+        if (typeof r === 'function') r(true);
+    };
+  </script>
+
+  <!-- FIREBASE + GUARDIÃO + DADOS -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, onSnapshot, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { renderSidebar } from "../sidebar.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+      authDomain: "centra-fin.firebaseapp.com",
+      projectId: "centra-fin",
+      storageBucket: "centra-fin.firebasestorage.app",
+      messagingSenderId: "666471089411",
+      appId: "1:666471089411:web:4630f5b2ced70ceb981536"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const CHAVE_PAGINA = 'custo_folha';
+    const COLECAO = 'CustosFolha';
+
+    // ==========================================
+    // WHITELISTS — espelha o importador (custo_folha_desktop/code.html L660-758)
+    // Fórmula: Custo Total = Vencimentos + Encargos + Benefícios Pagos − Descontos Benefícios
+    // ==========================================
+    function isVencimento(k) {
+      const key = String(k || '').toUpperCase();
+      if (key.endsWith('_QTDE')) return false;
+      if (key.includes('INSS') || key.includes('IRRF') || key.includes('DESCONTO') ||
+          key.includes('EDUCACAO') || key.includes('FGTS') || key.includes('BASE_')) {
+        return false;
+      }
+      const keywords = [
+        'SALARIO', 'PRO_LABORE', 'DSR', 'CRECHE',
+        'COMISSAO', 'BANCO_DE_HORAS', 'ARREDONDAMENTO', 'REEMBOLSO',
+        'AVISO_PREVIO', 'FERIAS', '1_3', 'EMPRESTIMO_SALDO_NEGATIVO',
+        '13O', 'AJUDA_DE_CUSTO', 'RESCISAO', 'HORA_EXTRA',
+        'PARTICIPACAO', 'LUCRO',
+        'BONUS', 'PREMIO', 'PREMIACAO', 'GRATIFICACAO',
+      ];
+      return keywords.some(word => key.includes(word));
+    }
+
+    const SET_ENCARGOS = new Set([
+      'INSS_PATRONAL_Valor', 'VALOR_FGTS_Valor', 'FGTS_Valor', 'TERCEIROS_Valor',
+    ]);
+
+    const SET_BNF_PAGO = new Set([
+      'VALE_TRANSPORTE_Valor', 'VALE_REFEICAO_Valor',
+      'ASSISTENCIA_MEDICA_Valor', 'ASSISTENCIA_ODONTOLOGICA_Valor',
+      'VALE_ALIMENTACAO_Valor',
+    ]);
+
+    const SET_BNF_DESC = new Set([
+      'SEGURO_DE_VIDA_Valor', 'DESCTO_DE_VALE_TRANSPORTE_Valor',
+      'DEVOLUCAO_DE_VR_NAO_UTILIZADO_Valor',
+      'DESCTO_DE_VALE_REFEICAO_Valor',
+      'DESCTO_DE_ASSISTENCIA_MEDICA_Valor',
+    ]);
+
+    // Subset ESTRITO de Vencimentos: apenas salário base mensal e pro-labore.
+    // NÃO inclui bônus, férias, 13º, comissões, rescisões — esses continuam
+    // contando no bucket Vencimentos, só não aparecem no KPI "Salário Bruto".
+    const SET_SALARIO_BRUTO = new Set([
+      'SALARIO_Valor',
+      'SALARIO_BASE_Valor',
+      'SALARIO_BRUTO_MENSAL_Valor',
+      'PRO_LABORE_Valor',
+    ]);
+
+    function calcularTotais(reg) {
+      let vencimentos = 0, encargos = 0, beneficios = 0, descontosBnf = 0, salarioBruto = 0;
+      for (const k of Object.keys(reg || {})) {
+        const raw = reg[k];
+        if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
+        // Salário bruto acumula em PARALELO (subset estrito) — fora da cadeia
+        // de precedência, pra não alterar a soma contábil dos outros buckets.
+        if (SET_SALARIO_BRUTO.has(k)) salarioBruto += raw;
+
+        if (SET_ENCARGOS.has(k))   { encargos += raw; continue; }
+        if (k.startsWith('Bnf_'))  { beneficios += raw; continue; }
+        if (SET_BNF_PAGO.has(k))   { beneficios += raw; continue; }
+        if (SET_BNF_DESC.has(k))   { descontosBnf += raw; continue; }
+        if (isVencimento(k))       { vencimentos += raw; continue; }
+      }
+      const total = vencimentos + encargos + beneficios - descontosBnf;
+      return { vencimentos, encargos, beneficios, descontosBnf, total, salarioBruto };
+    }
+
+    // ==========================================
+    // HELPERS
+    // ==========================================
+    const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    function formatarMoeda(v) { return fmtBRL.format(v || 0); }
+    function formatarPct(num, den) {
+      if (!den || den === 0) return '0% do Custo Total';
+      return `${((num / den) * 100).toFixed(1).replace('.', ',')}% do Custo Total`;
+    }
+    function formatarValorGrafico(val) {
+      if (val === null || val === undefined || val === 0) return '';
+      if (Math.abs(val) >= 1_000_000) return (val / 1_000_000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' mi';
+      if (Math.abs(val) >= 1_000)     return (val / 1_000).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' mil';
+      return val.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+    function escapeHTML(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function iniciaisDe(nome) {
+      const partes = String(nome || '').trim().split(/\s+/).filter(Boolean);
+      if (!partes.length) return '?';
+      const primeira = partes[0][0] || '';
+      const ultima   = partes.length > 1 ? partes[partes.length - 1][0] || '' : '';
+      return (primeira + ultima).toUpperCase() || '?';
+    }
+    // Abreviação PT-BR para o eixo X dos gráficos de evolução (Mar/2026).
+    const MESES_ABREV = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    function competenciaBRfromRef(ref) {
+      if (!ref || !/^\d{4}-\d{2}$/.test(ref)) return String(ref || '—');
+      const [y, m] = ref.split('-');
+      return `${MESES_ABREV[parseInt(m, 10) - 1]}/${y}`;
+    }
+
+    // Instâncias ApexCharts — criadas UMA VEZ em `inicializarGraficos()`,
+    // depois só atualizadas via updateOptions/updateSeries em
+    // `processarCustoFolha()`. Esse padrão evita race conditions da primeira
+    // renderização quando o layout/containers ainda não estão estáveis.
+    let chartCustoMensalInstance    = null;
+    let chartEvolucaoInstance       = null;
+    let chartEmpresaInstance        = null;
+    let chartCcInstance             = null;
+    let chartSalarioMedioInstance   = null;
+    let chartVencimentoMedioInstance = null;
+    let chartCustoMedioInstance     = null;
+
+    // Tema global consolidado — cores, tipografia e animações em um só objeto
+    // para manter os gráficos com a mesma assinatura visual.
+    const themeGlobal = {
+      palette: {
+        evolucao:       ['#aad12f', '#59a4d8', '#ff8864', '#89d5c9'], // Venc · Enc · Bnf · Colabs (line)
+        donut:          ['#aad12f', '#59a4d8', '#ff8864', '#89d5c9', '#bfd7ea', '#1a4895', '#f59e0b', '#ef4444', '#a855f7', '#22d3ee'],
+        custoTotal:     ['#aad12f'],                        // coluna simples
+        cc:             { from: '#59a4d8', to: '#aad12f' }, // gradiente horizontal
+        salarioMedio:   ['#bfd7ea'],                        // Salário base (pale blue)
+        vencimentoMedio:['#ffffff'],                        // Vencimentos (branco)
+        custoMedio:     ['#aad12f'],                        // Custo total (verde)
+      },
+      apex: {
+        fontFamily: 'Manrope, sans-serif',
+        foreColor: '#bfd7ea',
+        gridBorder: 'rgba(191, 215, 234, 0.08)',
+      },
+      animations: {
+        enabled: true, easing: 'easeinout', speed: 600,
+        animateGradually: { enabled: true, delay: 80 },
+        dynamicAnimation: { enabled: true, speed: 450 }
+      }
+    };
+
+    function inicializarGraficos() {
+      if (typeof ApexCharts === 'undefined') {
+        console.error('[CustoFolhaDash] ApexCharts não carregou a tempo.');
+        return;
+      }
+
+      const { apex, animations, palette } = themeGlobal;
+      // Formatter sem threshold: mostra TODAS as fatias. `hideOverflowingLabels`
+      // (no plotOptions.bar) protege contra labels estourando barras finas.
+      const dataLabelsMes = {
+        enabled: true,
+        formatter: (v) => 'R$ ' + formatarValorGrafico(v),
+        style: { fontSize: '10px', fontWeight: 700, colors: ['#002443'] },
+        dropShadow: { enabled: false }
+      };
+
+      // 0) Custo Total Mensal (colunas simples) — com drill-down por mês
+      const elCTM = document.getElementById('chart-custo-total-mensal');
+      if (elCTM && !chartCustoMensalInstance) {
+        chartCustoMensalInstance = new ApexCharts(elCTM, {
+          chart: {
+            type: 'bar', height: 280, fontFamily: apex.fontFamily, foreColor: apex.foreColor,
+            toolbar: { show: false }, animations,
+            events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownMes(ctx._refsOrdenadas?.[cfg.dataPointIndex]) }
+          },
+          series: [{ name: 'Custo Total', data: [] }],
+          plotOptions: { bar: { borderRadius: 6, columnWidth: '45%', distributed: false } },
+          colors: palette.custoTotal,
+          fill: { type: 'gradient', gradient: { shade: 'dark', type: 'vertical', gradientToColors: ['#59a4d8'], stops: [0, 100], opacityFrom: 1, opacityTo: 0.85 } },
+          dataLabels: {
+            enabled: true, offsetY: -18,
+            formatter: (v) => 'R$ ' + formatarValorGrafico(v),
+            style: { fontSize: '10px', fontWeight: 800, colors: ['#ffffff'] },
+            background: { enabled: false },
+            dropShadow: { enabled: true, top: 1, left: 0, blur: 2, color: '#000', opacity: 0.6 }
+          },
+          xaxis: { categories: [], labels: { style: { colors: apex.foreColor, fontSize: '11px', fontWeight: 700 } }, axisBorder: { color: 'rgba(191, 215, 234, 0.15)' }, axisTicks: { color: 'rgba(191, 215, 234, 0.15)' } },
+          yaxis: { labels: { formatter: (v) => 'R$ ' + formatarValorGrafico(v), style: { colors: apex.foreColor, fontSize: '10px' } } },
+          grid: { borderColor: apex.gridBorder, strokeDashArray: 4 },
+          legend: { show: false },
+          tooltip: { theme: 'dark', y: { formatter: (v) => formatarMoeda(v) } },
+          states: { hover: { filter: { type: 'lighten', value: 0.1 } }, active: { filter: { type: 'darken', value: 0.1 } } },
+          noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
+        });
+        chartCustoMensalInstance.render();
+      }
+
+      // 1) Evolução mensal — MIXED CHART: 3 bars empilhadas + 1 line (Colaboradores)
+      // com eixo Y secundário (opposite) para a escala de headcount não ser
+      // esmagada pela escala financeira.
+      const elEvol = document.getElementById('chart-evolucao-custo');
+      if (elEvol && !chartEvolucaoInstance) {
+        chartEvolucaoInstance = new ApexCharts(elEvol, {
+          chart: {
+            type: 'line', stacked: true, height: 380, fontFamily: apex.fontFamily, foreColor: apex.foreColor,
+            toolbar: { show: false }, animations,
+            events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownMes(ctx._refsOrdenadas?.[cfg.dataPointIndex]) }
+          },
+          series: [
+            { name: 'Vencimentos',      type: 'bar',  data: [] },
+            { name: 'Encargos',         type: 'bar',  data: [] },
+            { name: 'Benefícios Pagos', type: 'bar',  data: [] },
+            { name: 'Colaboradores',    type: 'line', data: [] },
+          ],
+          plotOptions: {
+            bar: {
+              borderRadius: 6, columnWidth: '55%',
+              borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last',
+              dataLabels: { hideOverflowingLabels: true, position: 'center' }
+            }
+          },
+          stroke: { width: [0, 0, 0, 3], curve: 'smooth' },
+          markers: { size: [0, 0, 0, 5], colors: ['#89d5c9'], strokeColors: '#002443', strokeWidth: 2, hover: { sizeOffset: 3 } },
+          colors: palette.evolucao,
+          // dataLabels global fica desligado no mixed — as 3 séries de barras
+          // usam dataLabelsMes via `enabledOnSeries`, enquanto a linha usa label
+          // próprio com formatter de headcount inteiro.
+          dataLabels: {
+            enabled: true,
+            enabledOnSeries: [0, 1, 2, 3],
+            formatter: (val, opts) => {
+              if (opts.seriesIndex === 3) return String(Math.round(val));
+              return 'R$ ' + formatarValorGrafico(val);
+            },
+            style: { fontSize: '10px', fontWeight: 700, colors: ['#002443'] },
+            background: { enabled: false },
+            dropShadow: { enabled: false }
+          },
+          legend: { position: 'top', horizontalAlign: 'right', labels: { colors: apex.foreColor }, markers: { width: 10, height: 10, radius: 3 }, fontSize: '11px', fontWeight: 700 },
+          xaxis: { categories: [], labels: { style: { colors: apex.foreColor, fontSize: '11px', fontWeight: 700 } }, axisBorder: { color: 'rgba(191, 215, 234, 0.15)' }, axisTicks: { color: 'rgba(191, 215, 234, 0.15)' } },
+          yaxis: [
+            { seriesName: 'Vencimentos',      labels: { formatter: (v) => 'R$ ' + formatarValorGrafico(v), style: { colors: apex.foreColor, fontSize: '10px' } } },
+            { seriesName: 'Encargos',         show: false },
+            { seriesName: 'Benefícios Pagos', show: false },
+            {
+              seriesName: 'Colaboradores',
+              opposite: true,
+              labels: { formatter: (v) => String(Math.round(v)), style: { colors: '#89d5c9', fontSize: '10px', fontWeight: 700 } },
+              title: { text: 'Colaboradores', style: { color: '#89d5c9', fontSize: '10px', fontWeight: 700 } }
+            }
+          ],
+          grid: { borderColor: apex.gridBorder, strokeDashArray: 4 },
+          tooltip: {
+            theme: 'dark', shared: true, intersect: false,
+            y: {
+              formatter: (v, { seriesIndex }) => seriesIndex === 3 ? `${Math.round(v)} colaborador(es)` : formatarMoeda(v)
+            }
+          },
+          noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
+        });
+        chartEvolucaoInstance.render();
+      }
+
+      // 1.1) Gráficos de médias mensais (per capita) — 3 area charts suaves
+      const buildOptionsMedia = (elId, cor) => ({
+        chart: {
+          type: 'area', height: 260, fontFamily: apex.fontFamily, foreColor: apex.foreColor,
+          toolbar: { show: false }, animations,
+          events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownMes(ctx._refsOrdenadas?.[cfg.dataPointIndex]) }
+        },
+        series: [{ name: elId, data: [] }],
+        stroke: { width: 3, curve: 'smooth' },
+        colors: [cor],
+        fill: {
+          type: 'gradient',
+          gradient: { shade: 'dark', type: 'vertical', opacityFrom: 0.4, opacityTo: 0.02, stops: [0, 100] }
+        },
+        markers: { size: 4, colors: [cor], strokeColors: '#002443', strokeWidth: 2, hover: { sizeOffset: 3 } },
+        dataLabels: {
+          enabled: true,
+          formatter: (v) => 'R$ ' + formatarValorGrafico(v),
+          offsetY: -8,
+          style: { fontSize: '9px', fontWeight: 700, colors: ['#ffffff'] },
+          background: { enabled: false },
+          dropShadow: { enabled: true, top: 1, left: 0, blur: 2, color: '#000', opacity: 0.6 }
+        },
+        xaxis: { categories: [], labels: { style: { colors: apex.foreColor, fontSize: '10px', fontWeight: 700 } }, axisBorder: { color: 'rgba(191, 215, 234, 0.15)' }, axisTicks: { color: 'rgba(191, 215, 234, 0.15)' } },
+        yaxis: { labels: { formatter: (v) => 'R$ ' + formatarValorGrafico(v), style: { colors: apex.foreColor, fontSize: '9px' } } },
+        grid: { borderColor: apex.gridBorder, strokeDashArray: 4 },
+        tooltip: { theme: 'dark', y: { formatter: (v) => formatarMoeda(v) } },
+        legend: { show: false },
+        noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
+      });
+
+      const elSM = document.getElementById('chart-salario-medio');
+      if (elSM && !chartSalarioMedioInstance) {
+        chartSalarioMedioInstance = new ApexCharts(elSM, buildOptionsMedia('Salário Médio', palette.salarioMedio[0]));
+        chartSalarioMedioInstance.render();
+      }
+      const elVM = document.getElementById('chart-vencimento-medio');
+      if (elVM && !chartVencimentoMedioInstance) {
+        chartVencimentoMedioInstance = new ApexCharts(elVM, buildOptionsMedia('Vencimento Médio', palette.vencimentoMedio[0]));
+        chartVencimentoMedioInstance.render();
+      }
+      const elCM = document.getElementById('chart-custo-medio');
+      if (elCM && !chartCustoMedioInstance) {
+        chartCustoMedioInstance = new ApexCharts(elCM, buildOptionsMedia('Custo Médio', palette.custoMedio[0]));
+        chartCustoMedioInstance.render();
+      }
+
+      // 2) Custo por Empresa (donut) — com drill-down por empresa
+      const elEmp = document.getElementById('chart-empresa');
+      if (elEmp && !chartEmpresaInstance) {
+        chartEmpresaInstance = new ApexCharts(elEmp, {
+          chart: {
+            type: 'donut', height: 380, fontFamily: apex.fontFamily, foreColor: apex.foreColor, animations,
+            events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownEmpresa(ctx._labelsAtuais?.[cfg.dataPointIndex]) }
+          },
+          series: [],
+          labels: [],
+          colors: palette.donut,
+          stroke: { width: 2, colors: ['#002443'] },
+          legend: { position: 'bottom', labels: { colors: apex.foreColor }, fontSize: '11px', fontWeight: 700, markers: { width: 10, height: 10, radius: 3 } },
+          dataLabels: { enabled: true, formatter: (val) => val.toFixed(1) + '%', style: { fontSize: '11px', fontWeight: 700, colors: ['#002443'] }, dropShadow: { enabled: false } },
+          plotOptions: {
+            pie: {
+              donut: {
+                size: '68%',
+                labels: {
+                  show: true,
+                  name: { color: apex.foreColor, fontSize: '11px', fontWeight: 700 },
+                  value: { color: '#ffffff', fontSize: '18px', fontWeight: 800, formatter: (v) => formatarMoeda(Number(v)) },
+                  total: { show: true, label: 'Custo Total', color: '#aad12f', fontSize: '10px', fontWeight: 700, formatter: (w) => formatarMoeda(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) }
+                }
+              }
+            }
+          },
+          tooltip: { theme: 'dark', y: { formatter: (v) => formatarMoeda(v) } },
+          noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
+        });
+        chartEmpresaInstance.render();
+      }
+
+      // 3) Custo por Centro de Custo (barras horizontais) — com drill-down por CC.
+      // height: '100%' junto com o container flex-1 faz o chart preencher toda
+      // a altura disponível do card, acompanhando o Top 10 sibling.
+      const elCc = document.getElementById('chart-centro-custo');
+      if (elCc && !chartCcInstance) {
+        chartCcInstance = new ApexCharts(elCc, {
+          chart: {
+            type: 'bar', height: '100%', fontFamily: apex.fontFamily, foreColor: apex.foreColor,
+            toolbar: { show: false }, animations,
+            events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownCc(ctx._categoriasAtuais?.[cfg.dataPointIndex]) }
+          },
+          series: [{ name: 'Custo Total', data: [] }],
+          plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '78%', distributed: false, dataLabels: { position: 'bottom' } } },
+          colors: [palette.cc.from],
+          fill: { type: 'gradient', gradient: { type: 'horizontal', gradientToColors: [palette.cc.to], stops: [0, 100], opacityFrom: 0.95, opacityTo: 1 } },
+          dataLabels: { enabled: true, textAnchor: 'start', offsetX: 8, formatter: (v) => 'R$ ' + formatarValorGrafico(v), style: { colors: ['#ffffff'], fontSize: '10px', fontWeight: 700 } },
+          xaxis: { categories: [], labels: { formatter: (v) => 'R$ ' + formatarValorGrafico(Number(v)), style: { colors: apex.foreColor, fontSize: '10px' } }, axisBorder: { color: 'rgba(191, 215, 234, 0.15)' }, axisTicks: { color: 'rgba(191, 215, 234, 0.15)' } },
+          yaxis: { labels: { style: { colors: apex.foreColor, fontSize: '11px', fontWeight: 700 } } },
+          grid: { borderColor: apex.gridBorder, strokeDashArray: 4 },
+          legend: { show: false },
+          tooltip: { theme: 'dark', y: { formatter: (v) => formatarMoeda(v) } },
+          noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
+        });
+        chartCcInstance.render();
+      }
+    }
+
+    // ==========================================
+    // MULTI-SELECT CUSTOMIZADO (Empresa + Centro de Custo)
+    // ==========================================
+    class MultiSelectCF {
+      constructor({ rootId, onChange }) {
+        this.root = document.getElementById(rootId);
+        if (!this.root) throw new Error(`MultiSelectCF: root #${rootId} não encontrado`);
+        this.onChange = onChange || (() => {});
+        this.selecionados = new Set();
+        this.opcoes = [];
+        this.placeholder = this.root.dataset.placeholder || 'Selecionar…';
+        this._bindTrigger();
+        this._bindOutsideClick();
+        this._updateLabel();
+      }
+      setOpcoes(lista) {
+        this.opcoes = [...lista];
+        // Remove seleções obsoletas (item deixou de existir na base).
+        for (const v of [...this.selecionados]) if (!this.opcoes.includes(v)) this.selecionados.delete(v);
+        this._renderPanel();
+        this._updateLabel();
+      }
+      getValores() { return [...this.selecionados]; }
+      setValores(valores) {
+        this.selecionados = new Set(valores || []);
+        this._renderPanel();
+        this._updateLabel();
+      }
+      limpar() { this.selecionados.clear(); this._renderPanel(); this._updateLabel(); }
+      _bindTrigger() {
+        const btn = this.root.querySelector('[data-trigger]');
+        btn.addEventListener('click', (e) => { e.stopPropagation(); this._togglePanel(); });
+      }
+      _bindOutsideClick() {
+        document.addEventListener('click', (e) => {
+          if (!this.root.contains(e.target)) this._closePanel();
+        });
+      }
+      _togglePanel() {
+        const panel = this.root.querySelector('[data-panel]');
+        const willOpen = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden');
+        const chev = this.root.querySelector('[data-chevron]');
+        if (chev) chev.classList.toggle('rotate-180', willOpen);
+      }
+      _closePanel() {
+        this.root.querySelector('[data-panel]').classList.add('hidden');
+        const chev = this.root.querySelector('[data-chevron]');
+        if (chev) chev.classList.remove('rotate-180');
+      }
+      _renderPanel() {
+        const panel = this.root.querySelector('[data-panel]');
+        if (!this.opcoes.length) {
+          panel.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-3">Nenhuma opção disponível.</p>';
+          return;
+        }
+        panel.innerHTML = this.opcoes.map(opt => {
+          const checked = this.selecionados.has(opt) ? 'checked' : '';
+          return `
+            <label class="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+              <input type="checkbox" value="${escapeHTML(opt)}" ${checked} class="w-4 h-4 rounded border-slate-300 text-brandGreen focus:ring-brandGreen/30">
+              <span class="text-xs font-bold text-brandDarkBlue flex-1 truncate" title="${escapeHTML(opt)}">${escapeHTML(opt)}</span>
+            </label>`;
+        }).join('');
+        panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
+          cb.addEventListener('change', () => {
+            if (cb.checked) this.selecionados.add(cb.value);
+            else this.selecionados.delete(cb.value);
+            this._updateLabel();
+            this.onChange(this.getValores());
+          });
+        });
+      }
+      _updateLabel() {
+        const label = this.root.querySelector('[data-label]');
+        if (!label) return;
+        const n = this.selecionados.size;
+        if (n === 0)      label.textContent = this.placeholder;
+        else if (n === 1) label.textContent = [...this.selecionados][0];
+        else              label.textContent = `${n} selecionados`;
+      }
+    }
+
+    let msEmpresa = null;
+    let msCentroCusto = null;
+
+    // Handlers de drill-down usados pelos chart events — declarados hoisted
+    // via `function` para estarem disponíveis antes do chart ser criado.
+    function aplicarDrillDownMes(ref) {
+      if (!ref) return;
+      document.getElementById('filtro-mes-inicial').value = ref;
+      document.getElementById('filtro-mes-final').value   = ref;
+      processarCustoFolha();
+    }
+    function aplicarDrillDownEmpresa(nome) {
+      if (!nome || !msEmpresa) return;
+      msEmpresa.setValores([nome]);
+      processarCustoFolha();
+    }
+    function aplicarDrillDownCc(nome) {
+      if (!nome || !msCentroCusto) return;
+      msCentroCusto.setValores([nome]);
+      processarCustoFolha();
+    }
+
+    // ==========================================
+    // AUTH + GUARDIÃO
+    // ==========================================
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "../login.html"; return; }
+      try {
+        let docRef = doc(db, "Usuarios", user.email.toLowerCase());
+        let docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) { docRef = doc(db, "Usuarios", user.uid); docSnap = await getDoc(docRef); }
+
+        if (!docSnap.exists()) {
+          await window.mostrarAvisoCF({ titulo: 'Acesso Negado', mensagem: 'Usuário não encontrado no sistema.' });
+          await signOut(auth);
+          window.location.href = "../login.html";
+          return;
+        }
+
+        const dadosUser = docSnap.data();
+        const userProfile = dadosUser.perfil;
+
+        if (dadosUser.status === 'inativo') {
+          await signOut(auth);
+          window.location.href = "../login.html";
+          return;
+        }
+
+        if (userProfile !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
+          await window.mostrarAvisoCF({ titulo: 'Acesso Negado', mensagem: 'Você não tem permissão para acessar esta página e foi desconectado por segurança.' });
+          await signOut(auth);
+          window.location.href = "../login.html";
+          return;
+        }
+
+        renderSidebar(userProfile, dadosUser.menus_permitidos || []);
+
+        // Inicializa multi-selects de Empresa e Centro de Custo — ambos vazios
+        // até que Base_Empresas e Base_Centros_Custo cheguem por onSnapshot.
+        msEmpresa     = new MultiSelectCF({ rootId: 'ms-empresa',       onChange: () => processarCustoFolha() });
+        msCentroCusto = new MultiSelectCF({ rootId: 'ms-centro-custo',  onChange: () => processarCustoFolha() });
+
+        // Inicializa as 4 instâncias ApexCharts com séries vazias ANTES do
+        // fetch. Assim, quando os dados chegam, `processarCustoFolha` só
+        // precisa chamar updateOptions/updateSeries — as instâncias sempre
+        // existem e o gráfico nunca fica em branco por race condition.
+        inicializarGraficos();
+
+        // Popula dropdowns dinâmicos (alimenta os multi-selects)
+        popularEmpresas();
+        popularCentrosCusto();
+
+        // Carrega base e processa
+        await carregarCustoFolha();
+
+      } catch (error) {
+        console.error("[CustoFolhaDash] Erro auth/bootstrap:", error);
+      }
+    });
+
+    // ==========================================
+    // POPULAÇÃO DOS MULTI-SELECTS (listeners em tempo real)
+    // ==========================================
+    function popularEmpresas() {
+      onSnapshot(collection(db, 'Base_Empresas'), (snap) => {
+        const lista = [];
+        snap.forEach(d => {
+          const data = d.data() || {};
+          const nome = (data.nome_fantasia || d.id || '').trim();
+          if (nome) lista.push(nome);
+        });
+        lista.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        if (msEmpresa) msEmpresa.setOpcoes(lista);
+      }, (err) => console.warn('[Base_Empresas] listener falhou:', err?.code || err?.message));
+    }
+
+    function popularCentrosCusto() {
+      onSnapshot(collection(db, 'Base_Centros_Custo'), (snap) => {
+        const nomes = [];
+        snap.forEach(d => {
+          const nome = String((d.data() || {}).nome || '').trim();
+          if (nome) nomes.push(nome);
+        });
+        nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        if (msCentroCusto) msCentroCusto.setOpcoes(nomes);
+      }, (err) => console.warn('[Base_Centros_Custo] listener falhou:', err?.code || err?.message));
+    }
+
+    // ==========================================
+    // CARGA DA BASE
+    // ==========================================
+    async function carregarCustoFolha() {
+      try {
+        // Sem orderBy nem limit: dashboard varre o universo e agrega em memória.
+        // - orderBy: Firestore excluiria docs sem o campo indexado.
+        // - limit: o teto do Firestore para structured query é 10.000; qualquer
+        //   valor acima dispara `Limit value ... is over the maximum value of 10000`
+        //   e a Promise rejeita — foi exatamente o bug que zerou os gráficos.
+        // Se o volume crescer a ponto de preocupar, a próxima estratégia é
+        // particionar por competência_ref (queries paralelas com `where`).
+        const q = query(collection(db, COLECAO));
+        const snap = await getDocs(q);
+
+        window._custoFolhaBase = [];
+        snap.forEach(d => {
+          window._custoFolhaBase.push({ _id: d.id, ...d.data() });
+        });
+
+        console.log(`[CustoFolhaDash] Registros carregados: ${window._custoFolhaBase.length}`);
+        processarCustoFolha();
+      } catch (err) {
+        console.error('[CustoFolhaDash] Erro ao carregar CustosFolha:', err);
+        // Zera a base para que os gráficos renderizem "Sem dados" em vez de
+        // ficar com o último estado fantasma, e avisa o usuário de forma leve.
+        window._custoFolhaBase = [];
+        try { processarCustoFolha(); } catch (_) { /* no-op */ }
+        window.mostrarAvisoCF({
+          titulo: 'Erro ao buscar dados do servidor',
+          mensagem: `Não foi possível carregar a coleção CustosFolha. Detalhe técnico: ${err?.code || err?.message || 'desconhecido'}. Tente recarregar a página; se o problema persistir, avise o time.`,
+          tom: 'erro'
+        });
+      }
+    }
+
+    // ==========================================
+    // PROCESSAMENTO + RENDER DOS 4 KPIs
+    // ==========================================
+    function processarCustoFolha() {
+      const base = window._custoFolhaBase || [];
+
+      const mesInicial  = document.getElementById('filtro-mes-inicial').value; // "YYYY-MM"
+      const mesFinal    = document.getElementById('filtro-mes-final').value;
+      const empresasSel = msEmpresa     ? msEmpresa.getValores()     : [];
+      const ccsSel      = msCentroCusto ? msCentroCusto.getValores() : [];
+
+      const temFiltro = mesInicial || mesFinal || empresasSel.length > 0 || ccsSel.length > 0;
+      const btnLimpar = document.getElementById('btn-limpar-filtros');
+      if (btnLimpar) {
+        // Tailwind: `hidden` controla display. Mantemos `flex` explícito para
+        // o layout do botão (ícone + texto) voltar direito quando visível.
+        if (temFiltro) { btnLimpar.classList.remove('hidden'); btnLimpar.classList.add('flex'); }
+        else           { btnLimpar.classList.add('hidden');    btnLimpar.classList.remove('flex'); }
+      }
+
+      // Filtro: intervalo de competência + inclusão (multi) por empresa/CC.
+      const empresasSet = new Set(empresasSel);
+      const ccsSet      = new Set(ccsSel);
+      const registros = base.filter(r => {
+        const ref = String(r.competencia_ref || '');
+        if (mesInicial && ref < mesInicial) return false;
+        if (mesFinal   && ref > mesFinal)   return false;
+        if (empresasSet.size && !empresasSet.has(String(r.empresa_atribuida || ''))) return false;
+        if (ccsSet.size      && !ccsSet.has(String(r.centro_custo || '')))           return false;
+        return true;
+      });
+
+      // Agregação em uma única passada: KPIs + insumos dos gráficos/ranking.
+      let totalVenc = 0, totalEnc = 0, totalBnfPago = 0, totalBnfDesc = 0, totalSalarioBruto = 0;
+      const competenciasSet = new Set();
+      const cpfsUnicos      = new Set(); // KPI "Total Colaboradores" — apenas CPF com dígitos
+      const porComp    = new Map(); // competencia_ref -> { v, e, b, d, s, cpfs }
+      const porEmpresa = new Map(); // empresa -> total
+      const porCc      = new Map(); // centro_custo -> total
+      const porCpf     = new Map(); // cpfKey -> { nome, cc, total }
+
+      for (const r of registros) {
+        const t = calcularTotais(r);
+        totalVenc         += t.vencimentos;
+        totalEnc          += t.encargos;
+        totalBnfPago      += t.beneficios;
+        totalBnfDesc      += t.descontosBnf;
+        totalSalarioBruto += t.salarioBruto;
+        if (r.competencia_ref) competenciasSet.add(r.competencia_ref);
+
+        const cpfDigitos = String(r.cpf || '').replace(/\D/g, '');
+        if (cpfDigitos) cpfsUnicos.add(cpfDigitos);
+
+        // porComp enriquecido: v/e/b/d/s + cpfs (Set de colaboradores únicos no mês)
+        // — permite calcular médias per capita mensais e headcount pela linha.
+        const ref = r.competencia_ref;
+        if (ref && /^\d{4}-\d{2}$/.test(ref)) {
+          let agg = porComp.get(ref);
+          if (!agg) { agg = { v: 0, e: 0, b: 0, d: 0, s: 0, cpfs: new Set() }; porComp.set(ref, agg); }
+          agg.v += t.vencimentos;
+          agg.e += t.encargos;
+          agg.b += t.beneficios;
+          agg.d += t.descontosBnf;
+          agg.s += t.salarioBruto;
+          if (cpfDigitos) agg.cpfs.add(cpfDigitos);
+        }
+
+        // Composição por Empresa / CC — usa Custo Total líquido (com descontos)
+        const empresaKey = String(r.empresa_atribuida || '').trim() || 'Sem empresa';
+        porEmpresa.set(empresaKey, (porEmpresa.get(empresaKey) || 0) + t.total);
+
+        const ccKey = String(r.centro_custo || '').trim() || 'Sem centro de custo';
+        porCc.set(ccKey, (porCc.get(ccKey) || 0) + t.total);
+
+        // Ranking por CPF (fallback: nome)
+        const cpfKey = cpfDigitos || `nome::${String(r.nome || '').toLowerCase()}`;
+        let pessoa = porCpf.get(cpfKey);
+        if (!pessoa) {
+          pessoa = { nome: r.nome || '—', cc: r.centro_custo || '—', total: 0 };
+          porCpf.set(cpfKey, pessoa);
+        }
+        pessoa.total += t.total;
+        if (r.nome)         pessoa.nome = r.nome;
+        if (r.centro_custo) pessoa.cc = r.centro_custo;
+      }
+
+      const custoBeneficios = totalBnfPago - totalBnfDesc;
+      const custoTotal = totalVenc + totalEnc + custoBeneficios;
+
+      // Render dos 6 cards
+      document.getElementById('kpi-custo-total').textContent = formatarMoeda(custoTotal);
+
+      document.getElementById('kpi-vencimentos').textContent = formatarMoeda(totalVenc);
+      document.getElementById('kpi-vencimentos-pct').textContent = formatarPct(totalVenc, custoTotal);
+
+      document.getElementById('kpi-salario-bruto').textContent = formatarMoeda(totalSalarioBruto);
+      // % do Salário Bruto em relação aos Vencimentos (dá ideia de quanto é
+      // salário base vs. bônus/férias/rescisões/etc).
+      const pctSalVenc = totalVenc > 0 ? `${((totalSalarioBruto / totalVenc) * 100).toFixed(1).replace('.', ',')}% dos Vencimentos` : '0% dos Vencimentos';
+      document.getElementById('kpi-salario-bruto-pct').textContent = pctSalVenc;
+
+      document.getElementById('kpi-encargos').textContent = formatarMoeda(totalEnc);
+      document.getElementById('kpi-encargos-pct').textContent = formatarPct(totalEnc, custoTotal);
+
+      document.getElementById('kpi-custo-beneficios').textContent = formatarMoeda(custoBeneficios);
+      document.getElementById('kpi-beneficios-pagos').textContent = formatarMoeda(totalBnfPago);
+      document.getElementById('kpi-descontos-beneficios').textContent = formatarMoeda(totalBnfDesc);
+
+      document.getElementById('kpi-colaboradores').textContent = cpfsUnicos.size.toLocaleString('pt-BR');
+
+      // Render dos gráficos/ranking (usam as agregações já calculadas)
+      renderGraficoCustoTotalMensal(porComp);
+      renderGraficoEvolucao(porComp);
+      renderGraficoEmpresa(porEmpresa);
+      renderGraficoCentroCusto(porCc);
+      renderGraficosMedia(porComp);
+      renderRankingColaboradores(porCpf);
+
+      // Debug: confirma que as agregações não estão vazias.
+      const refsOrdenadasDbg = [...porComp.keys()].sort();
+      console.log('[CustoFolhaDash] Dados injetados nos gráficos:', {
+        registrosFiltrados: registros.length,
+        custoTotal,
+        totalSalarioBruto,
+        colaboradoresUnicos: cpfsUnicos.size,
+        mensal: {
+          categorias:  refsOrdenadasDbg.map(competenciaBRfromRef),
+          custoTotal:  refsOrdenadasDbg.map(r => { const a = porComp.get(r); return Math.round(a.v + a.e + a.b - a.d); }),
+          colabs:      refsOrdenadasDbg.map(r => porComp.get(r).cpfs.size),
+          salarioMed:  refsOrdenadasDbg.map(r => { const a = porComp.get(r); const n = a.cpfs.size; return n > 0 ? Math.round(a.s / n) : 0; }),
+          vencimentoMed: refsOrdenadasDbg.map(r => { const a = porComp.get(r); const n = a.cpfs.size; return n > 0 ? Math.round(a.v / n) : 0; }),
+          custoMed:    refsOrdenadasDbg.map(r => { const a = porComp.get(r); const n = a.cpfs.size; const t = a.v + a.e + a.b - a.d; return n > 0 ? Math.round(t / n) : 0; }),
+        },
+        empresa: { labels: [...porEmpresa.keys()], series: [...porEmpresa.values()].map(v => Math.round(v)) },
+        centroCusto: { categorias: [...porCc.keys()], series: [...porCc.values()].map(v => Math.round(v)) },
+        rankingTotal: porCpf.size,
+      });
+    }
+
+    // ==========================================
+    // GRÁFICOS — funções de update (instâncias criadas em inicializarGraficos)
+    // `_refsOrdenadas`, `_labelsAtuais`, `_categoriasAtuais` são guardadas nas
+    // instâncias para que os handlers de drill-down saibam qual valor real
+    // (YYYY-MM / nome da empresa / nome do CC) corresponde ao índice clicado.
+    // ==========================================
+    function renderGraficoCustoTotalMensal(porComp) {
+      if (!chartCustoMensalInstance) return;
+      const refsOrdenadas = [...porComp.keys()].sort();
+      const categorias   = refsOrdenadas.map(competenciaBRfromRef);
+      const dataTotal    = refsOrdenadas.map(r => {
+        const a = porComp.get(r); return Math.round(a.v + a.e + a.b - a.d);
+      });
+
+      chartCustoMensalInstance._refsOrdenadas = refsOrdenadas;
+      chartCustoMensalInstance.updateOptions({ xaxis: { categories: categorias } }, false, false);
+      chartCustoMensalInstance.updateSeries([{ name: 'Custo Total', data: dataTotal }], true);
+    }
+
+    function renderGraficoEvolucao(porComp) {
+      if (!chartEvolucaoInstance) return;
+      const refsOrdenadas = [...porComp.keys()].sort();
+      const categorias = refsOrdenadas.map(competenciaBRfromRef);
+      const dataVenc   = refsOrdenadas.map(r => Math.round(porComp.get(r).v));
+      const dataEnc    = refsOrdenadas.map(r => Math.round(porComp.get(r).e));
+      const dataBen    = refsOrdenadas.map(r => Math.round(porComp.get(r).b));
+      const dataColabs = refsOrdenadas.map(r => porComp.get(r).cpfs.size); // headcount/mês
+
+      chartEvolucaoInstance._refsOrdenadas = refsOrdenadas;
+      chartEvolucaoInstance.updateOptions({ xaxis: { categories: categorias } }, false, false);
+      chartEvolucaoInstance.updateSeries([
+        { name: 'Vencimentos',      type: 'bar',  data: dataVenc   },
+        { name: 'Encargos',         type: 'bar',  data: dataEnc    },
+        { name: 'Benefícios Pagos', type: 'bar',  data: dataBen    },
+        { name: 'Colaboradores',    type: 'line', data: dataColabs },
+      ], true);
+    }
+
+    // Médias mensais (per capita) — cada chart divide o bucket financeiro do
+    // mês pelo número de CPFs únicos daquele mês. Quando não há colaborador,
+    // retorna 0 para não poluir com Infinity/NaN.
+    function renderGraficosMedia(porComp) {
+      const refsOrdenadas = [...porComp.keys()].sort();
+      const categorias = refsOrdenadas.map(competenciaBRfromRef);
+
+      const dataSalario    = refsOrdenadas.map(r => {
+        const a = porComp.get(r); const n = a.cpfs.size;
+        return n > 0 ? Math.round(a.s / n) : 0;
+      });
+      const dataVencimento = refsOrdenadas.map(r => {
+        const a = porComp.get(r); const n = a.cpfs.size;
+        return n > 0 ? Math.round(a.v / n) : 0;
+      });
+      const dataCusto      = refsOrdenadas.map(r => {
+        const a = porComp.get(r); const n = a.cpfs.size;
+        const total = a.v + a.e + a.b - a.d;
+        return n > 0 ? Math.round(total / n) : 0;
+      });
+
+      if (chartSalarioMedioInstance) {
+        chartSalarioMedioInstance._refsOrdenadas = refsOrdenadas;
+        chartSalarioMedioInstance.updateOptions({ xaxis: { categories: categorias } }, false, false);
+        chartSalarioMedioInstance.updateSeries([{ name: 'Salário Médio', data: dataSalario }], true);
+      }
+      if (chartVencimentoMedioInstance) {
+        chartVencimentoMedioInstance._refsOrdenadas = refsOrdenadas;
+        chartVencimentoMedioInstance.updateOptions({ xaxis: { categories: categorias } }, false, false);
+        chartVencimentoMedioInstance.updateSeries([{ name: 'Vencimento Médio', data: dataVencimento }], true);
+      }
+      if (chartCustoMedioInstance) {
+        chartCustoMedioInstance._refsOrdenadas = refsOrdenadas;
+        chartCustoMedioInstance.updateOptions({ xaxis: { categories: categorias } }, false, false);
+        chartCustoMedioInstance.updateSeries([{ name: 'Custo Médio', data: dataCusto }], true);
+      }
+    }
+
+    function renderGraficoEmpresa(porEmpresa) {
+      if (!chartEmpresaInstance) return;
+      const pares = [...porEmpresa.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+      const labelsEmpresa = pares.map(p => p[0]);
+      const seriesEmpresa = pares.map(p => Math.round(p[1]));
+
+      chartEmpresaInstance._labelsAtuais = labelsEmpresa;
+      chartEmpresaInstance.updateOptions({ labels: labelsEmpresa }, false, false);
+      chartEmpresaInstance.updateSeries(seriesEmpresa, true);
+    }
+
+    function renderGraficoCentroCusto(porCc) {
+      if (!chartCcInstance) return;
+      const pares = [...porCc.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+      const categoriesCc = pares.map(p => p[0]);
+      const seriesCc     = pares.map(p => Math.round(p[1]));
+
+      chartCcInstance._categoriasAtuais = categoriesCc;
+      // Altura é controlada pelo container (flex-1 + height: '100%' no chart).
+      // Só precisamos repassar categorias e a série — o Apex remedeia sozinho.
+      chartCcInstance.updateOptions({ xaxis: { categories: categoriesCc } }, false, false);
+      chartCcInstance.updateSeries([{ name: 'Custo Total', data: seriesCc }], true);
+    }
+
+    function renderRankingColaboradores(porCpf) {
+      const container = document.getElementById('ranking-colaboradores');
+      const contador  = document.getElementById('ranking-colaboradores-contagem');
+      if (!container) return;
+      // Ranking COMPLETO — lista rola internamente via overflow-y-auto do container.
+      const lista = [...porCpf.values()].sort((a, b) => b.total - a.total);
+
+      if (contador) contador.textContent = lista.length
+        ? `${lista.length} colaborador${lista.length === 1 ? '' : 'es'}`
+        : '—';
+
+      if (!lista.length) {
+        container.innerHTML = '<div class="text-center text-slate-500 text-sm py-16 font-medium">Nenhum colaborador no período filtrado.</div>';
+        return;
+      }
+
+      const maxTotal = lista[0].total || 1;
+
+      container.innerHTML = lista.map((c, idx) => {
+        const pct = maxTotal > 0 ? Math.max(5, (c.total / maxTotal) * 100) : 0;
+        const iniciais = iniciaisDe(c.nome);
+        const medalha = idx === 0 ? 'bg-brandGreen text-brandDarkBlue'
+                      : idx === 1 ? 'bg-brandLightBlue text-brandDarkBlue'
+                      : idx === 2 ? 'bg-brandOrange text-white'
+                      : 'bg-white/10 text-white';
+        return `
+          <div class="flex items-center gap-4 py-3 group">
+            <div class="relative shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-brandMidBlue to-brandDarkBlue flex items-center justify-center text-white font-extrabold text-xs shadow-inner border border-white/10">
+              ${escapeHTML(iniciais)}
+              <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full ${medalha} text-[9px] font-black flex items-center justify-center shadow-lg">${idx + 1}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-bold text-white truncate" title="${escapeHTML(c.nome)}">${escapeHTML(c.nome)}</p>
+              <p class="text-[10px] text-slate-400 truncate font-medium" title="${escapeHTML(c.cc)}">${escapeHTML(c.cc)}</p>
+              <div class="mt-1.5 w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-brandOrange via-brandGreen to-brandLightBlue rounded-full transition-all duration-700" style="width:${pct.toFixed(1)}%"></div>
+              </div>
+            </div>
+            <div class="text-right shrink-0 pl-2">
+              <p class="text-sm font-black text-white whitespace-nowrap">${formatarMoeda(c.total)}</p>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ==========================================
+    // HANDLERS EXPOSTOS
+    // ==========================================
+    window.aplicarFiltrosCustoFolha = () => {
+      // Validação: mês inicial não pode ser maior que o final
+      const mi = document.getElementById('filtro-mes-inicial').value;
+      const mf = document.getElementById('filtro-mes-final').value;
+      if (mi && mf && mi > mf) {
+        window.mostrarAvisoCF({ titulo: 'Intervalo inválido', mensagem: 'O Mês Inicial não pode ser posterior ao Mês Final.', tom: 'aviso' });
+        return;
+      }
+      window.toggleModal('modal-filtros-custofolha', false);
+      processarCustoFolha();
+    };
+
+    window.limparFiltrosCustoFolha = () => {
+      document.getElementById('filtro-mes-inicial').value = '';
+      document.getElementById('filtro-mes-final').value   = '';
+      if (msEmpresa)     msEmpresa.limpar();
+      if (msCentroCusto) msCentroCusto.limpar();
+      processarCustoFolha();
+    };
+
+    // Recálculo em tempo real nos inputs de mês (multi-selects usam onChange
+    // configurado no construtor do MultiSelectCF).
+    ['filtro-mes-inicial', 'filtro-mes-final'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', () => processarCustoFolha());
+    });
+
+    // Logout via sidebar
+    document.addEventListener('click', async (e) => {
+      const logoutBtn = e.target.closest('#btn-logout');
+      if (logoutBtn) {
+        e.preventDefault();
+        await signOut(auth);
+        window.location.href = "../login.html";
+      }
+    });
+  </script>
+
+</body>
+
+</html>

@@ -145,30 +145,14 @@
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
           <a href="../aging_desktop/code.html" data-menu="aging" id="card-acesso-aging" style="animation-delay: 0.4s;"
-            class="hidden card-entry-anim bg-brandDarkBlue rounded-xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-brandMidBlue/30 relative overflow-hidden group flex flex-col justify-between h-full cursor-pointer">
-            <div
-              class="absolute -right-8 -top-8 w-32 h-32 bg-brandGreen/10 rounded-full blur-3xl group-hover:bg-brandGreen/20 transition-all duration-500">
-            </div>
-            <div>
-              <div class="flex items-center gap-4 mb-3">
-                <div
-                  class="w-12 h-12 rounded-lg bg-brandGreen/10 flex items-center justify-center border border-brandGreen/20 shadow-inner">
-                  <span class="material-symbols-outlined text-brandGreen text-[28px]">query_stats</span>
-                </div>
-                <div>
-                  <h3 class="text-white font-extrabold text-lg tracking-wide">AGING Financeiro</h3>
-                  <p class="text-brandGreen/80 text-xs font-semibold uppercase tracking-wider">Saúde do Fluxo de Caixa
-                  </p>
-                </div>
-              </div>
-              <p class="text-brandPaleBlue/70 text-sm leading-relaxed mb-6 font-medium">Análise executiva detalhada de
-                Contas
-                a Receber, Recebidos e taxa real de inadimplência por competência e serviço.</p>
-            </div>
-            <div
-              class="flex items-center text-brandGreen text-sm font-bold uppercase tracking-wider group-hover:translate-x-2 transition-transform duration-300">
-              Acessar Painel <span class="material-symbols-outlined text-base ml-1.5 font-bold">arrow_forward</span>
-            </div>
+            class="card-entry-anim block bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+            <span class="material-symbols-outlined text-4xl text-brandGreen mb-4 block">query_stats</span>
+            <h3 class="text-white text-xl font-extrabold mb-2">AGING Financeiro</h3>
+            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Análise de Contas a Receber, Recebidos e inadimplência
+              real por competência e serviço.</p>
+            <span
+              class="text-brandGreen text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
+              Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </a>
         </div>
 
@@ -183,6 +167,17 @@
               class="text-brandAqua text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
+
+          <a href="../custo_folha_dash/code.html" data-menu="custo_folha" id="card-acesso-custo-folha" style="animation-delay: 0.6s;"
+            class="card-entry-anim block bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+            <span class="material-symbols-outlined text-4xl text-brandOrange mb-4 block">receipt_long</span>
+            <h3 class="text-white text-xl font-extrabold mb-2">Custo de Folha</h3>
+            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Visão executiva de Vencimentos, Encargos, Benefícios e
+              Custo Total por empresa e centro de custo.</p>
+            <span
+              class="text-brandOrange text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
+              Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
+          </a>
         </div>
       </div>
 
@@ -2499,50 +2494,76 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
     onAuthStateChanged(auth, async (user) => {
-      if (user) {
+      if (!user) { window.location.href = "../login.html"; return; }
+
+      // ETAPA 1 — Autenticação/RBAC (bloqueante, rápido).
+      let dadosUser, userProfile, menusPermitidos;
+      try {
+        let docRef = doc(db, "Usuarios", user.email.toLowerCase());
+        let docSnap = await getDoc(docRef);
+        // Fallback: tenta por UID antigo (período de migração)
+        if (!docSnap.exists()) { docRef = doc(db, "Usuarios", user.uid); docSnap = await getDoc(docRef); }
+
+        if (!docSnap.exists()) {
+          await signOut(auth);
+          alert('Acesso Negado: Usuário não encontrado no sistema.');
+          window.location.href = "../login.html";
+          return;
+        }
+
+        dadosUser = docSnap.data();
+        userProfile = dadosUser.perfil;
+        menusPermitidos = dadosUser.menus_permitidos || [];
+
+        const CHAVE_PAGINA = 'dashboard_master';
+        if (userProfile !== 'super_admin' && !menusPermitidos.includes(CHAVE_PAGINA)) {
+          await signOut(auth);
+          alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
+          window.location.href = "../login.html";
+          return;
+        }
+      } catch (error) {
+        console.error("[DashboardMaster] Falha na autenticação/RBAC:", error);
+        return;
+      }
+
+      // ETAPA 2 — Shell visual (sidebar + RBAC dos cards navegáveis).
+      // Os cards Aging e Custo de Folha renderizam visíveis por default e
+      // animam junto com os demais (mesmo padrão de Faturamento/Fluxo/etc).
+      // A RBAC aqui APENAS ESCONDE os cards para usuários sem permissão —
+      // isso acontece antes de a animação fadeInUp começar (delay 0.4-0.6s),
+      // então não há flash perceptível para quem não tem acesso.
+      try {
+        renderSidebar(userProfile, menusPermitidos);
+
+        const ehSuper = userProfile === 'super_admin';
+
+        const cardAging = document.getElementById('card-acesso-aging');
+        if (cardAging && !ehSuper && !menusPermitidos.includes('aging')) {
+          cardAging.classList.add('hidden');
+        }
+        const cardCustoFolha = document.getElementById('card-acesso-custo-folha');
+        if (cardCustoFolha && !ehSuper && !menusPermitidos.includes('custo_folha')) {
+          cardCustoFolha.classList.add('hidden');
+        }
+      } catch (error) {
+        console.error("[DashboardMaster] Falha ao renderizar shell/cards:", error);
+      }
+
+      // ETAPA 3 — Dados de módulos. Queries INDEPENDENTES rodam em paralelo
+      // via allSettled — falha/lentidão em uma não afeta a outra e os cards
+      // já estão visíveis (ETAPA 2 acima) independentemente do resultado.
+      const [lancRes, metasRes] = await Promise.allSettled([
+        getDocs(query(collection(db, "Lancamentos"), where("tipo", "==", "receita"))),
+        getDocs(collection(db, "MetasFinanceiras"))
+      ]);
+
+      // Lancamentos (Faturamento / Aging / Fluxo)
+      if (lancRes.status === 'fulfilled') {
         try {
-          let docRef = doc(db, "Usuarios", user.email.toLowerCase());
-          let docSnap = await getDoc(docRef);
-          // Fallback: tenta por UID antigo (período de migração)
-          if (!docSnap.exists()) { docRef = doc(db, "Usuarios", user.uid); docSnap = await getDoc(docRef); }
-
-          if (docSnap.exists()) {
-            const dadosUser = docSnap.data();
-            const userProfile = dadosUser.perfil;
-
-            // GUARDIÃO DE ROTA
-            const CHAVE_PAGINA = 'dashboard_master';
-            if (userProfile !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
-              await signOut(auth);
-              alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
-              window.location.href = "../login.html";
-              return;
-            }
-
-            renderSidebar(userProfile, dadosUser.menus_permitidos || []);
-
-            // Exibição de cards analíticos por permissão RBAC
-            const menusPermitidos = dadosUser.menus_permitidos || [];
-            const cardAging = document.getElementById('card-acesso-aging');
-            if (cardAging) {
-              if (userProfile === 'super_admin' || menusPermitidos.includes('aging')) {
-                cardAging.classList.remove('hidden');
-              }
-            }
-          } else {
-            await signOut(auth);
-            alert('Acesso Negado: Usuário não encontrado no sistema.');
-            window.location.href = "../login.html";
-            return;
-          }
-
-          const q = query(collection(db, "Lancamentos"), where("tipo", "==", "receita"));
-          const querySnapshot = await getDocs(q);
-
           window.dadosGlobaisFirestore = [];
-          querySnapshot.forEach(doc => {
+          lancRes.value.forEach(doc => {
             const data = doc.data();
-
             // 🛑 BLOQUEIO DE LIXO DO EXCEL: Ignora linhas de subtotal que inflavam 65 Milhões
             const nfStr = String(data['nf'] || data['Nº NF'] || data['Nº NF-e'] || data['NF'] || "").toUpperCase().trim();
             if (!nfStr.includes('TOTAL') && !nfStr.includes('TOTAIS')) {
@@ -2550,28 +2571,33 @@
             }
           });
 
-
-          window.popularListasFiltro(window.dadosGlobaisFirestore);
-          window.processarEAtualizarGraficos(window.dadosGlobaisFirestore, 'todas');
-
-          // Buscar Metas Financeiras
-          const metasSnapshot = await getDocs(collection(db, "MetasFinanceiras"));
-          window.dadosMetasGlobais = [];
-          metasSnapshot.forEach(doc => {
-            window.dadosMetasGlobais.push(doc.data());
-          });
-
-          // Renderizar Metas
-          setTimeout(() => {
-            if (typeof window.inicializarGraficosMetas === 'function') window.inicializarGraficosMetas();
-            if (typeof window.processarDashMetas === 'function') window.processarDashMetas();
-          }, 500);
-
-        } catch (error) {
-          console.error("Erro Firebase:", error);
+          if (typeof window.popularListasFiltro === 'function') window.popularListasFiltro(window.dadosGlobaisFirestore);
+          if (typeof window.processarEAtualizarGraficos === 'function') window.processarEAtualizarGraficos(window.dadosGlobaisFirestore, 'todas');
+        } catch (err) {
+          console.error("[DashboardMaster] Falha ao processar Lancamentos:", err);
         }
       } else {
-        window.location.href = "../login.html";
+        console.error("[DashboardMaster] Falha ao buscar Lancamentos:", lancRes.reason);
+      }
+
+      // Metas Financeiras
+      if (metasRes.status === 'fulfilled') {
+        try {
+          window.dadosMetasGlobais = [];
+          metasRes.value.forEach(doc => { window.dadosMetasGlobais.push(doc.data()); });
+          setTimeout(() => {
+            try {
+              if (typeof window.inicializarGraficosMetas === 'function') window.inicializarGraficosMetas();
+              if (typeof window.processarDashMetas === 'function') window.processarDashMetas();
+            } catch (err) {
+              console.error("[DashboardMaster] Falha ao renderizar Metas:", err);
+            }
+          }, 500);
+        } catch (err) {
+          console.error("[DashboardMaster] Falha ao processar MetasFinanceiras:", err);
+        }
+      } else {
+        console.error("[DashboardMaster] Falha ao buscar MetasFinanceiras:", metasRes.reason);
       }
     });
 
