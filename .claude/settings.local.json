@@ -18,7 +18,8 @@
       "Bash(node _diag_custos_folha.mjs)",
       "Bash(where gcloud *)",
       "Bash(node _smoke_wl.mjs)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(node --input-type=module -e ' *)"
     ]
   }
 }

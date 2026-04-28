@@ -19,16 +19,38 @@
 // UTILIDADES DE SANITIZAÇÃO
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Remove tudo que não for dígito. Ex.: "123.456.789-00" -> "12345678900" */
-export function sanitizarCPF(valor) {
-    return String(valor || '').replace(/\D/g, '');
+/**
+ * Normaliza CPF para 11 dígitos. Auditoria 2026-04-27: o Excel costuma comer
+ * o zero à esquerda quando a coluna é numérica (ex.: "01234567890" vira o
+ * número 1234567890 com 10 dígitos), o que antes derrubava o registro do
+ * headcount. O padStart blinda esse caso.
+ *
+ * Regras:
+ *   - 0 dígitos          → '' (linha sem CPF — caller decide o que fazer)
+ *   - 1..10 dígitos      → preenche zeros à esquerda até 11
+ *   - 11 dígitos         → mantém
+ *   - 12+ dígitos        → primeiros 11 (defensivo, não deve acontecer)
+ */
+export function normalizarCPF(valor) {
+    const digitos = String(valor || '').replace(/\D/g, '');
+    if (!digitos) return '';
+    if (digitos.length === 11) return digitos;
+    if (digitos.length < 11) return digitos.padStart(11, '0');
+    return digitos.slice(0, 11);
 }
 
-/** CPF minimamente válido: 11 dígitos e não é sequência de um único número. */
+/** Alias retrocompatível — não use em código novo. */
+export const sanitizarCPF = normalizarCPF;
+
+/**
+ * CPF minimamente válido: 11 dígitos. Sequência repetida (000.000.000-00,
+ * 111.111.111-11 etc.) ainda costuma aparecer em planilhas reais como
+ * "placeholder" de funcionário sem CPF cadastrado — DEIXAMOS PASSAR para
+ * não furar o headcount. A unicidade no Firestore é por docId auto, não
+ * por CPF, então um sequencial repetido não quebra nada.
+ */
 export function cpfPareceValido(cpfLimpo) {
-    if (!cpfLimpo || cpfLimpo.length !== 11) return false;
-    if (/^(\d)\1{10}$/.test(cpfLimpo)) return false;
-    return true;
+    return !!cpfLimpo && cpfLimpo.length === 11;
 }
 
 /**
@@ -243,19 +265,36 @@ export function processarRelatorioFolha(dadosBrutos) {
 
     // 5) Itera sobre as linhas de dados.
     const saida = [];
+    let totalLinhas = 0, descartadasVazias = 0, descartadasSemCPF = 0,
+        descartadasTotalizador = 0, descartadasCabecalho = 0;
     for (let i = idxSub + 1; i < dadosBrutos.length; i++) {
+        totalLinhas++;
         const row = dadosBrutos[i];
-        if (!row || row.every(c => c === null || c === undefined || String(c).trim() === '')) continue;
+        if (!row || row.every(c => c === null || c === undefined || String(c).trim() === '')) {
+            descartadasVazias++;
+            continue;
+        }
 
         const cpfBruto = row[idxCPF];
-        const cpfLimpo = sanitizarCPF(cpfBruto);
-        if (!cpfLimpo) continue; // linha sem CPF -> ignora
+        const cpfLimpo = normalizarCPF(cpfBruto);
+        if (!cpfLimpo) {
+            // Linha sem dígitos no CPF — quase sempre totalizador ou separador.
+            // Logamos pra auditoria caso seja um colaborador real perdido.
+            descartadasSemCPF++;
+            continue;
+        }
 
         // Descarta qualquer linha de totalizador (presente em várias colunas).
         const linhaNorm = row.map(normalizarCelula).join(' | ');
-        if (/\bTOTAL\b|\bTOTAIS\b|\bSUBTOTAL\b/.test(linhaNorm)) continue;
+        if (/\bTOTAL\b|\bTOTAIS\b|\bSUBTOTAL\b/.test(linhaNorm)) {
+            descartadasTotalizador++;
+            continue;
+        }
         // Re-impressões de cabeçalho no meio do relatório.
-        if (linhaNorm.includes('CODIGO') && linhaNorm.includes('NOME')) continue;
+        if (linhaNorm.includes('CODIGO') && linhaNorm.includes('NOME')) {
+            descartadasCabecalho++;
+            continue;
+        }
 
         const obj = { cpf: cpfLimpo, _origem: 'folha' };
         for (const colStr of Object.keys(mapaColunas)) {
@@ -273,6 +312,14 @@ export function processarRelatorioFolha(dadosBrutos) {
         saida.push(obj);
     }
 
+    console.log('[ETL Folha] Linhas processadas:', {
+        totalLinhas,
+        aceitas: saida.length,
+        descartadasVazias,
+        descartadasSemCPF,
+        descartadasTotalizador,
+        descartadasCabecalho,
+    });
     return saida;
 }
 
@@ -341,15 +388,24 @@ export function processarRelatorioBeneficios(dadosBrutos) {
     }
 
     const saida = [];
+    let totalLinhas = 0, descartadasVazias = 0, descartadasSemCPF = 0,
+        descartadasTotalizador = 0;
     for (let i = idxHeader + 1; i < dadosBrutos.length; i++) {
+        totalLinhas++;
         const row = dadosBrutos[i];
-        if (!row || row.every(c => c === null || c === undefined || String(c).trim() === '')) continue;
+        if (!row || row.every(c => c === null || c === undefined || String(c).trim() === '')) {
+            descartadasVazias++;
+            continue;
+        }
 
-        const cpfLimpo = sanitizarCPF(row[idxCPF]);
-        if (!cpfLimpo) continue;
+        const cpfLimpo = normalizarCPF(row[idxCPF]);
+        if (!cpfLimpo) { descartadasSemCPF++; continue; }
 
         const linhaNorm = row.map(normalizarCelula).join(' | ');
-        if (/\bTOTAL\b|\bTOTAIS\b|\bSUBTOTAL\b/.test(linhaNorm)) continue;
+        if (/\bTOTAL\b|\bTOTAIS\b|\bSUBTOTAL\b/.test(linhaNorm)) {
+            descartadasTotalizador++;
+            continue;
+        }
 
         const obj = { cpf: cpfLimpo, _origem: 'beneficios' };
         for (const colStr of Object.keys(mapaColunas)) {
@@ -365,6 +421,13 @@ export function processarRelatorioBeneficios(dadosBrutos) {
         }
         saida.push(obj);
     }
+    console.log('[ETL Benefícios] Linhas processadas:', {
+        totalLinhas,
+        aceitas: saida.length,
+        descartadasVazias,
+        descartadasSemCPF,
+        descartadasTotalizador,
+    });
     return saida;
 }
 
@@ -421,13 +484,24 @@ export function unificarBases(arrayFolha, arrayBeneficios, cfg = {}) {
     }
 
     // 3) Consolida em array flat e anexa metadados solicitados no front.
+    // Auditoria 2026-04-27: NÃO descartamos mais por CPF malformado — o
+    // headcount tem que refletir QUEM apareceu na planilha. CPFs com problema
+    // são logados pra investigação manual, mas o registro vai pro Firestore.
     const saida = [];
+    let cpfsMalformados = 0;
     for (const reg of mapa.values()) {
-        if (!cpfPareceValido(reg.cpf)) continue; // descarta CPFs malformados
+        if (!cpfPareceValido(reg.cpf)) {
+            cpfsMalformados++;
+            console.warn('[ETL Folha] CPF malformado mantido no headcount:',
+                JSON.stringify({ cpf: reg.cpf, nome: reg.nome || '(sem nome)' }));
+        }
         reg.competencia = competencia;
         if (empresa) reg.empresa_atribuida = empresa;
         reg.tipo = 'custo_folha';
         saida.push(reg);
+    }
+    if (cpfsMalformados > 0) {
+        console.warn(`[ETL Folha] ${cpfsMalformados} colaborador(es) com CPF malformado entraram no headcount. Verifique a planilha original.`);
     }
     return saida;
 }

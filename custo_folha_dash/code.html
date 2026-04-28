@@ -121,7 +121,7 @@
           </div>
           <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Colaboradores</p>
-            <h3 class="text-3xl xl:text-4xl font-black text-brandAqua tracking-tight truncate leading-none" id="kpi-colaboradores">0</h3>
+            <h3 class="text-[clamp(1.5rem,2vw,2.25rem)] font-black text-brandAqua tracking-tight tabular-nums truncate leading-none" id="kpi-colaboradores">0</h3>
           </div>
         </div>
 
@@ -142,7 +142,7 @@
           </div>
           <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
             <p class="text-[10px] font-black text-brandGreen uppercase tracking-[0.12em] mb-1">Custo Total</p>
-            <h3 class="text-2xl xl:text-3xl font-black text-white tracking-tight truncate leading-none" id="kpi-custo-total">R$ 0,00</h3>
+            <h3 class="text-[clamp(0.95rem,1.25vw,1.375rem)] font-black text-white tracking-tight tabular-nums truncate leading-none" title="" id="kpi-custo-total">R$ 0,00</h3>
           </div>
         </div>
 
@@ -163,7 +163,7 @@
           </div>
           <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Total Vencimentos</p>
-            <h3 class="text-2xl xl:text-3xl font-black text-white tracking-tight truncate leading-none" id="kpi-vencimentos">R$ 0,00</h3>
+            <h3 class="text-[clamp(0.95rem,1.25vw,1.375rem)] font-black text-white tracking-tight tabular-nums truncate leading-none" title="" id="kpi-vencimentos">R$ 0,00</h3>
             <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-vencimentos-pct">0% do Custo Total</p>
           </div>
         </div>
@@ -185,7 +185,7 @@
           </div>
           <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Salário Bruto</p>
-            <h3 class="text-2xl xl:text-3xl font-black text-brandPaleBlue tracking-tight truncate leading-none" id="kpi-salario-bruto">R$ 0,00</h3>
+            <h3 class="text-[clamp(0.95rem,1.25vw,1.375rem)] font-black text-brandPaleBlue tracking-tight tabular-nums truncate leading-none" title="" id="kpi-salario-bruto">R$ 0,00</h3>
             <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-salario-bruto-pct">0% dos Vencimentos</p>
           </div>
         </div>
@@ -207,7 +207,7 @@
           </div>
           <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Total Encargos</p>
-            <h3 class="text-2xl xl:text-3xl font-black text-brandLightBlue tracking-tight truncate leading-none" id="kpi-encargos">R$ 0,00</h3>
+            <h3 class="text-[clamp(0.95rem,1.25vw,1.375rem)] font-black text-brandLightBlue tracking-tight tabular-nums truncate leading-none" title="" id="kpi-encargos">R$ 0,00</h3>
             <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-encargos-pct">0% do Custo Total</p>
           </div>
         </div>
@@ -230,18 +230,18 @@
           <div class="relative z-10 flex flex-col gap-2 min-w-0">
             <div class="min-w-0">
               <p class="text-[10px] font-black text-brandOrange uppercase tracking-[0.12em] mb-1">Benefícios</p>
-              <h3 class="text-xl xl:text-2xl font-black text-white tracking-tight truncate leading-none" id="kpi-custo-beneficios">R$ 0,00</h3>
+              <h3 class="text-[clamp(0.875rem,1.1vw,1.25rem)] font-black text-white tracking-tight tabular-nums truncate leading-none" title="" id="kpi-custo-beneficios">R$ 0,00</h3>
               <p class="text-[9px] text-slate-400 mt-0.5 font-semibold uppercase tracking-wider">Pagos − Descontos</p>
             </div>
             <div class="h-px bg-slate-600/40"></div>
             <div class="grid grid-cols-2 gap-2 min-w-0">
               <div class="min-w-0">
                 <p class="text-[9px] font-black text-emerald-300 uppercase tracking-wider mb-0.5">Pagos</p>
-                <h4 class="text-sm xl:text-base font-extrabold text-white truncate" id="kpi-beneficios-pagos">R$ 0,00</h4>
+                <h4 class="text-[clamp(0.625rem,0.78vw,0.8125rem)] font-extrabold text-white tracking-tight tabular-nums truncate" title="" id="kpi-beneficios-pagos">R$ 0,00</h4>
               </div>
               <div class="min-w-0">
                 <p class="text-[9px] font-black text-red-400 uppercase tracking-wider mb-0.5">Descontos</p>
-                <h4 class="text-sm xl:text-base font-extrabold text-white truncate" id="kpi-descontos-beneficios">R$ 0,00</h4>
+                <h4 class="text-[clamp(0.625rem,0.78vw,0.8125rem)] font-extrabold text-white tracking-tight tabular-nums truncate" title="" id="kpi-descontos-beneficios">R$ 0,00</h4>
               </div>
             </div>
           </div>
@@ -283,40 +283,47 @@
         </div>
       </div>
 
-      <!-- ANÁLISES GRÁFICAS — MÉDIAS MENSAIS (per capita) -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- ANÁLISES GRÁFICAS — MÉDIAS MENSAIS (per capita) + HEADCOUNT -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
 
         <!-- Salário Médio / Mês -->
         <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center mb-4">
             <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-              <span class="material-symbols-outlined text-brandPaleBlue">badge</span> Salário Médio / Mês
+              <span class="material-symbols-outlined text-brandLightBlue">badge</span> Salário Médio / Mês
             </h3>
-            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Por CPF</p>
           </div>
           <div id="chart-salario-medio" class="w-full h-[260px]"></div>
         </div>
 
         <!-- Vencimento Médio / Mês -->
         <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center mb-4">
             <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-              <span class="material-symbols-outlined text-white">payments</span> Vencimento Médio / Mês
+              <span class="material-symbols-outlined text-brandOrange">payments</span> Vencimento Médio / Mês
             </h3>
-            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Por CPF</p>
           </div>
           <div id="chart-vencimento-medio" class="w-full h-[260px]"></div>
         </div>
 
         <!-- Custo Médio / Mês -->
         <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center mb-4">
             <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
               <span class="material-symbols-outlined text-brandGreen">savings</span> Custo Médio / Mês
             </h3>
-            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Por CPF</p>
           </div>
           <div id="chart-custo-medio" class="w-full h-[260px]"></div>
+        </div>
+
+        <!-- Evolução de Colaboradores (headcount mensal) -->
+        <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
+          <div class="flex items-center mb-4">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandAqua">groups</span> Evolução de Colaboradores
+            </h3>
+          </div>
+          <div id="chart-headcount" class="w-full h-[260px]"></div>
         </div>
       </div>
 
@@ -492,6 +499,16 @@
     function isVencimento(k) {
       const key = String(k || '').toUpperCase();
       if (key.endsWith('_QTDE')) return false;
+      // Pró-labore é PROVENTO mesmo com FGTS no slug ("PRO_LABORE_C_FGTS_Valor")
+      // — caso comum de sócio-administrador. Sem essa exceção, a blindagem
+      // FGTS abaixo o joga em "outros valores" e ele vaza p/ Encargos.
+      const ehProLabore = key.includes('PRO_LABORE') || key.includes('PROLABORE');
+      if (ehProLabore) {
+        if (key.startsWith('DESC_') || key.startsWith('DESCTO_')) return false;
+        if (key.includes('DESCONTO')) return false;
+        if (key.startsWith('BASE_')) return false;
+        return true;
+      }
       if (key.includes('INSS') || key.includes('IRRF') || key.includes('DESCONTO') ||
           key.includes('EDUCACAO') || key.includes('FGTS') || key.includes('BASE_')) {
         return false;
@@ -507,9 +524,41 @@
       return keywords.some(word => key.includes(word));
     }
 
-    const SET_ENCARGOS = new Set([
-      'INSS_PATRONAL_Valor', 'VALOR_FGTS_Valor', 'FGTS_Valor', 'TERCEIROS_Valor',
-    ]);
+    // Encargos Patronais — auditoria 2026-04-27.
+    // Whitelist tokenizada + blacklist defensiva. Espelha custo_folha_desktop.
+    // INSS retido / IRRF / sindicato JAMAIS entram aqui (já estão no Bruto).
+    function _hasToken(key, token) {
+      return new RegExp(`(^|_)${token}(_|$)`).test(key);
+    }
+    function isEncargo(k) {
+      const key = String(k || '').toUpperCase();
+      if (key.endsWith('_QTDE')) return false;
+      if (key.startsWith('BASE_')) return false;
+      if (key.startsWith('DESC_') || key.startsWith('DESCTO_')) return false;
+      if (key.includes('DESCONTO')) return false;
+      // Pró-labore é PROVENTO — bloqueio antes da whitelist FGTS pra impedir
+      // que "PRO_LABORE_C_FGTS_Valor" vaze pra encargos via token FGTS.
+      if (key.includes('PRO_LABORE') || key.includes('PROLABORE')) return false;
+      // Blacklist explícita — descontos do funcionário.
+      if (_hasToken(key, 'IRRF') || _hasToken(key, 'IR_RETIDO')) return false;
+      if (key.includes('SINDIC')) return false;        // SINDICATO + SINDICAL
+      if (_hasToken(key, 'CONTRIBUICAO_ASSISTENCIAL')) return false;
+      if (_hasToken(key, 'INSS_RETIDO')) return false;
+      if (_hasToken(key, 'INSS') && !key.includes('PATRONAL')) return false;
+      // Whitelist patronal por TOKEN.
+      const tokens = ['INSS_PATRONAL', 'FGTS', 'TERCEIROS', 'RAT', 'FAP', 'SISTEMA_S'];
+      return tokens.some(t => _hasToken(key, t));
+    }
+    function isDescFolhaInfo(k) {
+      const key = String(k || '').toUpperCase();
+      if (key.endsWith('_QTDE')) return false;
+      if (key.startsWith('BASE_')) return false;
+      if (_hasToken(key, 'INSS') && !key.includes('PATRONAL')) return true;
+      if (_hasToken(key, 'IRRF') || _hasToken(key, 'IR_RETIDO')) return true;
+      if (key.includes('SINDIC')) return true;        // SINDICATO + SINDICAL
+      if (_hasToken(key, 'CONTRIBUICAO_ASSISTENCIAL')) return true;
+      return false;
+    }
 
     const SET_BNF_PAGO = new Set([
       'VALE_TRANSPORTE_Valor', 'VALE_REFEICAO_Valor',
@@ -524,31 +573,116 @@
       'DESCTO_DE_ASSISTENCIA_MEDICA_Valor',
     ]);
 
-    // Subset ESTRITO de Vencimentos: apenas salário base mensal e pro-labore.
-    // NÃO inclui bônus, férias, 13º, comissões, rescisões — esses continuam
-    // contando no bucket Vencimentos, só não aparecem no KPI "Salário Bruto".
-    const SET_SALARIO_BRUTO = new Set([
-      'SALARIO_Valor',
-      'SALARIO_BASE_Valor',
-      'SALARIO_BRUTO_MENSAL_Valor',
-      'PRO_LABORE_Valor',
-    ]);
+    // isBnfDesc estende SET_BNF_DESC para coparticipação odontológica.
+    // Auditoria 2026-04-27 (caso Henrique): "DESCONTO CONTRIBUIÇÃO ODONTOLOGICA"
+    // estava caindo em "outros valores" e não reduzia o Custo Total — corrige
+    // diferença de R$ 11,25 vs. relatório oficial. Espelha custo_folha_desktop.
+    function isBnfDesc(k) {
+      if (SET_BNF_DESC.has(k)) return true;
+      const key = String(k || '').toUpperCase();
+      if (key.endsWith('_QTDE')) return false;
+      if (key.startsWith('BASE_')) return false;
+      const ehDesconto = key.startsWith('DESC_') || key.startsWith('DESCTO_') || key.includes('DESCONTO');
+      if (ehDesconto && key.includes('ODONTOL')) return true;
+      return false;
+    }
+
+    // Subset de Vencimentos = salário base mensal (incluindo PRO_LABORE).
+    // Detecção FLEXÍVEL por substring SALARIO/PRO_LABORE — captura variações
+    // tipo SALARIO_Valor, SALARIO_BASE_Valor, SALARIO_BRUTO_MENSAL_Valor, etc.
+    // Blindagens excluem rubricas que CONTÊM "salário" mas NÃO são base mensal:
+    // família, maternidade, adiantamento, líquido, 13º, férias, bases de cálculo
+    // e descontos. Mantém o KPI "Salário Bruto" coerente: salário-base × cabeça.
+    function isSalarioBase(k) {
+      const key = String(k || '').toUpperCase();
+      // Precisa conter SALARIO ou PRO_LABORE — caso contrário, descarta cedo.
+      if (!key.includes('SALARIO') && !key.includes('PRO_LABORE')) return false;
+      // Blindagens: rejeita variantes que não são salário base mensal.
+      if (key.endsWith('_QTDE'))           return false;
+      if (key.includes('BASE_'))           return false; // BASE_INSS, BASE_FGTS
+      if (key.includes('FAMILIA'))         return false; // Salário-família
+      if (key.includes('MATERNIDADE'))     return false; // Auxílio maternidade
+      if (key.includes('ADIANTAMENTO'))    return false;
+      if (key.includes('LIQUIDO'))         return false; // Salário líquido
+      if (key.includes('13O'))             return false; // 13º salário
+      if (key.includes('FERIAS'))          return false;
+      if (key.includes('RESCISAO'))        return false;
+      if (key.includes('AVISO_PREVIO'))    return false;
+      if (key.includes('DESCONTO'))        return false;
+      if (key.startsWith('DESC_'))         return false;
+      if (key.startsWith('DESCTO_'))       return false;
+      if (key.includes('INSS_S_'))         return false; // INSS s/ 13º
+      if (key.includes('IRRF'))            return false;
+      return true;
+    }
+
+    // Set global pra debug — coleta todas as chaves classificadas como salário
+    // base durante as varreduras. Logado em processarCustoFolha pra o usuário
+    // ver no Console quais slugs do Firestore estão entrando na conta.
+    const _chavesSalarioDetectadas = new Set();
+
+    // Auditoria 2026-04-27 (rodada 2): rastreio por chave para detectar se
+    // alguma rubrica de INSS retido vazou pro bucket de encargos no banco real.
+    // Não muda nenhuma regra — só observa. Lido em processarCustoFolha.
+    const _audEncargosPorChave    = new Map(); // k -> soma R$
+    const _audDescFolhaPorChave   = new Map(); // k -> soma R$
+    const _audInssEmOutrosBuckets = new Map(); // k -> { bucket, soma }
 
     function calcularTotais(reg) {
       let vencimentos = 0, encargos = 0, beneficios = 0, descontosBnf = 0, salarioBruto = 0;
       for (const k of Object.keys(reg || {})) {
         const raw = reg[k];
         if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
-        // Salário bruto acumula em PARALELO (subset estrito) — fora da cadeia
-        // de precedência, pra não alterar a soma contábil dos outros buckets.
-        if (SET_SALARIO_BRUTO.has(k)) salarioBruto += raw;
+        // Salário bruto acumula em PARALELO ao bucket Vencimentos — fora da
+        // cadeia de precedência pra não alterar a soma contábil.
+        if (isSalarioBase(k)) {
+          salarioBruto += raw;
+          _chavesSalarioDetectadas.add(k);
+        }
 
-        if (SET_ENCARGOS.has(k))   { encargos += raw; continue; }
-        if (k.startsWith('Bnf_'))  { beneficios += raw; continue; }
-        if (SET_BNF_PAGO.has(k))   { beneficios += raw; continue; }
-        if (SET_BNF_DESC.has(k))   { descontosBnf += raw; continue; }
-        if (isVencimento(k))       { vencimentos += raw; continue; }
+        // Precedência (espelha custo_folha_desktop):
+        //   1. Descontos folha (INSS retido/IRRF/sindicato) — descarta ANTES
+        //      de qualquer match. Já estão embutidos no Bruto.
+        //   2. Encargos patronais (whitelist tokenizada).
+        //   3. Benefícios (Bnf_* + Sets estritos).
+        //   4. Vencimentos (validador flexível).
+        const kUpper = String(k).toUpperCase();
+        const tocaINSS = kUpper.includes('INSS');
+
+        if (isDescFolhaInfo(k))    {
+          _audDescFolhaPorChave.set(k, (_audDescFolhaPorChave.get(k) || 0) + raw);
+          continue;
+        }
+        if (isEncargo(k))          {
+          encargos += raw;
+          _audEncargosPorChave.set(k, (_audEncargosPorChave.get(k) || 0) + raw);
+          continue;
+        }
+        if (k.startsWith('Bnf_'))  {
+          beneficios += raw;
+          if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'beneficios (Bnf_)', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
+          continue;
+        }
+        if (SET_BNF_PAGO.has(k))   {
+          beneficios += raw;
+          if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'beneficios (SET_BNF_PAGO)', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
+          continue;
+        }
+        if (isBnfDesc(k))          {
+          descontosBnf += raw;
+          if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'descontosBnf', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
+          continue;
+        }
+        if (isVencimento(k))       {
+          vencimentos += raw;
+          if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'vencimentos', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
+          continue;
+        }
+        // Caiu em "outros" — se contém INSS, é alerta crítico.
+        if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'outros (não somou)', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
       }
+      // Custo Total = Vencimentos + Encargos + (Bnf Pagos − Desc. Bnf).
+      // INSS/IRRF retidos NÃO somam — já estão dentro do SALARIO bruto.
       const total = vencimentos + encargos + beneficios - descontosBnf;
       return { vencimentos, encargos, beneficios, descontosBnf, total, salarioBruto };
     }
@@ -556,6 +690,30 @@
     // ==========================================
     // HELPERS
     // ==========================================
+    // Normalização de CPF — espelha importacao_folha.js#normalizarCPF.
+    // Auditoria 2026-04-27: Excel come zero à esquerda quando a coluna é
+    // numérica (ex: "01234567890" vira 1234567890 com 10 dígitos). O padStart
+    // recoloca o zero. Importante pra o headcount não duplicar a mesma pessoa
+    // entre meses onde o Excel cortou e meses onde não cortou.
+    function normalizarCPF(valor) {
+      const digitos = String(valor || '').replace(/\D/g, '');
+      if (!digitos) return '';
+      if (digitos.length === 11) return digitos;
+      if (digitos.length < 11) return digitos.padStart(11, '0');
+      return digitos.slice(0, 11);
+    }
+
+    // Chave de identidade do colaborador. Se o CPF normalizar vazio, faz
+    // fallback pra nome (lowercase + trim) — assim o headcount não perde
+    // colaborador por planilha mal preenchida.
+    function chaveColaborador(reg) {
+      const cpf = normalizarCPF(reg?.cpf);
+      if (cpf) return `cpf::${cpf}`;
+      const nome = String(reg?.nome || '').trim().toLowerCase();
+      if (nome) return `nome::${nome}`;
+      return ''; // sem identidade — não conta no headcount (defensivo)
+    }
+
     const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     function formatarMoeda(v) { return fmtBRL.format(v || 0); }
     function formatarPct(num, den) {
@@ -597,18 +755,19 @@
     let chartSalarioMedioInstance   = null;
     let chartVencimentoMedioInstance = null;
     let chartCustoMedioInstance     = null;
+    let chartHeadcountInstance      = null;
 
     // Tema global consolidado — cores, tipografia e animações em um só objeto
     // para manter os gráficos com a mesma assinatura visual.
     const themeGlobal = {
       palette: {
-        evolucao:       ['#aad12f', '#59a4d8', '#ff8864', '#89d5c9'], // Venc · Enc · Bnf · Colabs (line)
+        evolucao:       ['#aad12f', '#59a4d8', '#ff8864'], // Venc · Enc · Bnf
         donut:          ['#aad12f', '#59a4d8', '#ff8864', '#89d5c9', '#bfd7ea', '#1a4895', '#f59e0b', '#ef4444', '#a855f7', '#22d3ee'],
         custoTotal:     ['#aad12f'],                        // coluna simples
         cc:             { from: '#59a4d8', to: '#aad12f' }, // gradiente horizontal
-        salarioMedio:   ['#bfd7ea'],                        // Salário base (pale blue)
-        vencimentoMedio:['#ffffff'],                        // Vencimentos (branco)
-        custoMedio:     ['#aad12f'],                        // Custo total (verde)
+        salarioMedio:   ['#59a4d8'],                        // brandLightBlue — azul claro
+        vencimentoMedio:['#ff8864'],                        // brandOrange
+        custoMedio:     ['#aad12f'],                        // brandGreen — custo total
       },
       apex: {
         fontFamily: 'Manrope, sans-serif',
@@ -669,22 +828,19 @@
         chartCustoMensalInstance.render();
       }
 
-      // 1) Evolução mensal — MIXED CHART: 3 bars empilhadas + 1 line (Colaboradores)
-      // com eixo Y secundário (opposite) para a escala de headcount não ser
-      // esmagada pela escala financeira.
+      // 1) Evolução mensal (stacked bar) — com dataLabels + drill-down por mês
       const elEvol = document.getElementById('chart-evolucao-custo');
       if (elEvol && !chartEvolucaoInstance) {
         chartEvolucaoInstance = new ApexCharts(elEvol, {
           chart: {
-            type: 'line', stacked: true, height: 380, fontFamily: apex.fontFamily, foreColor: apex.foreColor,
+            type: 'bar', stacked: true, height: 380, fontFamily: apex.fontFamily, foreColor: apex.foreColor,
             toolbar: { show: false }, animations,
             events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownMes(ctx._refsOrdenadas?.[cfg.dataPointIndex]) }
           },
           series: [
-            { name: 'Vencimentos',      type: 'bar',  data: [] },
-            { name: 'Encargos',         type: 'bar',  data: [] },
-            { name: 'Benefícios Pagos', type: 'bar',  data: [] },
-            { name: 'Colaboradores',    type: 'line', data: [] },
+            { name: 'Vencimentos',      data: [] },
+            { name: 'Encargos',         data: [] },
+            { name: 'Benefícios Pagos', data: [] },
           ],
           plotOptions: {
             bar: {
@@ -693,43 +849,13 @@
               dataLabels: { hideOverflowingLabels: true, position: 'center' }
             }
           },
-          stroke: { width: [0, 0, 0, 3], curve: 'smooth' },
-          markers: { size: [0, 0, 0, 5], colors: ['#89d5c9'], strokeColors: '#002443', strokeWidth: 2, hover: { sizeOffset: 3 } },
           colors: palette.evolucao,
-          // dataLabels global fica desligado no mixed — as 3 séries de barras
-          // usam dataLabelsMes via `enabledOnSeries`, enquanto a linha usa label
-          // próprio com formatter de headcount inteiro.
-          dataLabels: {
-            enabled: true,
-            enabledOnSeries: [0, 1, 2, 3],
-            formatter: (val, opts) => {
-              if (opts.seriesIndex === 3) return String(Math.round(val));
-              return 'R$ ' + formatarValorGrafico(val);
-            },
-            style: { fontSize: '10px', fontWeight: 700, colors: ['#002443'] },
-            background: { enabled: false },
-            dropShadow: { enabled: false }
-          },
+          dataLabels: dataLabelsMes,
           legend: { position: 'top', horizontalAlign: 'right', labels: { colors: apex.foreColor }, markers: { width: 10, height: 10, radius: 3 }, fontSize: '11px', fontWeight: 700 },
           xaxis: { categories: [], labels: { style: { colors: apex.foreColor, fontSize: '11px', fontWeight: 700 } }, axisBorder: { color: 'rgba(191, 215, 234, 0.15)' }, axisTicks: { color: 'rgba(191, 215, 234, 0.15)' } },
-          yaxis: [
-            { seriesName: 'Vencimentos',      labels: { formatter: (v) => 'R$ ' + formatarValorGrafico(v), style: { colors: apex.foreColor, fontSize: '10px' } } },
-            { seriesName: 'Encargos',         show: false },
-            { seriesName: 'Benefícios Pagos', show: false },
-            {
-              seriesName: 'Colaboradores',
-              opposite: true,
-              labels: { formatter: (v) => String(Math.round(v)), style: { colors: '#89d5c9', fontSize: '10px', fontWeight: 700 } },
-              title: { text: 'Colaboradores', style: { color: '#89d5c9', fontSize: '10px', fontWeight: 700 } }
-            }
-          ],
+          yaxis: { labels: { formatter: (v) => 'R$ ' + formatarValorGrafico(v), style: { colors: apex.foreColor, fontSize: '10px' } } },
           grid: { borderColor: apex.gridBorder, strokeDashArray: 4 },
-          tooltip: {
-            theme: 'dark', shared: true, intersect: false,
-            y: {
-              formatter: (v, { seriesIndex }) => seriesIndex === 3 ? `${Math.round(v)} colaborador(es)` : formatarMoeda(v)
-            }
-          },
+          tooltip: { theme: 'dark', shared: true, intersect: false, y: { formatter: (v) => formatarMoeda(v) } },
           noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
         });
         chartEvolucaoInstance.render();
@@ -780,6 +906,45 @@
       if (elCM && !chartCustoMedioInstance) {
         chartCustoMedioInstance = new ApexCharts(elCM, buildOptionsMedia('Custo Médio', palette.custoMedio[0]));
         chartCustoMedioInstance.render();
+      }
+
+      // 1.2) Evolução de Colaboradores (headcount/mês) — area suave brandAqua,
+      // formatador inteiro pra escala em "pessoas".
+      const elHC = document.getElementById('chart-headcount');
+      if (elHC && !chartHeadcountInstance) {
+        chartHeadcountInstance = new ApexCharts(elHC, {
+          chart: {
+            type: 'area', height: 260, fontFamily: apex.fontFamily, foreColor: apex.foreColor,
+            toolbar: { show: false }, animations,
+            events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownMes(ctx._refsOrdenadas?.[cfg.dataPointIndex]) }
+          },
+          series: [{ name: 'Colaboradores', data: [] }],
+          stroke: { width: 3, curve: 'smooth' },
+          colors: ['#89d5c9'], // brandAqua
+          fill: {
+            type: 'gradient',
+            gradient: { shade: 'dark', type: 'vertical', opacityFrom: 0.45, opacityTo: 0.02, stops: [0, 100] }
+          },
+          markers: { size: 5, colors: ['#89d5c9'], strokeColors: '#002443', strokeWidth: 2, hover: { sizeOffset: 3 } },
+          dataLabels: {
+            enabled: true,
+            formatter: (v) => String(Math.round(v)),
+            offsetY: -8,
+            style: { fontSize: '11px', fontWeight: 800, colors: ['#ffffff'] },
+            background: { enabled: false },
+            dropShadow: { enabled: true, top: 1, left: 0, blur: 2, color: '#000', opacity: 0.6 }
+          },
+          xaxis: { categories: [], labels: { style: { colors: apex.foreColor, fontSize: '10px', fontWeight: 700 } }, axisBorder: { color: 'rgba(191, 215, 234, 0.15)' }, axisTicks: { color: 'rgba(191, 215, 234, 0.15)' } },
+          yaxis: {
+            labels: { formatter: (v) => String(Math.round(v)), style: { colors: apex.foreColor, fontSize: '9px' } },
+            forceNiceScale: true, decimalsInFloat: 0
+          },
+          grid: { borderColor: apex.gridBorder, strokeDashArray: 4 },
+          tooltip: { theme: 'dark', y: { formatter: (v) => `${Math.round(v)} colaborador(es)` } },
+          legend: { show: false },
+          noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
+        });
+        chartHeadcountInstance.render();
       }
 
       // 2) Custo por Empresa (donut) — com drill-down por empresa
@@ -1073,6 +1238,11 @@
     // PROCESSAMENTO + RENDER DOS 4 KPIs
     // ==========================================
     function processarCustoFolha() {
+      // Reset dos rastreadores de auditoria — refletem só o filtro atual.
+      _audEncargosPorChave.clear();
+      _audDescFolhaPorChave.clear();
+      _audInssEmOutrosBuckets.clear();
+
       const base = window._custoFolhaBase || [];
 
       const mesInicial  = document.getElementById('filtro-mes-inicial').value; // "YYYY-MM"
@@ -1104,11 +1274,18 @@
       // Agregação em uma única passada: KPIs + insumos dos gráficos/ranking.
       let totalVenc = 0, totalEnc = 0, totalBnfPago = 0, totalBnfDesc = 0, totalSalarioBruto = 0;
       const competenciasSet = new Set();
-      const cpfsUnicos      = new Set(); // KPI "Total Colaboradores" — apenas CPF com dígitos
-      const porComp    = new Map(); // competencia_ref -> { v, e, b, d, s, cpfs }
+      // Headcount = chave de identidade única (cpf:: ou nome::), independente
+      // de a linha ter Vencimento/Salário. Auditoria 2026-04-27: presença na
+      // planilha é suficiente — não filtramos por valor.
+      const colabsUnicos    = new Set();
+      const porComp    = new Map(); // competencia_ref -> { v, e, b, d, s, colabs }
       const porEmpresa = new Map(); // empresa -> total
       const porCc      = new Map(); // centro_custo -> total
-      const porCpf     = new Map(); // cpfKey -> { nome, cc, total }
+      const porColab   = new Map(); // chaveColaborador -> { nome, cc, total }
+
+      // Telemetria: o usuário precisa enxergar por que o headcount bate ou não.
+      let registrosSemIdentidade = 0;   // sem CPF e sem nome
+      let registrosComFallbackNome = 0; // CPF inválido, contado pelo nome
 
       for (const r of registros) {
         const t = calcularTotais(r);
@@ -1119,21 +1296,26 @@
         totalSalarioBruto += t.salarioBruto;
         if (r.competencia_ref) competenciasSet.add(r.competencia_ref);
 
-        const cpfDigitos = String(r.cpf || '').replace(/\D/g, '');
-        if (cpfDigitos) cpfsUnicos.add(cpfDigitos);
+        const chave = chaveColaborador(r);
+        if (!chave) {
+          registrosSemIdentidade++;
+        } else {
+          if (chave.startsWith('nome::')) registrosComFallbackNome++;
+          colabsUnicos.add(chave);
+        }
 
-        // porComp enriquecido: v/e/b/d/s + cpfs (Set de colaboradores únicos no mês)
-        // — permite calcular médias per capita mensais e headcount pela linha.
+        // porComp enriquecido: v/e/b/d/s + colabs (Set de identidades únicas no
+        // mês). Headcount mensal e médias per capita usam .size deste Set.
         const ref = r.competencia_ref;
         if (ref && /^\d{4}-\d{2}$/.test(ref)) {
           let agg = porComp.get(ref);
-          if (!agg) { agg = { v: 0, e: 0, b: 0, d: 0, s: 0, cpfs: new Set() }; porComp.set(ref, agg); }
+          if (!agg) { agg = { v: 0, e: 0, b: 0, d: 0, s: 0, colabs: new Set() }; porComp.set(ref, agg); }
           agg.v += t.vencimentos;
           agg.e += t.encargos;
           agg.b += t.beneficios;
           agg.d += t.descontosBnf;
           agg.s += t.salarioBruto;
-          if (cpfDigitos) agg.cpfs.add(cpfDigitos);
+          if (chave) agg.colabs.add(chave);
         }
 
         // Composição por Empresa / CC — usa Custo Total líquido (com descontos)
@@ -1143,41 +1325,51 @@
         const ccKey = String(r.centro_custo || '').trim() || 'Sem centro de custo';
         porCc.set(ccKey, (porCc.get(ccKey) || 0) + t.total);
 
-        // Ranking por CPF (fallback: nome)
-        const cpfKey = cpfDigitos || `nome::${String(r.nome || '').toLowerCase()}`;
-        let pessoa = porCpf.get(cpfKey);
-        if (!pessoa) {
-          pessoa = { nome: r.nome || '—', cc: r.centro_custo || '—', total: 0 };
-          porCpf.set(cpfKey, pessoa);
+        // Ranking por colaborador (mesma chave do headcount).
+        if (chave) {
+          let pessoa = porColab.get(chave);
+          if (!pessoa) {
+            pessoa = { nome: r.nome || '—', cc: r.centro_custo || '—', total: 0 };
+            porColab.set(chave, pessoa);
+          }
+          pessoa.total += t.total;
+          if (r.nome)         pessoa.nome = r.nome;
+          if (r.centro_custo) pessoa.cc = r.centro_custo;
         }
-        pessoa.total += t.total;
-        if (r.nome)         pessoa.nome = r.nome;
-        if (r.centro_custo) pessoa.cc = r.centro_custo;
       }
 
       const custoBeneficios = totalBnfPago - totalBnfDesc;
       const custoTotal = totalVenc + totalEnc + custoBeneficios;
 
-      // Render dos 6 cards
-      document.getElementById('kpi-custo-total').textContent = formatarMoeda(custoTotal);
+      // Helper: setText + title nativo (fallback de hover quando o truncate
+      // chegar a cortar em telas extremas).
+      const setKPI = (id, valor) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = valor;
+        el.setAttribute('title', valor);
+      };
 
-      document.getElementById('kpi-vencimentos').textContent = formatarMoeda(totalVenc);
+      // Render dos 6 cards
+      setKPI('kpi-custo-total', formatarMoeda(custoTotal));
+
+      setKPI('kpi-vencimentos', formatarMoeda(totalVenc));
       document.getElementById('kpi-vencimentos-pct').textContent = formatarPct(totalVenc, custoTotal);
 
-      document.getElementById('kpi-salario-bruto').textContent = formatarMoeda(totalSalarioBruto);
+      setKPI('kpi-salario-bruto', formatarMoeda(totalSalarioBruto));
       // % do Salário Bruto em relação aos Vencimentos (dá ideia de quanto é
       // salário base vs. bônus/férias/rescisões/etc).
       const pctSalVenc = totalVenc > 0 ? `${((totalSalarioBruto / totalVenc) * 100).toFixed(1).replace('.', ',')}% dos Vencimentos` : '0% dos Vencimentos';
       document.getElementById('kpi-salario-bruto-pct').textContent = pctSalVenc;
 
-      document.getElementById('kpi-encargos').textContent = formatarMoeda(totalEnc);
+      setKPI('kpi-encargos', formatarMoeda(totalEnc));
       document.getElementById('kpi-encargos-pct').textContent = formatarPct(totalEnc, custoTotal);
 
-      document.getElementById('kpi-custo-beneficios').textContent = formatarMoeda(custoBeneficios);
-      document.getElementById('kpi-beneficios-pagos').textContent = formatarMoeda(totalBnfPago);
-      document.getElementById('kpi-descontos-beneficios').textContent = formatarMoeda(totalBnfDesc);
+      setKPI('kpi-custo-beneficios', formatarMoeda(custoBeneficios));
+      setKPI('kpi-beneficios-pagos', formatarMoeda(totalBnfPago));
+      setKPI('kpi-descontos-beneficios', formatarMoeda(totalBnfDesc));
 
-      document.getElementById('kpi-colaboradores').textContent = cpfsUnicos.size.toLocaleString('pt-BR');
+      setKPI('kpi-colaboradores', colabsUnicos.size.toLocaleString('pt-BR'));
 
       // Render dos gráficos/ranking (usam as agregações já calculadas)
       renderGraficoCustoTotalMensal(porComp);
@@ -1185,26 +1377,59 @@
       renderGraficoEmpresa(porEmpresa);
       renderGraficoCentroCusto(porCc);
       renderGraficosMedia(porComp);
-      renderRankingColaboradores(porCpf);
+      renderRankingColaboradores(porColab);
 
-      // Debug: confirma que as agregações não estão vazias.
+      // Debug: confirma que as agregações não estão vazias + lista as chaves
+      // do Firestore que entraram no Salário Bruto (útil pra ajustar blindagens
+      // se aparecer algo que não deveria, ou expandir o detector).
       const refsOrdenadasDbg = [...porComp.keys()].sort();
+      console.log('[CustoFolhaDash] Total de linhas processadas:', registros.length);
+      console.log('[CustoFolhaDash] Chaves classificadas como Salário Base:', [..._chavesSalarioDetectadas].sort());
+
+      // ===================================================================
+      // AUDITORIA INSS — rodada 2 (2026-04-27)
+      // Mostra exatamente quais chaves entraram em ENCARGOS e quais foram
+      // descartadas como descontos folha. Se aparecer alguma chave INSS na
+      // lista de ENCARGOS que NÃO seja "INSS_PATRONAL_*", é o vazamento.
+      // ===================================================================
+      const fmtSomas = (m) => [...m.entries()]
+        .map(([k, v]) => ({ chave: k, soma: Math.round(v * 100) / 100 }))
+        .sort((a, b) => b.soma - a.soma);
+      console.log('%c[Auditoria INSS] Chaves classificadas como ENCARGOS (somam ao Custo Total):', 'font-weight:bold;color:#aad12f');
+      console.table(fmtSomas(_audEncargosPorChave));
+      console.log('%c[Auditoria INSS] Chaves classificadas como DESCONTOS FOLHA (NÃO somam — informativo):', 'font-weight:bold;color:#ff9a3c');
+      console.table(fmtSomas(_audDescFolhaPorChave));
+      if (_audInssEmOutrosBuckets.size > 0) {
+        const inssVazados = [..._audInssEmOutrosBuckets.entries()]
+          .map(([k, v]) => ({ chave: k, bucket: v.bucket, soma: Math.round(v.soma * 100) / 100 }));
+        console.warn('%c[Auditoria INSS] ⚠ Chaves contendo INSS em outros buckets (verificar se é vazamento):', 'font-weight:bold;color:#ff4444');
+        console.table(inssVazados);
+      } else {
+        console.log('%c[Auditoria INSS] OK — nenhuma chave INSS fora dos buckets esperados.', 'color:#aad12f');
+      }
+      // ===================================================================
+      console.log('[CustoFolhaDash] Headcount auditoria:', {
+        linhasProcessadas: registros.length,
+        colaboradoresUnicos: colabsUnicos.size,
+        registrosSemIdentidade,           // sem CPF e sem nome — não contou
+        registrosComFallbackNome,         // CPF inválido, contado pelo nome
+      });
       console.log('[CustoFolhaDash] Dados injetados nos gráficos:', {
         registrosFiltrados: registros.length,
         custoTotal,
         totalSalarioBruto,
-        colaboradoresUnicos: cpfsUnicos.size,
+        colaboradoresUnicos: colabsUnicos.size,
         mensal: {
           categorias:  refsOrdenadasDbg.map(competenciaBRfromRef),
           custoTotal:  refsOrdenadasDbg.map(r => { const a = porComp.get(r); return Math.round(a.v + a.e + a.b - a.d); }),
-          colabs:      refsOrdenadasDbg.map(r => porComp.get(r).cpfs.size),
-          salarioMed:  refsOrdenadasDbg.map(r => { const a = porComp.get(r); const n = a.cpfs.size; return n > 0 ? Math.round(a.s / n) : 0; }),
-          vencimentoMed: refsOrdenadasDbg.map(r => { const a = porComp.get(r); const n = a.cpfs.size; return n > 0 ? Math.round(a.v / n) : 0; }),
-          custoMed:    refsOrdenadasDbg.map(r => { const a = porComp.get(r); const n = a.cpfs.size; const t = a.v + a.e + a.b - a.d; return n > 0 ? Math.round(t / n) : 0; }),
+          colabs:      refsOrdenadasDbg.map(r => porComp.get(r).colabs.size),
+          salarioMed:  refsOrdenadasDbg.map(r => { const a = porComp.get(r); const n = a.colabs.size; return n > 0 ? Math.round(a.s / n) : 0; }),
+          vencimentoMed: refsOrdenadasDbg.map(r => { const a = porComp.get(r); const n = a.colabs.size; return n > 0 ? Math.round(a.v / n) : 0; }),
+          custoMed:    refsOrdenadasDbg.map(r => { const a = porComp.get(r); const n = a.colabs.size; const t = a.v + a.e + a.b - a.d; return n > 0 ? Math.round(t / n) : 0; }),
         },
         empresa: { labels: [...porEmpresa.keys()], series: [...porEmpresa.values()].map(v => Math.round(v)) },
         centroCusto: { categorias: [...porCc.keys()], series: [...porCc.values()].map(v => Math.round(v)) },
-        rankingTotal: porCpf.size,
+        rankingTotal: porColab.size,
       });
     }
 
@@ -1231,18 +1456,16 @@
       if (!chartEvolucaoInstance) return;
       const refsOrdenadas = [...porComp.keys()].sort();
       const categorias = refsOrdenadas.map(competenciaBRfromRef);
-      const dataVenc   = refsOrdenadas.map(r => Math.round(porComp.get(r).v));
-      const dataEnc    = refsOrdenadas.map(r => Math.round(porComp.get(r).e));
-      const dataBen    = refsOrdenadas.map(r => Math.round(porComp.get(r).b));
-      const dataColabs = refsOrdenadas.map(r => porComp.get(r).cpfs.size); // headcount/mês
+      const dataVenc = refsOrdenadas.map(r => Math.round(porComp.get(r).v));
+      const dataEnc  = refsOrdenadas.map(r => Math.round(porComp.get(r).e));
+      const dataBen  = refsOrdenadas.map(r => Math.round(porComp.get(r).b));
 
       chartEvolucaoInstance._refsOrdenadas = refsOrdenadas;
       chartEvolucaoInstance.updateOptions({ xaxis: { categories: categorias } }, false, false);
       chartEvolucaoInstance.updateSeries([
-        { name: 'Vencimentos',      type: 'bar',  data: dataVenc   },
-        { name: 'Encargos',         type: 'bar',  data: dataEnc    },
-        { name: 'Benefícios Pagos', type: 'bar',  data: dataBen    },
-        { name: 'Colaboradores',    type: 'line', data: dataColabs },
+        { name: 'Vencimentos',      data: dataVenc },
+        { name: 'Encargos',         data: dataEnc  },
+        { name: 'Benefícios Pagos', data: dataBen  },
       ], true);
     }
 
@@ -1254,15 +1477,15 @@
       const categorias = refsOrdenadas.map(competenciaBRfromRef);
 
       const dataSalario    = refsOrdenadas.map(r => {
-        const a = porComp.get(r); const n = a.cpfs.size;
+        const a = porComp.get(r); const n = a.colabs.size;
         return n > 0 ? Math.round(a.s / n) : 0;
       });
       const dataVencimento = refsOrdenadas.map(r => {
-        const a = porComp.get(r); const n = a.cpfs.size;
+        const a = porComp.get(r); const n = a.colabs.size;
         return n > 0 ? Math.round(a.v / n) : 0;
       });
       const dataCusto      = refsOrdenadas.map(r => {
-        const a = porComp.get(r); const n = a.cpfs.size;
+        const a = porComp.get(r); const n = a.colabs.size;
         const total = a.v + a.e + a.b - a.d;
         return n > 0 ? Math.round(total / n) : 0;
       });
@@ -1281,6 +1504,14 @@
         chartCustoMedioInstance._refsOrdenadas = refsOrdenadas;
         chartCustoMedioInstance.updateOptions({ xaxis: { categories: categorias } }, false, false);
         chartCustoMedioInstance.updateSeries([{ name: 'Custo Médio', data: dataCusto }], true);
+      }
+
+      // Headcount mensal — quantidade de colaboradores únicos por competência
+      if (chartHeadcountInstance) {
+        const dataColabs = refsOrdenadas.map(r => porComp.get(r).colabs.size);
+        chartHeadcountInstance._refsOrdenadas = refsOrdenadas;
+        chartHeadcountInstance.updateOptions({ xaxis: { categories: categorias } }, false, false);
+        chartHeadcountInstance.updateSeries([{ name: 'Colaboradores', data: dataColabs }], true);
       }
     }
 
@@ -1308,12 +1539,12 @@
       chartCcInstance.updateSeries([{ name: 'Custo Total', data: seriesCc }], true);
     }
 
-    function renderRankingColaboradores(porCpf) {
+    function renderRankingColaboradores(porColab) {
       const container = document.getElementById('ranking-colaboradores');
       const contador  = document.getElementById('ranking-colaboradores-contagem');
       if (!container) return;
       // Ranking COMPLETO — lista rola internamente via overflow-y-auto do container.
-      const lista = [...porCpf.values()].sort((a, b) => b.total - a.total);
+      const lista = [...porColab.values()].sort((a, b) => b.total - a.total);
 
       if (contador) contador.textContent = lista.length
         ? `${lista.length} colaborador${lista.length === 1 ? '' : 'es'}`

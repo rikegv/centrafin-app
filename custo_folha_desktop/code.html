@@ -686,6 +686,21 @@
         // 1. Blindagem: rejeita Quantidades (contadores de dias/horas, não R$),
         //    Encargos, Descontos de Folha e Bases de cálculo.
         if (key.endsWith('_QTDE')) return false;
+
+        // 1b. Pró-labore é PROVENTO (vencimento), mesmo quando o slug contém
+        //     "FGTS" — caso clássico: "PRO_LABORE_C_FGTS_Valor" (pró-labore com
+        //     incidência opcional de FGTS, comum para sócio-administrador).
+        //     Sem essa exceção, o token FGTS faria a blindagem rejeitar como
+        //     se fosse encargo, e a chave caía em "outros valores".
+        const ehProLabore = key.includes('PRO_LABORE') || key.includes('PROLABORE');
+        if (ehProLabore) {
+            // Pró-labore vira desconto se for slug DESC_*/DESCTO_*/DESCONTO.
+            if (key.startsWith('DESC_') || key.startsWith('DESCTO_')) return false;
+            if (key.includes('DESCONTO')) return false;
+            if (key.startsWith('BASE_')) return false;
+            return true; // provento
+        }
+
         if (key.includes('INSS') || key.includes('IRRF') || key.includes('DESCONTO') ||
             key.includes('EDUCACAO') || key.includes('FGTS') || key.includes('BASE_')) {
             return false;
@@ -709,11 +724,68 @@
         return keywords.some(word => key.includes(word));
     }
 
-    // Bucket 2 — Encargos Sociais (custo extra patronal).
-    // Importante: NUNCA incluir BASE_FGTS / BASE_INSS (base de cálculo, não pagamento).
-    const SET_ENCARGOS = new Set([
-        'INSS_PATRONAL_Valor', 'VALOR_FGTS_Valor', 'FGTS_Valor', 'TERCEIROS_Valor',
-    ]);
+    // Bucket 2 — Encargos Sociais (custo PATRONAL — soma ao Custo Total).
+    //
+    // Auditoria 2026-04-27: descontos retidos do funcionário (INSS, IRRF,
+    // sindicato, contribuição assistencial) JAMAIS entram aqui — eles já estão
+    // embutidos no SALARIO bruto. Tratá-los como encargo é DUPLA CONTAGEM e
+    // estoura o Custo Total artificialmente.
+    //
+    // Estratégia: validador por TOKEN (delimitado por _ ou início/fim) com
+    //   - Blacklist defensiva ANTES da whitelist (INSS sem PATRONAL = retido).
+    //   - Whitelist por substring tokenizada (RAT/FAP não bate em GRATIFICACAO).
+    function _hasToken(key, token) {
+        return new RegExp(`(^|_)${token}(_|$)`).test(key);
+    }
+
+    function isEncargo(k) {
+        const key = String(k || '').toUpperCase();
+
+        // 1. Blindagem geral: quantidades, bases de cálculo, descontos.
+        if (key.endsWith('_QTDE')) return false;
+        if (key.startsWith('BASE_')) return false;       // BASE_FGTS, BASE_INSS
+        if (key.startsWith('DESC_') || key.startsWith('DESCTO_')) return false;
+        if (key.includes('DESCONTO')) return false;
+
+        // 1b. Pró-labore é PROVENTO, NÃO encargo — mesmo que o slug contenha
+        //     "FGTS" (ex.: "PRO_LABORE_C_FGTS_Valor"). Sem este bloqueio o
+        //     token FGTS faz a whitelist abaixo somar pró-labore ao Custo
+        //     Patronal — bug detectado em 2026-04-27 no dossiê do Marcelo.
+        if (key.includes('PRO_LABORE') || key.includes('PROLABORE')) return false;
+
+        // 2. Blacklist EXPLÍCITA — descontos do funcionário.
+        //    INSS retido (sem PATRONAL), IRRF/IR retido, sindicato, contribuição
+        //    assistencial. Tem que vir ANTES da whitelist porque "INSS" tokeniza
+        //    em "INSS_PATRONAL" mas também em "INSS_VALOR" puro.
+        if (_hasToken(key, 'IRRF') || _hasToken(key, 'IR_RETIDO')) return false;
+        if (key.includes('SINDIC')) return false;        // SINDICATO + SINDICAL
+        if (_hasToken(key, 'CONTRIBUICAO_ASSISTENCIAL')) return false;
+        if (_hasToken(key, 'INSS_RETIDO')) return false;
+        if (_hasToken(key, 'INSS') && !key.includes('PATRONAL')) return false;
+
+        // 3. Whitelist patronal por TOKEN — só estes somam ao custo da empresa.
+        const tokens = ['INSS_PATRONAL', 'FGTS', 'TERCEIROS', 'RAT', 'FAP', 'SISTEMA_S'];
+        return tokens.some(t => _hasToken(key, t));
+    }
+
+    // Validador para o Olho — descontos de folha (informativo, não soma).
+    // Captura INSS retido, IRRF, sindicato e variações que aparecerem no futuro
+    // sem precisar atualizar Set manual.
+    function isDescFolhaInfo(k) {
+        const key = String(k || '').toUpperCase();
+        if (key.endsWith('_QTDE')) return false;
+        if (key.startsWith('BASE_')) return false;
+        // INSS retido (qualquer INSS que não seja PATRONAL).
+        if (_hasToken(key, 'INSS') && !key.includes('PATRONAL')) return true;
+        if (_hasToken(key, 'IRRF') || _hasToken(key, 'IR_RETIDO')) return true;
+        if (key.includes('SINDIC')) return true;        // SINDICATO + SINDICAL
+        if (_hasToken(key, 'CONTRIBUICAO_ASSISTENCIAL')) return true;
+        // Itens informativos legados.
+        if (_hasToken(key, 'MULTA_ART_480_CLT')) return true;
+        if (_hasToken(key, 'HORAS_NAO_COMPENSADAS')) return true;
+        if (key.startsWith('DESC_EMPRESTIMO_CONSIGNADO')) return true;
+        return false;
+    }
 
     // Bucket 3 — Benefícios Pagos (custo de benefício ao empregado).
     // Em adição: qualquer k.startsWith('Bnf_') também entra aqui (arquivo de Benefícios).
@@ -724,6 +796,11 @@
     ]);
 
     // Bucket 4 — Descontos de Benefícios (coparticipação do empregado).
+    // O Set cobre os slugs canônicos que o ETL gera. A função isBnfDesc abaixo
+    // estende a detecção com um caso flexível: qualquer chave de DESCONTO que
+    // mencione plano odontológico (coparticipação) — equivalente ao desconto
+    // de plano médico, mas com nomenclatura "DESCONTO CONTRIBUIÇÃO ODONTOLÓGICA"
+    // que o Set não previa. Auditoria 2026-04-27: caso do Henrique.
     const SET_BNF_DESC = new Set([
         'SEGURO_DE_VIDA_Valor', 'DESCTO_DE_VALE_TRANSPORTE_Valor',
         'DEVOLUCAO_DE_VR_NAO_UTILIZADO_Valor',
@@ -731,28 +808,49 @@
         'DESCTO_DE_ASSISTENCIA_MEDICA_Valor',
     ]);
 
-    // Bucket 5 — Descontos Folha (INFORMATIVO — não entra na soma, só aparece no Olho).
-    const SET_DESC_FOLHA_INFO = new Set([
-        'INSS_Valor', 'IRRF_Valor', 'CONTRIBUICAO_ASSISTENCIAL_Valor',
-        'INSS_S_13OSALARIO_Valor', 'MULTA_ART_480_CLT_Valor',
-        'HORAS_NAO_COMPENSADAS_Valor', 'DESC_EMPRESTIMO_CONSIGNADO_FGTS_Valor',
-    ]);
+    function isBnfDesc(k) {
+        if (SET_BNF_DESC.has(k)) return true;
+        const key = String(k || '').toUpperCase();
+        if (key.endsWith('_QTDE')) return false;
+        if (key.startsWith('BASE_')) return false;
+        // Coparticipação em plano odontológico — reduz custo da empresa
+        // (mesma natureza do desconto VR/VT). Captura variantes tipo:
+        //   DESCONTO_CONTRIBUICAO_ODONTOLOGICA_Valor
+        //   DESCTO_DE_ASSISTENCIA_ODONTOLOGICA_Valor
+        //   DESCONTO_PLANO_ODONTO_Valor
+        const ehDesconto = key.startsWith('DESC_') || key.startsWith('DESCTO_') || key.includes('DESCONTO');
+        if (ehDesconto && key.includes('ODONTOL')) return true;
+        return false;
+    }
+
+    // Bucket 5 — Descontos Folha (INFORMATIVO).
+    // Detecção via isDescFolhaInfo() acima (tokenizada). Não há Set estático aqui:
+    // qualquer INSS retido / IRRF / sindicato / contribuição assistencial nova é
+    // capturada automaticamente sem precisar atualizar lista manual.
 
     function calcularTotais(reg) {
         let vencimentos = 0, encargos = 0, beneficios = 0, descontosBnf = 0;
         for (const k of Object.keys(reg || {})) {
             const raw = reg[k];
             if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
-            // Precedência: Encargos/Bnf têm Sets estritos ANTES da checagem flexível
-            // de Vencimentos — assim VALOR_FGTS e similares não "vazam" para Venc.
-            if (SET_ENCARGOS.has(k))   { encargos += raw; continue; }
+            // Precedência:
+            //   1. DescFolhaInfo (INSS retido / IRRF / sindicato) — descarta ANTES
+            //      de qualquer outra checagem, pra blindar contra match acidental
+            //      em Bnf_* ou similar. Esses valores já estão no SALARIO bruto.
+            //   2. Encargos patronais (whitelist tokenizada).
+            //   3. Benefícios e descontos de benefícios (Sets estritos).
+            //   4. Vencimentos (validador flexível por substring).
+            if (isDescFolhaInfo(k))    { continue; } // não soma — só informativo
+            if (isEncargo(k))          { encargos += raw; continue; }
             if (k.startsWith('Bnf_'))  { beneficios += raw; continue; }
             if (SET_BNF_PAGO.has(k))   { beneficios += raw; continue; }
-            if (SET_BNF_DESC.has(k))   { descontosBnf += raw; continue; }
+            if (isBnfDesc(k))          { descontosBnf += raw; continue; }
             if (isVencimento(k))       { vencimentos += raw; continue; }
-            // Descontos Folha (Bucket 5 / SET_DESC_FOLHA_INFO) e chaves desconhecidas
-            // não entram na soma — aparecem só no modal Olho.
+            // Chaves desconhecidas não entram na soma — aparecem no modal Olho
+            // como "outros valores importados" (amber).
         }
+        // Custo Total = Vencimentos + Encargos Patronais + (Bnf Pagos − Desc. Bnf).
+        // INSS/IRRF retidos do funcionário NÃO entram — já embutidos no Bruto.
         const total = vencimentos + encargos + beneficios - descontosBnf;
         return { vencimentos, encargos, beneficios, descontosBnf, total };
     }
@@ -1166,14 +1264,15 @@
         // C) Identificação & Log de Importação — chaves literais.
         if (IDENT_KEYS.has(k)) return 'identificacao';
         if (META_KEYS.has(k)) return 'metadados';
-        // Buckets contábeis (apenas números finitos).
+        // Buckets contábeis (apenas números finitos). Espelha calcularTotais:
+        // descontos de folha caem em 'descontos_folha' (informativo, NÃO soma).
         if (typeof raw === 'number' && Number.isFinite(raw)) {
-            if (SET_ENCARGOS.has(k))         return 'encargos';
+            if (isDescFolhaInfo(k))          return 'descontos_folha'; // informativo
+            if (isEncargo(k))                return 'encargos';
             if (k.startsWith('Bnf_'))        return 'beneficios';
             if (SET_BNF_PAGO.has(k))         return 'beneficios';
-            if (SET_BNF_DESC.has(k))         return 'descontos_bnf';
+            if (isBnfDesc(k))                return 'descontos_bnf';
             if (isVencimento(k))             return 'vencimentos';
-            if (SET_DESC_FOLHA_INFO.has(k))  return 'descontos_folha'; // informativo
             // D) Amber — só o que sobrou E é número (dinheiro não mapeado).
             return 'outros_valores';
         }
