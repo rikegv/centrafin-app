@@ -964,11 +964,10 @@
             return;
           }
 
-          // GUARDIÃO DE ROTA
+          // GUARDIÃO DE ROTA — Auditoria 2026-04-28: redirect amigável.
+          // Sessão preservada; login.html roteia para o 1º módulo permitido.
           const CHAVE_PAGINA = 'contas_receber';
           if (dadosUser.perfil !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
-            await signOut(auth);
-            alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
             window.location.href = "../login.html";
             return;
           }

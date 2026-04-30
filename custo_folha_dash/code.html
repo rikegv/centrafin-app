@@ -27,6 +27,24 @@
   </script>
 
   <style>
+    /* Fade-in suave do app shell (auditoria 2026-04-29) — substitui o
+       overlay explícito anterior. Body mantém o bg padrão do sistema; só o
+       sidebar e o main começam invisíveis e ganham opacity ao auth-ok ser
+       setado pelo handler. Redirect de "sem permissão" acontece enquanto
+       opacity ainda é 0 — usuário não vê NADA da tela proibida nem do
+       processo de validação. */
+    body > #sidebar-container,
+    body > main {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    body.auth-ok > #sidebar-container,
+    body.auth-ok > main {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     body {
       background-color: #f8fafc;
       color: #1e293b;
@@ -53,6 +71,25 @@
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
+    }
+
+    /* Ticker de movimentações de cargo — desliza da direita para a esquerda
+       de forma contínua. O conteúdo é duplicado em runtime para que o final
+       do 1º bloco emende com o início do 2º sem flash. */
+    .ticker-mask {
+      mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+    }
+    .ticker-track {
+      display: inline-flex;
+      white-space: nowrap;
+      will-change: transform;
+      animation: ticker-scroll var(--ticker-duration, 32s) linear infinite;
+    }
+    .ticker-track:hover { animation-play-state: paused; }
+    @keyframes ticker-scroll {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
     }
   </style>
 </head>
@@ -101,137 +138,122 @@
     <!-- CONTEUDO PRINCIPAL -->
     <div class="px-8 py-6 space-y-6">
 
-      <!-- KPIs LUXO — 6 cards (Colaboradores · Custo Total · Vencimentos · Salário Bruto · Encargos · Benefícios) -->
+      <!-- KPIs LUXO — 6 cards (Colaboradores · Custo Total · Vencimentos · Encargos · Benefícios · Salário Bruto) -->
       <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
 
-        <!-- KPI 1: TOTAL COLABORADORES -->
-        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
+        <!-- KPI 1: TOTAL COLABORADORES (com TICKER + Modal de Movimentações) -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-3 py-2.5 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col overflow-hidden">
           <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
             <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandAqua/10 rounded-full blur-2xl group-hover/card:bg-brandAqua/20 transition-all"></div>
           </div>
           <div class="flex justify-between items-start relative z-10">
-            <span class="material-symbols-outlined text-brandAqua/40 text-[26px]">groups</span>
-            <div class="group relative">
-              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
-              <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
-                CPFs únicos no período. Um colaborador em vários meses/empresas conta 1 vez.
-                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
-              </div>
+            <span class="material-symbols-outlined text-brandAqua/40 text-[24px]">groups</span>
+            <!-- Botão discreto: abre o modal de detalhes de movimentações. -->
+            <button id="btn-abrir-movimentacoes" type="button"
+              title="Ver detalhes das movimentações"
+              class="text-slate-500/70 hover:text-brandAqua hover:scale-110 cursor-pointer transition-all duration-200 active:scale-95">
+              <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+            </button>
+          </div>
+          <div class="relative z-10 mt-1.5">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Colaboradores</p>
+            <div class="flex items-baseline gap-2 min-w-0">
+              <h3 class="text-[clamp(1.4rem,1.85vw,2.1rem)] font-black text-brandAqua tracking-tight tabular-nums truncate leading-none" id="kpi-colaboradores">0</h3>
+              <span id="kpi-movimentacoes-contagem" class="text-[11px] font-medium text-slate-400 tabular-nums whitespace-nowrap truncate">(0 movimentações)</span>
             </div>
           </div>
-          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Colaboradores</p>
-            <h3 class="text-[clamp(1.5rem,2vw,2.25rem)] font-black text-brandAqua tracking-tight tabular-nums truncate leading-none" id="kpi-colaboradores">0</h3>
+          <!-- Ticker de Movimentações: rodapé do card, scroll horizontal contínuo. -->
+          <div class="relative z-10 mt-2 -mx-3 -mb-2.5 px-3 py-1.5 bg-slate-900/40 border-t border-slate-700/40 ticker-mask overflow-hidden">
+            <div id="ticker-movimentacoes" class="ticker-track text-[10px] font-semibold text-slate-300">
+              <span class="px-2">Aguardando dados…</span>
+            </div>
           </div>
         </div>
 
         <!-- KPI 2: CUSTO TOTAL (DESTAQUE PRINCIPAL) -->
-        <div class="bg-brandDarkBlue border border-brandGreen/30 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card ring-1 ring-brandGreen/20 flex flex-col">
+        <div class="bg-brandDarkBlue border border-brandGreen/30 rounded-2xl px-3 py-2.5 shadow-2xl shadow-[#002443]/50 relative group/card ring-1 ring-brandGreen/20 flex flex-col">
           <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
             <div class="absolute -right-4 -top-4 w-28 h-28 bg-brandGreen/15 rounded-full blur-2xl group-hover/card:bg-brandGreen/25 transition-all"></div>
           </div>
           <div class="flex justify-between items-start relative z-10">
-            <span class="material-symbols-outlined text-brandGreen text-[26px]">savings</span>
+            <span class="material-symbols-outlined text-brandGreen text-[24px]">savings</span>
             <div class="group relative">
-              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[15px] transition-colors">info</span>
               <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
                 Custo Total = Vencimentos + Encargos + Benefícios Pagos − Descontos.
                 <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
               </div>
             </div>
           </div>
-          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
+          <div class="relative z-10 flex-1 flex flex-col justify-end mt-1.5">
             <p class="text-[10px] font-black text-brandGreen uppercase tracking-[0.12em] mb-1">Custo Total</p>
             <h3 class="text-[clamp(0.95rem,1.25vw,1.375rem)] font-black text-white tracking-tight tabular-nums truncate leading-none" title="" id="kpi-custo-total">R$ 0,00</h3>
           </div>
         </div>
 
         <!-- KPI 3: TOTAL VENCIMENTOS -->
-        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-3 py-2.5 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
           <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
             <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/5 rounded-full blur-2xl group-hover/card:bg-white/10 transition-all"></div>
           </div>
           <div class="flex justify-between items-start relative z-10">
-            <span class="material-symbols-outlined text-slate-500/50 text-[26px]">payments</span>
+            <span class="material-symbols-outlined text-slate-500/50 text-[24px]">payments</span>
             <div class="group relative">
-              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[15px] transition-colors">info</span>
               <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
                 Proventos: Salário, DSR, Férias, 13º, Horas Extras, Rescisões, Bônus, Prêmios, Comissões.
                 <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
               </div>
             </div>
           </div>
-          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
+          <div class="relative z-10 flex-1 flex flex-col justify-end mt-1.5">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Total Vencimentos</p>
             <h3 class="text-[clamp(0.95rem,1.25vw,1.375rem)] font-black text-white tracking-tight tabular-nums truncate leading-none" title="" id="kpi-vencimentos">R$ 0,00</h3>
             <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-vencimentos-pct">0% do Custo Total</p>
           </div>
         </div>
 
-        <!-- KPI 4: TOTAL SALÁRIO BRUTO (subset estrito dentro de Vencimentos) -->
-        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
-          <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
-            <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandPaleBlue/10 rounded-full blur-2xl group-hover/card:bg-brandPaleBlue/20 transition-all"></div>
-          </div>
-          <div class="flex justify-between items-start relative z-10">
-            <span class="material-symbols-outlined text-brandPaleBlue/60 text-[26px]">badge</span>
-            <div class="group relative">
-              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
-              <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
-                Apenas chaves estritas de salário base: SALARIO, SALARIO_BRUTO_MENSAL, SALARIO_BASE, PRO_LABORE. Subset dos Vencimentos, sem bônus/férias/rescisões.
-                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
-              </div>
-            </div>
-          </div>
-          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Salário Bruto</p>
-            <h3 class="text-[clamp(0.95rem,1.25vw,1.375rem)] font-black text-brandPaleBlue tracking-tight tabular-nums truncate leading-none" title="" id="kpi-salario-bruto">R$ 0,00</h3>
-            <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-salario-bruto-pct">0% dos Vencimentos</p>
-          </div>
-        </div>
-
-        <!-- KPI 5: TOTAL ENCARGOS -->
-        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
+        <!-- KPI 4: TOTAL ENCARGOS -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-3 py-2.5 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
           <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
             <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandLightBlue/5 rounded-full blur-2xl group-hover/card:bg-brandLightBlue/10 transition-all"></div>
           </div>
           <div class="flex justify-between items-start relative z-10">
-            <span class="material-symbols-outlined text-brandLightBlue/40 text-[26px]">account_balance</span>
+            <span class="material-symbols-outlined text-brandLightBlue/40 text-[24px]">account_balance</span>
             <div class="group relative">
-              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[15px] transition-colors">info</span>
               <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
                 INSS Patronal, FGTS, Valor FGTS e Terceiros (SAT/SESI/SESC).
                 <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
               </div>
             </div>
           </div>
-          <div class="relative z-10 flex-1 flex flex-col justify-end mt-2">
+          <div class="relative z-10 flex-1 flex flex-col justify-end mt-1.5">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Total Encargos</p>
             <h3 class="text-[clamp(0.95rem,1.25vw,1.375rem)] font-black text-brandLightBlue tracking-tight tabular-nums truncate leading-none" title="" id="kpi-encargos">R$ 0,00</h3>
             <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-encargos-pct">0% do Custo Total</p>
           </div>
         </div>
 
-        <!-- KPI 6: CUSTO BENEFICIOS -->
-        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-4 py-3 shadow-2xl shadow-[#002443]/50 relative group/card">
+        <!-- KPI 5: CUSTO BENEFÍCIOS -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-3 py-2.5 shadow-2xl shadow-[#002443]/50 relative group/card">
           <div class="absolute inset-0 rounded-2xl pointer-events-none overflow-hidden">
             <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandOrange/10 rounded-full blur-2xl group-hover/card:bg-brandOrange/20 transition-all"></div>
           </div>
-          <div class="flex justify-between items-start relative z-10 mb-2">
-            <span class="material-symbols-outlined text-brandOrange/40 text-[26px]">card_travel</span>
+          <div class="flex justify-between items-start relative z-10 mb-1.5">
+            <span class="material-symbols-outlined text-brandOrange/40 text-[24px]">card_travel</span>
             <div class="group relative">
-              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[16px] transition-colors">info</span>
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[15px] transition-colors">info</span>
               <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
                 Pagos (VT, VR, VA, Planos) − Descontos (coparticipação, seguro de vida, descontos VT/VR).
                 <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
               </div>
             </div>
           </div>
-          <div class="relative z-10 flex flex-col gap-2 min-w-0">
+          <div class="relative z-10 flex flex-col gap-1.5 min-w-0">
             <div class="min-w-0">
               <p class="text-[10px] font-black text-brandOrange uppercase tracking-[0.12em] mb-1">Benefícios</p>
               <h3 class="text-[clamp(0.875rem,1.1vw,1.25rem)] font-black text-white tracking-tight tabular-nums truncate leading-none" title="" id="kpi-custo-beneficios">R$ 0,00</h3>
-              <p class="text-[9px] text-slate-400 mt-0.5 font-semibold uppercase tracking-wider">Pagos − Descontos</p>
             </div>
             <div class="h-px bg-slate-600/40"></div>
             <div class="grid grid-cols-2 gap-2 min-w-0">
@@ -246,6 +268,28 @@
             </div>
           </div>
         </div>
+
+        <!-- KPI 6: TOTAL SALÁRIO BRUTO (subset estrito dentro de Vencimentos) -->
+        <div class="bg-brandDarkBlue border border-slate-700/50 rounded-2xl px-3 py-2.5 shadow-2xl shadow-[#002443]/50 relative group/card flex flex-col">
+          <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+            <div class="absolute -right-4 -top-4 w-20 h-20 bg-brandPaleBlue/10 rounded-full blur-2xl group-hover/card:bg-brandPaleBlue/20 transition-all"></div>
+          </div>
+          <div class="flex justify-between items-start relative z-10">
+            <span class="material-symbols-outlined text-brandPaleBlue/60 text-[24px]">badge</span>
+            <div class="group relative">
+              <span class="material-symbols-outlined text-slate-500 hover:text-brandGreen cursor-help text-[15px] transition-colors">info</span>
+              <div class="absolute bottom-full right-0 mb-3 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 w-56 p-3 bg-slate-800 border border-slate-700 text-white text-[11px] leading-relaxed rounded-xl shadow-2xl z-[999] pointer-events-none">
+                Salário base mensal (SALARIO, SALARIO_BASE, SALARIO_BRUTO_MENSAL, PRO_LABORE). Subset dos Vencimentos, sem bônus/férias/rescisões.
+                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+          </div>
+          <div class="relative z-10 flex-1 flex flex-col justify-end mt-1.5">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Salário Bruto</p>
+            <h3 class="text-[clamp(0.95rem,1.25vw,1.375rem)] font-black text-brandPaleBlue tracking-tight tabular-nums truncate leading-none" title="" id="kpi-salario-bruto">R$ 0,00</h3>
+            <p class="text-[9px] text-slate-400 mt-1 font-semibold uppercase tracking-wider" id="kpi-salario-bruto-pct">0% dos Vencimentos</p>
+          </div>
+        </div>
       </div>
 
       <!-- NOVO: Custo Total Mensal (colunas simples, largura total) -->
@@ -258,7 +302,7 @@
         <div id="chart-custo-total-mensal" class="w-full h-[280px]"></div>
       </div>
 
-      <!-- ANÁLISES GRÁFICAS — LINHA 1 -->
+      <!-- ANÁLISES GRÁFICAS — LINHA 1 (Evolução + 2 donuts laterais empilhados) -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <!-- Evolução mensal (col-span-2) -->
@@ -272,14 +316,26 @@
           <div id="chart-evolucao-custo" class="w-full h-[380px]"></div>
         </div>
 
-        <!-- Donut por empresa (col-span-1) -->
-        <div class="lg:col-span-1 bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-              <span class="material-symbols-outlined text-brandOrange">donut_large</span> Custo por Empresa
-            </h3>
+        <!-- Coluna lateral: dois donuts empilhados (Empresa + Cargo) -->
+        <div class="lg:col-span-1 grid grid-cols-1 gap-6 min-w-0">
+          <!-- Donut por empresa -->
+          <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-5 min-w-0">
+            <div class="flex items-center mb-3">
+              <h3 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <span class="material-symbols-outlined text-brandOrange text-[18px]">donut_large</span> Custo por Empresa
+              </h3>
+            </div>
+            <div id="chart-empresa" class="w-full h-[170px] flex items-center justify-center"></div>
           </div>
-          <div id="chart-empresa" class="w-full h-[380px] flex items-center justify-center"></div>
+          <!-- Donut composição por Cargo -->
+          <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-5 min-w-0">
+            <div class="flex items-center mb-3">
+              <h3 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <span class="material-symbols-outlined text-brandAqua text-[18px]">workspaces</span> Composição por Cargo
+              </h3>
+            </div>
+            <div id="chart-composicao-cargo" class="w-full h-[170px] flex items-center justify-center"></div>
+          </div>
         </div>
       </div>
 
@@ -414,6 +470,33 @@
                     Limpar
                 </button>
             </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE DETALHES DE MOVIMENTAÇÕES — populado em renderTickerMovimentacoes -->
+  <div id="modal-movimentacoes" class="fixed inset-0 z-[70] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
+    <div class="absolute inset-0 bg-brandDarkBlue/40 backdrop-blur-sm" onclick="window.toggleModal('modal-movimentacoes', false)"></div>
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 transform scale-95 transition-all duration-300 max-h-[85vh] flex flex-col">
+        <!-- Cabeçalho -->
+        <div class="flex justify-between items-center px-8 py-6 border-b border-slate-100">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-brandAqua/10 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-brandAqua text-[22px]">swap_horiz</span>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="text-lg font-extrabold text-brandDarkBlue truncate">Detalhes de Movimentações</h3>
+                    <p id="modal-movimentacoes-subtitulo" class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider truncate">— colaborador(es) com mudança de cargo</p>
+                </div>
+            </div>
+            <button onclick="window.toggleModal('modal-movimentacoes', false)" class="text-slate-400 hover:text-brandDarkBlue hover:bg-slate-100 rounded-lg p-1.5 transition-all shrink-0">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <!-- Corpo: lista populada dinamicamente. Scroll interno preserva header/footer. -->
+        <div id="modal-movimentacoes-lista" class="flex-1 overflow-y-auto custom-scroll px-8 py-6 space-y-3 min-h-[200px]">
+            <div class="text-center text-slate-400 text-sm py-12 font-medium">Carregando…</div>
         </div>
     </div>
   </div>
@@ -599,7 +682,12 @@
       if (!key.includes('SALARIO') && !key.includes('PRO_LABORE')) return false;
       // Blindagens: rejeita variantes que não são salário base mensal.
       if (key.endsWith('_QTDE'))           return false;
-      if (key.includes('BASE_'))           return false; // BASE_INSS, BASE_FGTS
+      // Auditoria 2026-04-28: ANTES era `key.includes('BASE_')` o que rejeitava
+      // SILENCIOSAMENTE chaves como SALARIO_BASE_Valor. O bucket Salário Bruto
+      // ficava zerado quando a planilha vinha com a coluna "Salário Base".
+      // Agora rejeitamos só chaves que COMEÇAM com BASE_ (BASE_INSS, BASE_FGTS,
+      // BASE_IRRF) — bases de cálculo de tributos, não salário.
+      if (key.startsWith('BASE_'))         return false; // BASE_INSS, BASE_FGTS
       if (key.includes('FAMILIA'))         return false; // Salário-família
       if (key.includes('MATERNIDADE'))     return false; // Auxílio maternidade
       if (key.includes('ADIANTAMENTO'))    return false;
@@ -703,15 +791,111 @@
       return digitos.slice(0, 11);
     }
 
-    // Chave de identidade do colaborador. Se o CPF normalizar vazio, faz
-    // fallback pra nome (lowercase + trim) — assim o headcount não perde
-    // colaborador por planilha mal preenchida.
+    // Parser tolerante de data BR/ISO. Aceita "dd/mm/aaaa", "dd-mm-aaaa",
+    // "aaaa-mm-dd". Devolve null para vazio, "00/00/0000", strings não-data,
+    // ou qualquer combinação que o Date construa como NaN.
+    // Usado pela detecção cronológica antigo→novo no modal de Movimentações.
+    function parseDataBR(valor) {
+      if (valor === null || valor === undefined) return null;
+      const s = String(valor).trim();
+      if (!s) return null;
+      if (/^0+$/.test(s.replace(/\D/g, ''))) return null;       // "0", "00/00/0000"
+      if (s === '--/--/----' || s === '—' || s === '-') return null;
+
+      // BR: dd/mm/aaaa ou dd-mm-aaaa
+      let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+      if (m) {
+        let [, d, mo, y] = m;
+        y = y.length === 2 ? (Number(y) >= 70 ? '19' + y : '20' + y) : y;
+        const dt = new Date(Number(y), Number(mo) - 1, Number(d));
+        return isNaN(dt.getTime()) ? null : dt;
+      }
+      // ISO: aaaa-mm-dd (com ou sem hora)
+      m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (m) {
+        const dt = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        return isNaN(dt.getTime()) ? null : dt;
+      }
+      return null;
+    }
+
+    // Localiza data de demissão/desligamento no registro. Faz match por
+    // SUBSTRING no nome da chave (DEMISSAO, DESLIG, RESCISAO_DT…) e só
+    // considera valores STRING — números seriam datas zeradas pelo
+    // parseNumeroBR antigo do ETL (parsed como inteiro, sem dia/mês legível).
+    function obterDataDemissao(reg) {
+      if (!reg) return null;
+      // Atalho: campo fixo do ETL (após auditoria 2026-04-28).
+      if (typeof reg.demissao === 'string') {
+        const dt = parseDataBR(reg.demissao);
+        if (dt) return dt;
+      }
+      for (const k of Object.keys(reg)) {
+        const KU = String(k).toUpperCase();
+        if (!(KU.includes('DEMISSAO') || KU.includes('DESLIG') || KU.includes('RESCISAO'))) continue;
+        const v = reg[k];
+        if (typeof v !== 'string') continue;
+        const dt = parseDataBR(v);
+        if (dt) return dt;
+      }
+      return null;
+    }
+
+    // Localiza data de admissão. Atalho pelo campo fixo `admissao`, com
+    // varredura por substring como redundância p/ planilhas com nomes
+    // alternativos (DT_ADMISSAO, DATA_ADMISSAO_*…).
+    function obterDataAdmissao(reg) {
+      if (!reg) return null;
+      if (typeof reg.admissao === 'string') {
+        const dt = parseDataBR(reg.admissao);
+        if (dt) return dt;
+      }
+      for (const k of Object.keys(reg)) {
+        const KU = String(k).toUpperCase();
+        if (!KU.includes('ADMISSAO')) continue;
+        const v = reg[k];
+        if (typeof v !== 'string') continue;
+        const dt = parseDataBR(v);
+        if (dt) return dt;
+      }
+      return null;
+    }
+
+    // Slug determinístico do cargo — espelha importacao_folha.js#slugCargo.
+    // Auditoria 2026-04-28: a unicidade do colaborador passou a ser por
+    // CONTRATO (cpf+cargo) e não mais por pessoa física. Promoções no meio
+    // do mês (Estagiário→Efetivo) agora contam como 2 posições distintas,
+    // batendo com o relatório de folha enviado pela contabilidade.
+    function slugCargo(valor) {
+      const slug = String(valor || '')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 80);
+      return slug || 'SEM_CARGO';
+    }
+
+    // Chave de identidade do CONTRATO (cpf + cargo).
+    //
+    // Auditoria 2026-04-28 (regressão do Headcount após Bnf opcional):
+    // Reescrevemos com formato simples + fallback seguro pedido na auditoria:
+    //   `${cpf || 'sem-cpf'}_${(cargo || 'sem-cargo').trim().toLowerCase()}`
+    //
+    // - normalizarCPF descarta máscara/espaço; mantém o headcount estável
+    //   entre planilhas onde Excel comeu o zero à esquerda.
+    // - .trim().toLowerCase() colapsa "Designer Sr" e " designer sr " na
+    //   mesma chave, evitando double-count por whitespace/caixa.
+    // - O fallback garante que registros sem identidade caiam num bucket
+    //   determinístico em vez de gerar Set vazio (que confundia a contagem).
     function chaveColaborador(reg) {
-      const cpf = normalizarCPF(reg?.cpf);
-      if (cpf) return `cpf::${cpf}`;
-      const nome = String(reg?.nome || '').trim().toLowerCase();
-      if (nome) return `nome::${nome}`;
-      return ''; // sem identidade — não conta no headcount (defensivo)
+      const cpfNorm = normalizarCPF(reg?.cpf);
+      const cpf = cpfNorm || 'sem-cpf';
+      // O ETL grava o cargo no campo `funcao` (rótulo fixo do parser de Folha);
+      // mantemos `cargo` como alias defensivo para compatibilidade futura.
+      const cargoBruto = reg?.funcao ?? reg?.cargo ?? '';
+      const cargo = String(cargoBruto).trim().toLowerCase() || 'sem-cargo';
+      return `${cpf}_${cargo}`;
     }
 
     const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -751,6 +935,7 @@
     let chartCustoMensalInstance    = null;
     let chartEvolucaoInstance       = null;
     let chartEmpresaInstance        = null;
+    let chartCargoInstance          = null;
     let chartCcInstance             = null;
     let chartSalarioMedioInstance   = null;
     let chartVencimentoMedioInstance = null;
@@ -947,29 +1132,29 @@
         chartHeadcountInstance.render();
       }
 
-      // 2) Custo por Empresa (donut) — com drill-down por empresa
+      // 2) Custo por Empresa (donut compacto) — com drill-down por empresa
       const elEmp = document.getElementById('chart-empresa');
       if (elEmp && !chartEmpresaInstance) {
         chartEmpresaInstance = new ApexCharts(elEmp, {
           chart: {
-            type: 'donut', height: 380, fontFamily: apex.fontFamily, foreColor: apex.foreColor, animations,
+            type: 'donut', height: 170, fontFamily: apex.fontFamily, foreColor: apex.foreColor, animations,
             events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownEmpresa(ctx._labelsAtuais?.[cfg.dataPointIndex]) }
           },
           series: [],
           labels: [],
           colors: palette.donut,
           stroke: { width: 2, colors: ['#002443'] },
-          legend: { position: 'bottom', labels: { colors: apex.foreColor }, fontSize: '11px', fontWeight: 700, markers: { width: 10, height: 10, radius: 3 } },
-          dataLabels: { enabled: true, formatter: (val) => val.toFixed(1) + '%', style: { fontSize: '11px', fontWeight: 700, colors: ['#002443'] }, dropShadow: { enabled: false } },
+          legend: { position: 'right', labels: { colors: apex.foreColor }, fontSize: '10px', fontWeight: 700, markers: { width: 8, height: 8, radius: 2 }, itemMargin: { horizontal: 4, vertical: 1 } },
+          dataLabels: { enabled: true, formatter: (val) => val.toFixed(0) + '%', style: { fontSize: '10px', fontWeight: 700, colors: ['#002443'] }, dropShadow: { enabled: false } },
           plotOptions: {
             pie: {
               donut: {
-                size: '68%',
+                size: '62%',
                 labels: {
                   show: true,
-                  name: { color: apex.foreColor, fontSize: '11px', fontWeight: 700 },
-                  value: { color: '#ffffff', fontSize: '18px', fontWeight: 800, formatter: (v) => formatarMoeda(Number(v)) },
-                  total: { show: true, label: 'Custo Total', color: '#aad12f', fontSize: '10px', fontWeight: 700, formatter: (w) => formatarMoeda(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) }
+                  name: { color: apex.foreColor, fontSize: '9px', fontWeight: 700 },
+                  value: { color: '#ffffff', fontSize: '13px', fontWeight: 800, formatter: (v) => formatarMoeda(Number(v)) },
+                  total: { show: true, label: 'Custo Total', color: '#aad12f', fontSize: '9px', fontWeight: 700, formatter: (w) => formatarMoeda(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) }
                 }
               }
             }
@@ -978,6 +1163,49 @@
           noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
         });
         chartEmpresaInstance.render();
+      }
+
+      // 2.1) Composição por Cargo (donut compacto) — quantidade de contratos por cargo.
+      // Sem drill-down (filtros existentes não suportam cargo). Tooltip mostra
+      // quantidade absoluta + percentual sobre o headcount total.
+      const elCargo = document.getElementById('chart-composicao-cargo');
+      if (elCargo && !chartCargoInstance) {
+        chartCargoInstance = new ApexCharts(elCargo, {
+          chart: {
+            type: 'donut', height: 170, fontFamily: apex.fontFamily, foreColor: apex.foreColor, animations,
+          },
+          series: [],
+          labels: [],
+          colors: palette.donut,
+          stroke: { width: 2, colors: ['#002443'] },
+          legend: { position: 'right', labels: { colors: apex.foreColor }, fontSize: '10px', fontWeight: 700, markers: { width: 8, height: 8, radius: 2 }, itemMargin: { horizontal: 4, vertical: 1 } },
+          dataLabels: { enabled: true, formatter: (val) => val.toFixed(0) + '%', style: { fontSize: '10px', fontWeight: 700, colors: ['#002443'] }, dropShadow: { enabled: false } },
+          plotOptions: {
+            pie: {
+              donut: {
+                size: '62%',
+                labels: {
+                  show: true,
+                  name: { color: apex.foreColor, fontSize: '9px', fontWeight: 700 },
+                  value: { color: '#ffffff', fontSize: '13px', fontWeight: 800, formatter: (v) => `${Number(v)} contrato${Number(v) === 1 ? '' : 's'}` },
+                  total: { show: true, label: 'Headcount', color: '#89d5c9', fontSize: '9px', fontWeight: 700, formatter: (w) => `${w.globals.seriesTotals.reduce((a, b) => a + b, 0)} contratos` }
+                }
+              }
+            }
+          },
+          tooltip: {
+            theme: 'dark',
+            y: {
+              formatter: (v, ctx) => {
+                const total = (ctx?.config?.series || []).reduce((a, b) => a + b, 0) || 1;
+                const pct = ((v / total) * 100).toFixed(1).replace('.', ',');
+                return `${v} contrato${v === 1 ? '' : 's'} · ${pct}%`;
+              }
+            }
+          },
+          noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
+        });
+        chartCargoInstance.render();
       }
 
       // 3) Custo por Centro de Custo (barras horizontais) — com drill-down por CC.
@@ -1139,18 +1367,33 @@
         }
 
         if (userProfile !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
-          await window.mostrarAvisoCF({ titulo: 'Acesso Negado', mensagem: 'Você não tem permissão para acessar esta página e foi desconectado por segurança.' });
-          await signOut(auth);
+          // Auditoria 2026-04-28: redirect amigável (sem signOut). login.html
+          // roteia automaticamente para o 1º módulo permitido.
           window.location.href = "../login.html";
           return;
         }
 
         renderSidebar(userProfile, dadosUser.menus_permitidos || []);
 
+        // Aplica o filtro de Centro de Custo (3º nível de permissão). Se o
+        // usuário tem `permissoes.filtros.centrosCusto` populado, esse Set
+        // restringe a base ANTES de qualquer agregação/render. Vazio ou ausente
+        // = "todos os CCs" (perfil sem restrição lateral).
+        const ccsRestritos = Array.isArray(dadosUser?.permissoes?.filtros?.centrosCusto)
+          ? dadosUser.permissoes.filtros.centrosCusto
+          : [];
+        window._ccPermitidos = ccsRestritos.length > 0 ? new Set(ccsRestritos) : null;
+        if (window._ccPermitidos && userProfile !== 'super_admin') {
+          console.log('[CustoFolhaDash] Filtro de CC aplicado:', [...window._ccPermitidos]);
+        }
+
         // Inicializa multi-selects de Empresa e Centro de Custo — ambos vazios
         // até que Base_Empresas e Base_Centros_Custo cheguem por onSnapshot.
         msEmpresa     = new MultiSelectCF({ rootId: 'ms-empresa',       onChange: () => processarCustoFolha() });
         msCentroCusto = new MultiSelectCF({ rootId: 'ms-centro-custo',  onChange: () => processarCustoFolha() });
+
+        // Libera a UI — auth + permissões resolvidos, conteúdo pode aparecer.
+        document.body.classList.add('auth-ok');
 
         // Inicializa as 4 instâncias ApexCharts com séries vazias ANTES do
         // fetch. Assim, quando os dados chegam, `processarCustoFolha` só
@@ -1194,7 +1437,13 @@
           if (nome) nomes.push(nome);
         });
         nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        if (msCentroCusto) msCentroCusto.setOpcoes(nomes);
+        // 3º nível de permissão: oculta do dropdown qualquer CC que o usuário
+        // não pode ver. Garante que o filtro lateral nunca apresente uma opção
+        // que vazaria dado restrito.
+        const visiveis = window._ccPermitidos
+          ? nomes.filter(n => window._ccPermitidos.has(n))
+          : nomes;
+        if (msCentroCusto) msCentroCusto.setOpcoes(visiveis);
       }, (err) => console.warn('[Base_Centros_Custo] listener falhou:', err?.code || err?.message));
     }
 
@@ -1213,12 +1462,22 @@
         const q = query(collection(db, COLECAO));
         const snap = await getDocs(q);
 
-        window._custoFolhaBase = [];
-        snap.forEach(d => {
-          window._custoFolhaBase.push({ _id: d.id, ...d.data() });
-        });
+        const todos = [];
+        snap.forEach(d => { todos.push({ _id: d.id, ...d.data() }); });
 
-        console.log(`[CustoFolhaDash] Registros carregados: ${window._custoFolhaBase.length}`);
+        // Filtro de Centro de Custo (3º nível de permissão). Aplicado AQUI,
+        // na ingestão da base — todos os agregados (KPIs, gráficos, ranking,
+        // movimentações) consomem `_custoFolhaBase` já filtrado, sem cada
+        // função precisar reaplicar o gate.
+        if (window._ccPermitidos) {
+          window._custoFolhaBase = todos.filter(r =>
+            window._ccPermitidos.has(String(r.centro_custo || '').trim())
+          );
+          console.log(`[CustoFolhaDash] Após filtro CC: ${window._custoFolhaBase.length} de ${todos.length} registros`);
+        } else {
+          window._custoFolhaBase = todos;
+          console.log(`[CustoFolhaDash] Registros carregados: ${window._custoFolhaBase.length}`);
+        }
         processarCustoFolha();
       } catch (err) {
         console.error('[CustoFolhaDash] Erro ao carregar CustosFolha:', err);
@@ -1277,15 +1536,28 @@
       // Headcount = chave de identidade única (cpf:: ou nome::), independente
       // de a linha ter Vencimento/Salário. Auditoria 2026-04-27: presença na
       // planilha é suficiente — não filtramos por valor.
-      const colabsUnicos    = new Set();
+      // Renomeado em 2026-04-28 para deixar explícito que é o Set do Headcount —
+      // a auditoria do KPI pediu visibilidade nominal pelo nome cpfsUnicos.
+      const cpfsUnicos = new Set();
+      const colabsUnicos = cpfsUnicos; // alias retrocompatível dentro desta função
       const porComp    = new Map(); // competencia_ref -> { v, e, b, d, s, colabs }
       const porEmpresa = new Map(); // empresa -> total
       const porCc      = new Map(); // centro_custo -> total
-      const porColab   = new Map(); // chaveColaborador -> { nome, cc, total }
+      const porColab   = new Map(); // chaveColaborador -> { nome, cc, cargo, total }
+      // Composição por Cargo: cargoStr -> Set(chaveContrato). .size dá o headcount
+      // por cargo, batendo com o KPI de Total Colaboradores.
+      const porCargo = new Map();
+      // Detecção de Movimentações: agrupa por PESSOA (cpf ou nome — IGNORA cargo)
+      // e coleta o Set de cargos que aquela pessoa apareceu no período. Quem
+      // tiver >=2 cargos diferentes vira movimentação.
+      const movimentacoesPorPessoa = new Map(); // pessoaKey -> { nome, cargos: Map<cargoStr, {salario, cc}> }
 
-      // Telemetria: o usuário precisa enxergar por que o headcount bate ou não.
-      let registrosSemIdentidade = 0;   // sem CPF e sem nome
-      let registrosComFallbackNome = 0; // CPF inválido, contado pelo nome
+      // Telemetria: visibilidade do bucket-fallback (registros sem cpf/cargo).
+      // A nova chaveColaborador SEMPRE devolve uma string canônica, então o
+      // que medimos agora é quantas linhas caíram no fallback "sem-cpf" ou
+      // "sem-cargo" — sinal de que a planilha precisa de revisão.
+      let registrosSemCpf = 0;
+      let registrosSemCargo = 0;
 
       for (const r of registros) {
         const t = calcularTotais(r);
@@ -1297,12 +1569,9 @@
         if (r.competencia_ref) competenciasSet.add(r.competencia_ref);
 
         const chave = chaveColaborador(r);
-        if (!chave) {
-          registrosSemIdentidade++;
-        } else {
-          if (chave.startsWith('nome::')) registrosComFallbackNome++;
-          colabsUnicos.add(chave);
-        }
+        if (chave.startsWith('sem-cpf_')) registrosSemCpf++;
+        if (chave.endsWith('_sem-cargo')) registrosSemCargo++;
+        cpfsUnicos.add(chave);
 
         // porComp enriquecido: v/e/b/d/s + colabs (Set de identidades únicas no
         // mês). Headcount mensal e médias per capita usam .size deste Set.
@@ -1325,18 +1594,91 @@
         const ccKey = String(r.centro_custo || '').trim() || 'Sem centro de custo';
         porCc.set(ccKey, (porCc.get(ccKey) || 0) + t.total);
 
-        // Ranking por colaborador (mesma chave do headcount).
+        // Ranking por contrato (mesma chave do headcount: cpf+cargo).
         if (chave) {
           let pessoa = porColab.get(chave);
           if (!pessoa) {
-            pessoa = { nome: r.nome || '—', cc: r.centro_custo || '—', total: 0 };
+            pessoa = { nome: r.nome || '—', cc: r.centro_custo || '—', cargo: r.funcao || '', total: 0 };
             porColab.set(chave, pessoa);
           }
           pessoa.total += t.total;
           if (r.nome)         pessoa.nome = r.nome;
           if (r.centro_custo) pessoa.cc = r.centro_custo;
+          if (r.funcao)       pessoa.cargo = r.funcao;
+        }
+
+        // Composição por Cargo (donut): contagem de contratos únicos por cargo.
+        // Auditoria 2026-04-28: cargos sem string vão para "Não Informado"
+        // (rótulo combinado com a regra de "nunca consolidar em Outros").
+        if (chave) {
+          const cargoStr = String(r.funcao || '').trim() || 'Não Informado';
+          let setCargo = porCargo.get(cargoStr);
+          if (!setCargo) { setCargo = new Set(); porCargo.set(cargoStr, setCargo); }
+          setCargo.add(chave);
+        }
+
+        // Movimentações: agrega cargos vistos por pessoa (CPF puro, sem cargo).
+        const cargoMov = String(r.funcao || '').trim();
+        if (cargoMov) {
+          const cpfPuro = normalizarCPF(r.cpf);
+          const pessoaKey = cpfPuro
+            ? `cpf::${cpfPuro}`
+            : (String(r.nome || '').trim() ? `nome::${r.nome.trim().toLowerCase()}` : '');
+          if (pessoaKey) {
+            let entry = movimentacoesPorPessoa.get(pessoaKey);
+            if (!entry) {
+              entry = { nome: r.nome || '—', cargos: new Map() };
+              movimentacoesPorPessoa.set(pessoaKey, entry);
+            }
+            if (r.nome) entry.nome = r.nome;
+            let cargoData = entry.cargos.get(cargoMov);
+            if (!cargoData) {
+              cargoData = { salario: 0, cc: '', demissao: null, admissao: null };
+              entry.cargos.set(cargoMov, cargoData);
+            }
+            // Salário bruto: fallback quando não há datas para inferir ordem.
+            cargoData.salario += (t.salarioBruto || t.vencimentos || 0);
+            if (r.centro_custo) cargoData.cc = r.centro_custo;
+            // Cronologia: a regra primária é cargo COM demissão = antigo. A
+            // admissão entra como tie-breaker quando ambos saem ou nenhum sai.
+            // Mantemos a data MAIS RECENTE de cada (planilhas que repetem a
+            // linha em meses subsequentes não devem regredir o registro).
+            const dDem = obterDataDemissao(r);
+            if (dDem && (!cargoData.demissao || dDem > cargoData.demissao)) cargoData.demissao = dDem;
+            const dAdm = obterDataAdmissao(r);
+            if (dAdm && (!cargoData.admissao || dAdm > cargoData.admissao)) cargoData.admissao = dAdm;
+          }
         }
       }
+
+      // Pós-processamento: filtra pessoas com >=2 cargos. Ordena cada par
+      // antigo→novo aplicando regra cronológica estrita pedida pela auditoria
+      // (2026-04-28):
+      //   1) Cargo COM demissão preenchida = antigo.
+      //   2) Empate (ambos com demissão ou nenhum): admissão MAIS ANTIGA = antigo.
+      //   3) Sem datas: salário ascendente (estagiário < efetivo).
+      //   4) Tudo igual: ordem alfabética estável.
+      const movimentacoes = [];
+      for (const entry of movimentacoesPorPessoa.values()) {
+        if (entry.cargos.size < 2) continue;
+        const ordenados = [...entry.cargos.entries()].sort(([cA, dA], [cB, dB]) => {
+          const demA = !!dA.demissao, demB = !!dB.demissao;
+          if (demA !== demB) return demA ? -1 : 1;                 // (1)
+          if (demA && demB) return dA.demissao - dB.demissao;       // empate em (1)
+          if (dA.admissao && dB.admissao) return dA.admissao - dB.admissao; // (2)
+          if (dA.admissao) return -1;
+          if (dB.admissao) return 1;
+          if (dA.salario !== dB.salario) return dA.salario - dB.salario;    // (3)
+          return cA.localeCompare(cB);                              // (4)
+        });
+        const cargoAntigo = ordenados[0][0];
+        const cargoNovo   = ordenados[ordenados.length - 1][0];
+        // CC: prefere o do cargo "novo" se houver, senão o do antigo.
+        const cc = ordenados[ordenados.length - 1][1].cc || ordenados[0][1].cc || '';
+        movimentacoes.push({ nome: entry.nome, cargoAntigo, cargoNovo, cc });
+      }
+      // Ordem alfabética estável p/ o ticker — UX coerente entre renders.
+      movimentacoes.sort((a, b) => a.nome.localeCompare(b.nome));
 
       const custoBeneficios = totalBnfPago - totalBnfDesc;
       const custoTotal = totalVenc + totalEnc + custoBeneficios;
@@ -1375,9 +1717,11 @@
       renderGraficoCustoTotalMensal(porComp);
       renderGraficoEvolucao(porComp);
       renderGraficoEmpresa(porEmpresa);
+      renderGraficoComposicaoCargo(porCargo);
       renderGraficoCentroCusto(porCc);
       renderGraficosMedia(porComp);
       renderRankingColaboradores(porColab);
+      renderTickerMovimentacoes(movimentacoes);
 
       // Debug: confirma que as agregações não estão vazias + lista as chaves
       // do Firestore que entraram no Salário Bruto (útil pra ajustar blindagens
@@ -1408,17 +1752,24 @@
         console.log('%c[Auditoria INSS] OK — nenhuma chave INSS fora dos buckets esperados.', 'color:#aad12f');
       }
       // ===================================================================
+      // AUDITORIA HEADCOUNT (regressão 2026-04-28)
+      // Lista as chaves cpf+cargo exatamente como entraram no Set de
+      // headcount, permitindo identificar visualmente qualquer duplicação
+      // por whitespace, caixa ou cargo undefined.
+      // ===================================================================
+      const _chavesOrdenadas = Array.from(cpfsUnicos).sort();
+      console.log('Chaves Únicas de Headcount:', _chavesOrdenadas);
       console.log('[CustoFolhaDash] Headcount auditoria:', {
         linhasProcessadas: registros.length,
-        colaboradoresUnicos: colabsUnicos.size,
-        registrosSemIdentidade,           // sem CPF e sem nome — não contou
-        registrosComFallbackNome,         // CPF inválido, contado pelo nome
+        colaboradoresUnicos: cpfsUnicos.size,
+        registrosSemCpf,    // chave caiu em "sem-cpf_*" (planilha sem CPF)
+        registrosSemCargo,  // chave caiu em "*_sem-cargo" (planilha sem funcao)
       });
       console.log('[CustoFolhaDash] Dados injetados nos gráficos:', {
         registrosFiltrados: registros.length,
         custoTotal,
         totalSalarioBruto,
-        colaboradoresUnicos: colabsUnicos.size,
+        colaboradoresUnicos: cpfsUnicos.size,
         mensal: {
           categorias:  refsOrdenadasDbg.map(competenciaBRfromRef),
           custoTotal:  refsOrdenadasDbg.map(r => { const a = porComp.get(r); return Math.round(a.v + a.e + a.b - a.d); }),
@@ -1526,6 +1877,137 @@
       chartEmpresaInstance.updateSeries(seriesEmpresa, true);
     }
 
+    // Composição por Cargo — donut com a contagem de contratos únicos por
+    // string de cargo. Auditoria 2026-04-28: removido o bucket "Outros" que
+    // consolidava cargos com baixa contagem (gerava fatia fantasma sem
+    // contrapartida real no banco). Cada cargo é renderizado integralmente,
+    // independente do tamanho da fatia. ApexCharts não agrupa fatias pequenas
+    // por padrão em donut — sem opção `legend.tooltipHoverFormatter` ou
+    // `dataLabels.minSliceAngle` ativa, o controle fica 100% no nosso lado.
+    function renderGraficoComposicaoCargo(porCargo) {
+      if (!chartCargoInstance) return;
+      const pares = [...porCargo.entries()]
+        .map(([cargo, set]) => [cargo, set.size])
+        .filter(([, n]) => n > 0)
+        .sort((a, b) => b[1] - a[1]);
+
+      const labels = pares.map(p => p[0]);
+      const series = pares.map(p => p[1]);
+
+      chartCargoInstance.updateOptions({ labels }, false, false);
+      chartCargoInstance.updateSeries(series, true);
+    }
+
+    // Cache acessível pelo handler do modal — mantém a última lista de
+    // movimentações renderizada na tela (sincronizada com os filtros atuais).
+    let _movimentacoesCache = [];
+
+    // Ticker de Movimentações — desenha lista deslizante no rodapé do card
+    // Colaboradores. Cada item mostra Nome, Cargo Antigo → Cargo Novo, e CC.
+    // O conteúdo é DUPLICADO no DOM p/ o keyframe @ticker-scroll (-50%) emendar
+    // sem flash. A duração é proporcional à largura medida — mantém a mesma
+    // velocidade aparente independente da quantidade de movimentações.
+    //
+    // Também atualiza o contador estático "(N movimentações)" e a lista do
+    // modal de detalhes para que ticker, contador e modal fiquem sincronizados
+    // sem múltiplas passes na mesma estrutura.
+    function renderTickerMovimentacoes(movimentacoes) {
+      _movimentacoesCache = Array.isArray(movimentacoes) ? movimentacoes : [];
+      const el = document.getElementById('ticker-movimentacoes');
+
+      // Contador estático ao lado do número grande de Colaboradores.
+      const elContagem = document.getElementById('kpi-movimentacoes-contagem');
+      if (elContagem) {
+        const n = _movimentacoesCache.length;
+        elContagem.textContent = `(${n} movimentaç${n === 1 ? 'ão' : 'ões'})`;
+      }
+
+      // Lista do modal — atualizada em todo render p/ acompanhar filtros.
+      renderListaModalMovimentacoes(_movimentacoesCache);
+
+      if (!el) return;
+
+      if (_movimentacoesCache.length === 0) {
+        el.innerHTML = '<span class="px-3">Nenhuma movimentação de cargo no período</span>';
+        el.style.setProperty('--ticker-duration', '40s');
+        return;
+      }
+
+      const item = (m) => `
+        <span class="px-4 inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span class="text-brandAqua">🔄 Movimentação:</span>
+          <span class="text-white font-bold">${escapeHTML(m.nome)}</span>
+          <span class="text-slate-400">(</span>
+          <span class="text-slate-200">${escapeHTML(m.cargoAntigo)}</span>
+          <span class="text-brandGreen font-black">➔</span>
+          <span class="text-brandGreen font-bold">${escapeHTML(m.cargoNovo)}</span>
+          <span class="text-slate-400">)</span>
+          ${m.cc ? `<span class="text-slate-500">no CC</span><span class="text-slate-200">${escapeHTML(m.cc)}</span>` : ''}
+        </span>
+        <span class="text-slate-600 px-1">·</span>`;
+
+      const bloco = _movimentacoesCache.map(item).join('');
+      // Duplica para loop contínuo via translateX(-50%).
+      el.innerHTML = bloco + bloco;
+
+      // Calcula duração no próximo frame, depois que o navegador resolveu o layout.
+      // Velocidade alvo: ~70 px/s. Mínimo 18s p/ não ficar borrado em poucos itens.
+      requestAnimationFrame(() => {
+        const widthMetade = el.scrollWidth / 2;
+        const dur = Math.max(18, Math.round(widthMetade / 70));
+        el.style.setProperty('--ticker-duration', `${dur}s`);
+      });
+    }
+
+    // Lista detalhada do modal de Movimentações. Usa o mesmo formato visual
+    // da lista de Empresas/CCs (cards claros sobre fundo branco), com badge
+    // de Centro de Custo e setinha de transição entre cargos.
+    function renderListaModalMovimentacoes(movimentacoes) {
+      const lista = document.getElementById('modal-movimentacoes-lista');
+      const subtitulo = document.getElementById('modal-movimentacoes-subtitulo');
+      if (!lista) return;
+
+      const n = movimentacoes.length;
+      if (subtitulo) {
+        subtitulo.textContent = n === 0
+          ? 'Nenhum colaborador com mudança de cargo'
+          : `${n} colaborador${n === 1 ? '' : 'es'} com mudança de cargo`;
+      }
+
+      if (n === 0) {
+        lista.innerHTML = `
+          <div class="flex flex-col items-center justify-center text-center py-14 px-6">
+            <div class="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-4">
+              <span class="material-symbols-outlined text-slate-300 text-[32px]">inbox</span>
+            </div>
+            <h4 class="text-sm font-extrabold text-brandDarkBlue mb-1">Nenhuma movimentação no período selecionado</h4>
+            <p class="text-xs text-slate-400 font-medium max-w-sm">Quando um colaborador aparecer com mais de um cargo no intervalo de competências filtrado, ele será listado aqui.</p>
+          </div>`;
+        return;
+      }
+
+      lista.innerHTML = movimentacoes.map((m, idx) => `
+        <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-brandAqua/40 hover:bg-white transition-all">
+          <div class="shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-brandAqua to-brandLightBlue flex items-center justify-center text-white font-extrabold text-xs shadow-md">
+            ${escapeHTML(iniciaisDe(m.nome))}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-extrabold text-brandDarkBlue truncate" title="${escapeHTML(m.nome)}">${escapeHTML(m.nome)}</p>
+            <div class="mt-1 flex items-center gap-1.5 text-[11px] font-semibold flex-wrap">
+              <span class="px-2 py-0.5 rounded-md bg-slate-200 text-slate-600">${escapeHTML(m.cargoAntigo)}</span>
+              <span class="material-symbols-outlined text-brandGreen text-[16px]">arrow_forward</span>
+              <span class="px-2 py-0.5 rounded-md bg-brandGreen/15 text-brandGreen">${escapeHTML(m.cargoNovo)}</span>
+            </div>
+          </div>
+          ${m.cc ? `
+          <div class="shrink-0 hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-brandLightBlue/10 border border-brandLightBlue/20 text-[10px] font-bold text-brandLightBlue uppercase tracking-wider" title="Centro de Custo">
+            <span class="material-symbols-outlined text-[14px]">corporate_fare</span>
+            <span class="truncate max-w-[120px]">${escapeHTML(m.cc)}</span>
+          </div>` : ''}
+          <span class="shrink-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 tabular-nums">${idx + 1}</span>
+        </div>`).join('');
+    }
+
     function renderGraficoCentroCusto(porCc) {
       if (!chartCcInstance) return;
       const pares = [...porCc.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
@@ -1564,6 +2046,10 @@
                       : idx === 1 ? 'bg-brandLightBlue text-brandDarkBlue'
                       : idx === 2 ? 'bg-brandOrange text-white'
                       : 'bg-white/10 text-white';
+        // Exibe "Nome (Cargo)" quando há cargo, p/ desambiguar mesma pessoa
+        // em contratos distintos no mesmo período (ex: promoção no mês).
+        const cargoTxt = String(c.cargo || '').trim();
+        const nomeExib = cargoTxt ? `${c.nome} (${cargoTxt})` : c.nome;
         return `
           <div class="flex items-center gap-4 py-3 group">
             <div class="relative shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-brandMidBlue to-brandDarkBlue flex items-center justify-center text-white font-extrabold text-xs shadow-inner border border-white/10">
@@ -1571,7 +2057,7 @@
               <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full ${medalha} text-[9px] font-black flex items-center justify-center shadow-lg">${idx + 1}</span>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-xs font-bold text-white truncate" title="${escapeHTML(c.nome)}">${escapeHTML(c.nome)}</p>
+              <p class="text-xs font-bold text-white truncate" title="${escapeHTML(nomeExib)}">${escapeHTML(nomeExib)}</p>
               <p class="text-[10px] text-slate-400 truncate font-medium" title="${escapeHTML(c.cc)}">${escapeHTML(c.cc)}</p>
               <div class="mt-1.5 w-full bg-white/5 h-1 rounded-full overflow-hidden">
                 <div class="h-full bg-gradient-to-r from-brandOrange via-brandGreen to-brandLightBlue rounded-full transition-all duration-700" style="width:${pct.toFixed(1)}%"></div>
@@ -1613,6 +2099,14 @@
       const el = document.getElementById(id);
       if (el) el.addEventListener('change', () => processarCustoFolha());
     });
+
+    // Modal de Movimentações: o botão `+` no card Colaboradores abre o modal.
+    // A lista interna é mantida atualizada por renderTickerMovimentacoes a cada
+    // re-cálculo dos filtros — aqui só disparamos o toggleModal já existente.
+    const _btnAbrirMov = document.getElementById('btn-abrir-movimentacoes');
+    if (_btnAbrirMov) {
+      _btnAbrirMov.addEventListener('click', () => window.toggleModal('modal-movimentacoes', true));
+    }
 
     // Logout via sidebar
     document.addEventListener('click', async (e) => {

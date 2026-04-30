@@ -40,6 +40,22 @@
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .dropzone { transition: all 0.2s ease; }
         .dropzone.has-file { border-color: #aad12f; background-color: #f7fbe8; }
+
+        /* Fade-in suave do app shell (auditoria 2026-04-29) — body mantém
+           o bg padrão; sidebar e main entram com opacity 0 e fazem transição
+           para 1 quando o handler de auth adiciona `auth-ok`. Redirect de
+           "sem permissão" ocorre antes da transição → usuário não vê flash. */
+        body > #sidebar-container,
+        body > main {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        body.auth-ok > #sidebar-container,
+        body.auth-ok > main {
+            opacity: 1;
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-on-surface font-body antialiased">
@@ -81,6 +97,12 @@
                         <span class="material-symbols-outlined text-base">filter_alt_off</span>
                         Limpar Filtros
                     </button>
+                    <!-- Bulk delete (Super Adm) — escondido até haver seleção. -->
+                    <button id="btn-excluir-selecionados" type="button"
+                            class="hidden items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-lg text-xs font-bold shadow-sm shadow-red-600/20 hover:brightness-110 active:scale-95 transition-all">
+                        <span class="material-symbols-outlined text-base">delete_sweep</span>
+                        Excluir <span id="excluir-count" data-count>0</span> Selecionados
+                    </button>
                     <button id="btn-abrir-importar" type="button" class="flex items-center gap-2 px-5 py-2 bg-primary text-[#341100] rounded-lg text-sm font-bold shadow-sm hover:brightness-105 active:scale-95 transition-all">
                         <span class="material-symbols-outlined text-lg">upload_file</span>
                         Importar
@@ -96,6 +118,10 @@
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 border-b border-slate-100 text-[10px]">
                         <tr>
+                            <!-- Coluna de seleção (Super Adm). Liberada via JS após auth. -->
+                            <th id="th-selecao" class="hidden px-4 py-3 w-10 text-center align-middle">
+                                <input id="cb-selecionar-todos" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer" title="Selecionar todos os visíveis" />
+                            </th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Competência</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Nome</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">CPF</th>
@@ -178,11 +204,11 @@
                                 <span class="material-symbols-outlined text-secondary">card_travel</span>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-bold text-secondary">Benefícios</p>
+                                <p class="text-sm font-bold text-secondary">Benefícios <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider ml-1">(opcional)</span></p>
                                 <p id="label-file-beneficios" class="text-[11px] text-slate-500 mt-0.5 font-medium truncate">Clique para selecionar (.xlsx, .xls, .csv)</p>
                             </div>
                         </div>
-                        <input id="file-beneficios" type="file" accept=".xlsx,.xls,.csv" class="hidden" required />
+                        <input id="file-beneficios" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
                     </label>
                 </div>
 
@@ -523,6 +549,12 @@
     const filtroCc = document.getElementById('filtro_centro_custo'); // <select>
     const chipFiltrosAtivos = document.getElementById('chip-filtros-ativos');
     let filtroCcValor = ''; // filtro client-side aplicado sobre cacheRegistros
+    // Flag de Super Adm — preenchida no fluxo de auth. Controla a visibilidade
+    // da coluna de seleção/exclusão na tabela (linha + cabeçalho), do botão de
+    // bulk delete na topbar e do ícone de lixeira por linha. Auditoria
+    // 2026-04-28: a UI de exclusão é EXCLUSIVA do perfil super_admin.
+    let isSuperAdm = false;
+    const selecaoIds = new Set();
 
     // Top bar da tabela
     const inputBusca = document.getElementById('input-busca');
@@ -566,18 +598,40 @@
                 return;
             }
             if (dadosUser.perfil !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
-                await confirmarAcao({
-                    titulo: 'Acesso Negado',
-                    mensagem: 'Sua sessão expirou ou você não tem permissão para esta tela.',
-                    labelConfirmar: 'Entendido',
-                    labelCancelar: null,
-                    tom: 'erro',
-                });
-                await signOut(auth);
+                // Auditoria 2026-04-28: redirect amigável (sem signOut). O
+                // roteador inteligente em login.html leva o usuário ao 1º
+                // módulo permitido. Sessão preservada.
                 window.location.href = "../login.html";
                 return;
             }
             renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
+            // Habilita UI de exclusão APENAS para super_admin. Tudo o que
+            // depende disso (header de seleção, checkboxes nas linhas, ícone
+            // de lixeira, botão de bulk delete) é mantido oculto até aqui.
+            isSuperAdm = dadosUser.perfil === 'super_admin';
+            if (isSuperAdm) {
+                const thSel = document.getElementById('th-selecao');
+                if (thSel) thSel.classList.remove('hidden');
+                // Re-render da tabela caso já tenha carregado antes do flag.
+                renderHistorico();
+            }
+
+            // 3º nível de permissão: filtro de Centro de Custo. Super Adm
+            // bypassa; demais perfis com restrição em `permissoes.filtros.
+            // centrosCusto` veem APENAS os CCs autorizados na tabela e nos
+            // dropdowns de filtro.
+            const ccsRestritos = Array.isArray(dadosUser?.permissoes?.filtros?.centrosCusto)
+                ? dadosUser.permissoes.filtros.centrosCusto
+                : [];
+            window._ccPermitidos = (!isSuperAdm && ccsRestritos.length > 0)
+                ? new Set(ccsRestritos)
+                : null;
+            if (window._ccPermitidos) {
+                console.log('[CustoFolhaDesktop] Filtro de CC aplicado:', [...window._ccPermitidos]);
+            }
+
+            // Libera a UI: auth + permissões resolvidos.
+            document.body.classList.add('auth-ok');
         } catch (err) {
             console.error('Falha na autenticação:', err);
             window.location.href = "../login.html";
@@ -638,9 +692,13 @@
             if (nome) nomes.push(nome);
         });
         nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        // 3º nível de permissão: oculta CCs não-autorizados do dropdown.
+        const visiveis = window._ccPermitidos
+            ? nomes.filter(n => window._ccPermitidos.has(n))
+            : nomes;
         const valAtual = filtroCc.value;
         filtroCc.innerHTML = '<option value="">Todos</option>';
-        for (const n of nomes) {
+        for (const n of visiveis) {
             const opt = document.createElement('option');
             opt.value = n; opt.textContent = n;
             filtroCc.appendChild(opt);
@@ -896,6 +954,8 @@
             // Se é só a busca que filtrou tudo, não mostra chips (confunde).
             if (!cacheRegistros.length) renderDisponiveis();
             else document.getElementById('hist-disponiveis').innerHTML = '';
+            atualizarBotaoExcluirSelecionados();
+            sincronizarMasterCheckbox([]);
             return;
         }
         histVazio.classList.add('hidden');
@@ -908,8 +968,25 @@
             const comp = r.competencia_ref
                 ? competenciaBRfromRef(r.competencia_ref)
                 : (r.competencia || '—');
+            // Coluna de seleção e ícone de lixeira: renderizadas APENAS para
+            // super_admin. Mantemos a estrutura da linha com a checagem inline
+            // pra simplificar — quem não é super adm continua vendo a tabela
+            // exatamente como antes.
+            const cellSelecao = isSuperAdm
+                ? `<td class="px-4 py-3 text-center align-middle">
+                     <input type="checkbox" data-id="${escapeHTML(r._id)}" data-acao="selecionar"
+                            ${selecaoIds.has(r._id) ? 'checked' : ''}
+                            class="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer" />
+                   </td>`
+                : '';
+            const btnExcluir = isSuperAdm
+                ? `<button data-acao="excluir" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir registro">
+                       <span class="material-symbols-outlined text-base">delete</span>
+                   </button>`
+                : '';
             return `
-                <tr class="hover:bg-slate-50 transition-colors">
+                <tr class="hover:bg-slate-50 transition-colors" data-row-id="${escapeHTML(r._id)}">
+                    ${cellSelecao}
                     <td class="px-4 py-3 text-xs text-slate-500 font-mono">${escapeHTML(comp)}</td>
                     <td class="px-4 py-3 text-xs font-bold text-slate-900">${escapeHTML(nome)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 font-mono">${fmtCPF(r.cpf)}</td>
@@ -928,11 +1005,14 @@
                             <button data-acao="editar" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors" title="Editar">
                                 <span class="material-symbols-outlined text-base">edit</span>
                             </button>
+                            ${btnExcluir}
                         </div>
                     </td>
                 </tr>`;
         });
         histCorpo.innerHTML = linhas.join('');
+        atualizarBotaoExcluirSelecionados();
+        sincronizarMasterCheckbox(registros);
     }
 
     // ── DESCOBERTA: combinações (competencia_ref × empresa) presentes ────────
@@ -1037,6 +1117,18 @@
         unsubHistorico = onSnapshot(q, (snap) => {
             const regs = [];
             snap.forEach(d => regs.push({ _id: d.id, ...d.data() }));
+            // 3º nível de permissão (auditoria 2026-04-28): aplica o filtro de
+            // Centro de Custo logo na ingestão, antes do render. Super Adm e
+            // perfis sem restrição passam window._ccPermitidos = null.
+            if (window._ccPermitidos) {
+                const antes = regs.length;
+                const filtrados = regs.filter(r => window._ccPermitidos.has(String(r.centro_custo || '').trim()));
+                regs.length = 0;
+                regs.push(...filtrados);
+                if (antes !== filtrados.length) {
+                    console.log(`[CustoFolhaDesktop] Filtro CC: ${filtrados.length} de ${antes} registros visíveis`);
+                }
+            }
             // Ordem estável: quando houver competência/empresa, ordena por nome;
             // no histórico global a ordem já vem do Firestore (dataImportacao desc),
             // mas fazemos um sort secundário por nome dentro de cada importação.
@@ -1101,7 +1193,7 @@
         carregarDadosTabela();
     });
 
-    // ── AÇÕES DA TABELA: Visualizar (olho) + Editar (lápis) ──────────────────
+    // ── AÇÕES DA TABELA: Visualizar / Editar / Excluir ───────────────────────
     histCorpo.addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-acao]');
         if (!btn) return;
@@ -1112,7 +1204,139 @@
 
         if (acao === 'visualizar') abrirVisualizar(reg);
         else if (acao === 'editar') abrirEditar(reg);
+        else if (acao === 'excluir') excluirRegistros([reg._id]);
     });
+
+    // Seleção múltipla — escuta `change` em qualquer checkbox dentro do tbody.
+    // selecaoIds é um Set persistente entre renders, então marcar uma linha
+    // sobrevive a re-renders por busca/filtros. Quando o usuário re-rodar
+    // renderHistorico, as checkboxes voltam marcadas pra os IDs ainda no Set.
+    histCorpo.addEventListener('change', (e) => {
+        const cb = e.target.closest('input[type="checkbox"][data-acao="selecionar"]');
+        if (!cb) return;
+        const id = cb.getAttribute('data-id');
+        if (!id) return;
+        if (cb.checked) selecaoIds.add(id);
+        else selecaoIds.delete(id);
+        atualizarBotaoExcluirSelecionados();
+        sincronizarMasterCheckbox(aplicarBusca(cacheRegistros));
+    });
+
+    // Master checkbox no header — alterna em massa apenas as linhas VISÍVEIS
+    // no momento (cacheRegistros após busca). Não afeta seleções fora da view.
+    const cbSelecionarTodos = document.getElementById('cb-selecionar-todos');
+    if (cbSelecionarTodos) {
+        cbSelecionarTodos.addEventListener('change', () => {
+            const visiveis = aplicarBusca(cacheRegistros);
+            if (cbSelecionarTodos.checked) {
+                visiveis.forEach(r => selecaoIds.add(r._id));
+            } else {
+                visiveis.forEach(r => selecaoIds.delete(r._id));
+            }
+            // Marca/desmarca cada checkbox renderizada sem re-render completo.
+            histCorpo.querySelectorAll('input[type="checkbox"][data-acao="selecionar"]').forEach(cb => {
+                cb.checked = cbSelecionarTodos.checked;
+            });
+            atualizarBotaoExcluirSelecionados();
+        });
+    }
+
+    // Ajusta o botão "Excluir N Selecionados" — visível só quando há seleção.
+    function atualizarBotaoExcluirSelecionados() {
+        const btn = document.getElementById('btn-excluir-selecionados');
+        const cnt = document.getElementById('excluir-count');
+        if (!btn || !cnt) return;
+        const n = selecaoIds.size;
+        cnt.textContent = String(n);
+        if (n > 0 && isSuperAdm) {
+            btn.classList.remove('hidden');
+            btn.classList.add('flex');
+        } else {
+            btn.classList.add('hidden');
+            btn.classList.remove('flex');
+        }
+    }
+
+    // Atualiza o estado do master checkbox: marcado se TODOS os visíveis estão
+    // selecionados; "indeterminate" se parcial; desmarcado se nenhum.
+    function sincronizarMasterCheckbox(registrosVisiveis) {
+        if (!cbSelecionarTodos) return;
+        if (!registrosVisiveis || registrosVisiveis.length === 0) {
+            cbSelecionarTodos.checked = false;
+            cbSelecionarTodos.indeterminate = false;
+            return;
+        }
+        const total = registrosVisiveis.length;
+        const marcados = registrosVisiveis.filter(r => selecaoIds.has(r._id)).length;
+        cbSelecionarTodos.checked = marcados === total;
+        cbSelecionarTodos.indeterminate = marcados > 0 && marcados < total;
+    }
+
+    // Botão de bulk delete na topbar — converte a seleção atual em uma chamada
+    // única do excluirRegistros (que faz o writeBatch e pede confirmação).
+    const btnExcluirSelecionados = document.getElementById('btn-excluir-selecionados');
+    if (btnExcluirSelecionados) {
+        btnExcluirSelecionados.addEventListener('click', () => {
+            if (selecaoIds.size === 0) return;
+            excluirRegistros([...selecaoIds]);
+        });
+    }
+
+    // ── BATCH DELETE ─────────────────────────────────────────────────────────
+    // Apaga uma lista de docs em CustosFolha via writeBatch (atômico em chunks
+    // de CHUNK_SIZE). Auditoria 2026-04-28: a UI de exclusão substitui o
+    // antigo DROP automático que rodava antes de cada importação. Agora todo
+    // delete passa por confirmação explícita — protege contra perda de dados
+    // e contra cliques acidentais em lotes grandes.
+    async function excluirRegistros(ids) {
+        if (!isSuperAdm) {
+            return mostrarErro('Apenas Super Adm pode excluir registros.');
+        }
+        const lista = (ids || []).filter(Boolean);
+        if (!lista.length) return;
+
+        const ok = await confirmarAcao({
+            titulo: lista.length === 1 ? 'Excluir registro' : `Excluir ${lista.length} registros`,
+            mensagem: lista.length === 1
+                ? 'Esta ação remove permanentemente o registro do banco. Continuar?'
+                : `Esta ação remove permanentemente ${lista.length} registros do banco. A operação é atômica em lote e não pode ser desfeita. Continuar?`,
+            labelConfirmar: lista.length === 1 ? 'Sim, excluir' : `Sim, excluir ${lista.length}`,
+            labelCancelar: 'Cancelar',
+            tom: 'perigo',
+        });
+        if (!ok) return;
+
+        setLoading(true, lista.length === 1 ? 'Excluindo registro...' : `Excluindo ${lista.length} registros...`);
+        try {
+            for (let i = 0; i < lista.length; i += CHUNK_SIZE) {
+                const fatia = lista.slice(i, i + CHUNK_SIZE);
+                const batch = writeBatch(db);
+                for (const id of fatia) batch.delete(doc(db, COLECAO, id));
+                await batch.commit();
+            }
+        } catch (err) {
+            console.error('[Delete] writeBatch falhou:', err);
+            setLoading(false);
+            if (err.code === 'permission-denied') {
+                return mostrarErro('Acesso Negado: seu perfil não tem permissão para excluir CustosFolha.');
+            }
+            return mostrarErro('Falha ao excluir: ' + (err.message || 'erro desconhecido'));
+        }
+
+        // Atualiza estado em memória + DOM imediatamente (não espera onSnapshot).
+        const idsSet = new Set(lista);
+        cacheRegistros = cacheRegistros.filter(r => !idsSet.has(r._id));
+        lista.forEach(id => selecaoIds.delete(id));
+        // Invalida cache de "disponíveis" — combinação comp×empresa pode ter
+        // sumido e os chips precisam ser recalculados.
+        disponiveisCache = null;
+        disponiveisPromise = null;
+        renderHistorico();
+        setLoading(false);
+        mostrarSucesso(lista.length === 1
+            ? 'Registro excluído com sucesso.'
+            : `${lista.length} registros excluídos com sucesso.`);
+    }
 
     // ── MODAL EDITAR: cadastro (nome/empresa/cc) — valores financeiros são readonly.
     // CPF é a chave funcional do registro e fica travado. Valores vêm do recálculo
@@ -1775,15 +1999,23 @@
                 </div>
                 <span class="text-sm font-bold ${cor}">${valor}</span>
             </div>`;
+        // Aviso visível quando o lote rodou sem Bnf — reforça o que o sucesso já diz.
+        const avisoSemBnf = diag.beneficiosImportado === false
+            ? `<div class="mb-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100 text-[11px] font-medium text-amber-700">
+                 <span class="material-symbols-outlined text-amber-500 text-[16px] mt-0.5">info</span>
+                 <span>Importação parcial: planilha de Benefícios não enviada — VR/VA/VT/Plano/Odonto/Seguro foram zerados neste lote.</span>
+               </div>`
+            : '';
         feedbackBody.innerHTML = `
             <div class="mb-2 text-[11px] uppercase tracking-widest font-bold text-slate-400">
                 Competência ${competenciaBR} · ${empresa}
             </div>
+            ${avisoSemBnf}
             ${linha('table_view', 'Linhas lidas da Folha', diag.totalFolha)}
             ${linha('card_travel', 'Linhas lidas de Benefícios', diag.totalBeneficios)}
-            ${linha('merge', 'Funcionários unificados (gravados)', diag.totalUnificado, 'text-primary')}
-            ${linha('link', 'Com dados em ambas as bases', diag.ambas)}
-            ${linha('swap_horiz', 'Apenas na Folha', diag.somenteFolha, 'text-tertiary')}
+            ${linha('merge', 'Registros gravados', diag.totalUnificado, 'text-primary')}
+            ${linha('link', 'Com benefícios vinculados', diag.comBeneficiosVinculados)}
+            ${linha('swap_horiz', 'Apenas na Folha (sem Bnf)', diag.somenteFolha, 'text-tertiary')}
             ${linha('swap_horiz', 'Apenas em Benefícios', diag.somenteBeneficios, 'text-tertiary')}`;
     }
 
@@ -1797,52 +2029,66 @@
 
         if (!competenciaMes) return mostrarErro('Selecione a competência (mês/ano).');
         if (!empresa) return mostrarErro('Selecione a empresa/filial.');
-        if (!fileFolha) return mostrarErro('Selecione a planilha de Folha + Encargos.');
-        if (!fileBeneficios) return mostrarErro('Selecione a planilha de Benefícios.');
+        // Cenário A — sem Folha: erro crítico, fluxo abortado.
+        if (!fileFolha) {
+            return mostrarErro('Erro: É necessário selecionar ao menos o relatório de Folha de Pagamento.');
+        }
+        // Cenário B — só Folha: aviso + confirmação. Bnf será zerada.
+        // Auditoria 2026-04-28: Diretores e similares aparecem só na Folha;
+        // antes a importação era bloqueada e o usuário precisava montar uma
+        // planilha-fantasma de Bnf. Agora o sistema avisa e segue em frente.
+        if (!fileBeneficios) {
+            const ok = await confirmarAcao({
+                titulo: 'Benefícios não detectados',
+                mensagem: 'A base de Benefícios não foi detectada. Os custos de benefícios (VR, VA, VT, Plano de Saúde, Odonto, Seguro) serão zerados para este lote.\n\nDeseja prosseguir mesmo assim?',
+                labelConfirmar: 'Sim, importar só a Folha',
+                labelCancelar: 'Cancelar',
+                tom: 'aviso',
+            });
+            if (!ok) return; // usuário cancelou
+        }
+        // Cenário C — ambos selecionados: fluxo normal abaixo, sem prompt.
 
         const [ano, mes] = competenciaMes.split('-');
         const competenciaBR = `${mes}/${ano}`;
 
-        // 1) ETL
-        setLoading(true, 'Lendo planilhas...');
+        // 1) ETL — fileBeneficios pode ser undefined (Cenário B), ETL trata.
+        setLoading(true, fileBeneficios ? 'Lendo planilhas...' : 'Lendo Folha (sem Benefícios)...');
         let unificado, diagnostico;
         try {
             const r = await importarCustoFolha({
-                fileFolha, fileBeneficios, competencia: competenciaBR, empresa
+                fileFolha,
+                fileBeneficios: fileBeneficios || null,
+                competencia: competenciaBR,
+                empresa,
             });
             unificado = r.unificado;
             diagnostico = r.diagnostico;
-            if (!unificado.length) throw new Error('Nenhum funcionário válido foi identificado após o cruzamento das bases.');
+            if (!unificado.length) throw new Error('Nenhum funcionário válido foi identificado a partir da Folha.');
         } catch (err) {
             console.error('[ETL] falhou:', err);
             setLoading(false);
             return mostrarErro(err.message || 'Não foi possível processar as planilhas. Verifique o formato.');
         }
 
-        // 2) DROP — apaga registros anteriores dessa competência+empresa
-        setLoading(true, 'Removendo registros antigos...');
-        try {
-            await apagarRegistrosAntigos(competenciaMes, empresa);
-        } catch (err) {
-            console.error('[DROP] falhou:', err);
-            setLoading(false);
-            if (err.code === 'permission-denied') {
-                return mostrarErro('Acesso Negado: seu perfil não tem permissão para sobrescrever registros existentes.');
-            }
-            return mostrarErro('Falha ao limpar registros anteriores: ' + (err.message || 'erro desconhecido'));
-        }
-
-        // 3) REPLACE — grava o novo lote em batches de 450
-        setLoading(true, 'Gravando novos registros...');
+        // 2) UPSERT — grava o lote em batches de 450 com setDoc + merge:true.
+        // Auditoria 2026-04-28: o passo de "DROP em massa" (deletar todos os
+        // docs de competencia_ref+empresa antes de gravar) foi removido. Agora
+        // a importação é IDEMPOTENTE por chave composta cpf+comp+cargo+empresa
+        // — reimportar 61 registros e depois +3 deixa o banco com 64; corrigir
+        // um campo num CPF/Cargo existente apenas atualiza aquela linha. A
+        // exclusão deixou de ser efeito colateral da importação e virou ação
+        // explícita (Super Adm) na própria tabela.
+        setLoading(true, 'Gravando registros (upsert)...');
         try {
             await gravarUnificado(unificado, competenciaMes, competenciaBR, empresa);
         } catch (err) {
-            console.error('[REPLACE] falhou:', err);
+            console.error('[UPSERT] falhou:', err);
             setLoading(false);
             if (err.code === 'permission-denied') {
                 return mostrarErro('Acesso Negado: seu perfil não tem permissão para gravar em CustosFolha.');
             }
-            return mostrarErro('Falha ao gravar os novos registros: ' + (err.message || 'erro desconhecido'));
+            return mostrarErro('Falha ao gravar os registros: ' + (err.message || 'erro desconhecido'));
         }
 
         // 4) Sincroniza a base de Centros de Custo (não-crítico — falhas ficam no console).
@@ -1879,50 +2125,87 @@
         carregarDadosTabela();
 
         fecharModal('modal-importar');
-        mostrarSucesso(`${diagnostico.totalUnificado} funcionários gravados na competência ${competenciaBR} (${empresa}).`);
+        const _x = diagnostico.totalUnificado;
+        const _y = diagnostico.comBeneficiosVinculados;
+        mostrarSucesso(`${_x} registros de folha processados (${_y} com benefícios vinculados) — ${competenciaBR} · ${empresa}.`);
     });
 
-    // ── HELPERS: DROP & REPLACE ──────────────────────────────────────────────
-    async function apagarRegistrosAntigos(competenciaRef, empresa) {
-        const q = query(
-            collection(db, COLECAO),
-            where('competencia_ref', '==', competenciaRef),
-            where('empresa_atribuida', '==', empresa)
-        );
-        const snap = await getDocs(q);
-        if (snap.empty) return 0;
+    // ── HELPERS: UPSERT (sem DROP em massa) ──────────────────────────────────
 
-        const ids = [];
-        snap.forEach(d => ids.push(d.id));
+    // Slug determinístico de empresa para compor o docId. Lowercase + apenas
+    // [a-z0-9_] — mesmo padrão de slugCargo, garante chave estável e segura.
+    function slugEmpresa(valor) {
+        const slug = String(valor || '')
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .slice(0, 60);
+        return slug || 'sem_empresa';
+    }
 
-        for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
-            const batch = writeBatch(db);
-            const fatia = ids.slice(i, i + CHUNK_SIZE);
-            for (const id of fatia) batch.delete(doc(db, COLECAO, id));
-            await batch.commit();
-        }
-        return ids.length;
+    // Slug de cargo em lowercase — espelha slugCargo de importacao_folha.js
+    // mas com caixa baixa pra alinhar com o novo padrão de docId composto.
+    // Usado APENAS aqui pra compor o docId; o ETL continua guardando o cargo
+    // bruto no campo `funcao` do registro.
+    function slugCargoLower(valor) {
+        const slug = String(valor || '')
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .slice(0, 80);
+        return slug || 'sem_cargo';
+    }
+
+    // DocId composto: CPF_COMPETENCIA_CARGO_EMPRESA (tudo lowercase).
+    // Auditoria 2026-04-28: a ordem foi alinhada à especificação (CARGO antes
+    // de EMPRESA) e a caixa foi reduzida pra lowercase, deixando o ID legível
+    // e idempotente. O setDoc + merge:true em gravarUnificado garante upsert
+    // — reimportar a mesma planilha NÃO duplica linhas; corrigir um único
+    // campo (ex: editar nome) só atualiza aquele documento.
+    function gerarDocId(cpf, competenciaRef, cargo, empresa) {
+        const cpfLimpo = String(cpf || '').replace(/\D/g, '').slice(0, 11) || 'sem_cpf';
+        const comp = String(competenciaRef || 'sem_comp').replace(/[^0-9-]/g, '').toLowerCase();
+        return [
+            cpfLimpo,
+            comp,
+            slugCargoLower(cargo),
+            slugEmpresa(empresa),
+        ].join('_').slice(0, 1500); // Firestore docId limit ~1500 bytes
     }
 
     async function gravarUnificado(lista, competenciaRef, competenciaBR, empresa) {
         const totalChunks = Math.ceil(lista.length / CHUNK_SIZE);
+        // Set local apenas pra contagem de colisões dentro do mesmo lote
+        // (importações com 2 linhas de mesmo cpf+cargo+empresa+comp). Em vez
+        // de sufixar (gera registro fantasma), a 2ª linha agora SOBRESCREVE
+        // a 1ª via merge:true — comportamento idempotente esperado em UPSERT.
+        const idsVistos = new Set();
+        let colapsadas = 0;
         for (let c = 0; c < totalChunks; c++) {
             const inicio = c * CHUNK_SIZE;
             const fim = Math.min(inicio + CHUNK_SIZE, lista.length);
             const batch = writeBatch(db);
             for (let i = inicio; i < fim; i++) {
                 const reg = lista[i];
-                const ref = doc(collection(db, COLECAO));
+                const id = gerarDocId(reg.cpf, competenciaRef, reg.funcao, empresa);
+                if (idsVistos.has(id)) colapsadas++;
+                idsVistos.add(id);
+                const ref = doc(db, COLECAO, id);
                 batch.set(ref, {
                     ...reg,
                     competencia: competenciaBR,
                     competencia_ref: competenciaRef,
                     empresa_atribuida: empresa,
-                    dataImportacao: serverTimestamp()
-                });
+                    dataImportacao: serverTimestamp(),
+                }, { merge: true });
             }
             await batch.commit();
             setLoading(true, `Gravando ${Math.min(fim, lista.length)}/${lista.length}...`);
+        }
+        if (colapsadas > 0) {
+            console.warn(`[CustosFolha] ${colapsadas} linha(s) com mesma chave cpf+comp+cargo+empresa foram colapsadas via merge. Investigue se é duplicata real na planilha.`);
         }
     }
 

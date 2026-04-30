@@ -451,11 +451,9 @@
             const dadosUser = docSnap.data();
             const userProfile = dadosUser.perfil;
 
-            // GUARDIAO DE ROTA
+            // GUARDIAO DE ROTA — Auditoria 2026-04-28: redirect amigável.
             const CHAVE_PAGINA = 'aging';
             if (userProfile !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
-              await signOut(auth);
-              alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
               window.location.href = "../login.html";
               return;
             }

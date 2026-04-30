@@ -78,5 +78,33 @@ service cloud.firestore {
     match /CustosFolha/{docId} {
       allow read, write: if request.auth != null && hasMenu('custo_folha');
     }
+
+    // CONTAS A PAGAR — Fase 1 + Fase 2 (auditoria 2026-04-29).
+    // Coleção foi renomeada para ContasAPagar (com "A" separado) seguindo a
+    // especificação da Fase 2 do ETL. Quem tem o menu contas_pagar pode ler
+    // e gravar; o parser TXT também grava nesta coleção.
+    match /ContasAPagar/{docId} {
+      allow read, write: if request.auth != null && hasMenu('contas_pagar');
+    }
+
+    // REGRAS DE CONCILIAÇÃO — dicionário "De-Para" para o ETL automático.
+    // Leitura: qualquer autenticado (o ETL roda com a sessão do usuário que
+    // disparou a importação). Escrita: apenas admin/super_admin (o CRUD
+    // vive na aba Configurações > Regras de Classificação).
+    match /RegrasConciliacao/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // ÁREAS CONTAS A PAGAR — Fase 2.1 (auditoria 2026-04-29).
+    // Coleção independente de Base_Centros_Custo (usada no Custo de Folha).
+    // Aqui ficam as "áreas" exclusivas do módulo Contas a Pagar — alimentam
+    // tanto o dropdown das RegrasConciliacao quanto o datalist do wizard.
+    // Leitura aberta para autenticados; escrita restrita ao admin (CRUD em
+    // master.html → Configurações → Regras de Classificação → Áreas).
+    match /AreasContasPagar/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
   }
 }

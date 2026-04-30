@@ -29,6 +29,22 @@
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
   <style>
+    /* Fade-in suave do app shell (auditoria 2026-04-29) — body mantém o bg
+       padrão; sidebar e main entram com opacity 0 e fazem transição quando
+       `auth-ok` é setado. Redirect de "sem permissão" acontece antes do
+       fade-in, então o usuário não vê os cards proibidos. */
+    body > #sidebar-container,
+    body > main {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    body.auth-ok > #sidebar-container,
+    body.auth-ok > main {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     body {
       background-color: #f8fafc;
       color: #1e293b;
@@ -114,7 +130,7 @@
 
 
         <div class="grid grid-cols-4 gap-6">
-          <div onclick="window.abrirModulo('tela-faturamento')" style="animation-delay: 0.1s;"
+          <div onclick="window.abrirModulo('tela-faturamento')" data-modulo="moduloFaturamento" id="card-modulo-faturamento" style="animation-delay: 0.1s;"
             class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandGreen mb-4 block">payments</span>
             <h3 class="text-white text-xl font-extrabold mb-2">Módulo Faturamento</h3>
@@ -124,7 +140,7 @@
               class="text-brandGreen text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
-          <div onclick="window.abrirModulo('tela-fluxo')" style="animation-delay: 0.2s;"
+          <div onclick="window.abrirModulo('tela-fluxo')" data-modulo="fluxoCaixa" id="card-modulo-fluxo" style="animation-delay: 0.2s;"
             class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandLightBlue mb-4 block">account_balance</span>
             <h3 class="text-white text-xl font-extrabold mb-2">Fluxo de Caixa</h3>
@@ -134,7 +150,7 @@
               class="text-brandLightBlue text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
-          <div onclick="window.abrirModulo('tela-rh')" style="animation-delay: 0.3s;"
+          <div onclick="window.abrirModulo('tela-rh')" data-modulo="forecast" id="card-modulo-forecast" style="animation-delay: 0.3s;"
             class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandOrange mb-4 block">groups</span>
             <h3 class="text-white text-xl font-extrabold mb-2">FORECAST</h3>
@@ -144,7 +160,7 @@
               class="text-brandOrange text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
-          <a href="../aging_desktop/code.html" data-menu="aging" id="card-acesso-aging" style="animation-delay: 0.4s;"
+          <a href="../aging_desktop/code.html" data-menu="aging" data-modulo="aging" id="card-acesso-aging" style="animation-delay: 0.4s;"
             class="card-entry-anim block bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandGreen mb-4 block">query_stats</span>
             <h3 class="text-white text-xl font-extrabold mb-2">AGING Financeiro</h3>
@@ -157,7 +173,7 @@
         </div>
 
         <div class="grid grid-cols-4 gap-6">
-          <div onclick="window.abrirModulo('tela-metas')" style="animation-delay: 0.5s;"
+          <div onclick="window.abrirModulo('tela-metas')" data-modulo="metas" id="card-modulo-metas" style="animation-delay: 0.5s;"
             class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandAqua mb-4 block">track_changes</span>
             <h3 class="text-white text-xl font-extrabold mb-2">Metas Financeiras</h3>
@@ -168,7 +184,7 @@
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
           </div>
 
-          <a href="../custo_folha_dash/code.html" data-menu="custo_folha" id="card-acesso-custo-folha" style="animation-delay: 0.6s;"
+          <a href="../custo_folha_dash/code.html" data-menu="custo_folha" data-modulo="custoFolha" id="card-acesso-custo-folha" style="animation-delay: 0.6s;"
             class="card-entry-anim block bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandOrange mb-4 block">receipt_long</span>
             <h3 class="text-white text-xl font-extrabold mb-2">Custo de Folha</h3>
@@ -2517,8 +2533,9 @@
 
         const CHAVE_PAGINA = 'dashboard_master';
         if (userProfile !== 'super_admin' && !menusPermitidos.includes(CHAVE_PAGINA)) {
-          await signOut(auth);
-          alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
+          // Auditoria 2026-04-28: redirect amigável (sem signOut). O roteador
+          // inteligente em login.html lê a sessão ativa e leva o usuário ao
+          // primeiro módulo permitido — ou exibe "zero permissões" se nenhum.
           window.location.href = "../login.html";
           return;
         }
@@ -2528,24 +2545,43 @@
       }
 
       // ETAPA 2 — Shell visual (sidebar + RBAC dos cards navegáveis).
-      // Os cards Aging e Custo de Folha renderizam visíveis por default e
-      // animam junto com os demais (mesmo padrão de Faturamento/Fluxo/etc).
-      // A RBAC aqui APENAS ESCONDE os cards para usuários sem permissão —
-      // isso acontece antes de a animação fadeInUp começar (delay 0.4-0.6s),
-      // então não há flash perceptível para quem não tem acesso.
+      // Auditoria 2026-04-28: refatoramos para usar a nova matriz granular
+      // permissoes.modulosDashboard. Cada card carrega data-modulo (chave do
+      // novo schema) — ocultamos qualquer card cujo módulo seja false.
+      // Back-compat: se o usuário ainda está no formato antigo, derivamos a
+      // partir do array menus_permitidos (e tratamos quem tem dashboard_master
+      // como tendo todos os módulos liberados, preservando o comportamento
+      // anterior).
       try {
         renderSidebar(userProfile, menusPermitidos);
 
         const ehSuper = userProfile === 'super_admin';
+        // Resolve permissoes.modulosDashboard com fallback ao formato antigo.
+        const permModulos = (() => {
+          const novo = dadosUser.permissoes?.modulosDashboard;
+          if (novo && Object.keys(novo).length > 0) return novo;
+          // Migração implícita: se tem dashboard_master no array antigo, libera
+          // tudo (preserva comportamento anterior). Senão, libera nada.
+          const tinhaDashboard = menusPermitidos.includes('dashboard_master');
+          return {
+            moduloFaturamento: tinhaDashboard,
+            fluxoCaixa: tinhaDashboard,
+            forecast: tinhaDashboard,
+            aging: tinhaDashboard && menusPermitidos.includes('aging'),
+            metas: tinhaDashboard,
+            custoFolha: tinhaDashboard && menusPermitidos.includes('custo_folha'),
+          };
+        })();
 
-        const cardAging = document.getElementById('card-acesso-aging');
-        if (cardAging && !ehSuper && !menusPermitidos.includes('aging')) {
-          cardAging.classList.add('hidden');
-        }
-        const cardCustoFolha = document.getElementById('card-acesso-custo-folha');
-        if (cardCustoFolha && !ehSuper && !menusPermitidos.includes('custo_folha')) {
-          cardCustoFolha.classList.add('hidden');
-        }
+        // Aplica visibilidade card-a-card a partir de data-modulo.
+        document.querySelectorAll('[data-modulo]').forEach(card => {
+          if (ehSuper) return; // super_admin vê tudo
+          const chave = card.getAttribute('data-modulo');
+          if (!permModulos[chave]) card.classList.add('hidden');
+        });
+
+        // Libera o conteúdo: auth + RBAC dos cards já aplicados.
+        document.body.classList.add('auth-ok');
       } catch (error) {
         console.error("[DashboardMaster] Falha ao renderizar shell/cards:", error);
       }

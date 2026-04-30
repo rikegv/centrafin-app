@@ -162,8 +162,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
@@ -184,69 +184,132 @@
         const txtErro = document.getElementById('texto-erro');
         const loadingState = document.getElementById('loading-state');
 
+        // ROTEADOR PÓS-LOGIN — auditoria 2026-04-28
+        // Avalia a matriz `permissoes.menus` (ou faz fallback ao array legado
+        // `menus_permitidos`) e decide para qual tela redirecionar, seguindo a
+        // hierarquia pedida na auditoria: Dashboard > Faturamento > Custo Folha
+        // > Metas. Super Adm sempre vai pro Dashboard. Devolve null se o
+        // usuário não tem nenhum menu permitido.
+        function rotaPorPermissoes(userData) {
+            if (!userData) return null;
+            if (userData.perfil === 'super_admin') {
+                return 'dashboard_master_desktop/code.html';
+            }
+            // Lê o formato novo, com fallback ao array legado (back-compat).
+            let menus = userData.permissoes?.menus;
+            if (!menus) {
+                const arr = Array.isArray(userData.menus_permitidos) ? userData.menus_permitidos : [];
+                menus = {
+                    dashboardGeral:           arr.includes('dashboard_master'),
+                    faturamento:              arr.includes('contas_receber'),
+                    contasPagar:              arr.includes('contas_pagar'),
+                    custoFolha:               arr.includes('custo_folha'),
+                    metasFinanceiras:         arr.includes('metas'),
+                    configuracoesPrivacidade: arr.includes('usuarios'),
+                };
+            }
+            if (menus.dashboardGeral)   return 'dashboard_master_desktop/code.html';
+            if (menus.faturamento)      return 'contas_a_receber_desktop/code.html';
+            if (menus.contasPagar)      return 'contas_a_pagar_desktop/code.html';
+            if (menus.custoFolha)       return 'custo_folha_desktop/code.html';
+            if (menus.metasFinanceiras) return 'metas_desktop/code.html';
+            // Super Adm-only entry — usuário comum não chega aqui pelo fluxo
+            // normal, mas defensivamente: se for o único menu, leva pra lá.
+            if (menus.configuracoesPrivacidade) return 'master.html';
+            return null;
+        }
+
+        // Busca o doc do usuário com auto-migração de doc-por-UID → doc-por-email.
+        async function carregarDocUsuario(user) {
+            const emailKey = user.email.toLowerCase();
+            let docRef = doc(db, "Usuarios", emailKey);
+            let docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) {
+                const uidRef = doc(db, "Usuarios", user.uid);
+                const uidSnap = await getDoc(uidRef);
+                if (uidSnap.exists()) {
+                    console.log("[MIGRAÇÃO] Migrando doc de UID para e-mail:", emailKey);
+                    const dados = uidSnap.data();
+                    dados.email = emailKey;
+                    dados.menus_permitidos = dados.menus_permitidos || [];
+                    await setDoc(doc(db, "Usuarios", emailKey), dados);
+                    await deleteDoc(uidRef);
+                    docSnap = await getDoc(docRef);
+                }
+            }
+            return docSnap;
+        }
+
+        // Decide o que fazer com um usuário JÁ autenticado: roteia para o 1º
+        // módulo permitido, ou exibe erro de zero-permissões e desloga.
+        async function rotearAposLogin(user) {
+            const docSnap = await carregarDocUsuario(user);
+            if (!docSnap.exists()) {
+                await signOut(auth);
+                showError("Acesso negado. Seu usuário não está cadastrado. Contate o administrador.");
+                return;
+            }
+            const userData = docSnap.data();
+            if (userData.status === 'inativo') {
+                await signOut(auth);
+                showError("Sua conta está inativa. Contate o administrador.");
+                return;
+            }
+            const rota = rotaPorPermissoes(userData);
+            if (!rota) {
+                // Zero permissões — não há tela alvo. Avisa e desloga.
+                await signOut(auth);
+                showError("Seu usuário ainda não possui permissões de acesso. Contate o administrador.");
+                return;
+            }
+            // Log de auditoria para perfis com restrição lateral por CC. Não
+            // bloqueia o redirect — falha de log nunca trava o login.
+            const ccsRestritos = Array.isArray(userData?.permissoes?.filtros?.centrosCusto)
+                ? userData.permissoes.filtros.centrosCusto
+                : [];
+            if (ccsRestritos.length > 0 && userData.perfil !== 'super_admin') {
+                addDoc(collection(db, "Logs"), {
+                    usuario: userData.nome || userData.email || user.email,
+                    acao: "ACESSO",
+                    modulo: "Login (CC restrito)",
+                    detalhes: `Login com restrição lateral por Centro de Custo: ${ccsRestritos.join(', ')}.`,
+                    data_hora: serverTimestamp(),
+                }).catch(e => console.warn('[Logs] Falha ao registrar acesso CC restrito:', e?.code || e?.message));
+            }
+            window.location.href = rota;
+        }
+
+        // Sessão pré-existente: se o navegador já está autenticado (refresh,
+        // redirect vindo de uma página interna sem permissão, etc), roteia
+        // imediatamente sem exigir novo clique no Google.
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) return;
+            try {
+                btnGoogle.disabled = true;
+                btnGoogle.classList.add('opacity-50', 'cursor-not-allowed');
+                loadingState.classList.remove('hidden');
+                await rotearAposLogin(user);
+            } catch (err) {
+                console.error("[Auto-route] Falha ao rotear sessão existente:", err);
+                btnGoogle.disabled = false;
+                btnGoogle.classList.remove('opacity-50', 'cursor-not-allowed');
+                loadingState.classList.add('hidden');
+            }
+        });
+
         btnGoogle.addEventListener('click', async () => {
-            // Reset state
             msgErro.classList.add('hidden');
             btnGoogle.disabled = true;
             btnGoogle.classList.add('opacity-50', 'cursor-not-allowed');
             loadingState.classList.remove('hidden');
-
             try {
                 const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-
-                // Motor de Segurança: Validação no Firestore (doc ID = e-mail)
-                const emailKey = user.email.toLowerCase();
-                let docRef = doc(db, "Usuarios", emailKey);
-                let docSnap = await getDoc(docRef);
-
-                // AUTO-MIGRAÇÃO: Se não achou por e-mail, tenta pelo UID antigo e migra
-                if (!docSnap.exists()) {
-                    const uidRef = doc(db, "Usuarios", user.uid);
-                    const uidSnap = await getDoc(uidRef);
-                    if (uidSnap.exists()) {
-                        console.log("[MIGRAÇÃO] Migrando doc de UID para e-mail:", emailKey);
-                        const dados = uidSnap.data();
-                        dados.email = emailKey;
-                        dados.menus_permitidos = dados.menus_permitidos || [];
-                        await setDoc(doc(db, "Usuarios", emailKey), dados);
-                        await deleteDoc(uidRef);
-                        docSnap = await getDoc(docRef);
-                        console.log("[MIGRAÇÃO] Concluída com sucesso para:", emailKey);
-                    }
-                }
-
-                if (docSnap.exists()) {
-                    const userData = docSnap.data();
-
-                    // Verificação de Status
-                    if (userData.status === 'inativo') {
-                        await signOut(auth);
-                        showError("Sua conta está inativa. Contate o administrador.");
-                        return;
-                    }
-
-                    // Sucesso: Redirecionamento baseado no perfil
-                    if (userData.perfil === 'master' || userData.perfil === 'super_admin') {
-                        window.location.href = "dashboard_master_desktop/code.html";
-                    } else {
-                        window.location.href = "contas_a_receber_desktop/code.html";
-                    }
-                } else {
-                    // Usuário logou no Google mas NÃO existe no nosso Firestore
-                    await signOut(auth);
-                    showError("Acesso Negado. Fale com o Administrador");
-                }
-
+                await rotearAposLogin(result.user);
             } catch (error) {
                 console.error("Erro na autenticação:", error);
-
-                if (error.code === 'auth/popup-closed-by-user') {
-                    // Usuário fechou a janela sem logar
-                } else {
+                if (error.code !== 'auth/popup-closed-by-user') {
                     showError(`Erro técnico: ${error.code}`);
                 }
-
                 btnGoogle.disabled = false;
                 btnGoogle.classList.remove('opacity-50', 'cursor-not-allowed');
                 loadingState.classList.add('hidden');
@@ -256,6 +319,17 @@
         function showError(mensagem) {
             txtErro.textContent = mensagem;
             msgErro.classList.remove('hidden');
+            // Cor Coral solicitada pelo design system (#FF8864) para "acesso negado".
+            // Mantemos o tom vermelho atual; quando a copy traz "permissões", aplica
+            // a paleta coral pra alinhar com o brand.
+            const wrap = msgErro;
+            const usaCoral = /permiss[oõ]es|zero|n[aã]o cadastrado|inativ[ao]/i.test(mensagem);
+            if (usaCoral) {
+                wrap.classList.remove('bg-red-900/10', 'border-red-900/20', 'text-red-900');
+                wrap.classList.add('bg-[#FF8864]/15', 'border-[#FF8864]/40', 'text-[#FF8864]');
+                txtErro.classList.remove('text-red-900/80');
+                txtErro.classList.add('text-[#7a3a22]');
+            }
             loadingState.classList.add('hidden');
             btnGoogle.disabled = false;
             btnGoogle.classList.remove('opacity-50', 'cursor-not-allowed');

@@ -196,11 +196,9 @@
           return;
         }
 
-        // GUARDIÃO DE ROTA
+        // GUARDIÃO DE ROTA — Auditoria 2026-04-28: redirect amigável.
         const CHAVE_PAGINA = 'gestao_parceiros';
         if (dadosUser.perfil !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
-          await signOut(auth);
-          alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
           window.location.href = "../login.html";
           return;
         }

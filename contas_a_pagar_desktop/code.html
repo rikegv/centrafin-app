@@ -1,251 +1,443 @@
 <!DOCTYPE html>
 <html class="light" lang="pt-br">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>CentraFin | Contas a Pagar</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script id="tailwind-config">
+    <script>
         tailwind.config = {
-            darkMode: "class",
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#aad12f",
-                        "secondary": "#002443",
-                        "surface-container-low": "#f3f4f6",
-                        "on-surface": "#191c1e",
-                        "on-surface-variant": "#584237",
-                        "surface-container-highest": "#e1e2e4",
-                        "surface-container-lowest": "#ffffff",
-                        "error": "#ba1a1a",
-                        "tertiary": "#006398"
+                        primary: "#aad12f",
+                        secondary: "#002443",
+                        tertiary: "#59a4d8",
+                        "on-surface": "#1e293b",
+                        "on-surface-variant": "#64748b",
                     },
-                    fontFamily: {
-                        "headline": ["Manrope"],
-                        "body": ["Inter"]
-                    }
+                    fontFamily: { headline: ['Manrope', 'sans-serif'], body: ['Inter', 'sans-serif'] }
                 }
             }
-        }
+        };
     </script>
     <style>
+        /* Fade-in suave do app shell (auditoria 2026-04-29) — sidebar e main
+           começam invisíveis e ganham opacity:1 quando `auth-ok` é setado.
+           Body mantém o bg padrão (#f8fafc). */
+        body > #sidebar-container,
+        body > main {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        body.auth-ok > #sidebar-container,
+        body.auth-ok > main {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        @keyframes cp-spin { to { transform: rotate(360deg); } }
+
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .font-headline { font-family: 'Manrope', sans-serif; }
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .editorial-shadow { box-shadow: 0px 20px 40px rgba(25, 28, 30, 0.06); }
-        .backdrop-blur-sm { backdrop-filter: blur(4px); }
+        .spin { animation: cp-spin 0.9s linear infinite; }
     </style>
 </head>
-<body class="bg-surface-container-low text-on-surface font-body antialiased">
+<body class="bg-slate-50 antialiased">
 
 <div id="sidebar-container"></div>
 
-
 <main class="ml-20 min-h-screen">
-    <header class="bg-white shadow-sm docked full-width top-0 z-40 flex items-center w-full px-8 py-4">
-        <div class="flex items-center gap-4">
-            <h1 class="text-xl font-extrabold tracking-tight text-slate-900 font-manrope">CentraFin</h1>
-            <div class="h-6 w-px bg-slate-200 mx-2"></div>
-            <span class="text-slate-500 font-medium text-sm">Contas a Pagar</span>
-        </div>
-    </header>
 
-    <div class="p-8 space-y-8">
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white rounded-xl p-6 editorial-shadow border-l-4 border-tertiary">
-                <h3 class="font-headline text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1">Pagamentos Hoje</h3>
-                <span id="card-vencem-hoje" class="text-3xl font-manrope font-extrabold text-on-surface">R$ 0,00</span>
-                <p id="card-count-hoje" class="text-[11px] text-slate-400 mt-2 font-medium">-- lançamentos</p>
-            </div>
-            <div class="bg-white rounded-xl p-6 editorial-shadow border-l-4 border-primary">
-                <h3 class="font-headline text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1">A Pagar na Semana</h3>
-                <span id="card-vencem-semana" class="text-3xl font-manrope font-extrabold text-on-surface">R$ 0,00</span>
-                <p id="card-count-semana" class="text-[11px] text-slate-400 mt-2 font-medium">-- lançamentos</p>
-            </div>
-            <div class="bg-white rounded-xl p-6 editorial-shadow border-l-4 border-error">
-                <h3 class="font-headline text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1">Total em Atraso</h3>
-                <span id="card-atraso" class="text-3xl font-manrope font-extrabold text-error">R$ 0,00</span>
-                <p id="card-count-atraso" class="text-[11px] text-error/70 mt-2 font-medium">-- pendências críticas</p>
-            </div>
-        </section>
-
-        <!-- Action Bar / Filtros -->
-        <section class="flex flex-col gap-6">
-            <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div class="relative w-full md:w-96 text-left">
-                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
-                    <input id="input-busca" class="w-full pl-10 pr-4 py-2.5 bg-white rounded-lg border-none focus:ring-2 focus:ring-primary/20 text-sm font-medium editorial-shadow" placeholder="Pesquisar por Fornecedor ou Categoria..." type="text"/>
+    <!-- HEADER: título + ações principais -->
+    <section class="px-8 pt-8 pb-6 border-b border-slate-100 bg-white">
+        <div class="flex items-start justify-between gap-6 flex-wrap">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-primary text-3xl">account_balance_wallet</span>
                 </div>
-                <button id="btn-nova-despesa" class="flex items-center gap-2 px-6 py-2.5 bg-[#aad12f] text-[#341100] rounded-xl text-sm font-bold shadow-lg shadow-[#aad12f]/20 hover:brightness-110 active:scale-95 transition-all">
-                    <span class="material-symbols-outlined text-lg">add_box</span>
-                    Nova Despesa
+                <div class="min-w-0">
+                    <h1 class="font-headline text-2xl font-extrabold text-secondary tracking-tight">Contas a Pagar</h1>
+                    <p class="text-[12px] text-slate-500 font-medium mt-0.5">Gestão de obrigações financeiras com conciliação contínua via banco de regras.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2.5">
+                <button id="btn-importar-txt" type="button"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-white text-secondary border border-slate-200 hover:border-tertiary hover:bg-tertiary/5 rounded-xl text-sm font-bold transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-lg text-tertiary">upload_file</span>
+                    Importar Arquivo TXT
+                </button>
+                <button id="btn-adicionar-manual" type="button"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-primary text-[#341100] rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all">
+                    <span class="material-symbols-outlined text-lg">add_circle</span>
+                    Adicionar Manual
                 </button>
             </div>
-            <div class="flex flex-col md:flex-row gap-4 items-end bg-white/50 p-4 rounded-xl border border-surface-container shadow-sm">
-                <div class="flex-1 min-w-[150px] text-left">
-                    <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Empresa Pagadora</label>
-                    <select id="filtro-empresa" class="w-full bg-white border-none rounded-lg py-2 px-3 text-xs focus:ring-2 focus:ring-secondary/10 editorial-shadow">
-                        <option value="">Todas as Empresas</option>
+        </div>
+    </section>
+
+    <div class="p-8 space-y-6">
+
+        <!-- FILTROS -->
+        <section class="bg-white rounded-2xl editorial-shadow border border-slate-100 p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-[11px] font-extrabold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-[18px]">tune</span>
+                    Filtros
+                </h3>
+                <button id="btn-limpar-filtros" type="button" class="hidden items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-red-600 px-2 py-1 rounded-lg transition-colors">
+                    <span class="material-symbols-outlined text-base">filter_alt_off</span>
+                    Limpar
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Competência</label>
+                    <input id="filtro-competencia" type="month"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Fornecedor / Cliente</label>
+                    <input id="filtro-entidade" type="text" placeholder="Buscar por nome…"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Área</label>
+                    <select id="filtro-centro-custo"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white">
+                        <option value="">Todas</option>
                     </select>
                 </div>
-                <div class="flex-1 min-w-[150px] text-left">
-                    <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Status Pagamento</label>
-                    <select id="filtro-status-tabela" class="w-full bg-white border-none rounded-lg py-2 px-3 text-xs focus:ring-2 focus:ring-secondary/10 editorial-shadow">
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Status</label>
+                    <select id="filtro-status"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white">
                         <option value="">Todos</option>
-                        <option value="A PAGAR">A Pagar</option>
-                        <option value="PAGO">Pago</option>
-                        <option value="EM ATRASO">Em Atraso</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="pago">Pago</option>
                     </select>
                 </div>
             </div>
         </section>
 
-        <section class="bg-white rounded-2xl editorial-shadow overflow-hidden">
+        <!-- KPIs RESUMO -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow">
+                <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1">Total de lançamentos</p>
+                <h3 class="text-2xl font-extrabold text-secondary tabular-nums" id="kpi-total-count">0</h3>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow">
+                <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1">Valor total</p>
+                <h3 class="text-2xl font-extrabold text-secondary tabular-nums" id="kpi-valor-total">R$ 0,00</h3>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow">
+                <p class="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest mb-1">Pendentes</p>
+                <h3 class="text-2xl font-extrabold text-amber-600 tabular-nums" id="kpi-pendente">R$ 0,00</h3>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow">
+                <p class="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest mb-1">Pagos</p>
+                <h3 class="text-2xl font-extrabold text-emerald-600 tabular-nums" id="kpi-pago">R$ 0,00</h3>
+            </div>
+        </section>
+
+        <!-- TABELA -->
+        <section class="bg-white rounded-2xl editorial-shadow border border-slate-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <h3 class="font-headline text-sm font-bold text-secondary flex items-center gap-2">
+                    <span class="material-symbols-outlined text-slate-400 text-[20px]">table_view</span>
+                    Lançamentos
+                </h3>
+                <span class="text-[11px] font-bold text-slate-400" id="hint-filtro">Mostrando todos os registros</span>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-surface-container-low/50">
-                            <th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Empresa</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Fornecedor</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Categoria</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-center">Vencimento</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Valor</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-center">Status</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Ações</th>
+                    <thead class="bg-slate-50 border-b border-slate-100 text-[10px]">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Competência</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Código</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Entidade</th>
+                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Valor Original</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Categoria</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Área</th>
+                            <th class="px-4 py-3 text-center font-bold text-on-surface-variant uppercase tracking-widest">Status</th>
+                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="corpo-tabela" class="divide-y divide-slate-50">
-                        <!-- Injetado via JS -->
-                    </tbody>
+                    <tbody id="cp-corpo" class="divide-y divide-slate-50"></tbody>
                 </table>
             </div>
-            <div class="px-6 py-5 flex items-center justify-between border-t border-slate-100">
-                <span id="footer-count" class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Carregando dados...</span>
-                <div id="paginacao-controles" class="flex items-center gap-2"></div>
+            <!-- Empty State -->
+            <div id="cp-vazio" class="px-8 py-20 text-center">
+                <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-3xl text-slate-300">inbox</span>
+                </div>
+                <h4 class="text-sm font-extrabold text-secondary mb-1">Nenhum lançamento encontrado</h4>
+                <p class="text-[12px] text-slate-400 font-medium max-w-sm mx-auto">
+                    Comece importando um arquivo TXT do banco ou adicione lançamentos manualmente.
+                    O sistema usa o <strong class="text-slate-600">Banco de Regras de Conciliação</strong> para classificar entidades automaticamente.
+                </p>
+                <div class="flex items-center justify-center gap-2.5 mt-5">
+                    <button onclick="document.getElementById('btn-importar-txt').click()" class="text-[11px] font-bold text-tertiary hover:underline">
+                        Importar TXT
+                    </button>
+                    <span class="text-slate-300">·</span>
+                    <button onclick="document.getElementById('btn-adicionar-manual').click()" class="text-[11px] font-bold text-primary hover:underline">
+                        Adicionar manualmente
+                    </button>
+                </div>
             </div>
         </section>
     </div>
 </main>
 
-<!-- Modal Nova/Editar Despesa -->
-<div id="modal-despesa" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="modal-overlay"></div>
-    <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl z-10 p-6 transform scale-95 transition-transform duration-300 relative max-h-[95vh] overflow-y-auto" id="modal-content">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="font-headline text-xl font-bold text-slate-900">Novo Lançamento</h3>
-            <button id="btn-fechar-modal" class="text-slate-400 hover:text-slate-700 transition-colors">
+<!-- MODAL: Adicionar Manual -->
+<div id="modal-manual" class="fixed inset-0 z-[65] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-manual"></div>
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] overflow-y-auto">
+        <div class="flex justify-between items-center px-7 pt-7 pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">add_circle</span>
+                </div>
+                <div>
+                    <h3 class="font-headline text-lg font-extrabold text-secondary">Adicionar Lançamento</h3>
+                    <p class="text-[11px] text-slate-400 font-medium">Inclusão manual em Contas a Pagar.</p>
+                </div>
+            </div>
+            <button data-fechar-modal="modal-manual" class="text-slate-400 hover:text-secondary transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <form id="form-despesa" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="col-span-1 md:col-span-3">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Descrição</label>
-                    <input type="text" id="campo-descricao" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="Ex: Pagamento Fornecedor Service">
+        <form id="form-manual" class="p-7 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Data de Vencimento</label>
+                    <input id="m-vencimento" type="date" required
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
                 </div>
-                <div class="col-span-1 lg:col-span-2">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Fornecedor</label>
-                    <select id="campo-fornecedor" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none">
-                        <option value="">Selecione...</option>
-                    </select>
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Código</label>
+                    <input id="m-codigo" type="text" placeholder="NF, boleto, ref…"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
                 </div>
-                <div class="col-span-1">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Valor (R$)</label>
-                    <input type="number" step="0.01" id="campo-valor" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="0.00">
+            </div>
+            <div>
+                <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Entidade (Fornecedor/Cliente)</label>
+                <input id="m-entidade" type="text" required placeholder="Ex: TELEFONICA BRASIL S.A."
+                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                <p id="m-entidade-hint" class="hidden text-[10px] font-medium text-tertiary mt-1.5 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[12px]">auto_awesome</span>
+                    <span data-hint-text></span>
+                </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Valor Original (R$)</label>
+                    <input id="m-valor" type="number" step="0.01" required min="0" placeholder="0,00"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
                 </div>
-                <div class="col-span-1">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Vencimento</label>
-                    <input type="date" id="campo-vencimento" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none">
-                </div>
-                <div class="col-span-1">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Pagamento</label>
-                    <input type="date" id="campo-data-pagamento" class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none">
-                </div>
-                <div class="col-span-1">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Referência</label>
-                    <input type="text" id="campo-mes-referencia" class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="MM/AAAA">
-                </div>
-                <div class="col-span-1">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Categoria</label>
-                    <select id="campo-categoria" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none"><option value="">Selecione...</option></select>
-                </div>
-                <div class="col-span-1">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Empresa Atribuída</label>
-                    <select id="campo-empresa-atribuida" required class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary outline-none"><option value="">Selecione...</option></select>
-                </div>
-                <div class="col-span-1">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Status</label>
-                    <select id="campo-status-lanc" class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm bg-slate-50 outline-none" disabled>
-                        <option value="A PAGAR">A Pagar</option>
-                        <option value="PAGO">Pago</option>
-                        <option value="EM ATRASO">Em Atraso</option>
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Status</label>
+                    <select id="m-status" required
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white">
+                        <option value="pendente">Pendente</option>
+                        <option value="pago">Pago</option>
                     </select>
                 </div>
             </div>
-
-            <div id="alerta-sucesso" class="hidden bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm font-bold flex items-center gap-2">
-                <span class="material-symbols-outlined text-base">check_circle</span>
-                Operação realizada com sucesso!
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Categoria</label>
+                    <input id="m-categoria" type="text" placeholder="Ex: Telecomunicações"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Área</label>
+                    <input id="m-centro-custo" type="text" placeholder="Ex: Operacional"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" list="datalist-cc-manual" />
+                    <datalist id="datalist-cc-manual"></datalist>
+                </div>
             </div>
-
-            <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
-                <button type="button" id="btn-cancelar" class="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">Cancelar</button>
-                <button type="submit" id="btn-salvar" class="flex items-center gap-2 px-8 py-2.5 bg-[#aad12f] text-[#341100] rounded-xl text-sm font-bold shadow-lg shadow-[#aad12f]/20 hover:brightness-105 active:scale-95 transition-all">
-                    <span class="material-symbols-outlined text-lg" id="icon-salvar">save</span>
-                    Salvar Despesa
+            <div id="msg-form-manual" class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2"></div>
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button type="button" data-fechar-modal="modal-manual" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                <button type="submit" id="btn-salvar-manual"
+                    class="flex items-center gap-2 px-6 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-extrabold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined text-base" id="ico-salvar-manual">save</span>
+                    <span id="lbl-salvar-manual">SALVAR LANÇAMENTO</span>
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal Premium de Sucesso -->
-<div id="modal-sucesso" class="fixed inset-0 z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-  <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-sucesso-overlay"></div>
-  <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100" id="modal-sucesso-content">
-    <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-      <span class="material-symbols-outlined text-4xl text-[#aad12f]">check_circle</span>
+<!-- MODAL: Wizard de Importação TXT — Fase 2 (auditoria 2026-04-29) -->
+<div id="modal-importar" class="fixed inset-0 z-[65] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-importar"></div>
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
+
+        <!-- HEADER do wizard com indicador de passo -->
+        <div class="px-7 pt-7 pb-5 border-b border-slate-100">
+            <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-tertiary">upload_file</span>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="font-headline text-lg font-extrabold text-secondary">Importar Arquivo TXT</h3>
+                        <p id="wizard-subtitulo" class="text-[11px] text-slate-400 font-medium truncate">Selecione o spool bancário para iniciar a leitura.</p>
+                    </div>
+                </div>
+                <button data-fechar-modal="modal-importar" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <!-- Indicador de passos -->
+            <div class="flex items-center gap-2 mt-5">
+                <div data-passo-indicador="upload" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-tertiary text-white text-[10px] font-extrabold uppercase tracking-wider">
+                    <span class="material-symbols-outlined text-[14px]">file_open</span> 1. Leitura
+                </div>
+                <div class="h-px flex-1 bg-slate-200"></div>
+                <div data-passo-indicador="conciliacao" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">
+                    <span class="material-symbols-outlined text-[14px]">rule</span> 2. Conciliação
+                </div>
+                <div class="h-px flex-1 bg-slate-200"></div>
+                <div data-passo-indicador="finalizando" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">
+                    <span class="material-symbols-outlined text-[14px]">save</span> 3. Gravação
+                </div>
+            </div>
+        </div>
+
+        <!-- CORPO do wizard -->
+        <div class="flex-1 overflow-y-auto px-7 py-6">
+
+            <!-- PASSO 1: Upload do arquivo TXT -->
+            <div data-passo="upload" class="space-y-4">
+                <label class="block border-2 border-dashed border-slate-200 rounded-xl p-8 cursor-pointer hover:border-tertiary hover:bg-tertiary/5 transition-all" id="dropzone-txt">
+                    <div class="flex flex-col items-center text-center gap-3">
+                        <span class="material-symbols-outlined text-5xl text-slate-300">description</span>
+                        <div>
+                            <p class="text-sm font-bold text-secondary">Clique para selecionar o arquivo TXT</p>
+                            <p id="lbl-arquivo-txt" class="text-[11px] text-slate-400 mt-1">Spool bancário .txt — leitura linha a linha via regex.</p>
+                        </div>
+                    </div>
+                    <input id="file-txt" type="file" accept=".txt" class="hidden" />
+                </label>
+                <div id="dryrun-stats" class="hidden bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-3">
+                    <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Pré-leitura do arquivo</p>
+                    <!-- Empresa-mãe detectada (Fase 2.1): banner destacado -->
+                    <div id="empresa-origem-banner" class="hidden flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-tertiary/10 border border-tertiary/30">
+                        <span class="material-symbols-outlined text-tertiary text-[20px]">domain</span>
+                        <div class="min-w-0">
+                            <p class="text-[9px] font-bold text-tertiary uppercase tracking-wider">Empresa-mãe (1ª linha)</p>
+                            <p class="text-sm font-extrabold text-secondary truncate" id="stat-empresa-origem">—</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="bg-white border border-slate-100 rounded-lg p-3">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Clientes</p>
+                            <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-clientes">0</p>
+                        </div>
+                        <div class="bg-white border border-slate-100 rounded-lg p-3">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pagamentos</p>
+                            <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-pagamentos">0</p>
+                        </div>
+                        <div class="bg-white border border-slate-100 rounded-lg p-3">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Entidades únicas</p>
+                            <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-entidades">0</p>
+                        </div>
+                    </div>
+                    <div id="dryrun-pendencias-resumo" class="hidden flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-800">
+                        <span class="material-symbols-outlined text-amber-600 text-[16px] mt-0.5">info</span>
+                        <span data-pendencias-text></span>
+                    </div>
+                </div>
+                <div id="msg-passo-upload" class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2"></div>
+            </div>
+
+            <!-- PASSO 2: Conciliação de entidades pendentes -->
+            <div data-passo="conciliacao" class="hidden space-y-4">
+                <div class="flex items-start gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-[12px] font-medium text-amber-800">
+                    <span class="material-symbols-outlined text-amber-600 text-[18px] mt-0.5">auto_awesome</span>
+                    <div>
+                        <p class="font-extrabold mb-0.5">Conciliação Inteligente</p>
+                        <p>Os nomes abaixo apareceram no arquivo mas <strong>não estão no Banco de Regras</strong>. Classifique cada um — o sistema vai aprender e aplicar essas regras agora e nas próximas importações.</p>
+                    </div>
+                </div>
+                <div class="overflow-y-auto max-h-[50vh]">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 sticky top-0 z-10">
+                            <tr class="text-[10px] uppercase tracking-widest font-bold text-slate-500">
+                                <th class="px-4 py-3 text-left">Entidade</th>
+                                <th class="px-4 py-3 text-left">Tipo</th>
+                                <th class="px-4 py-3 text-left">Área</th>
+                            </tr>
+                        </thead>
+                        <tbody id="conciliacao-corpo" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <p class="text-[10px] text-slate-400 italic">Dica: o Tipo padrão sugerido é "Fornecedor Externo" para nomes vindos da coluna de fornecedor e "Cliente" para os cabeçalhos do spool.</p>
+            </div>
+
+            <!-- PASSO 3: Confirmação final / progresso de gravação -->
+            <div data-passo="finalizando" class="hidden flex flex-col items-center text-center py-8 gap-3">
+                <div class="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-emerald-600 text-3xl" id="ico-finalizando">check_circle</span>
+                </div>
+                <h3 class="font-headline text-lg font-extrabold text-secondary" id="titulo-finalizando">Importação concluída</h3>
+                <p class="text-[12px] text-slate-500 max-w-md" id="msg-finalizando">—</p>
+                <div class="grid grid-cols-3 gap-3 w-full max-w-md mt-2">
+                    <div class="bg-slate-50 rounded-lg p-3">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Regras criadas</p>
+                        <p class="text-xl font-extrabold text-tertiary tabular-nums" id="stat-regras-criadas">0</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-lg p-3">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Lançamentos</p>
+                        <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-lancamentos-gravados">0</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-lg p-3">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Atualizados (merge)</p>
+                        <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-lancamentos-merge">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER do wizard com botões contextuais -->
+        <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-slate-50/50">
+            <button id="btn-wizard-voltar" type="button" class="hidden items-center gap-1 px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                <span class="material-symbols-outlined text-base">arrow_back</span> Voltar
+            </button>
+            <div class="flex-1"></div>
+            <button data-fechar-modal="modal-importar" id="btn-wizard-cancelar" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                Cancelar
+            </button>
+            <button id="btn-wizard-avancar" type="button" disabled
+                class="flex items-center gap-2 px-6 py-2.5 bg-tertiary text-white rounded-xl text-xs font-extrabold shadow-lg shadow-tertiary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                <span class="material-symbols-outlined text-base" id="ico-wizard-avancar">arrow_forward</span>
+                <span id="lbl-wizard-avancar">Processar Arquivo</span>
+            </button>
+        </div>
     </div>
-    <h3 class="font-headline text-2xl font-bold text-[#002443] mb-3 tracking-tight">Sucesso!</h3>
-    <p class="text-slate-500 text-[13px] mb-8 font-medium">As informações foram atualizadas com sucesso no CentraFin.</p>
-    <button id="btn-sucesso-concluir" class="w-full py-3.5 bg-[#aad12f] text-[#341100] rounded-xl text-xs font-bold shadow-lg shadow-[#aad12f]/40 hover:brightness-105 active:scale-95 transition-all">OK, CONCLUIR</button>
-  </div>
 </div>
 
-<!-- Modal Premium de Erro -->
-<div id="modal-erro" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-  <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-erro-overlay"></div>
-  <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100" id="modal-erro-content">
-    <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-      <span class="material-symbols-outlined text-4xl text-red-500">error</span>
-    </div>
-    <h3 class="font-headline text-2xl font-bold text-[#002443] mb-3 tracking-tight">Atenção</h3>
-    <p id="modal-erro-mensagem" class="text-slate-500 text-[13px] mb-8 font-medium">Ocorreu um erro inesperado. Tente novamente.</p>
-    <button id="btn-erro-fechar" class="w-full py-3.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">FECHAR</button>
-  </div>
-</div>
-
-<!-- Modal Premium de Exclusão -->
-<div id="modal-excluir-confirmacao" class="fixed inset-0 z-[75] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-  <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-excluir-overlay"></div>
-  <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100" id="modal-excluir-content">
-    <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-      <span class="material-symbols-outlined text-4xl text-red-500">delete_forever</span>
-    </div>
-    <h3 class="font-headline text-xl font-bold text-[#002443] mb-3 tracking-tight">Remover Despesa?</h3>
-    <p class="text-slate-500 text-xs mb-8 font-medium leading-relaxed">Deseja realmente excluir este registro? Esta ação não pode ser desfeita.</p>
-    <div class="flex gap-3">
-      <button id="btn-excluir-cancelar" class="flex-1 py-3 border border-slate-200 text-slate-400 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">CANCELAR</button>
-      <button id="btn-excluir-confirmar" class="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-red-500/20 active:scale-95 transition-all">SIM, EXCLUIR</button>
-    </div>
-  </div>
+<!-- TOAST -->
+<div id="toast-cp" class="hidden fixed bottom-6 right-6 z-[80] bg-secondary text-white rounded-xl shadow-2xl px-5 py-3.5 flex items-center gap-3 transform translate-y-2 opacity-0 transition-all duration-300">
+    <span class="material-symbols-outlined text-primary" id="toast-cp-icon">check_circle</span>
+    <span class="text-sm font-bold" id="toast-cp-text">—</span>
 </div>
 
 <script type="module">
     import { renderSidebar } from "../sidebar.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, setDoc, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import {
+        getFirestore, collection, addDoc, doc, getDoc, getDocs, onSnapshot, deleteDoc,
+        updateDoc, setDoc, writeBatch, query, orderBy, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -255,304 +447,1055 @@
         storageBucket: "centra-fin.firebasestorage.app",
         messagingSenderId: "666471089411",
         appId: "1:666471089411:web:4630f5b2ced70ceb981536",
-        measurementId: "G-CJJX2T2HT8"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
+    const CHAVE_PAGINA = 'contas_pagar';
+    const COLECAO = 'ContasAPagar'; // Fase 2: nome com "A" separado por especificação
+
+    // ESTADO
+    let cacheRegistros = [];          // todos os docs (já filtrados por CC quando aplicável)
+    let regrasCache = [];             // RegrasConciliacao em memória pra autoclassificação
+    let usuarioLogadoNome = 'Sistema';
+
+    // FORMATTERS
+    const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const fmtData = (yyyymmdd) => {
+        if (!yyyymmdd) return '—';
+        const m = String(yyyymmdd).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? `${m[3]}/${m[2]}/${m[1]}` : yyyymmdd;
+    };
+    // Auditoria 2026-04-29: a 1ª coluna da tabela passou de "Vencimento" para
+    // "Competência" (formato MM/AAAA). Aceita tanto `competencia_ref` (já no
+    // formato YYYY-MM, populado pelo ETL e pela inclusão manual) quanto cai
+    // no fallback derivando de `data_vencimento`. O campo `data_vencimento`
+    // permanece intacto no Firestore — necessário para a ordenação cronológica
+    // estrita aplicada na query do onSnapshot.
+    const fmtCompetencia = (reg) => {
+        const ref = String(reg?.competencia_ref || '').trim();
+        if (/^\d{4}-\d{2}$/.test(ref)) {
+            return `${ref.slice(5, 7)}/${ref.slice(0, 4)}`;
+        }
+        const m = String(reg?.data_vencimento || '').match(/^(\d{4})-(\d{2})/);
+        return m ? `${m[2]}/${m[1]}` : '—';
+    };
+    const escapeHTML = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    // ========================================================================
+    // AUTH + GUARDIÃO + CC FILTER
+    // ========================================================================
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
+        if (!user) { window.location.href = "../login.html"; return; }
+        try {
             let docRef = doc(db, "Usuarios", user.email.toLowerCase());
             let docSnap = await getDoc(docRef);
-            // Fallback: tenta por UID antigo (período de migração)
             if (!docSnap.exists()) { docRef = doc(db, "Usuarios", user.uid); docSnap = await getDoc(docRef); }
-            if (docSnap.exists()) {
-                const dadosUser = docSnap.data();
-                if (dadosUser.status === 'inativo') {
-                    await signOut(auth);
-                    window.location.href = "../login.html";
-                    return;
-                }
-
-                // GUARDIÃO DE ROTA
-                const CHAVE_PAGINA = 'contas_pagar';
-                if (dadosUser.perfil !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
-                    await signOut(auth);
-                    alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
-                    window.location.href = "../login.html";
-                    return;
-                }
-
-                renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
-            } else {
+            if (!docSnap.exists()) {
                 await signOut(auth);
-                alert('Acesso Negado: Usuário não encontrado no sistema.');
                 window.location.href = "../login.html";
                 return;
             }
-        } else {
-            window.location.href = "../login.html";
+            const dadosUser = docSnap.data();
+            usuarioLogadoNome = dadosUser.nome || dadosUser.email || user.email;
+
+            if (dadosUser.status === 'inativo') {
+                await signOut(auth);
+                window.location.href = "../login.html";
+                return;
+            }
+            // Guardião de rota — redirect amigável (login.html roteia ao 1º
+            // módulo permitido sem signOut).
+            if (dadosUser.perfil !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
+                window.location.href = "../login.html";
+                return;
+            }
+
+            renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
+
+            // 3º nível: filtro por Centro de Custo (mesmo padrão do Custo Folha).
+            const ccsRestritos = Array.isArray(dadosUser?.permissoes?.filtros?.centrosCusto)
+                ? dadosUser.permissoes.filtros.centrosCusto : [];
+            window._ccPermitidos = (dadosUser.perfil !== 'super_admin' && ccsRestritos.length > 0)
+                ? new Set(ccsRestritos) : null;
+            if (window._ccPermitidos) {
+                console.log('[ContasPagar] Filtro CC aplicado:', [...window._ccPermitidos]);
+            }
+
+            // Libera UI
+            document.body.classList.add('auth-ok');
+
+            // Bootstrap dos dados
+            inscreverRegras();
+            popularDropdownsCC();
+            inscreverContasPagar();
+        } catch (err) {
+            console.error('[ContasPagar] Falha auth/bootstrap:', err);
         }
     });
 
-    // ESTADO GLOBAL
-    let allDocs = [];
-    let paginaAtual = 1;
-    const itensPorPagina = 10;
-    let idParaExcluir = null;
-    let idParaEditar = null;
-    const formatadorMoeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-
-    // ELEMENTOS UI
-    const elTabelaCorpo = document.getElementById('corpo-tabela');
-    const inputBusca = document.getElementById('input-busca');
-    const filtroEmpresa = document.getElementById('filtro-empresa');
-    const filtroStatus = document.getElementById('filtro-status-tabela');
-    const footerCount = document.getElementById('footer-count');
-    const paginacaoControles = document.getElementById('paginacao-controles');
-
-    const modalDespesa = document.getElementById('modal-despesa');
-    const formDespesa = document.getElementById('form-despesa');
-    const alertaSucesso = document.getElementById('alerta-sucesso');
-
-    // UTILS
-    function formatarDataBR(iso) {
-        if (!iso) return "-";
-        const [y, m, d] = iso.split('-');
-        return `${d}/${m}/${y}`;
+    // ========================================================================
+    // BANCO DE REGRAS (autoclassificação no input manual)
+    // ========================================================================
+    function inscreverRegras() {
+        onSnapshot(collection(db, 'RegrasConciliacao'), (snap) => {
+            regrasCache = [];
+            snap.forEach(d => regrasCache.push({ _id: d.id, ...d.data() }));
+            // Ordena por chave_busca DESC pra que matches mais específicos
+            // ("TELEFONICA BRASIL") vençam genéricos ("TELEFONICA").
+            regrasCache.sort((a, b) => String(b.chave_busca || '').length - String(a.chave_busca || '').length);
+        }, (err) => console.warn('[RegrasConciliacao] listener falhou:', err?.code || err?.message));
     }
 
-    // MODAL ACTIONS
-    window.abrirModal = () => {
-        modalDespesa.classList.remove('opacity-0', 'pointer-events-none');
-        document.getElementById('modal-content').classList.remove('scale-95');
-        alertaSucesso.classList.add('hidden');
-    };
-
-    window.fecharModal = () => {
-        modalDespesa.classList.add('opacity-0', 'pointer-events-none');
-        document.getElementById('modal-content').classList.add('scale-95');
-        formDespesa.reset();
-        idParaEditar = null;
-        document.querySelector('#modal-despesa h3').textContent = "Novo Lançamento";
-    };
-
-    document.getElementById('btn-nova-despesa').onclick = window.abrirModal;
-    document.getElementById('btn-fechar-modal').onclick = window.fecharModal;
-    document.getElementById('btn-cancelar').onclick = window.fecharModal;
-    document.getElementById('modal-overlay').onclick = window.fecharModal;
-
-    // RENDERIZAÇÃO
-    function filtrarERenderizar() {
-        const termo = inputBusca.value.toLowerCase().trim();
-        const fEmpresa = filtroEmpresa.value;
-        const fStatus = filtroStatus.value;
-
-        const filtrados = allDocs.filter(d => {
-            const matchBusca = (d.fornecedor || "").toLowerCase().includes(termo) || (d.categoria || "").toLowerCase().includes(termo) || (d.descricao || "").toLowerCase().includes(termo);
-            const matchEmpresa = !fEmpresa || d.empresa_atribuida === fEmpresa;
-            const matchStatus = !fStatus || (d.status || "").toUpperCase() === fStatus;
-            return matchBusca && matchEmpresa && matchStatus;
-        });
-
-        const total = filtrados.length;
-        const totalPaginas = Math.ceil(total / itensPorPagina) || 1;
-        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
-
-        const inicio = (paginaAtual - 1) * itensPorPagina;
-        const fim = inicio + itensPorPagina;
-        const docsPagina = filtrados.slice(inicio, fim);
-
-        elTabelaCorpo.innerHTML = "";
-        docsPagina.forEach(d => {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50 transition-colors group";
-            
-            const valor = Number(d.valor) || 0;
-            const status = (d.status || "Pendente").toUpperCase();
-            let statusClass = "bg-slate-100 text-slate-500";
-            if (status === 'PAGO') statusClass = "bg-green-100 text-green-700";
-            if (status === 'EM ATRASO') statusClass = "bg-red-100 text-red-700";
-
-            tr.innerHTML = `
-                <td class="px-6 py-4 text-xs font-bold text-slate-900">${d.empresa_atribuida || "-"}</td>
-                <td class="px-6 py-4 text-xs text-slate-600 font-medium">${d.fornecedor || "-"}</td>
-                <td class="px-6 py-4 text-xs text-slate-500 uppercase font-bold">${d.categoria || "-"}</td>
-                <td class="px-6 py-4 text-xs text-center font-bold text-slate-700">${formatarDataBR(d.vencimento)}</td>
-                <td class="px-6 py-4 text-xs text-right font-extrabold text-slate-900">${formatadorMoeda.format(valor)}</td>
-                <td class="px-6 py-4 text-center">
-                    <span class="px-2 py-0.5 rounded text-[9px] font-bold ${statusClass}">${status}</span>
-                </td>
-                <td class="px-6 py-4 text-right">
-                    <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="window.editarDespesa('${d.id}')" class="p-1 hover:text-primary transition-colors"><span class="material-symbols-outlined text-lg">edit</span></button>
-                        <button onclick="window.preparoExclusao('${d.id}')" class="p-1 hover:text-red-500 transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
-                    </div>
-                </td>
-            `;
-            elTabelaCorpo.appendChild(tr);
-        });
-
-        footerCount.textContent = `Mostrando ${inicio+1}-${Math.min(fim, total)} de ${total} despesas`;
-        renderizarPaginacao(totalPaginas);
-        atualizarMetrics(allDocs);
-    }
-
-    function renderizarPaginacao(total) {
-        paginacaoControles.innerHTML = "";
-        for (let i = 1; i <= total; i++) {
-            if (i === 1 || i === total || (i >= paginaAtual - 1 && i <= paginaAtual + 1)) {
-                const btn = document.createElement('button');
-                btn.className = `w-7 h-7 flex items-center justify-center rounded-lg text-[10px] font-bold transition-all ${i === paginaAtual ? 'bg-secondary text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`;
-                btn.textContent = i;
-                btn.onclick = () => { paginaAtual = i; filtrarERenderizar(); };
-                paginacaoControles.appendChild(btn);
-            }
+    // Procura uma regra cuja chave_busca esteja contida no nome da entidade
+    // (case-insensitive). Devolve o primeiro match (lista ordenada por
+    // especificidade) ou null.
+    function classificarPorRegra(entidade) {
+        const alvo = String(entidade || '').toUpperCase();
+        if (!alvo) return null;
+        for (const r of regrasCache) {
+            const chave = String(r.chave_busca || '').toUpperCase().trim();
+            if (chave && alvo.includes(chave)) return r;
         }
+        return null;
     }
 
-    function atualizarMetrics(docs) {
-        const hoje = new Date().toISOString().split('T')[0];
-        let vHoje = 0, vSemana = 0, vAtraso = 0;
-        let cHoje = 0, cSemana = 0, cAtraso = 0;
-
-        docs.forEach(d => {
-            const val = Number(d.valor) || 0;
-            const status = (d.status || "").toUpperCase();
-            if (d.vencimento === hoje) { vHoje += val; cHoje++; }
-            if (status === "EM ATRASO") { vAtraso += val; cAtraso++; }
-            // Lógica simplificada semana
-        });
-
-        document.getElementById('card-vencem-hoje').textContent = formatadorMoeda.format(vHoje);
-        document.getElementById('card-count-hoje').textContent = `${cHoje} lançamentos de hoje`;
-        document.getElementById('card-atraso').textContent = formatadorMoeda.format(vAtraso);
-        document.getElementById('card-count-atraso').textContent = `${cAtraso} pendências críticas`;
-    }
-
-    // CRUD ACTIONS
-    window.editarDespesa = (id) => {
-        const d = allDocs.find(x => x.id === id);
-        if (!d) return;
-        idParaEditar = id;
-        document.getElementById('campo-descricao').value = d.descricao || "";
-        document.getElementById('campo-fornecedor').value = d.fornecedor || "";
-        document.getElementById('campo-valor').value = d.valor || 0;
-        document.getElementById('campo-vencimento').value = d.vencimento || "";
-        document.getElementById('campo-data-pagamento').value = d.data_pagamento || "";
-        document.getElementById('campo-mes-referencia').value = d.mes_referencia || "";
-        document.getElementById('campo-categoria').value = d.categoria || "";
-        document.getElementById('campo-empresa-atribuida').value = d.empresa_atribuida || "";
-        document.querySelector('#modal-despesa h3').textContent = "Editar Despesa";
-        window.abrirModal();
-    };
-
-    const mExcluir = document.getElementById('modal-excluir-confirmacao');
-    window.preparoExclusao = (id) => {
-        idParaExcluir = id;
-        mExcluir.classList.remove('opacity-0', 'pointer-events-none');
-        document.getElementById('modal-excluir-content').classList.remove('scale-95');
-    };
-
-    document.getElementById('btn-excluir-cancelar').onclick = () => {
-        mExcluir.classList.add('opacity-0', 'pointer-events-none');
-        document.getElementById('modal-excluir-content').classList.add('scale-95');
-    };
-
-    document.getElementById('btn-excluir-confirmar').onclick = async () => {
-        if (!idParaExcluir) return;
-        try {
-            await deleteDoc(doc(db, "Lancamentos", idParaExcluir));
-            document.getElementById('btn-excluir-cancelar').click();
-        } catch (err) {
-            console.error("Erro ao excluir:", err);
-            document.getElementById('btn-excluir-cancelar').click();
-            if (err.code === 'permission-denied') {
-                alert("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.");
-            } else {
-                alert("Erro ao excluir registro.");
-            }
-        }
-    };
-
-    // FORM SUBMIT
-    formDespesa.onsubmit = async (e) => {
-        e.preventDefault();
-        const btnSalvar = document.getElementById('btn-salvar');
-        btnSalvar.disabled = true;
-        btnSalvar.classList.add('opacity-50');
-
-        const payload = {
-            descricao: document.getElementById('campo-descricao').value,
-            fornecedor: document.getElementById('campo-fornecedor').value,
-            valor: Number(document.getElementById('campo-valor').value),
-            vencimento: document.getElementById('campo-vencimento').value,
-            data_pagamento: document.getElementById('campo-data-pagamento').value,
-            mes_referencia: document.getElementById('campo-mes-referencia').value,
-            categoria: document.getElementById('campo-categoria').value,
-            empresa_atribuida: document.getElementById('campo-empresa-atribuida').value,
-            tipo: "despesa",
-            status: document.getElementById('campo-data-pagamento').value ? "PAGO" : "A PAGAR"
-        };
-
-        try {
-            if (idParaEditar) {
-                await setDoc(doc(db, "Lancamentos", idParaEditar), { ...payload, data_edicao: new Date() }, { merge: true });
-            } else {
-                await addDoc(collection(db, "Lancamentos"), { ...payload, data_criacao: new Date() });
-            }
-            alertaSucesso.classList.remove('hidden');
-            setTimeout(() => { window.fecharModal(); }, 1500);
-        } catch (err) {
-            console.error(err);
-            if (err.code === 'permission-denied') {
-                alert("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.");
-            } else {
-                alert("Erro ao salvar dados.");
-            }
-        } finally {
-            btnSalvar.disabled = false;
-            btnSalvar.classList.remove('opacity-50');
-        }
-    };
-
-    // FILTERS
-    inputBusca.onkeyup = () => { paginaAtual = 1; filtrarERenderizar(); };
-    filtroEmpresa.onchange = () => { paginaAtual = 1; filtrarERenderizar(); };
-    filtroStatus.onchange = () => { paginaAtual = 1; filtrarERenderizar(); };
-
-    // SYNC
-    onSnapshot(collection(db, "Lancamentos"), (snap) => {
-        allDocs = [];
-        snap.forEach(d => {
-            const data = d.data();
-            if (data.tipo === 'despesa') allDocs.push({ id: d.id, ...data });
-        });
-        allDocs.sort((a,b) => (b.vencimento || "").localeCompare(a.vencimento || ""));
-        filtrarERenderizar();
-    });
-
-    // BASES
-    const carregarBases = (col, elId) => {
-        const el = document.getElementById(elId);
-        onSnapshot(collection(db, col), (snap) => {
-            const valAtu = el.value;
-            el.innerHTML = '<option value="">Selecione...</option>';
+    // ========================================================================
+    // DROPDOWNS DE CC (filtro principal + datalist do form)
+    // ========================================================================
+    function popularDropdownsCC() {
+        // Fase 2.1: o universo de "Áreas" do Contas a Pagar é independente
+        // do Custo de Folha. Lemos de AreasContasPagar — collection nova
+        // mantida via master.html → Configurações → Regras de Classificação.
+        onSnapshot(collection(db, 'AreasContasPagar'), (snap) => {
+            const nomes = [];
             snap.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d.id; opt.textContent = d.id;
-                el.appendChild(opt);
+                const n = String((d.data() || {}).nome || '').trim();
+                if (n) nomes.push(n);
             });
-            el.value = valAtu;
-        });
-    };
-    carregarBases("Base_Fornecedores", "campo-fornecedor");
-    carregarBases("Base_Categorias", "campo-categoria");
-    carregarBases("Base_Empresas", "campo-empresa-atribuida");
-    carregarBases("Base_Empresas", "filtro-empresa");
+            nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            const visiveis = window._ccPermitidos ? nomes.filter(n => window._ccPermitidos.has(n)) : nomes;
 
+            // Filtro principal (label "Centro de Custo" na UI mas alimenta Áreas).
+            const sel = document.getElementById('filtro-centro-custo');
+            const valAtual = sel.value;
+            sel.innerHTML = '<option value="">Todas</option>' + visiveis.map(n => `<option value="${escapeHTML(n)}">${escapeHTML(n)}</option>`).join('');
+            if (valAtual && visiveis.includes(valAtual)) sel.value = valAtual;
+
+            // Datalist do form manual + datalist do wizard de conciliação.
+            const dl = document.getElementById('datalist-cc-manual');
+            dl.innerHTML = visiveis.map(n => `<option value="${escapeHTML(n)}">`).join('');
+            const dlConc = document.getElementById('datalist-conc-cc');
+            if (dlConc) dlConc.innerHTML = visiveis.map(n => `<option value="${escapeHTML(n)}">`).join('');
+        }, (err) => console.warn('[AreasContasPagar] listener falhou:', err?.code || err?.message));
+    }
+
+    // ========================================================================
+    // CONTAS A PAGAR — onSnapshot + filtros + render
+    // ========================================================================
+    function inscreverContasPagar() {
+        const q = query(collection(db, COLECAO), orderBy('data_vencimento', 'desc'));
+        onSnapshot(q, (snap) => {
+            const todos = [];
+            snap.forEach(d => todos.push({ _id: d.id, ...d.data() }));
+            // 3º nível: filtro de CC aplicado AQUI, antes de qualquer agregação.
+            cacheRegistros = window._ccPermitidos
+                ? todos.filter(r => window._ccPermitidos.has(String(r.centro_custo || '').trim()))
+                : todos;
+            renderTabela();
+        }, (err) => {
+            console.error('[ContasPagar] listener falhou:', err);
+            cacheRegistros = [];
+            renderTabela();
+        });
+    }
+
+    function aplicarFiltrosTabela(registros) {
+        const compMes = document.getElementById('filtro-competencia').value;       // YYYY-MM
+        const ent = document.getElementById('filtro-entidade').value.trim().toLowerCase();
+        const cc = document.getElementById('filtro-centro-custo').value.trim();
+        const status = document.getElementById('filtro-status').value;
+        return registros.filter(r => {
+            if (compMes) {
+                const ref = (r.competencia_ref || (r.data_vencimento || '').slice(0, 7));
+                if (ref !== compMes) return false;
+            }
+            if (ent && !String(r.entidade || '').toLowerCase().includes(ent)) return false;
+            if (cc && String(r.centro_custo || '').trim() !== cc) return false;
+            if (status && String(r.status || '').toLowerCase() !== status) return false;
+            return true;
+        });
+    }
+
+    function renderTabela() {
+        const corpo = document.getElementById('cp-corpo');
+        const vazio = document.getElementById('cp-vazio');
+        const hint = document.getElementById('hint-filtro');
+        const btnLimpar = document.getElementById('btn-limpar-filtros');
+
+        const filtrados = aplicarFiltrosTabela(cacheRegistros);
+        const temFiltroAtivo = !!(document.getElementById('filtro-competencia').value
+            || document.getElementById('filtro-entidade').value.trim()
+            || document.getElementById('filtro-centro-custo').value
+            || document.getElementById('filtro-status').value);
+
+        if (btnLimpar) {
+            if (temFiltroAtivo) { btnLimpar.classList.remove('hidden'); btnLimpar.classList.add('flex'); }
+            else { btnLimpar.classList.add('hidden'); btnLimpar.classList.remove('flex'); }
+        }
+
+        // KPIs sobre o filtrado
+        const total = filtrados.reduce((s, r) => s + (Number(r.valor_original) || 0), 0);
+        const pend = filtrados.filter(r => r.status === 'pendente').reduce((s, r) => s + (Number(r.valor_original) || 0), 0);
+        const pago = filtrados.filter(r => r.status === 'pago').reduce((s, r) => s + (Number(r.valor_original) || 0), 0);
+        document.getElementById('kpi-total-count').textContent = filtrados.length.toLocaleString('pt-BR');
+        document.getElementById('kpi-valor-total').textContent = fmtBRL.format(total);
+        document.getElementById('kpi-pendente').textContent = fmtBRL.format(pend);
+        document.getElementById('kpi-pago').textContent = fmtBRL.format(pago);
+
+        if (filtrados.length === 0) {
+            corpo.innerHTML = '';
+            vazio.classList.remove('hidden');
+            hint.textContent = cacheRegistros.length === 0
+                ? 'Sem dados — comece importando ou adicionando manualmente.'
+                : 'Nenhum lançamento bate com os filtros atuais.';
+            return;
+        }
+        vazio.classList.add('hidden');
+        hint.textContent = `${filtrados.length} ${filtrados.length === 1 ? 'lançamento' : 'lançamentos'}`;
+
+        corpo.innerHTML = filtrados.map(r => {
+            const statusBadge = r.status === 'pago'
+                ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold border border-emerald-100"><span class="material-symbols-outlined text-[12px]">check_circle</span>PAGO</span>'
+                : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-extrabold border border-amber-100"><span class="material-symbols-outlined text-[12px]">schedule</span>PENDENTE</span>';
+            return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3 text-xs font-mono font-bold text-secondary" title="Vencimento: ${escapeHTML(fmtData(r.data_vencimento))}">${escapeHTML(fmtCompetencia(r))}</td>
+                    <td class="px-4 py-3 text-xs font-mono text-slate-500">${escapeHTML(r.codigo || '—')}</td>
+                    <td class="px-4 py-3 text-xs font-bold text-slate-800">${escapeHTML(r.entidade || '—')}</td>
+                    <td class="px-4 py-3 text-xs text-right font-semibold text-secondary tabular-nums">${fmtBRL.format(Number(r.valor_original) || 0)}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600">${escapeHTML(r.categoria || '—')}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${escapeHTML(r.centro_custo || '—')}</td>
+                    <td class="px-4 py-3 text-center">${statusBadge}</td>
+                    <td class="px-4 py-3 text-right">
+                        <div class="flex justify-end gap-1">
+                            <button data-acao="alternar-status" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-emerald-600 transition-colors" title="Alternar status">
+                                <span class="material-symbols-outlined text-base">swap_horiz</span>
+                            </button>
+                            <button data-acao="excluir" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir">
+                                <span class="material-symbols-outlined text-base">delete</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    // ========================================================================
+    // FILTROS UI
+    // ========================================================================
+    ['filtro-competencia', 'filtro-entidade', 'filtro-centro-custo', 'filtro-status'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', renderTabela);
+        if (el) el.addEventListener('change', renderTabela);
+    });
+    document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
+        document.getElementById('filtro-competencia').value = '';
+        document.getElementById('filtro-entidade').value = '';
+        document.getElementById('filtro-centro-custo').value = '';
+        document.getElementById('filtro-status').value = '';
+        renderTabela();
+    });
+
+    // ========================================================================
+    // AÇÕES NA TABELA (alternar status / excluir)
+    // ========================================================================
+    document.getElementById('cp-corpo').addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-acao]');
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        const acao = btn.getAttribute('data-acao');
+        const reg = cacheRegistros.find(r => r._id === id);
+        if (!reg) return;
+
+        if (acao === 'alternar-status') {
+            const novo = reg.status === 'pago' ? 'pendente' : 'pago';
+            try {
+                await updateDoc(doc(db, COLECAO, id), { status: novo, updated_at: serverTimestamp() });
+                mostrarToast(`Status atualizado para ${novo.toUpperCase()}.`, 'check_circle');
+            } catch (err) {
+                console.error('[ContasPagar] falha ao alternar status:', err);
+                mostrarToast('Falha ao atualizar status.', 'error', true);
+            }
+        } else if (acao === 'excluir') {
+            if (!confirm(`Excluir o lançamento "${reg.entidade}" (R$ ${fmtBRL.format(Number(reg.valor_original) || 0)})?`)) return;
+            try {
+                await deleteDoc(doc(db, COLECAO, id));
+                mostrarToast('Lançamento excluído.', 'delete');
+            } catch (err) {
+                console.error('[ContasPagar] falha ao excluir:', err);
+                mostrarToast('Falha ao excluir.', 'error', true);
+            }
+        }
+    });
+
+    // ========================================================================
+    // MODAL — Adicionar Manual
+    // ========================================================================
+    function abrirModal(id) {
+        const m = document.getElementById(id);
+        if (!m) return;
+        m.classList.remove('opacity-0', 'pointer-events-none');
+        const card = m.querySelector('div.bg-white');
+        if (card) card.classList.remove('scale-95');
+    }
+    function fecharModal(id) {
+        const m = document.getElementById(id);
+        if (!m) return;
+        m.classList.add('opacity-0', 'pointer-events-none');
+        const card = m.querySelector('div.bg-white');
+        if (card) card.classList.add('scale-95');
+    }
+    document.querySelectorAll('[data-fechar-modal]').forEach(b => {
+        b.addEventListener('click', () => fecharModal(b.getAttribute('data-fechar-modal')));
+    });
+    document.querySelectorAll('[data-modal-overlay]').forEach(o => {
+        o.addEventListener('click', () => fecharModal(o.getAttribute('data-modal-overlay')));
+    });
+
+    document.getElementById('btn-importar-txt').addEventListener('click', () => {
+        resetarWizard();
+        abrirModal('modal-importar');
+    });
+
+    // ========================================================================
+    // FASE 2 — MOTOR DE ETL TXT + WIZARD DE CONCILIAÇÃO
+    // ========================================================================
+    // Estado do wizard mantido entre passos. Resetado a cada abertura do
+    // modal para evitar contaminação de imports anteriores.
+    const wizardState = {
+        passo: 'upload',        // 'upload' | 'conciliacao' | 'finalizando'
+        arquivoNome: '',
+        empresaOrigem: '',      // Fase 2.1: 1ª linha do spool (SOULAN / NEAT / …)
+        pagamentos: [],         // Array<{ codigo, fornecedor, data, valor, status, categoria, clienteAtual, _linha }>
+        clientes: [],           // Array<{ codigo, nome }> — só os cabeçalhos achados
+        entidadesUnicas: [],    // Array<string> com todos os nomes (cliente + fornecedor)
+        entidadesPendentes: [], // Subset de entidadesUnicas SEM regra (após heurística pass-through)
+        sugestoesTipo: {},      // entidade -> tipo sugerido (Cliente para headers, Fornecedor Externo p/ resto)
+    };
+
+    function resetarWizard() {
+        wizardState.passo = 'upload';
+        wizardState.arquivoNome = '';
+        wizardState.empresaOrigem = '';
+        wizardState.pagamentos = [];
+        wizardState.clientes = [];
+        wizardState.entidadesUnicas = [];
+        wizardState.entidadesPendentes = [];
+        wizardState.sugestoesTipo = {};
+        document.getElementById('file-txt').value = '';
+        document.getElementById('lbl-arquivo-txt').textContent = 'Spool bancário .txt — leitura linha a linha via regex.';
+        document.getElementById('dryrun-stats').classList.add('hidden');
+        document.getElementById('dryrun-pendencias-resumo').classList.add('hidden');
+        document.getElementById('msg-passo-upload').classList.add('hidden');
+        atualizarPassoUI();
+    }
+
+    // ── PARSER (REGEX) ─────────────────────────────────────────────────────
+    // Empresa-mãe (Fase 2.1, auditoria 2026-04-29): a primeira linha do
+    // spool contém "Codigo / Nome da Empresa: 0001 SOULAN CONSULTORIA…".
+    // Capturamos o nome da empresa-mãe e gravamos em TODO payload subsequente
+    // — necessário para distinguir spools de SOULAN vs NEAT vs outras
+    // operações no mesmo banco.
+    const RE_EMPRESA = /Codigo\s*\/\s*Nome\s+da\s+Empresa\s*:\s*\d+\s+(.+?)\s*$/i;
+    // Cabeçalho de cliente: "Codigo / NoXXXXXX-Ciente: NOME"
+    const RE_CLIENTE = /Codigo\s*\/\s*No\s*(\d+)\s*-\s*Ciente\s*:\s*(.+?)\s*$/i;
+    // Linha de pagamento: começa com 6 dígitos, hífen, 3 dígitos.
+    const RE_PAG_LINHA_INICIO = /^\s*(\d{6})-(\d{3})\b/;
+    // Data BR no formato DD/MM/AAAA — encontrada em qualquer posição da linha.
+    const RE_DATA_BR = /\b(\d{2})\/(\d{2})\/(\d{4})\b/;
+    // Valor monetário BR ou anglicano — o ÚLTIMO match na linha tende a ser
+    // o valor (após cabeçalho, código, nome, datas).
+    const RE_VALOR = /(\-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\-?\d+[.,]\d{2})/g;
+    // Status conhecidos no spool — adapte conforme variação aparecer.
+    const RE_STATUS = /\b(Baixado|Baixada|Pago|Aberto|Aberta|Pendente|Cancelad[oa]|Liquidad[oa]|Vencid[oa])\b/i;
+
+    function extrairEmpresa(linha) {
+        const m = linha.match(RE_EMPRESA);
+        return m ? m[1].trim() : null;
+    }
+
+    function extrairCliente(linha) {
+        const m = linha.match(RE_CLIENTE);
+        if (!m) return null;
+        return { codigo: m[1].trim(), nome: m[2].trim() };
+    }
+
+    function parseValorBR(s) {
+        if (s == null) return 0;
+        let str = String(s).trim();
+        if (!str) return 0;
+        // Detecta separador decimal pela ÚLTIMA ocorrência de . ou , na string.
+        const ultPonto = str.lastIndexOf('.');
+        const ultVirg  = str.lastIndexOf(',');
+        if (ultPonto !== -1 && ultVirg !== -1) {
+            if (ultVirg > ultPonto) {
+                // Decimal é vírgula (BR): remove pontos (milhar), troca vírgula.
+                str = str.replace(/\./g, '').replace(',', '.');
+            } else {
+                // Decimal é ponto (EN): remove vírgulas (milhar).
+                str = str.replace(/,/g, '');
+            }
+        } else if (ultVirg !== -1) {
+            str = str.replace(',', '.');
+        }
+        const n = parseFloat(str);
+        return isFinite(n) ? n : 0;
+    }
+
+    function parseDataBRtoISO(d, mo, y) {
+        // Constrói YYYY-MM-DD com zero-pad. Validação básica de range.
+        const di = parseInt(d, 10), mi = parseInt(mo, 10), yi = parseInt(y, 10);
+        if (di < 1 || di > 31 || mi < 1 || mi > 12 || yi < 1900 || yi > 3000) return null;
+        return `${String(yi).padStart(4, '0')}-${String(mi).padStart(2, '0')}-${String(di).padStart(2, '0')}`;
+    }
+
+    // Extrai um pagamento de uma linha do spool. Estratégia:
+    //  1. Codigo de 6 dígitos no início (regex obrigatória).
+    //  2. Data BR em qualquer posição (primeiro match).
+    //  3. Valor monetário — pega o último número com decimal antes da palavra
+    //     de status (heurística: spool típico tem ordem CODIGO NOME DATA VALOR STATUS CATEGORIA).
+    //  4. Status: substring match contra lista conhecida.
+    //  5. Fornecedor: substring entre o código e a data.
+    //  6. Categoria: substring após o status.
+    function extrairPagamento(linha) {
+        const mIni = linha.match(RE_PAG_LINHA_INICIO);
+        if (!mIni) return null;
+        const codigo = mIni[1];
+        // Tudo após o código-sufixo (ex. "057538-096 ").
+        const restoBruto = linha.slice(mIni[0].length).trim();
+
+        const mData = restoBruto.match(RE_DATA_BR);
+        const dataISO = mData ? parseDataBRtoISO(mData[1], mData[2], mData[3]) : null;
+
+        // Valores: pega TODOS os matches numéricos com decimal e usa o último
+        // (geralmente o valor depois aparece após nome+data).
+        const valoresMatch = [...restoBruto.matchAll(RE_VALOR)];
+        const valorStr = valoresMatch.length ? valoresMatch[valoresMatch.length - 1][1] : '';
+        const valor = parseValorBR(valorStr);
+
+        const mStatus = restoBruto.match(RE_STATUS);
+        const status = mStatus ? normalizarStatus(mStatus[1]) : 'pendente';
+
+        // Fornecedor = trecho entre o início e a data (ou status, ou valor — o
+        // que vier primeiro). Limpa espaços excedentes.
+        let fornecedorBruto = restoBruto;
+        const corteIdx = [
+            mData ? mData.index : -1,
+            mStatus ? mStatus.index : -1,
+            valoresMatch.length ? valoresMatch[valoresMatch.length - 1].index : -1,
+        ].filter(i => i >= 0).sort((a, b) => a - b);
+        if (corteIdx.length) fornecedorBruto = restoBruto.slice(0, corteIdx[0]);
+        const fornecedor = fornecedorBruto.replace(/\s{2,}/g, ' ').trim();
+
+        // Categoria = trecho após o status (ou após o valor se status não casou).
+        let categoria = '';
+        if (mStatus) {
+            categoria = restoBruto.slice(mStatus.index + mStatus[0].length).replace(/\s{2,}/g, ' ').trim();
+        } else if (valoresMatch.length) {
+            const ultVal = valoresMatch[valoresMatch.length - 1];
+            categoria = restoBruto.slice(ultVal.index + ultVal[0].length).replace(/\s{2,}/g, ' ').trim();
+        }
+
+        // Filtros de sanidade: precisa pelo menos do código e do fornecedor.
+        if (!fornecedor) return null;
+        return { codigo, fornecedor, data: dataISO, valor, status, categoria };
+    }
+
+    function normalizarStatus(raw) {
+        const s = String(raw || '').toLowerCase();
+        if (s.startsWith('baix') || s.startsWith('pag') || s.startsWith('liquid')) return 'pago';
+        if (s.startsWith('cancel')) return 'cancelado';
+        return 'pendente';
+    }
+
+    // Parser principal. Retorna { empresaOrigem, pagamentos, clientes, entidadesUnicas, descartadas }.
+    function parsearTXT(texto) {
+        const linhas = String(texto || '').split(/\r?\n/);
+        let empresaOrigem = null;
+        let clienteAtual = null;
+        const pagamentos = [];
+        const clientes = [];
+        let descartadas = 0;
+        for (let i = 0; i < linhas.length; i++) {
+            const linha = linhas[i];
+            // 1) Empresa-mãe: pega o PRIMEIRO match na varredura. Tipicamente
+            // aparece nas primeiras linhas do spool. Ignorada nos próximos
+            // matches (algumas rolagens repetem o cabeçalho página a página).
+            if (!empresaOrigem) {
+                const emp = extrairEmpresa(linha);
+                if (emp) { empresaOrigem = emp; continue; }
+            }
+            // 2) Cabeçalho de cliente — atualiza a variável de estado.
+            const cli = extrairCliente(linha);
+            if (cli) {
+                clienteAtual = cli;
+                clientes.push(cli);
+                continue;
+            }
+            // 3) Linha de pagamento — anexa o cliente vigente.
+            const pag = extrairPagamento(linha);
+            if (pag) {
+                pag.clienteAtual = clienteAtual ? clienteAtual.nome : null;
+                pag._linha = i + 1;
+                pagamentos.push(pag);
+            } else if (RE_PAG_LINHA_INICIO.test(linha)) {
+                // Padrão de código bateu mas faltou nome — log para debug.
+                descartadas++;
+            }
+        }
+        // Universo de entidades únicas (cliente + fornecedor) UPPERCASE.
+        const setEntidades = new Set();
+        for (const c of clientes) {
+            const n = String(c.nome || '').trim();
+            if (n) setEntidades.add(n.toUpperCase());
+        }
+        for (const p of pagamentos) {
+            if (p.clienteAtual) setEntidades.add(String(p.clienteAtual).trim().toUpperCase());
+            if (p.fornecedor) setEntidades.add(String(p.fornecedor).trim().toUpperCase());
+        }
+        return {
+            empresaOrigem,
+            pagamentos,
+            clientes,
+            entidadesUnicas: [...setEntidades].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+            descartadas,
+        };
+    }
+
+    // ── BOTÕES DO WIZARD ────────────────────────────────────────────────────
+    const inputFileTxt = document.getElementById('file-txt');
+    const btnAvancar = document.getElementById('btn-wizard-avancar');
+    const btnVoltar = document.getElementById('btn-wizard-voltar');
+
+    inputFileTxt.addEventListener('change', async () => {
+        const f = inputFileTxt.files?.[0];
+        if (!f) return;
+        document.getElementById('lbl-arquivo-txt').textContent = `${f.name} (${Math.ceil(f.size / 1024)} KB)`;
+        wizardState.arquivoNome = f.name;
+        // Pre-leitura imediata: já roda o parser pra mostrar estatísticas e
+        // habilitar o botão Processar com os números à vista.
+        try {
+            const texto = await f.text();
+            const parsed = parsearTXT(texto);
+            wizardState.empresaOrigem = parsed.empresaOrigem || '';
+            wizardState.pagamentos = parsed.pagamentos;
+            wizardState.clientes = parsed.clientes;
+            wizardState.entidadesUnicas = parsed.entidadesUnicas;
+            // Sugestão de tipo: clientes do cabeçalho viram "Cliente"; demais
+            // entidades, "Fornecedor Externo".
+            const setHeaders = new Set(parsed.clientes.map(c => String(c.nome || '').trim().toUpperCase()));
+            const sug = {};
+            for (const e of parsed.entidadesUnicas) {
+                sug[e] = setHeaders.has(e) ? 'Cliente' : 'Fornecedor Externo';
+            }
+            wizardState.sugestoesTipo = sug;
+
+            document.getElementById('stat-clientes').textContent = parsed.clientes.length.toLocaleString('pt-BR');
+            document.getElementById('stat-pagamentos').textContent = parsed.pagamentos.length.toLocaleString('pt-BR');
+            document.getElementById('stat-entidades').textContent = parsed.entidadesUnicas.length.toLocaleString('pt-BR');
+            const empresaBanner = document.getElementById('empresa-origem-banner');
+            if (parsed.empresaOrigem) {
+                document.getElementById('stat-empresa-origem').textContent = parsed.empresaOrigem;
+                empresaBanner.classList.remove('hidden');
+            } else {
+                empresaBanner.classList.add('hidden');
+            }
+            document.getElementById('dryrun-stats').classList.remove('hidden');
+
+            // Calcula pendências aqui (cruzamento contra regrasCache já em memória).
+            recalcularPendencias();
+            const pend = wizardState.entidadesPendentes.length;
+            const resumo = document.getElementById('dryrun-pendencias-resumo');
+            const txt = resumo.querySelector('[data-pendencias-text]');
+            if (pend > 0) {
+                txt.textContent = `${pend} ${pend === 1 ? 'entidade não está' : 'entidades não estão'} no Banco de Regras — você vai classificá-${pend === 1 ? 'la' : 'las'} no próximo passo.`;
+                resumo.classList.remove('hidden');
+            } else {
+                txt.textContent = 'Todas as entidades já têm regra cadastrada — pode gravar diretamente.';
+                resumo.classList.remove('hidden');
+            }
+
+            if (parsed.pagamentos.length > 0) {
+                btnAvancar.disabled = false;
+            } else {
+                mostrarMsgPasso('upload', 'Nenhuma linha de pagamento detectada (padrão `\\d{6}-\\d{3}`). Verifique se o arquivo está correto.', 'erro');
+                btnAvancar.disabled = true;
+            }
+        } catch (err) {
+            console.error('[ETL TXT] falha ao ler arquivo:', err);
+            mostrarMsgPasso('upload', `Falha ao ler o arquivo: ${err.message || 'erro desconhecido'}.`, 'erro');
+            btnAvancar.disabled = true;
+        }
+    });
+
+    function mostrarMsgPasso(passo, texto, tipo = 'erro') {
+        const el = document.getElementById('msg-passo-' + passo);
+        if (!el) return;
+        el.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'border-red-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+        if (tipo === 'sucesso') {
+            el.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-200');
+            el.innerHTML = `<span class="material-symbols-outlined text-base">check_circle</span> ${texto}`;
+        } else {
+            el.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
+            el.innerHTML = `<span class="material-symbols-outlined text-base">error</span> ${texto}`;
+        }
+    }
+
+    function recalcularPendencias() {
+        // Heurística pass-through (Fase 2.1, auditoria 2026-04-29):
+        //   1. Cabeçalhos sem regra → SEMPRE pendentes (precisam ser
+        //      classificados pelo admin como Cliente/Fornecedor/etc).
+        //   2. Fornecedores sob cabeçalho COM regra `Cliente` → herdam a Área
+        //      do cliente automaticamente (tipo=Custo de Cliente). NÃO pendentes.
+        //   3. Fornecedores cujo cabeçalho está pendente → assumimos que será
+        //      classificado como Cliente. NÃO pendentes (otimismo operacional).
+        //   4. Fornecedores órfãos (sem cabeçalho) ou sob cabeçalho com regra
+        //      diferente de `Cliente` → pendentes se não tiverem regra própria.
+        const pendentes = new Set();
+
+        // Cabeçalhos pendentes (sem regra própria).
+        const headers = new Set();
+        for (const c of wizardState.clientes) {
+            const n = String(c.nome || '').trim().toUpperCase();
+            if (n) headers.add(n);
+        }
+        const headersPendentes = new Set();
+        for (const h of headers) {
+            if (!classificarPorRegra(h)) {
+                pendentes.add(h);
+                headersPendentes.add(h);
+            }
+        }
+
+        // Fornecedores: avaliação caso a caso.
+        for (const pag of wizardState.pagamentos) {
+            const forn = String(pag.fornecedor || '').trim().toUpperCase();
+            if (!forn) continue;
+            if (classificarPorRegra(forn)) continue; // já tem regra própria
+
+            const cli = String(pag.clienteAtual || '').trim().toUpperCase();
+            const regraCli = cli ? classificarPorRegra(cli) : null;
+            if (regraCli && regraCli.tipo_entidade === 'Cliente') continue;       // pass-through
+            if (cli && headersPendentes.has(cli)) continue;                        // cabeçalho será classificado como Cliente
+            // Órfão ou sob cabeçalho com regra ≠ Cliente → entra na fila.
+            pendentes.add(forn);
+        }
+
+        wizardState.entidadesPendentes = [...pendentes].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+
+    // ── NAVEGAÇÃO ENTRE PASSOS ──────────────────────────────────────────────
+    function atualizarPassoUI() {
+        const passos = ['upload', 'conciliacao', 'finalizando'];
+        for (const p of passos) {
+            document.querySelector(`[data-passo="${p}"]`).classList.toggle('hidden', p !== wizardState.passo);
+            const ind = document.querySelector(`[data-passo-indicador="${p}"]`);
+            if (!ind) continue;
+            const idxAtual = passos.indexOf(wizardState.passo);
+            const idxInd = passos.indexOf(p);
+            ind.classList.remove('bg-tertiary', 'text-white', 'bg-emerald-500', 'bg-slate-100', 'text-slate-400');
+            if (idxInd < idxAtual) ind.classList.add('bg-emerald-500', 'text-white');
+            else if (idxInd === idxAtual) ind.classList.add('bg-tertiary', 'text-white');
+            else ind.classList.add('bg-slate-100', 'text-slate-400');
+        }
+        // Botões contextuais
+        const lbl = document.getElementById('lbl-wizard-avancar');
+        const ico = document.getElementById('ico-wizard-avancar');
+        const subt = document.getElementById('wizard-subtitulo');
+        if (wizardState.passo === 'upload') {
+            lbl.textContent = wizardState.entidadesPendentes.length > 0 ? 'Próximo: Conciliação' : 'Gravar Lançamentos';
+            ico.textContent = 'arrow_forward';
+            btnVoltar.classList.add('hidden');
+            btnAvancar.classList.remove('hidden');
+            subt.textContent = 'Selecione o spool bancário para iniciar a leitura.';
+        } else if (wizardState.passo === 'conciliacao') {
+            lbl.textContent = 'Salvar Regras e Continuar';
+            ico.textContent = 'auto_awesome';
+            btnVoltar.classList.remove('hidden');
+            btnVoltar.classList.add('flex');
+            btnAvancar.classList.remove('hidden');
+            subt.textContent = `${wizardState.entidadesPendentes.length} ${wizardState.entidadesPendentes.length === 1 ? 'entidade' : 'entidades'} para classificar.`;
+        } else if (wizardState.passo === 'finalizando') {
+            btnVoltar.classList.add('hidden');
+            btnAvancar.classList.add('hidden');
+            document.getElementById('btn-wizard-cancelar').textContent = 'Fechar';
+            subt.textContent = 'Importação concluída.';
+        }
+    }
+
+    btnVoltar.addEventListener('click', () => {
+        if (wizardState.passo === 'conciliacao') {
+            wizardState.passo = 'upload';
+            atualizarPassoUI();
+        }
+    });
+
+    btnAvancar.addEventListener('click', async () => {
+        if (wizardState.passo === 'upload') {
+            // Recalcula pendências (caso regras tenham chegado por snapshot
+            // depois do dryrun) e decide pra qual passo ir.
+            recalcularPendencias();
+            if (wizardState.entidadesPendentes.length > 0) {
+                renderConciliacaoTabela();
+                wizardState.passo = 'conciliacao';
+                atualizarPassoUI();
+            } else {
+                await persistirImportacao([]);
+            }
+        } else if (wizardState.passo === 'conciliacao') {
+            const novasRegras = lerFormConciliacao();
+            if (!novasRegras) return; // erro já mostrado inline
+            await persistirImportacao(novasRegras);
+        }
+    });
+
+    // ── PASSO 2: TABELA DE CONCILIAÇÃO ──────────────────────────────────────
+    function renderConciliacaoTabela() {
+        const corpo = document.getElementById('conciliacao-corpo');
+        // Ordena os CCs disponíveis para datalist em runtime (alimentado por
+        // popularDropdownsCC mas vamos extrair os valores aqui).
+        const ccsDisponiveis = [...document.querySelectorAll('#datalist-cc-manual option')]
+            .map(o => o.value).filter(Boolean);
+        corpo.innerHTML = wizardState.entidadesPendentes.map((ent, idx) => {
+            const tipoSug = wizardState.sugestoesTipo[ent] || 'Fornecedor Externo';
+            return `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-3 align-top">
+                        <p class="text-xs font-extrabold text-secondary">${ent.replace(/</g, '&lt;')}</p>
+                        <p class="text-[10px] text-slate-400 font-medium mt-0.5">Sugerido: ${tipoSug}</p>
+                    </td>
+                    <td class="px-4 py-3 align-top">
+                        <select data-conc-tipo="${idx}" class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs font-bold text-secondary bg-white focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary outline-none">
+                            <option value="Cliente" ${tipoSug === 'Cliente' ? 'selected' : ''}>Cliente</option>
+                            <option value="Fornecedor Externo" ${tipoSug === 'Fornecedor Externo' ? 'selected' : ''}>Fornecedor Externo</option>
+                            <option value="Fornecedor Interno (PJ)" ${tipoSug === 'Fornecedor Interno (PJ)' ? 'selected' : ''}>Fornecedor Interno (PJ)</option>
+                        </select>
+                    </td>
+                    <td class="px-4 py-3 align-top">
+                        <input data-conc-cc="${idx}" type="text" placeholder="Ex: TI"
+                            list="datalist-conc-cc"
+                            class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs font-medium focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary outline-none placeholder:text-slate-300" />
+                    </td>
+                </tr>`;
+        }).join('');
+        // Datalist compartilhado entre todas as linhas
+        let dl = document.getElementById('datalist-conc-cc');
+        if (!dl) {
+            dl = document.createElement('datalist');
+            dl.id = 'datalist-conc-cc';
+            document.body.appendChild(dl);
+        }
+        dl.innerHTML = ccsDisponiveis.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
+    }
+
+    function lerFormConciliacao() {
+        const novasRegras = [];
+        for (let i = 0; i < wizardState.entidadesPendentes.length; i++) {
+            const ent = wizardState.entidadesPendentes[i];
+            const tipo = document.querySelector(`[data-conc-tipo="${i}"]`)?.value;
+            const cc = document.querySelector(`[data-conc-cc="${i}"]`)?.value.trim();
+            if (!tipo || !cc) {
+                mostrarToast(`Preencha tipo e área para "${ent.slice(0, 40)}".`, 'warning', true);
+                return null;
+            }
+            // Chave de busca: usa a entidade INTEIRA em maiúsculas — o ETL
+            // posterior faz substring-match, então isso vira a primeira regra
+            // específica daquele nome. Admin pode encurtar depois em
+            // Configurações → Regras de Classificação.
+            novasRegras.push({
+                chave_busca: ent,
+                tipo_entidade: tipo,
+                centro_custo: cc,
+            });
+        }
+        return novasRegras;
+    }
+
+    // ── PERSISTÊNCIA ────────────────────────────────────────────────────────
+    // gerarDocId compõe a chave única dos pagamentos (especificação Fase 2):
+    //   ${codigo}_${dataYYYYMMDD}_${valorEmCentavos}
+    // Reimportar o mesmo arquivo NÃO duplica linhas — merge:true atualiza
+    // o doc existente e mantém campos como categoria/regra_aplicada.
+    function gerarDocIdPagamento(pag) {
+        const codigo = String(pag.codigo || 'sem_cod').replace(/\D/g, '').slice(0, 6) || 'sem_cod';
+        const dataCompacta = (pag.data || '').replace(/\D/g, '') || 'sem_data';
+        const centavos = Math.round((Number(pag.valor) || 0) * 100);
+        return `${codigo}_${dataCompacta}_${centavos}`;
+    }
+
+    async function persistirImportacao(novasRegras) {
+        wizardState.passo = 'finalizando';
+        atualizarPassoUI();
+        document.getElementById('ico-finalizando').textContent = 'progress_activity';
+        document.getElementById('ico-finalizando').classList.add('spin');
+        document.getElementById('titulo-finalizando').textContent = 'Gravando…';
+        document.getElementById('msg-finalizando').textContent = 'Aplicando regras e persistindo lançamentos.';
+
+        let regrasCriadas = 0;
+        let lancNovos = 0;
+        let lancMerge = 0;
+        const idsVistos = new Set();
+
+        try {
+            // 1) Persistir novas regras PRIMEIRO — pra que classificarPorRegra
+            // consiga encontrá-las quando processarmos os pagamentos abaixo.
+            for (const r of (novasRegras || [])) {
+                await addDoc(collection(db, 'RegrasConciliacao'), {
+                    chave_busca: r.chave_busca,
+                    tipo_entidade: r.tipo_entidade,
+                    centro_custo: r.centro_custo,
+                    criado_em: serverTimestamp(),
+                    criado_por: usuarioLogadoNome,
+                    atualizado_em: serverTimestamp(),
+                    atualizado_por: usuarioLogadoNome,
+                    origem: 'wizard_importacao_txt',
+                });
+                regrasCriadas++;
+            }
+            // Aguarda o snapshot do RegrasConciliacao chegar com as regras novas
+            // (o listener já está ativo em inscreverRegras). Como writes locais
+            // são ecoados imediatamente, regrasCache deve ter as adições em ms.
+            // Defensivamente, aplicamos as regras NOVAS direto na lookup local
+            // sem esperar o snapshot — garantia de classificação consistente.
+            const regrasEfetivas = [...regrasCache];
+            for (const r of (novasRegras || [])) regrasEfetivas.push(r);
+            regrasEfetivas.sort((a, b) => String(b.chave_busca || '').length - String(a.chave_busca || '').length);
+
+            const classificarLocal = (entidade) => {
+                const alvo = String(entidade || '').toUpperCase();
+                if (!alvo) return null;
+                for (const r of regrasEfetivas) {
+                    const ch = String(r.chave_busca || '').toUpperCase().trim();
+                    if (ch && alvo.includes(ch)) return r;
+                }
+                return null;
+            };
+
+            // 2) Persistir pagamentos com merge:true em batches de 450.
+            const CHUNK = 450;
+            const total = wizardState.pagamentos.length;
+            for (let i = 0; i < total; i += CHUNK) {
+                const fatia = wizardState.pagamentos.slice(i, i + CHUNK);
+                const batch = writeBatch(db);
+                for (const pag of fatia) {
+                    const id = gerarDocIdPagamento(pag);
+                    if (idsVistos.has(id)) {
+                        // 2 linhas no MESMO arquivo com mesma chave → merge
+                        // resolve, mas contamos para diagnóstico.
+                        lancMerge++;
+                    } else {
+                        idsVistos.add(id);
+                        lancNovos++;
+                    }
+                    // Aplica regra com PASS-THROUGH para Cliente (Fase 2.1):
+                    //   1. Se o cabeçalho do pagamento tem regra `Cliente`, o
+                    //      pagamento herda a Área do Cliente e o tipo é
+                    //      sobrescrito para "Custo de Cliente" (mesmo que o
+                    //      fornecedor tenha regra própria — operação manda).
+                    //   2. Caso contrário, prefere regra do fornecedor; se
+                    //      ausente, cai no cabeçalho como fallback contábil.
+                    const regraCli  = classificarLocal(pag.clienteAtual);
+                    const regraForn = classificarLocal(pag.fornecedor);
+                    let cc = null, tipoEnt = null, regraAplicada = null;
+                    if (regraCli && regraCli.tipo_entidade === 'Cliente') {
+                        cc = regraCli.centro_custo;
+                        tipoEnt = 'Custo de Cliente';
+                        regraAplicada = `cliente:${regraCli.chave_busca}`;
+                    } else if (regraForn) {
+                        cc = regraForn.centro_custo;
+                        tipoEnt = regraForn.tipo_entidade;
+                        regraAplicada = regraForn.chave_busca;
+                    } else if (regraCli) {
+                        cc = regraCli.centro_custo;
+                        tipoEnt = regraCli.tipo_entidade;
+                        regraAplicada = `cliente:${regraCli.chave_busca}`;
+                    }
+
+                    const payload = {
+                        codigo: pag.codigo,
+                        empresa_origem: wizardState.empresaOrigem || null,
+                        entidade: pag.fornecedor || pag.clienteAtual || '—',
+                        cliente_origem: pag.clienteAtual || null,
+                        fornecedor: pag.fornecedor || null,
+                        data_vencimento: pag.data,
+                        competencia_ref: pag.data ? pag.data.slice(0, 7) : null,
+                        valor_original: Number(pag.valor) || 0,
+                        status: pag.status || 'pendente',
+                        categoria: pag.categoria || null,
+                        centro_custo: cc,
+                        tipo_entidade: tipoEnt,
+                        regra_aplicada: regraAplicada,
+                        origem: 'etl_txt',
+                        arquivo: wizardState.arquivoNome,
+                        linha: pag._linha,
+                        criado_por: usuarioLogadoNome,
+                        updated_at: serverTimestamp(),
+                    };
+                    // Set com merge:true: idempotência total. Se já existir,
+                    // atualiza apenas os campos enviados (não apaga categoria
+                    // editada manualmente em outro fluxo).
+                    batch.set(doc(db, COLECAO, id), payload, { merge: true });
+                }
+                await batch.commit();
+                document.getElementById('msg-finalizando').textContent =
+                    `Gravando ${Math.min(i + CHUNK, total)}/${total} lançamentos…`;
+            }
+
+            // 3) Sucesso — atualiza UI com stats finais.
+            document.getElementById('ico-finalizando').textContent = 'check_circle';
+            document.getElementById('ico-finalizando').classList.remove('spin');
+            document.getElementById('titulo-finalizando').textContent = 'Importação concluída';
+            document.getElementById('msg-finalizando').textContent =
+                `${total} ${total === 1 ? 'lançamento processado' : 'lançamentos processados'} a partir de ${wizardState.arquivoNome}.`;
+            document.getElementById('stat-regras-criadas').textContent = regrasCriadas.toLocaleString('pt-BR');
+            document.getElementById('stat-lancamentos-gravados').textContent = lancNovos.toLocaleString('pt-BR');
+            document.getElementById('stat-lancamentos-merge').textContent = lancMerge.toLocaleString('pt-BR');
+            mostrarToast(`Importação concluída: ${lancNovos} novos · ${regrasCriadas} regras aprendidas.`, 'check_circle');
+        } catch (err) {
+            console.error('[ETL TXT] persistência falhou:', err);
+            document.getElementById('ico-finalizando').textContent = 'error';
+            document.getElementById('ico-finalizando').classList.remove('spin');
+            document.getElementById('titulo-finalizando').textContent = 'Falha na importação';
+            const detalhe = err.code === 'permission-denied'
+                ? 'Acesso negado: seu perfil não tem permissão para gravar em Contas a Pagar ou Regras.'
+                : (err.message || 'erro desconhecido');
+            document.getElementById('msg-finalizando').textContent = detalhe;
+            mostrarToast('Falha ao gravar a importação.', 'error', true);
+        }
+    }
+    document.getElementById('btn-adicionar-manual').addEventListener('click', () => {
+        document.getElementById('form-manual').reset();
+        document.getElementById('msg-form-manual').classList.add('hidden');
+        document.getElementById('m-entidade-hint').classList.add('hidden');
+        // Default vencimento = hoje
+        const hoje = new Date().toISOString().slice(0, 10);
+        document.getElementById('m-vencimento').value = hoje;
+        abrirModal('modal-manual');
+    });
+
+    // Sugestão de classificação ao digitar entidade — usa banco de regras.
+    document.getElementById('m-entidade').addEventListener('input', (e) => {
+        const valor = e.target.value;
+        const hint = document.getElementById('m-entidade-hint');
+        const hintText = hint.querySelector('[data-hint-text]');
+        const cc = document.getElementById('m-centro-custo');
+        const regra = classificarPorRegra(valor);
+        if (regra) {
+            hint.classList.remove('hidden');
+            hintText.textContent = `Regra "${regra.chave_busca}" detectada — ${regra.tipo_entidade} · CC: ${regra.centro_custo}`;
+            // Preenche CC SE estiver vazio (não sobrescreve digitação manual).
+            if (!cc.value.trim()) cc.value = regra.centro_custo || '';
+        } else {
+            hint.classList.add('hidden');
+            hintText.textContent = '';
+        }
+    });
+
+    document.getElementById('form-manual').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dataVenc = document.getElementById('m-vencimento').value;
+        const codigo = document.getElementById('m-codigo').value.trim();
+        const entidade = document.getElementById('m-entidade').value.trim();
+        const valor = parseFloat(document.getElementById('m-valor').value);
+        const status = document.getElementById('m-status').value;
+        const categoria = document.getElementById('m-categoria').value.trim();
+        const centroCusto = document.getElementById('m-centro-custo').value.trim();
+        const msg = document.getElementById('msg-form-manual');
+
+        if (!entidade || !dataVenc || !(valor > 0)) {
+            msg.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 bg-red-50 text-red-700 border border-red-200';
+            msg.innerHTML = '<span class="material-symbols-outlined text-base">error</span> Preencha entidade, data de vencimento e valor.';
+            msg.classList.remove('hidden');
+            return;
+        }
+        // Se houver restrição de CC e o usuário tentar gravar fora do escopo,
+        // bloqueia preventivamente (a rule do Firestore também travaria).
+        if (window._ccPermitidos && centroCusto && !window._ccPermitidos.has(centroCusto)) {
+            msg.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 bg-red-50 text-red-700 border border-red-200';
+            msg.innerHTML = '<span class="material-symbols-outlined text-base">block</span> Você não tem permissão para gravar nessa Área.';
+            msg.classList.remove('hidden');
+            return;
+        }
+
+        const btn = document.getElementById('btn-salvar-manual');
+        btn.disabled = true;
+        document.getElementById('ico-salvar-manual').textContent = 'progress_activity';
+        document.getElementById('ico-salvar-manual').classList.add('spin');
+        document.getElementById('lbl-salvar-manual').textContent = 'SALVANDO…';
+
+        try {
+            // Preenche tipo_entidade automaticamente quando há regra match.
+            const regra = classificarPorRegra(entidade);
+            const payload = {
+                data_vencimento: dataVenc,                            // YYYY-MM-DD
+                competencia_ref: dataVenc.slice(0, 7),                // YYYY-MM (filtro)
+                codigo: codigo || null,
+                entidade: entidade,
+                valor_original: Number(valor) || 0,
+                status: status || 'pendente',
+                categoria: categoria || null,
+                centro_custo: centroCusto || null,
+                tipo_entidade: regra ? regra.tipo_entidade : null,
+                origem: 'manual',
+                regra_aplicada: regra ? regra.chave_busca : null,
+                criado_por: usuarioLogadoNome,
+                created_at: serverTimestamp(),
+                updated_at: serverTimestamp(),
+            };
+            await addDoc(collection(db, COLECAO), payload);
+            fecharModal('modal-manual');
+            mostrarToast('Lançamento adicionado com sucesso.', 'check_circle');
+        } catch (err) {
+            console.error('[ContasPagar] addDoc falhou:', err);
+            msg.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 bg-red-50 text-red-700 border border-red-200';
+            const motivo = err.code === 'permission-denied'
+                ? 'Acesso negado: seu perfil não tem permissão para gravar em Contas a Pagar.'
+                : (err.message || 'erro desconhecido');
+            msg.innerHTML = `<span class="material-symbols-outlined text-base">error</span> Falha ao salvar: ${motivo}`;
+            msg.classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+            document.getElementById('ico-salvar-manual').textContent = 'save';
+            document.getElementById('ico-salvar-manual').classList.remove('spin');
+            document.getElementById('lbl-salvar-manual').textContent = 'SALVAR LANÇAMENTO';
+        }
+    });
+
+    // ========================================================================
+    // TOAST
+    // ========================================================================
+    let _toastTimer = null;
+    function mostrarToast(texto, icone = 'check_circle', erro = false) {
+        const t = document.getElementById('toast-cp');
+        document.getElementById('toast-cp-text').textContent = texto;
+        document.getElementById('toast-cp-icon').textContent = icone;
+        document.getElementById('toast-cp-icon').className = erro
+            ? 'material-symbols-outlined text-red-400'
+            : 'material-symbols-outlined text-primary';
+        t.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            t.classList.remove('opacity-0', 'translate-y-2');
+        });
+        if (_toastTimer) clearTimeout(_toastTimer);
+        _toastTimer = setTimeout(() => {
+            t.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => t.classList.add('hidden'), 320);
+        }, 3000);
+    }
 </script>
+
 </body>
 </html>

@@ -127,6 +127,35 @@ export function slugEvento(str) {
         .toUpperCase();
 }
 
+/**
+ * Slug determin\u00edstico de cargo/fun\u00e7\u00e3o para compor a Chave Composta de
+ * unicidade do colaborador (CPF + Cargo). Auditoria 2026-04-28: o usu\u00e1rio
+ * detectou que promo\u00e7\u00f5es no meio do m\u00eas (Estagi\u00e1rio \u2192 Efetivo) compartilham
+ * o mesmo CPF mas representam DOIS contratos distintos com custos pr\u00f3prios.
+ * O dedup por CPF puro estava esmagando o primeiro contrato.
+ *
+ * Regras:
+ *   - Vazio / null     \u2192 'SEM_CARGO'
+ *   - Acentos          \u2192 removidos
+ *   - Caixa            \u2192 UPPERCASE
+ *   - N\u00e3o-alfanum\u00e9rico \u2192 '_'
+ *   - 80+ chars        \u2192 corte defensivo
+ */
+export function slugCargo(valor) {
+    const slug = String(valor || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 80);
+    return slug || 'SEM_CARGO';
+}
+
+/** Chave Composta de unicidade do contrato: CPF + CargoSlug. */
+export function chaveContrato(cpf, cargo) {
+    return `${cpf}::${slugCargo(cargo)}`;
+}
+
 function normalizarCelula(v) {
     return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .trim().toUpperCase();
@@ -166,7 +195,11 @@ export function lerArquivoExcel(file) {
 // PARSER BASE 1 — RELATÓRIO DE FOLHA + ENCARGOS (cabeçalho duplo sujo)
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Rótulos fixos (identificação do funcionário) que podem aparecer no sub-header. */
+/** Rótulos fixos (identificação do funcionário) que podem aparecer no sub-header.
+ *  Auditoria 2026-04-28: DEMISSAO/DESLIGAMENTO/RESCISAO entraram aqui para que
+ *  o ETL pare de jogar essas colunas no parseNumeroBR (que zerava as datas) e
+ *  passe a guardá-las como STRING preservando o valor original. Necessário
+ *  para a regra cronológica antigo→novo no modal de Movimentações. */
 const ROTULOS_FIXOS = {
     CODIGO: ['CODIGO', 'COD', 'MATRICULA'],
     NOME: ['NOME', 'NOME FUNCIONARIO', 'FUNCIONARIO'],
@@ -174,7 +207,10 @@ const ROTULOS_FIXOS = {
     FUNCAO: ['FUNCAO', 'CARGO'],
     CENTRO_CUSTO: ['CENTRO DE CUSTO', 'CENTRO CUSTO', 'CCUSTO', 'CC'],
     DEPARTAMENTO: ['DEPARTAMENTO', 'DEPTO', 'SETOR'],
-    ADMISSAO: ['ADMISSAO', 'DATA ADMISSAO'],
+    ADMISSAO: ['ADMISSAO', 'DATA ADMISSAO', 'DT ADMISSAO', 'DATA DE ADMISSAO'],
+    DEMISSAO: ['DEMISSAO', 'DATA DEMISSAO', 'DT DEMISSAO', 'DATA DE DEMISSAO',
+               'DESLIGAMENTO', 'DATA DESLIGAMENTO', 'DT DESLIGAMENTO',
+               'DATA DE DESLIGAMENTO', 'DATA RESCISAO', 'DT RESCISAO'],
     SALARIO_BASE: ['SALARIO BASE', 'SALARIO'],
 };
 
@@ -436,7 +472,37 @@ export function processarRelatorioBeneficios(dadosBrutos) {
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Unifica Folha + Benefícios indexando por CPF limpo.
+ * Campos de benefícios que devem existir em TODO registro consolidado, mesmo
+ * quando a planilha de Benefícios não foi enviada ou quando o CPF da Folha
+ * não tem correspondência no Bnf. Auditoria 2026-04-28: o usuário pediu que
+ * importações parciais (apenas Folha) preencham VR/VA/VT/Plano/Odonto/Seguro
+ * com 0 — assim Diretores que só aparecem na Folha não inflam custo total
+ * com NaN nem ficam de fora do dashboard. salario_base também entra aqui:
+ * a Folha tem o salário no bucket SALARIO_*_Valor (vencimentos), e o
+ * salario_base extraído da Bnf é só para conferência cruzada.
+ */
+export const CAMPOS_BENEFICIOS_ZERAVEIS = Object.freeze([
+    'Bnf_VT', 'Bnf_VR', 'Bnf_VA',
+    'Bnf_PlanoSaude', 'Bnf_Odonto', 'Bnf_Seguro',
+    'salario_base',
+]);
+
+/**
+ * Unifica Folha + Benefícios indexando por CHAVE COMPOSTA: CPF + Cargo.
+ *
+ * Auditoria 2026-04-28: promoções/mudanças de cargo no meio do mês criam
+ * múltiplas linhas na Folha com o mesmo CPF, mas com `funcao` distinta. A
+ * lógica anterior (`mapa.set(cpf, ...)`) sobrescrevia silenciosamente o
+ * primeiro contrato (ex.: Estagiário) ao processar o segundo (ex.: Efetivo),
+ * derrubando o headcount real e o custo total. Agora cada `(cpf, cargo)`
+ * é um registro próprio.
+ *
+ * Estratégia para Benefícios (que tipicamente NÃO traz `funcao`):
+ *   1) Se houver match exato `cpf::cargoSlug`, merge ali.
+ *   2) Caso contrário, anexa ao PRIMEIRO contrato com mesmo CPF (preserva o
+ *      total de benefícios — não duplica para todos os cargos).
+ *   3) Se não houver match algum (CPF só na planilha de Bnf), cria entrada
+ *      nova com cargo derivado do próprio Bnf (ou SEM_CARGO).
  *
  * @param {Array<Object>} arrayFolha        Saída de processarRelatorioFolha
  * @param {Array<Object>} arrayBeneficios   Saída de processarRelatorioBeneficios
@@ -448,52 +514,114 @@ export function processarRelatorioBeneficios(dadosBrutos) {
 export function unificarBases(arrayFolha, arrayBeneficios, cfg = {}) {
     const { competencia = '', empresa = '' } = cfg;
     const mapa = new Map();
+    const cpfParaChaves = new Map(); // cpf -> [chave1, chave2, ...] (ordem de inserção)
 
     const registrarOrigem = (obj, chave) => {
         if (!obj._origens) obj._origens = { folha: false, beneficios: false };
         obj._origens[chave] = true;
     };
 
-    // 1) Popular com Folha.
+    const indexarChave = (cpf, chave) => {
+        if (!cpfParaChaves.has(cpf)) cpfParaChaves.set(cpf, []);
+        const lista = cpfParaChaves.get(cpf);
+        if (!lista.includes(chave)) lista.push(chave);
+    };
+
+    // 1) Popular com Folha — chave = cpf::cargoSlug.
+    let contratosColapsados = 0; // mesmo cpf+cargo aparecendo 2x na mesma planilha
     for (const reg of (arrayFolha || [])) {
         if (!reg || !reg.cpf) continue;
         const { _origem, ...resto } = reg;
-        const destino = { cpf: reg.cpf, ...resto };
-        registrarOrigem(destino, 'folha');
-        mapa.set(reg.cpf, destino);
+        const chave = chaveContrato(reg.cpf, reg.funcao);
+
+        const existente = mapa.get(chave);
+        if (existente) {
+            // Caso defensivo: mesma combinação cpf+cargo na mesma planilha.
+            // Mantemos o comportamento histórico (overwrite) para não inflar
+            // valores via duplicação acidental — só logamos pra auditoria.
+            contratosColapsados++;
+            for (const k of Object.keys(resto)) existente[k] = resto[k];
+            registrarOrigem(existente, 'folha');
+        } else {
+            const destino = { cpf: reg.cpf, ...resto };
+            registrarOrigem(destino, 'folha');
+            mapa.set(chave, destino);
+            indexarChave(reg.cpf, chave);
+        }
+    }
+    if (contratosColapsados > 0) {
+        console.warn(`[ETL Folha] ${contratosColapsados} linha(s) com mesmo cpf+cargo foram colapsadas (overwrite). Verifique a planilha se isso não for esperado.`);
     }
 
-    // 2) Merge com Benefícios.
+    // 2) Merge com Benefícios — match por cpf+cargo, fallback no 1º cpf.
+    let bnfMatchExato = 0, bnfMatchPorCpf = 0, bnfNovo = 0;
     for (const reg of (arrayBeneficios || [])) {
         if (!reg || !reg.cpf) continue;
         const { _origem, ...resto } = reg;
-        const existente = mapa.get(reg.cpf);
+        const chaveExata = chaveContrato(reg.cpf, reg.funcao);
+
+        let chaveAlvo;
+        if (mapa.has(chaveExata)) {
+            chaveAlvo = chaveExata;
+            bnfMatchExato++;
+        } else {
+            const candidatas = cpfParaChaves.get(reg.cpf);
+            if (candidatas && candidatas.length > 0) {
+                chaveAlvo = candidatas[0];
+                bnfMatchPorCpf++;
+            } else {
+                chaveAlvo = chaveExata;
+                bnfNovo++;
+            }
+        }
+
+        const existente = mapa.get(chaveAlvo);
         if (existente) {
-            // Benefícios não sobrescreve nome/centro_custo já vindos da Folha;
-            // demais chaves (Bnf_*, salario_base) entram normalmente.
+            // Benefícios não sobrescreve nome/centro_custo/funcao já vindos da Folha.
             for (const k of Object.keys(resto)) {
-                if ((k === 'nome' || k === 'centro_custo') && existente[k]) continue;
+                if ((k === 'nome' || k === 'centro_custo' || k === 'funcao') && existente[k]) continue;
                 existente[k] = resto[k];
             }
             registrarOrigem(existente, 'beneficios');
         } else {
             const novo = { cpf: reg.cpf, ...resto };
             registrarOrigem(novo, 'beneficios');
-            mapa.set(reg.cpf, novo);
+            mapa.set(chaveAlvo, novo);
+            indexarChave(reg.cpf, chaveAlvo);
         }
     }
+    console.log('[ETL Bnf] Match:', { exatoCpfCargo: bnfMatchExato, fallbackCpf: bnfMatchPorCpf, novosRegistros: bnfNovo });
 
     // 3) Consolida em array flat e anexa metadados solicitados no front.
     // Auditoria 2026-04-27: NÃO descartamos mais por CPF malformado — o
     // headcount tem que refletir QUEM apareceu na planilha. CPFs com problema
     // são logados pra investigação manual, mas o registro vai pro Firestore.
+    //
+    // Auditoria 2026-04-28 (Left Join): garantimos que TODO registro consolidado
+    // tenha os campos de benefícios zerados quando faltarem. Importações de
+    // apenas Folha (Diretores etc.) deixam de quebrar o cálculo de Custo Total
+    // por undefined/NaN, e a UI dashboarda 0 explicitamente em vez de "—".
     const saida = [];
     let cpfsMalformados = 0;
     for (const reg of mapa.values()) {
+        // Normalização final defensiva da chave composta cpf+cargo.
+        // Auditoria 2026-04-28: a regressão do KPI Headcount apontou risco de
+        // contagem dupla quando uma planilha trazia o mesmo CPF com formatações
+        // diferentes ou quando funcao chegava como undefined/null/whitespace.
+        // Aplicamos normalizarCPF (só dígitos, padded a 11) e String(funcao).trim()
+        // ANTES de o registro sair do ETL — garante que dashboard e Firestore
+        // recebam sempre cpf+cargo em formato canônico.
+        reg.cpf = normalizarCPF(reg.cpf);
+        reg.funcao = String(reg.funcao || '').trim();
         if (!cpfPareceValido(reg.cpf)) {
             cpfsMalformados++;
             console.warn('[ETL Folha] CPF malformado mantido no headcount:',
                 JSON.stringify({ cpf: reg.cpf, nome: reg.nome || '(sem nome)' }));
+        }
+        for (const campo of CAMPOS_BENEFICIOS_ZERAVEIS) {
+            if (typeof reg[campo] !== 'number' || !Number.isFinite(reg[campo])) {
+                reg[campo] = 0;
+            }
         }
         reg.competencia = competencia;
         if (empresa) reg.empresa_atribuida = empresa;
@@ -511,34 +639,49 @@ export function unificarBases(arrayFolha, arrayBeneficios, cfg = {}) {
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Esqueleto do fluxo de importação. A UI (página HTML futura) deve chamar
- * este método passando os dois <input type="file"> e a competência.
+ * Orquestra o fluxo completo de importação. Auditoria 2026-04-28: a planilha
+ * de Benefícios passou a ser OPCIONAL — quando ausente, o sistema processa
+ * só a Folha e zera os campos de benefícios em todos os registros (Diretores
+ * que não aparecem no Bnf agora entram corretamente sem quebrar o cálculo
+ * de Custo Total). Folha continua sendo OBRIGATÓRIA.
  *
+ * @param {Object} cfg
+ * @param {File}     cfg.fileFolha       Planilha de Folha + Encargos (obrigatória).
+ * @param {File?}    cfg.fileBeneficios  Planilha de Benefícios (opcional).
+ * @param {string}   cfg.competencia     "MM/AAAA".
+ * @param {string?}  cfg.empresa         Empresa atribuída.
  * @returns {Promise<{ unificado: Array, diagnostico: Object }>}
  */
 export async function importarCustoFolha({ fileFolha, fileBeneficios, competencia, empresa }) {
     if (!fileFolha) throw new Error('Planilha de Folha não selecionada.');
-    if (!fileBeneficios) throw new Error('Planilha de Benefícios não selecionada.');
     if (!competencia || !/^\d{2}\/\d{4}$/.test(competencia)) {
         throw new Error('Competência inválida. Formato esperado: MM/AAAA.');
     }
+    const temBeneficios = !!fileBeneficios;
 
     const [aoaFolha, aoaBnf] = await Promise.all([
         lerArquivoExcel(fileFolha),
-        lerArquivoExcel(fileBeneficios),
+        temBeneficios ? lerArquivoExcel(fileBeneficios) : Promise.resolve(null),
     ]);
 
     const folha = processarRelatorioFolha(aoaFolha);
-    const beneficios = processarRelatorioBeneficios(aoaBnf);
+    const beneficios = temBeneficios ? processarRelatorioBeneficios(aoaBnf) : [];
     const unificado = unificarBases(folha, beneficios, { competencia, empresa });
 
+    // Diagnóstico enriquecido: o campo `comBeneficiosVinculados` é o que a UI
+    // mostra na mensagem de sucesso. Quando o Bnf não foi enviado, fica em 0.
+    const comBeneficiosVinculados = unificado.filter(u =>
+        u._origens && u._origens.folha && u._origens.beneficios
+    ).length;
     const diagnostico = {
         totalFolha: folha.length,
         totalBeneficios: beneficios.length,
         totalUnificado: unificado.length,
         somenteFolha: unificado.filter(u => u._origens && u._origens.folha && !u._origens.beneficios).length,
         somenteBeneficios: unificado.filter(u => u._origens && !u._origens.folha && u._origens.beneficios).length,
-        ambas: unificado.filter(u => u._origens && u._origens.folha && u._origens.beneficios).length,
+        ambas: comBeneficiosVinculados,
+        comBeneficiosVinculados,
+        beneficiosImportado: temBeneficios,
     };
 
     return { unificado, diagnostico };

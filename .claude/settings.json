@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(node --check c:/Users/Henrique/Desktop/centrafin-app/importacao_folha.js)",
+      "Bash(node --check /tmp/desk_check.mjs)",
+      "Bash(node --check c:/Users/Henrique/AppData/Local/Temp/desk_check.mjs)",
+      "Bash(node --check c:/Users/Henrique/AppData/Local/Temp/dash_check.mjs)",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(node --check c:/Users/Henrique/AppData/Local/Temp/cp_check.mjs)"
     ]
   }
 }

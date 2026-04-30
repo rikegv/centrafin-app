@@ -27,6 +27,21 @@
         }
     </script>
     <style>
+        /* Fade-in suave do app shell (auditoria 2026-04-29) — sidebar e main
+           entram em opacity 0; ganham fade quando `auth-ok` é setado. Body
+           preserva o bg padrão (#f8f9fb). */
+        body > #sidebar-container,
+        body > main {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        body.auth-ok > #sidebar-container,
+        body.auth-ok > main {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8f9fb;
@@ -62,24 +77,27 @@
 
         <header class="flex justify-between items-center mb-8 border-b border-slate-200 pb-6">
             <div>
-                <h1 class="text-3xl font-extrabold tracking-tight text-secondary font-headline">Painel de Controle</h1>
-                <p class="text-slate-500 text-sm mt-1 font-medium">Gerencie acessos e monitore a segurança de todo o
-                    ecossistema CentraFin.</p>
+                <h1 class="text-3xl font-extrabold tracking-tight text-secondary font-headline">Configurações e Privacidade</h1>
+                <p class="text-slate-500 text-sm mt-1 font-medium">Gestão de usuários, matriz de permissões e auditoria de logs do ecossistema CentraFin.</p>
             </div>
             <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
-                <span class="material-symbols-outlined text-primary">shield_person</span>
-                <span class="font-bold text-sm text-secondary" id="display-user-email">Acesso Master</span>
+                <span class="material-symbols-outlined text-primary">admin_panel_settings</span>
+                <span class="font-bold text-sm text-secondary" id="display-user-email">Acesso Super Adm</span>
             </div>
         </header>
 
-        <div class="flex gap-6 mb-8 border-b border-slate-200">
+        <div class="flex gap-6 mb-8 border-b border-slate-200 flex-wrap">
             <button id="tab-users-btn"
                 class="pb-3 text-sm font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">manage_accounts</span> Gestão de Usuários
             </button>
             <button id="tab-logs-btn"
                 class="pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">policy</span> Auditoria (Logs)
+                <span class="material-symbols-outlined text-[18px]">policy</span> Auditoria de Logs
+            </button>
+            <button id="tab-regras-btn"
+                class="pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">rule</span> Regras de Classificação
             </button>
         </div>
 
@@ -119,54 +137,11 @@
                                 </select>
                             </div>
                             
-                            <!-- Checkboxes de Módulos (Design Premium) -->
-                            <div class="col-span-full mt-6">
-                                <label class="block text-[10px] font-extrabold text-slate-500 mb-3 uppercase tracking-widest border-b border-slate-100 pb-2">Módulos Permitidos</label>
-                                <div class="grid grid-cols-1 gap-2.5" id="container-menus-permitidos-cadastro">
-                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                                        <input type="checkbox" value="dashboard_master" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                                        <div class="flex flex-col">
-                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Dashboard Master / Metas</span>
-                                            <span class="text-[9px] text-slate-400 font-medium">Visão executiva e acompanhamento de metas</span>
-                                        </div>
-                                    </label>
-                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                                        <input type="checkbox" value="contas_receber" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                                        <div class="flex flex-col">
-                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Faturamento (CRF)</span>
-                                            <span class="text-[9px] text-slate-400 font-medium">Contas a Receber e faturamento consolidado</span>
-                                        </div>
-                                    </label>
-                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                                        <input type="checkbox" value="contas_pagar" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                                        <div class="flex flex-col">
-                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Contas a Pagar</span>
-                                            <span class="text-[9px] text-slate-400 font-medium">Gestão de obrigações e pagamentos</span>
-                                        </div>
-                                    </label>
-                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                                        <input type="checkbox" value="extrato" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                                        <div class="flex flex-col">
-                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Extrato Consolidado</span>
-                                            <span class="text-[9px] text-slate-400 font-medium">Visualização de transações e saldos</span>
-                                        </div>
-                                    </label>
-                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                                        <input type="checkbox" value="usuarios" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                                        <div class="flex flex-col">
-                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Gestão de Usuários</span>
-                                            <span class="text-[9px] text-slate-400 font-medium">Controle de acessos e permissões (RBAC)</span>
-                                        </div>
-                                    </label>
-                                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                                        <input type="checkbox" value="aging" class="menu-checkbox-cad rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                                        <div class="flex flex-col">
-                                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Dashboard de AGING</span>
-                                            <span class="text-[9px] text-slate-400 font-medium">Saúde do fluxo de caixa e inadimplência</span>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
+                            <!-- Matriz de Permissões — Nível 1 (menus) + Nível 2 (modulosDashboard) -->
+                            <!-- O conteúdo é injetado por gerarMatrizPermissoes('cad') na inicialização. -->
+                            <div id="matriz-cad" class="col-span-full mt-6"></div>
+                            <!-- Filtros de Dados (3º nível) — populado por gerarFiltroCC('cad'). -->
+                            <div id="filtro-cc-cad" class="col-span-full mt-5"></div>
 
                             <div id="msg-cadastro"
                                 class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4"></div>
@@ -250,12 +225,166 @@
             </div>
         </section>
 
+        <!-- ABA: REGRAS DE CLASSIFICAÇÃO — Fase 2.1 (auditoria 2026-04-29).
+             Duas sub-seções visuais: 1) Gestão de Áreas, 2) Regras de Entidades.
+             A coleção AreasContasPagar é independente de Base_Centros_Custo
+             (esse é exclusivo do Custo de Folha). -->
+        <section id="section-regras" class="hidden space-y-8">
+
+            <!-- ▣ 1. GESTÃO DE ÁREAS (Contas a Pagar) ▣ -->
+            <div>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary text-[20px]">workspaces</span>
+                    </div>
+                    <div>
+                        <h2 class="font-headline text-base font-extrabold text-secondary">1. Gestão de Áreas (Contas a Pagar)</h2>
+                        <p class="text-[11px] text-slate-400 font-medium">Lista própria do módulo — independente do Custo de Folha. Alimenta os dropdowns de Área das Regras e do Wizard.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <!-- Form criar Área -->
+                    <div class="xl:col-span-1">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                            <form id="form-area" class="space-y-3">
+                                <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome da Área</label>
+                                <input id="area-nome" type="text" required maxlength="80" placeholder="Ex: Operacional, Diretoria, Atração e Seleção"
+                                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                                <div id="msg-area" class="hidden text-xs font-bold p-2.5 rounded-lg flex items-start gap-2"></div>
+                                <button type="submit" id="btn-salvar-area"
+                                    class="w-full py-2.5 bg-primary text-secondary font-extrabold rounded-xl shadow-md hover:brightness-105 transition-all flex items-center justify-center gap-2 text-xs">
+                                    <span class="material-symbols-outlined text-base">add</span> Adicionar Área
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <!-- Listagem de Áreas -->
+                    <div class="xl:col-span-2">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3 class="text-xs font-extrabold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-slate-400 text-[16px]">list</span>
+                                    Áreas cadastradas
+                                </h3>
+                                <span id="contador-areas" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">0 áreas</span>
+                            </div>
+                            <div class="max-h-[280px] overflow-y-auto" id="lista-areas-wrapper">
+                                <ul id="lista-areas" class="divide-y divide-slate-100"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ▣ 2. REGRAS DE ENTIDADES (De-Para usado pelo ETL) ▣ -->
+            <div>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-9 h-9 rounded-lg bg-tertiary/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-tertiary text-[20px]">rule</span>
+                    </div>
+                    <div>
+                        <h2 class="font-headline text-base font-extrabold text-secondary">2. Regras de Entidades</h2>
+                        <p class="text-[11px] text-slate-400 font-medium">De-Para usado pelo ETL de conciliação contínua. O dropdown de Área puxa da lista cadastrada acima.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <!-- Form de criação de regra -->
+                    <div class="xl:col-span-1">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                            <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                                <span class="material-symbols-outlined text-primary text-2xl">add_box</span>
+                                <h3 class="font-headline font-bold text-base text-secondary">Nova Regra</h3>
+                            </div>
+                            <form id="form-regra" class="space-y-4">
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Chave de Busca</label>
+                                    <input id="regra-chave" type="text" required maxlength="100" placeholder="Ex: TELEFONICA"
+                                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium uppercase focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300 placeholder:normal-case" />
+                                    <p class="text-[10px] text-slate-400 font-medium mt-1">Trecho que o ETL procura no nome da entidade. Sempre em maiúsculas.</p>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Tipo de Entidade</label>
+                                    <select id="regra-tipo" required class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-bold text-secondary bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                        <option value="">Selecione…</option>
+                                        <option value="Cliente">Cliente</option>
+                                        <option value="Fornecedor Externo">Fornecedor Externo</option>
+                                        <option value="Fornecedor Interno (PJ)">Fornecedor Interno (PJ)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Área</label>
+                                    <!-- Dropdown SELECT (não input/datalist) — força a seleção dentro
+                                         do conjunto cadastrado em AreasContasPagar, evitando typos.
+                                         Alimentado pelo onSnapshot abaixo. -->
+                                    <select id="regra-cc" required class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium text-secondary bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                        <option value="">Selecione uma área…</option>
+                                    </select>
+                                </div>
+                                <div id="msg-regra" class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2"></div>
+                                <button type="submit" id="btn-salvar-regra"
+                                    class="w-full py-3 mt-2 bg-secondary text-white font-extrabold rounded-xl shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-base">save</span>
+                                    <span id="lbl-salvar-regra">Salvar Regra</span>
+                                </button>
+                                <button type="button" id="btn-cancelar-edicao-regra"
+                                    class="hidden w-full py-2 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                                    Cancelar edição
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Tabela CRUD de regras -->
+                    <div class="xl:col-span-2">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-tertiary text-2xl">rule_settings</span>
+                                    <div>
+                                        <h3 class="font-headline font-bold text-base text-secondary">Banco de Regras</h3>
+                                        <p class="text-[11px] text-slate-400 font-medium">Dicionário "De-Para" do ETL.</p>
+                                    </div>
+                                </div>
+                                <span id="contador-regras" class="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full">0 regras</span>
+                            </div>
+                            <div class="px-6 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                                <div class="relative w-64">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                                    <input id="busca-regra" type="text"
+                                        class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-full text-xs focus:ring-1 focus:ring-tertiary outline-none"
+                                        placeholder="Buscar por chave, tipo ou área…" />
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider sticky top-0 z-10">
+                                        <tr>
+                                            <th class="px-6 py-3 font-bold">Chave de Busca</th>
+                                            <th class="px-6 py-3 font-bold">Tipo</th>
+                                            <th class="px-6 py-3 font-bold">Área</th>
+                                            <th class="px-6 py-3 font-bold text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-regras" class="divide-y divide-slate-100 text-xs">
+                                        <tr><td colspan="4" class="text-center py-8 text-sm text-slate-400">Carregando regras…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
     </main>
 
     <!-- Modal de Edição Premium RBAC -->
     <div id="modal-edicao-usuario" class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
         <div class="absolute inset-0 bg-secondary/40 backdrop-blur-sm modal-overlay"></div>
-        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300 max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center gap-3">
                     <span class="material-symbols-outlined text-primary text-3xl">edit_square</span>
@@ -292,36 +421,10 @@
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-[10px] font-extrabold text-slate-500 mb-3 uppercase tracking-widest border-b border-slate-100 pb-2">Módulos Permitidos</label>
-                    <div class="grid grid-cols-1 gap-2.5" id="container-menus-permitidos-edicao">
-                        <!-- Módulos repetidos para edição -->
-                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                            <input type="checkbox" value="dashboard_master" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Dashboard Master / Metas</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                            <input type="checkbox" value="contas_receber" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Faturamento (CRF)</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                            <input type="checkbox" value="contas_pagar" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Contas a Pagar</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                            <input type="checkbox" value="extrato" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Extrato Consolidado</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                            <input type="checkbox" value="usuarios" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Gestão de Usuários</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group">
-                            <input type="checkbox" value="aging" class="menu-checkbox-edit rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                            <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">Dashboard de AGING</span>
-                        </label>
-                    </div>
-                </div>
+                <!-- Matriz de Permissões (edição) — gerada em runtime. -->
+                <div id="matriz-edit"></div>
+                <!-- Filtros de Dados (edição) — gerado em runtime. -->
+                <div id="filtro-cc-edit"></div>
 
                 <div class="flex justify-end gap-3 pt-4">
                     <button type="button" onclick="window.fecharModalEdicao()" class="px-6 py-2.5 text-xs font-extrabold text-slate-400 hover:text-secondary transition-all">Cancelar</button>
@@ -333,7 +436,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, query, orderBy, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { renderSidebar } from "./sidebar.js";
 
@@ -345,6 +448,297 @@
 
         let usuarioLogadoNome = "Sistema";
         let usuarioLogadoPerfil = "";
+
+        // ── MATRIZ DE PERMISSÕES (RBAC granular) ─────────────────────────────
+        // Auditoria 2026-04-28: refatoração para suportar 2 níveis de gating:
+        //   Nível 1 — menus laterais (sidebar)
+        //   Nível 2 — módulos do Dashboard Master (cards)
+        // O Firestore guarda { permissoes: { menus: {...}, modulosDashboard: {...} } }
+        // e ALÉM disso um array `menus_permitidos` derivado para retrocompatibilidade
+        // com as páginas antigas que ainda checam `menus_permitidos.includes(X)`.
+        const MENUS_DEF = [
+            { key: 'dashboardGeral',          label: 'Dashboard Geral',                 desc: 'Visão consolidada e cards executivos', icon: 'dashboard',     legacy: 'dashboard_master' },
+            { key: 'metasFinanceiras',        label: 'Metas Financeiras',               desc: 'Gestão de metas anuais e atingimento', icon: 'track_changes', legacy: 'metas' },
+            { key: 'faturamento',             label: 'Faturamento - Contas a receber', desc: 'Lançamentos, recebíveis e baixas',     icon: 'payments',      legacy: 'contas_receber' },
+            { key: 'contasPagar',             label: 'Contas a Pagar',                 desc: 'Obrigações e conciliação contínua',    icon: 'account_balance_wallet', legacy: 'contas_pagar' },
+            { key: 'custoFolha',              label: 'Custo de Folha',                  desc: 'Importação e dashboard de folha',      icon: 'receipt_long',  legacy: 'custo_folha' },
+            { key: 'configuracoesPrivacidade', label: 'Configurações e Privacidade',    desc: 'Apenas Super Adm — usuários e logs',  icon: 'admin_panel_settings', legacy: 'usuarios', superAdminOnly: true },
+        ];
+        const MODULOS_DEF = [
+            { key: 'moduloFaturamento', label: 'Módulo Faturamento', desc: 'Bruto vs Realizado, performance comercial', icon: 'payments' },
+            { key: 'fluxoCaixa',        label: 'Fluxo de Caixa',     desc: 'Entradas, saídas e projeções',              icon: 'account_balance' },
+            { key: 'forecast',          label: 'FORECAST',           desc: 'Headcount projetado e provisões',           icon: 'groups' },
+            { key: 'aging',             label: 'AGING Financeiro',   desc: 'Inadimplência e idade de recebíveis',       icon: 'query_stats', legacy: 'aging' },
+            { key: 'metas',             label: 'Metas Financeiras',  desc: 'Acompanhamento de metas no Dashboard',      icon: 'track_changes' },
+            { key: 'custoFolha',        label: 'Custo de Folha',     desc: 'Card de custo de folha no Dashboard',       icon: 'receipt_long', legacy: 'custo_folha' },
+        ];
+
+        function gerarMatrizPermissoes(prefixo) {
+            const itemMenu = (m) => `
+                <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group ${m.superAdminOnly ? 'border-amber-200 bg-amber-50/50' : ''}">
+                    <input type="checkbox" data-perm-menu="${m.key}" class="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 shrink-0">
+                    <span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-[18px] shrink-0">${m.icon}</span>
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-[11px] font-extrabold text-slate-700 group-hover:text-primary transition-colors flex items-center gap-1.5">
+                            ${m.label}${m.superAdminOnly ? '<span class="text-[8px] uppercase tracking-widest text-amber-600 font-bold bg-amber-100 px-1.5 py-0.5 rounded">Super Adm</span>' : ''}
+                        </span>
+                        <span class="text-[9px] text-slate-400 font-medium">${m.desc}</span>
+                    </div>
+                </label>`;
+
+            const itemModulo = (m) => `
+                <label class="flex items-center gap-2 p-2.5 border border-slate-100 rounded-lg cursor-pointer hover:bg-white hover:border-primary/40 transition-all group bg-white/70">
+                    <input type="checkbox" data-perm-modulo="${m.key}" class="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 shrink-0">
+                    <span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-[16px] shrink-0">${m.icon}</span>
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-[10.5px] font-extrabold text-slate-700 group-hover:text-primary transition-colors">${m.label}</span>
+                        <span class="text-[9px] text-slate-400 font-medium truncate">${m.desc}</span>
+                    </div>
+                </label>`;
+
+            return `
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-500 mb-3 uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-slate-400 text-[14px]">menu</span>
+                            Nível 1 — Menus Laterais
+                        </label>
+                        <div class="grid grid-cols-1 gap-2.5" data-perm-grid="menus-${prefixo}">
+                            ${MENUS_DEF.map(itemMenu).join('')}
+                        </div>
+                    </div>
+                    <div data-modulos-wrapper="${prefixo}" class="hidden bg-slate-50/70 border border-dashed border-slate-200 rounded-xl p-4">
+                        <label class="block text-[10px] font-extrabold text-slate-500 mb-3 uppercase tracking-widest pb-2 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary text-[14px]">widgets</span>
+                            Nível 2 — Módulos do Dashboard Geral
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" data-perm-grid="modulos-${prefixo}">
+                            ${MODULOS_DEF.map(itemModulo).join('')}
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-medium mt-3 italic flex items-start gap-1.5">
+                            <span class="material-symbols-outlined text-[12px]">info</span>
+                            Esta seção fica habilitada apenas quando "Dashboard Geral" está ativo no Nível 1.
+                        </p>
+                    </div>
+                </div>`;
+        }
+
+        // Toggle visibilidade do bloco Nível 2 conforme o checkbox de Dashboard Geral.
+        function bindToggleModulos(prefixo) {
+            const root = document.getElementById(`matriz-${prefixo}`);
+            if (!root) return;
+            const cbDash = root.querySelector('input[data-perm-menu="dashboardGeral"]');
+            const wrapper = root.querySelector(`[data-modulos-wrapper="${prefixo}"]`);
+            if (!cbDash || !wrapper) return;
+            const sync = () => {
+                if (cbDash.checked) wrapper.classList.remove('hidden');
+                else {
+                    wrapper.classList.add('hidden');
+                    // Desmarcar módulos quando Dashboard Geral é desativado — sem
+                    // acesso ao menu pai, os filhos não são acessíveis.
+                    wrapper.querySelectorAll('input[data-perm-modulo]').forEach(cb => cb.checked = false);
+                }
+            };
+            cbDash.addEventListener('change', sync);
+            sync();
+        }
+
+        function lerMatriz(prefixo) {
+            const root = document.getElementById(`matriz-${prefixo}`);
+            const menus = {};
+            const modulosDashboard = {};
+            if (!root) return { menus, modulosDashboard };
+            root.querySelectorAll('input[data-perm-menu]').forEach(cb => {
+                menus[cb.getAttribute('data-perm-menu')] = !!cb.checked;
+            });
+            root.querySelectorAll('input[data-perm-modulo]').forEach(cb => {
+                modulosDashboard[cb.getAttribute('data-perm-modulo')] = !!cb.checked;
+            });
+            return { menus, modulosDashboard };
+        }
+
+        function escreverMatriz(prefixo, permissoes) {
+            const root = document.getElementById(`matriz-${prefixo}`);
+            if (!root) return;
+            const p = permissoes || { menus: {}, modulosDashboard: {} };
+            const menus = p.menus || {};
+            const modulos = p.modulosDashboard || {};
+            root.querySelectorAll('input[data-perm-menu]').forEach(cb => {
+                cb.checked = !!menus[cb.getAttribute('data-perm-menu')];
+            });
+            root.querySelectorAll('input[data-perm-modulo]').forEach(cb => {
+                cb.checked = !!modulos[cb.getAttribute('data-perm-modulo')];
+            });
+            // Re-sincroniza visibilidade da seção Nível 2.
+            const cbDash = root.querySelector('input[data-perm-menu="dashboardGeral"]');
+            const wrapper = root.querySelector(`[data-modulos-wrapper="${prefixo}"]`);
+            if (cbDash && wrapper) {
+                if (cbDash.checked) wrapper.classList.remove('hidden');
+                else wrapper.classList.add('hidden');
+            }
+        }
+
+        // Deriva o array `menus_permitidos` (formato antigo) a partir do objeto
+        // novo. Mantém as páginas legadas funcionando sem alteração.
+        function permissoesParaMenusArray(permissoes) {
+            const arr = [];
+            for (const def of MENUS_DEF) {
+                if (permissoes?.menus?.[def.key]) arr.push(def.legacy);
+            }
+            // 'aging' é um módulo do Dashboard mas tem rota própria — replicamos
+            // no array para que aging_desktop/code.html continue passando o gate.
+            for (const def of MODULOS_DEF) {
+                if (def.legacy && permissoes?.modulosDashboard?.[def.key] && !arr.includes(def.legacy)) {
+                    arr.push(def.legacy);
+                }
+            }
+            return arr;
+        }
+
+        // ── 3º NÍVEL: FILTRO POR CENTRO DE CUSTO ─────────────────────────────
+        // Estado global: lista de CCs disponíveis (Base_Centros_Custo) + Set
+        // de selecionados por prefixo (cad/edit). A UI é uma lista de
+        // checkboxes com busca, padronizada com a matriz de permissões.
+        let _ccDisponiveis = []; // Array<string> ordenado alfabeticamente
+        const _ccSelecionados = { cad: new Set(), edit: new Set() };
+
+        function gerarFiltroCC(prefixo) {
+            return `
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 mb-3 uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-slate-400 text-[14px]">filter_list</span>
+                        Filtros de Dados
+                    </label>
+                    <div class="bg-slate-50/70 border border-dashed border-slate-200 rounded-xl p-4">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <div class="flex flex-col">
+                                <span class="text-[11px] font-extrabold text-slate-700 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-primary text-[14px]">corporate_fare</span>
+                                    Centros de Custo Permitidos
+                                </span>
+                                <span class="text-[9px] text-slate-400 font-medium">Vazio ou "Todos" = vê todos os centros (sem restrição lateral)</span>
+                            </div>
+                            <label class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 cursor-pointer">
+                                <input type="checkbox" data-cc-todos="${prefixo}" class="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                                Todos
+                            </label>
+                        </div>
+                        <div class="relative mb-2">
+                            <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300 text-[14px] pointer-events-none">search</span>
+                            <input type="text" data-cc-busca="${prefixo}" placeholder="Filtrar centros…"
+                                class="w-full pl-8 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                        </div>
+                        <div data-cc-lista="${prefixo}" class="max-h-44 overflow-y-auto bg-white border border-slate-100 rounded-lg p-1 space-y-0.5">
+                            <p class="text-[10px] text-slate-400 italic text-center py-2">Carregando centros de custo…</p>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-medium mt-2 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[12px]">info</span>
+                            <span data-cc-status="${prefixo}">Sem restrição (vê todos)</span>
+                        </p>
+                    </div>
+                </div>`;
+        }
+
+        function _renderListaCC(prefixo) {
+            const root = document.getElementById(`filtro-cc-${prefixo}`);
+            if (!root) return;
+            const lista = root.querySelector(`[data-cc-lista="${prefixo}"]`);
+            const busca = root.querySelector(`[data-cc-busca="${prefixo}"]`);
+            const status = root.querySelector(`[data-cc-status="${prefixo}"]`);
+            const cbTodos = root.querySelector(`[data-cc-todos="${prefixo}"]`);
+            if (!lista) return;
+            const termo = (busca?.value || '').trim().toLowerCase();
+            const filtrados = termo
+                ? _ccDisponiveis.filter(n => n.toLowerCase().includes(termo))
+                : _ccDisponiveis;
+            if (filtrados.length === 0) {
+                lista.innerHTML = '<p class="text-[10px] text-slate-400 italic text-center py-2">Nenhum centro encontrado.</p>';
+            } else {
+                lista.innerHTML = filtrados.map(n => `
+                    <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-50 cursor-pointer">
+                        <input type="checkbox" data-cc-item="${prefixo}" value="${n.replace(/"/g, '&quot;')}"
+                            ${_ccSelecionados[prefixo].has(n) ? 'checked' : ''}
+                            class="rounded border-slate-300 text-primary focus:ring-primary w-3.5 h-3.5">
+                        <span class="text-[11px] font-medium text-slate-700 truncate">${n.replace(/</g, '&lt;')}</span>
+                    </label>`).join('');
+                lista.querySelectorAll(`input[data-cc-item="${prefixo}"]`).forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        if (cb.checked) _ccSelecionados[prefixo].add(cb.value);
+                        else _ccSelecionados[prefixo].delete(cb.value);
+                        _atualizarStatusCC(prefixo);
+                    });
+                });
+            }
+            // Sincroniza checkbox "Todos": marcado = nenhum CC restrito.
+            if (cbTodos) cbTodos.checked = _ccSelecionados[prefixo].size === 0;
+            _atualizarStatusCC(prefixo);
+        }
+
+        function _atualizarStatusCC(prefixo) {
+            const root = document.getElementById(`filtro-cc-${prefixo}`);
+            if (!root) return;
+            const status = root.querySelector(`[data-cc-status="${prefixo}"]`);
+            const n = _ccSelecionados[prefixo].size;
+            if (status) {
+                status.textContent = n === 0
+                    ? 'Sem restrição (vê todos os centros)'
+                    : `Restrito a ${n} centro${n === 1 ? '' : 's'} de custo selecionado${n === 1 ? '' : 's'}`;
+            }
+        }
+
+        function bindFiltroCC(prefixo) {
+            const root = document.getElementById(`filtro-cc-${prefixo}`);
+            if (!root) return;
+            const busca = root.querySelector(`[data-cc-busca="${prefixo}"]`);
+            const cbTodos = root.querySelector(`[data-cc-todos="${prefixo}"]`);
+            if (busca) busca.addEventListener('input', () => _renderListaCC(prefixo));
+            if (cbTodos) cbTodos.addEventListener('change', () => {
+                if (cbTodos.checked) {
+                    _ccSelecionados[prefixo].clear();
+                    _renderListaCC(prefixo);
+                }
+            });
+        }
+
+        function lerFiltroCC(prefixo) {
+            return [..._ccSelecionados[prefixo]];
+        }
+
+        function escreverFiltroCC(prefixo, ccArr) {
+            _ccSelecionados[prefixo] = new Set(Array.isArray(ccArr) ? ccArr : []);
+            _renderListaCC(prefixo);
+        }
+
+        // Lê permissões de um doc de usuário e devolve o objeto novo. Migra do
+        // formato antigo (`menus_permitidos` array) quando o novo não existe.
+        // O array `filtros.centrosCusto` (3º nível, auditoria 2026-04-28) é
+        // sempre repassado quando presente — não há equivalente no formato
+        // antigo, então perfis migrados começam sem restrição lateral.
+        function lerPermissoesDoUser(dadosUser) {
+            const filtros = (dadosUser?.permissoes?.filtros) || {};
+            if (dadosUser?.permissoes && (dadosUser.permissoes.menus || dadosUser.permissoes.modulosDashboard)) {
+                return {
+                    menus: dadosUser.permissoes.menus || {},
+                    modulosDashboard: dadosUser.permissoes.modulosDashboard || {},
+                    filtros: { centrosCusto: Array.isArray(filtros.centrosCusto) ? filtros.centrosCusto : [] },
+                };
+            }
+            // Migração: array legado → matriz nova (Nível 1 derivado, Nível 2
+            // padrão off para forçar revisão consciente do Super Adm).
+            const arr = Array.isArray(dadosUser?.menus_permitidos) ? dadosUser.menus_permitidos : [];
+            const menus = {};
+            for (const def of MENUS_DEF) menus[def.key] = arr.includes(def.legacy);
+            const modulosDashboard = {};
+            for (const def of MODULOS_DEF) modulosDashboard[def.key] = false;
+            // Caso especial: se tinha 'aging' antes, ativa o módulo aging.
+            if (arr.includes('aging')) modulosDashboard.aging = true;
+            return {
+                menus,
+                modulosDashboard,
+                // Migração não tem equivalente do filtro CC — começa vazio.
+                filtros: { centrosCusto: [] },
+            };
+        }
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -361,11 +755,12 @@
                     usuarioLogadoNome = dadosUser.nome || user.email;
                     usuarioLogadoPerfil = dadosUser.perfil || "";
 
-                    // GUARDIÃO DE ROTA
-                    const CHAVE_PAGINA = 'usuarios';
-                    if (usuarioLogadoPerfil !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
-                        await signOut(auth);
-                        alert('Acesso Negado: Você não tem permissão para acessar esta página e foi desconectado por segurança.');
+                    // GUARDIÃO DE ROTA — Auditoria 2026-04-28: Configurações
+                    // e Privacidade é exclusiva de Super Adm. Para qualquer
+                    // outro perfil, redirect amigável ao login.html (sem
+                    // signOut) e o roteador inteligente leva ao primeiro
+                    // módulo permitido.
+                    if (usuarioLogadoPerfil !== 'super_admin') {
                         window.location.href = "login.html";
                         return;
                     }
@@ -378,6 +773,9 @@
                             opt.classList.remove('hidden');
                         });
                     }
+
+                    // Libera overlay anti-FoUC — todas as guardas passaram.
+                    document.body.classList.add('auth-ok');
                 } else {
                     await signOut(auth);
                     alert('Acesso Negado: Usuário não encontrado no sistema.');
@@ -389,51 +787,94 @@
             }
         });
 
-        // Lógica segura de navegação entre abas
-        const btnUsers = document.getElementById('tab-users-btn');
-        const btnLogs = document.getElementById('tab-logs-btn');
-        const secUsers = document.getElementById('section-users');
-        const secLogs = document.getElementById('section-logs');
-
-        if (btnUsers && btnLogs && secUsers && secLogs) {
-            btnUsers.addEventListener('click', (e) => {
-                e.preventDefault();
-                secUsers.classList.remove('hidden');
-                secLogs.classList.add('hidden');
-                btnUsers.className = "pb-3 text-sm font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2";
-                btnLogs.className = "pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2";
-            });
-
-            btnLogs.addEventListener('click', (e) => {
-                e.preventDefault();
-                secLogs.classList.remove('hidden');
-                secUsers.classList.add('hidden');
-                btnLogs.className = "pb-3 text-sm font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2";
-                btnUsers.className = "pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2";
-            });
-
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('tab') === 'logs') {
-                btnLogs.click();
+        // Tab switcher refatorado em 2026-04-28 para suportar 3 abas. Usa um
+        // mapa abas → seção; clicar em qualquer botão deixa só a seção alvo
+        // visível e remarca os botões com a classe ativa.
+        const ABAS = [
+            { btn: 'tab-users-btn',  sec: 'section-users',  slug: 'users' },
+            { btn: 'tab-logs-btn',   sec: 'section-logs',   slug: 'logs'  },
+            { btn: 'tab-regras-btn', sec: 'section-regras', slug: 'regras' },
+        ];
+        const _classeAtiva = "pb-3 text-sm font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2";
+        const _classeInativa = "pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2";
+        function ativarAba(slug) {
+            for (const a of ABAS) {
+                const sec = document.getElementById(a.sec);
+                const btn = document.getElementById(a.btn);
+                if (!sec || !btn) continue;
+                const ativa = a.slug === slug;
+                sec.classList.toggle('hidden', !ativa);
+                // Preserva ícones do botão ao trocar className.
+                const icone = btn.querySelector('.material-symbols-outlined');
+                btn.className = ativa ? _classeAtiva : _classeInativa;
+                if (icone && !btn.contains(icone)) btn.prepend(icone);
             }
+        }
+        for (const a of ABAS) {
+            const btn = document.getElementById(a.btn);
+            if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); ativarAba(a.slug); });
+        }
+        // Deep-link via querystring: ?tab=logs|regras|users
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam && ABAS.some(a => a.slug === tabParam)) {
+            ativarAba(tabParam);
         }
 
         const formUser = document.getElementById('form-criar-usuario');
         const btnSalvarUser = document.getElementById('btn-salvar-user');
         const msgCadastro = document.getElementById('msg-cadastro');
 
+        // Renderiza a matriz nos dois lugares (criação + edição) e ata o toggle
+        // Nível 1 → Nível 2. Executar AGORA, antes do primeiro abrirModalEdicao.
+        document.getElementById('matriz-cad').innerHTML = gerarMatrizPermissoes('cad');
+        document.getElementById('matriz-edit').innerHTML = gerarMatrizPermissoes('edit');
+        bindToggleModulos('cad');
+        bindToggleModulos('edit');
+
+        // Filtro de Centro de Custo (3º nível) — gerado e atado nos dois forms.
+        document.getElementById('filtro-cc-cad').innerHTML = gerarFiltroCC('cad');
+        document.getElementById('filtro-cc-edit').innerHTML = gerarFiltroCC('edit');
+        bindFiltroCC('cad');
+        bindFiltroCC('edit');
+
+        // Listener da Base_Centros_Custo: alimenta a lista visível em ambos
+        // os forms. Reaproveita o snapshot já existente em outras telas, mas
+        // localmente — assim o doc é independente de outras subscriptions.
+        onSnapshot(collection(db, 'Base_Centros_Custo'), (snap) => {
+            const nomes = [];
+            snap.forEach(d => {
+                const n = String((d.data() || {}).nome || '').trim();
+                if (n) nomes.push(n);
+            });
+            nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            _ccDisponiveis = nomes;
+            _renderListaCC('cad');
+            _renderListaCC('edit');
+        }, (err) => console.warn('[Base_Centros_Custo] listener falhou:', err?.code || err?.message));
+
         formUser.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nome = document.getElementById('cad-nome').value.trim();
             const email = document.getElementById('cad-email').value.trim().toLowerCase();
             const perfil = document.getElementById('campo-perfil-usuario').value;
-            
-            // CAPTURA RBAC: Coleta menus permitidos do formulário de cadastro
-            const menusSelecionados = Array.from(document.querySelectorAll('.menu-checkbox-cad:checked')).map(cb => cb.value);
+
+            // Matriz nova (objeto estruturado) + array legado derivado.
+            const permissoes = lerMatriz('cad');
+            // 3º nível: filtros de dados (Centro de Custo). Vazio = sem restrição.
+            permissoes.filtros = { centrosCusto: lerFiltroCC('cad') };
+            const menusLegados = permissoesParaMenusArray(permissoes);
 
             if (perfil === 'super_admin' && usuarioLogadoPerfil !== 'super_admin') {
                 msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
                 msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">error</span> Apenas Super Admins podem criar usuários com perfil Super Admin.';
+                msgCadastro.classList.remove('hidden');
+                return;
+            }
+            // Trava: só Super Adm pode atribuir o menu Configurações e Privacidade.
+            if (permissoes.menus.configuracoesPrivacidade && usuarioLogadoPerfil !== 'super_admin') {
+                msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
+                msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">error</span> Apenas Super Admins podem conceder acesso a "Configurações e Privacidade".';
                 msgCadastro.classList.remove('hidden');
                 return;
             }
@@ -457,7 +898,8 @@
                     nome: nome,
                     email: email,
                     perfil: perfil,
-                    menus_permitidos: menusSelecionados, // Salva o array de menus
+                    permissoes,                       // novo formato granular
+                    menus_permitidos: menusLegados,   // back-compat: páginas antigas continuam funcionando
                     status: 'ativo',
                     data_criacao: serverTimestamp()
                 });
@@ -466,7 +908,16 @@
                 msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">check_circle</span> Usuário criado e alocado com sucesso!';
                 msgCadastro.classList.remove('hidden');
                 formUser.reset();
-                registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Cadastro de Usuários", `Criou o usuário ${email} com perfil ${perfil}.`);
+                // Reset da matriz: form.reset() limpa as checkboxes; precisamos
+                // sincronizar a visibilidade do bloco de Nível 2 (que esconde
+                // quando Dashboard Geral está desmarcado).
+                escreverMatriz('cad', { menus: {}, modulosDashboard: {} });
+                escreverFiltroCC('cad', []);
+                const ccsCriados = permissoes.filtros.centrosCusto;
+                const detalheCC = ccsCriados.length > 0
+                    ? ` Restrição CC: ${ccsCriados.join(', ')}.`
+                    : '';
+                registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Cadastro de Usuários", `Criou o usuário ${email} com perfil ${perfil}.${detalheCC}`);
             } catch (error) {
                 console.error("Erro ao criar usuário:", error);
                 msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
@@ -534,12 +985,12 @@
                     document.getElementById('edit-nome').value = data.nome || "";
                     document.getElementById('edit-email').value = data.email || id;
                     document.getElementById('edit-perfil').value = data.perfil || "comum";
-                    
-                    // PREENCHIMENTO RBAC: "Tica" os menus permitidos
-                    const menusPermitidos = data.menus_permitidos || [];
-                    document.querySelectorAll('.menu-checkbox-edit').forEach(cb => {
-                        cb.checked = menusPermitidos.includes(cb.value);
-                    });
+
+                    // Preenche a matriz priorizando o formato novo, fazendo
+                    // fallback automático ao array legado (lerPermissoesDoUser).
+                    const permLidas = lerPermissoesDoUser(data);
+                    escreverMatriz('edit', permLidas);
+                    escreverFiltroCC('edit', permLidas.filtros?.centrosCusto || []);
 
                     modalEdicao.classList.remove('pointer-events-none', 'opacity-0');
                     modalEdicao.querySelector('div.bg-white').classList.remove('scale-95');
@@ -559,8 +1010,17 @@
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
             const perfil = document.getElementById('edit-perfil').value;
-            const menusSelecionados = Array.from(document.querySelectorAll('.menu-checkbox-edit:checked')).map(cb => cb.value);
+            const permissoes = lerMatriz('edit');
+            // 3º nível: filtros de dados (auditoria 2026-04-28).
+            permissoes.filtros = { centrosCusto: lerFiltroCC('edit') };
+            const menusLegados = permissoesParaMenusArray(permissoes);
             const btnAtualizar = document.getElementById('btn-atualizar-user');
+
+            // Trava: só Super Adm pode atribuir o menu Configurações e Privacidade.
+            if (permissoes.menus.configuracoesPrivacidade && usuarioLogadoPerfil !== 'super_admin') {
+                alert('Apenas Super Admins podem conceder acesso a "Configurações e Privacidade".');
+                return;
+            }
 
             btnAtualizar.disabled = true;
             btnAtualizar.classList.add('opacity-50');
@@ -568,10 +1028,15 @@
             try {
                 await updateDoc(doc(db, "Usuarios", id), {
                     perfil: perfil,
-                    menus_permitidos: menusSelecionados
+                    permissoes,                       // novo formato granular
+                    menus_permitidos: menusLegados,   // back-compat para páginas antigas
                 });
-                
-                registrarLogAutomático(usuarioLogadoNome, "ALTERAÇÃO", "Gestão de Usuários", `Editou permissões do usuário ${id}. Novo Perfil: ${perfil}.`);
+
+                const ccsEdit = permissoes.filtros.centrosCusto;
+                const detalheCC = ccsEdit.length > 0
+                    ? ` Restrição CC: ${ccsEdit.join(', ')}.`
+                    : ' Sem restrição lateral.';
+                registrarLogAutomático(usuarioLogadoNome, "ALTERAÇÃO", "Gestão de Usuários", `Editou permissões do usuário ${id}. Novo Perfil: ${perfil}.${detalheCC}`);
                 window.fecharModalEdicao();
             } catch (err) {
                 console.error("Erro ao salvar edição:", err);
@@ -648,6 +1113,336 @@
                 console.error("Falha ao registrar log:", e);
             }
         }
+
+        // ────────────────────────────────────────────────────────────────────
+        // REGRAS DE CONCILIAÇÃO — CRUD (Fase 1 do Contas a Pagar)
+        // Banco "De-Para" usado pelo ETL futuro para classificar entidades
+        // automaticamente (ex.: "TELEFONICA BRASIL S.A." → CC "TI").
+        // ────────────────────────────────────────────────────────────────────
+        const formRegra = document.getElementById('form-regra');
+        const inputRegraChave = document.getElementById('regra-chave');
+        const inputRegraTipo = document.getElementById('regra-tipo');
+        const inputRegraCC = document.getElementById('regra-cc');
+        const btnSalvarRegra = document.getElementById('btn-salvar-regra');
+        const lblSalvarRegra = document.getElementById('lbl-salvar-regra');
+        const btnCancelarEdicaoRegra = document.getElementById('btn-cancelar-edicao-regra');
+        const msgRegra = document.getElementById('msg-regra');
+        const tabelaRegras = document.getElementById('tabela-regras');
+        const contadorRegras = document.getElementById('contador-regras');
+        const inputBuscaRegra = document.getElementById('busca-regra');
+
+        let regrasCache = [];
+        let editandoRegraId = null;
+        // Fase 2.1 (auditoria 2026-04-29): cache local das Áreas — alimenta
+        // o dropdown do form de regras E a lista da sub-seção 1.
+        let areasCache = []; // Array<{ _id, nome }>
+
+        // Força UPPERCASE em tempo real na chave de busca para casar com o
+        // padrão do ETL (que faz toUpperCase do nome da entidade antes de
+        // procurar). Mantém consistência sem depender da diligência do admin.
+        inputRegraChave.addEventListener('input', () => {
+            const pos = inputRegraChave.selectionStart;
+            inputRegraChave.value = inputRegraChave.value.toUpperCase();
+            inputRegraChave.setSelectionRange(pos, pos);
+        });
+
+        // ────────────────────────────────────────────────────────────────────
+        // SUB-SEÇÃO 1 — GESTÃO DE ÁREAS (CRUD AreasContasPagar)
+        // Coleção independente de Base_Centros_Custo (Custo de Folha). Cada
+        // doc é { nome }. O datalist do wizard e o dropdown das regras leem
+        // desta lista — typos eliminados pelo SELECT estrito no form de regras.
+        // ────────────────────────────────────────────────────────────────────
+        const formArea = document.getElementById('form-area');
+        const inputAreaNome = document.getElementById('area-nome');
+        const btnSalvarArea = document.getElementById('btn-salvar-area');
+        const msgArea = document.getElementById('msg-area');
+        const listaAreas = document.getElementById('lista-areas');
+        const contadorAreas = document.getElementById('contador-areas');
+        const dropdownRegraCC = document.getElementById('regra-cc');
+
+        function _showMsgArea(texto, tipo = 'erro') {
+            msgArea.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'border-red-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+            if (tipo === 'sucesso') {
+                msgArea.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-200');
+                msgArea.innerHTML = `<span class="material-symbols-outlined text-base">check_circle</span> ${texto}`;
+            } else {
+                msgArea.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
+                msgArea.innerHTML = `<span class="material-symbols-outlined text-base">error</span> ${texto}`;
+            }
+        }
+
+        function renderAreas() {
+            if (!areasCache.length) {
+                listaAreas.innerHTML = `
+                    <li class="px-5 py-8 text-center text-sm text-slate-400 font-medium">
+                        Nenhuma área cadastrada. Adicione a primeira no formulário ao lado.
+                    </li>`;
+            } else {
+                listaAreas.innerHTML = areasCache.map(a => `
+                    <li class="px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
+                        <span class="text-sm font-bold text-secondary truncate">${escapeHTMLm(a.nome)}</span>
+                        <button data-acao-area="excluir" data-id="${escapeHTMLm(a._id)}" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir área">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </li>`).join('');
+            }
+            contadorAreas.textContent = `${areasCache.length} ${areasCache.length === 1 ? 'área' : 'áreas'}`;
+
+            // Atualiza dropdown do form de regras (SELECT estrito).
+            if (dropdownRegraCC) {
+                const valAtual = dropdownRegraCC.value;
+                dropdownRegraCC.innerHTML = '<option value="">Selecione uma área…</option>' +
+                    areasCache.map(a => `<option value="${escapeHTMLm(a.nome)}">${escapeHTMLm(a.nome)}</option>`).join('');
+                if (valAtual && areasCache.some(a => a.nome === valAtual)) {
+                    dropdownRegraCC.value = valAtual;
+                }
+            }
+        }
+
+        // Listener da coleção AreasContasPagar — único ponto de verdade.
+        onSnapshot(collection(db, 'AreasContasPagar'), (snap) => {
+            areasCache = [];
+            snap.forEach(d => {
+                const data = d.data() || {};
+                if (data.nome) areasCache.push({ _id: d.id, nome: String(data.nome).trim() });
+            });
+            areasCache.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+            renderAreas();
+        }, (err) => {
+            console.error('[AreasContasPagar] listener falhou:', err);
+            listaAreas.innerHTML = `<li class="px-5 py-8 text-center text-xs text-red-500 font-bold">Falha ao carregar áreas: ${err.code || err.message}</li>`;
+        });
+
+        formArea.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = inputAreaNome.value.trim();
+            if (!nome) { _showMsgArea('Informe o nome da área.'); return; }
+            if (areasCache.some(a => a.nome.toLowerCase() === nome.toLowerCase())) {
+                _showMsgArea(`A área "${nome}" já existe.`); return;
+            }
+            if (usuarioLogadoPerfil !== 'master' && usuarioLogadoPerfil !== 'super_admin') {
+                _showMsgArea('Apenas administradores podem cadastrar áreas.'); return;
+            }
+            btnSalvarArea.disabled = true;
+            btnSalvarArea.classList.add('opacity-60');
+            try {
+                await addDoc(collection(db, 'AreasContasPagar'), {
+                    nome,
+                    criado_em: serverTimestamp(),
+                    criado_por: usuarioLogadoNome,
+                });
+                registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Áreas Contas a Pagar", `Cadastrou a área "${nome}".`);
+                formArea.reset();
+                _showMsgArea(`Área "${nome}" adicionada.`, 'sucesso');
+                setTimeout(() => msgArea.classList.add('hidden'), 1800);
+            } catch (err) {
+                console.error('[AreasContasPagar] addDoc falhou:', err);
+                _showMsgArea(err.code === 'permission-denied'
+                    ? 'Acesso negado: apenas administradores.'
+                    : `Falha ao salvar: ${err.message || 'erro desconhecido'}`);
+            } finally {
+                btnSalvarArea.disabled = false;
+                btnSalvarArea.classList.remove('opacity-60');
+            }
+        });
+
+        listaAreas.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-acao-area="excluir"]');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            const a = areasCache.find(x => x._id === id);
+            if (!a) return;
+            // Verifica se há regras usando essa área antes de excluir — evita
+            // deixar regras órfãs apontando para uma área que não existe.
+            const regrasUsando = regrasCache.filter(r => r.centro_custo === a.nome);
+            const aviso = regrasUsando.length > 0
+                ? `\n\nATENÇÃO: ${regrasUsando.length} regra(s) ainda usa(m) essa área. Recadastre-as após excluir.`
+                : '';
+            if (!confirm(`Excluir a área "${a.nome}"?${aviso}`)) return;
+            try {
+                await deleteDoc(doc(db, 'AreasContasPagar', id));
+                registrarLogAutomático(usuarioLogadoNome, "EXCLUSÃO", "Áreas Contas a Pagar", `Excluiu a área "${a.nome}".`);
+            } catch (err) {
+                console.error('[AreasContasPagar] delete falhou:', err);
+                alert(err.code === 'permission-denied'
+                    ? 'Acesso negado: apenas administradores.'
+                    : `Falha ao excluir: ${err.message || 'erro desconhecido'}`);
+            }
+        });
+
+        function _showMsgRegra(texto, tipo = 'erro') {
+            msgRegra.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'border-red-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+            if (tipo === 'sucesso') {
+                msgRegra.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-200');
+                msgRegra.innerHTML = `<span class="material-symbols-outlined text-base">check_circle</span> ${texto}`;
+            } else {
+                msgRegra.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
+                msgRegra.innerHTML = `<span class="material-symbols-outlined text-base">error</span> ${texto}`;
+            }
+        }
+
+        function _resetFormRegra() {
+            formRegra.reset();
+            editandoRegraId = null;
+            lblSalvarRegra.textContent = 'Salvar Regra';
+            btnCancelarEdicaoRegra.classList.add('hidden');
+            msgRegra.classList.add('hidden');
+        }
+
+        btnCancelarEdicaoRegra.addEventListener('click', _resetFormRegra);
+
+        formRegra.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const chave = inputRegraChave.value.trim().toUpperCase();
+            const tipo = inputRegraTipo.value;
+            const cc = inputRegraCC.value.trim();
+            if (!chave || !tipo || !cc) {
+                _showMsgRegra('Preencha chave, tipo e área.');
+                return;
+            }
+            if (!areasCache.some(a => a.nome === cc)) {
+                _showMsgRegra(`A área "${cc}" não existe. Cadastre-a primeiro na seção "Gestão de Áreas" acima.`);
+                return;
+            }
+            // Trava: precisa ser admin para escrever em RegrasConciliacao
+            // (firestore.rules confirma isso server-side, mas avisamos antes).
+            if (usuarioLogadoPerfil !== 'master' && usuarioLogadoPerfil !== 'super_admin') {
+                _showMsgRegra('Apenas administradores podem editar regras.');
+                return;
+            }
+
+            btnSalvarRegra.disabled = true;
+            btnSalvarRegra.classList.add('opacity-60');
+            try {
+                const payload = {
+                    chave_busca: chave,
+                    tipo_entidade: tipo,
+                    centro_custo: cc,
+                    atualizado_em: serverTimestamp(),
+                    atualizado_por: usuarioLogadoNome,
+                };
+                if (editandoRegraId) {
+                    await updateDoc(doc(db, 'RegrasConciliacao', editandoRegraId), payload);
+                    registrarLogAutomático(usuarioLogadoNome, "ALTERAÇÃO", "Regras de Conciliação", `Editou regra ${chave} → ${tipo} / CC ${cc}.`);
+                } else {
+                    payload.criado_em = serverTimestamp();
+                    payload.criado_por = usuarioLogadoNome;
+                    await addDoc(collection(db, 'RegrasConciliacao'), payload);
+                    registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Regras de Conciliação", `Criou regra ${chave} → ${tipo} / CC ${cc}.`);
+                }
+                _resetFormRegra();
+                _showMsgRegra('Regra salva com sucesso.', 'sucesso');
+                setTimeout(() => msgRegra.classList.add('hidden'), 2200);
+            } catch (err) {
+                console.error('[RegrasConciliacao] save falhou:', err);
+                _showMsgRegra(err.code === 'permission-denied'
+                    ? 'Acesso negado: apenas administradores podem editar regras.'
+                    : `Falha ao salvar: ${err.message || 'erro desconhecido'}`);
+            } finally {
+                btnSalvarRegra.disabled = false;
+                btnSalvarRegra.classList.remove('opacity-60');
+            }
+        });
+
+        function renderRegras(lista) {
+            if (!tabelaRegras) return;
+            if (!lista.length) {
+                tabelaRegras.innerHTML = `
+                    <tr><td colspan="4" class="text-center py-12 text-sm text-slate-400">
+                        <div class="flex flex-col items-center gap-2">
+                            <span class="material-symbols-outlined text-3xl text-slate-300">rule</span>
+                            <span class="font-bold">Nenhuma regra cadastrada</span>
+                            <span class="text-[11px] text-slate-400">Crie a primeira regra usando o formulário ao lado.</span>
+                        </div>
+                    </td></tr>`;
+                return;
+            }
+            const corTipo = {
+                'Cliente': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                'Fornecedor Externo': 'bg-tertiary/10 text-tertiary border-tertiary/20',
+                'Fornecedor Interno (PJ)': 'bg-amber-50 text-amber-700 border-amber-200',
+            };
+            tabelaRegras.innerHTML = lista.map(r => {
+                const cor = corTipo[r.tipo_entidade] || 'bg-slate-100 text-slate-600 border-slate-200';
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-3 font-mono font-bold text-secondary">${escapeHTMLm(r.chave_busca)}</td>
+                        <td class="px-6 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-extrabold border ${cor}">${escapeHTMLm(r.tipo_entidade)}</span></td>
+                        <td class="px-6 py-3 text-slate-700 font-semibold uppercase">${escapeHTMLm(r.centro_custo)}</td>
+                        <td class="px-6 py-3 text-right">
+                            <div class="flex justify-end gap-1">
+                                <button data-acao-regra="editar" data-id="${escapeHTMLm(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors" title="Editar">
+                                    <span class="material-symbols-outlined text-base">edit</span>
+                                </button>
+                                <button data-acao-regra="excluir" data-id="${escapeHTMLm(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir">
+                                    <span class="material-symbols-outlined text-base">delete</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+            contadorRegras.textContent = `${lista.length} regra${lista.length === 1 ? '' : 's'}`;
+        }
+
+        function escapeHTMLm(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function aplicarBuscaRegras() {
+            const t = (inputBuscaRegra.value || '').toLowerCase().trim();
+            if (!t) return renderRegras(regrasCache);
+            const filtrada = regrasCache.filter(r =>
+                String(r.chave_busca || '').toLowerCase().includes(t) ||
+                String(r.tipo_entidade || '').toLowerCase().includes(t) ||
+                String(r.centro_custo || '').toLowerCase().includes(t)
+            );
+            renderRegras(filtrada);
+        }
+        inputBuscaRegra.addEventListener('input', aplicarBuscaRegras);
+
+        onSnapshot(collection(db, 'RegrasConciliacao'), (snap) => {
+            regrasCache = [];
+            snap.forEach(d => regrasCache.push({ _id: d.id, ...d.data() }));
+            // Ordem: alfabética por chave_busca para facilitar leitura.
+            regrasCache.sort((a, b) => String(a.chave_busca || '').localeCompare(String(b.chave_busca || '')));
+            aplicarBuscaRegras();
+        }, (err) => {
+            console.error('[RegrasConciliacao] listener falhou:', err);
+            tabelaRegras.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs font-bold">Falha ao carregar regras: ${err.code || err.message}</td></tr>`;
+        });
+
+        tabelaRegras.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-acao-regra]');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            const acao = btn.getAttribute('data-acao-regra');
+            const r = regrasCache.find(x => x._id === id);
+            if (!r) return;
+
+            if (acao === 'editar') {
+                inputRegraChave.value = r.chave_busca || '';
+                inputRegraTipo.value = r.tipo_entidade || '';
+                inputRegraCC.value = r.centro_custo || '';
+                editandoRegraId = id;
+                lblSalvarRegra.textContent = 'Atualizar Regra';
+                btnCancelarEdicaoRegra.classList.remove('hidden');
+                msgRegra.classList.add('hidden');
+                inputRegraChave.focus();
+                inputRegraChave.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else if (acao === 'excluir') {
+                if (!confirm(`Excluir a regra "${r.chave_busca}" → ${r.tipo_entidade} / CC ${r.centro_custo}?`)) return;
+                try {
+                    await deleteDoc(doc(db, 'RegrasConciliacao', id));
+                    registrarLogAutomático(usuarioLogadoNome, "EXCLUSÃO", "Regras de Conciliação", `Excluiu regra ${r.chave_busca}.`);
+                    if (editandoRegraId === id) _resetFormRegra();
+                } catch (err) {
+                    console.error('[RegrasConciliacao] delete falhou:', err);
+                    alert(err.code === 'permission-denied'
+                        ? 'Acesso negado: apenas administradores podem excluir regras.'
+                        : `Falha ao excluir: ${err.message || 'erro desconhecido'}`);
+                }
+            }
+        });
     </script>
 </body>
 

@@ -17,27 +17,27 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     const isParceirosActive = (currentPath.includes('gest_o_de_cadastros')) ? activeClass : inactiveClass;
     const isMetasActive = currentPath.includes('metas_desktop') ? activeClass : inactiveClass;
     const isCustoFolhaActive = currentPath.includes('custo_folha_desktop') ? activeClass : inactiveClass;
-    const isUsuariosActive = currentPath.includes('master.html') && !currentPath.includes('tab=logs') ? activeClass : inactiveClass;
-    const isAuditoriaActive = currentPath.includes('tab=logs') ? activeClass : inactiveClass;
+    // master.html agora abriga Configurações e Privacidade (abas Usuários + Auditoria).
+    const isConfiguracoesActive = currentPath.includes('master.html') ? activeClass : inactiveClass;
 
     // Classe comum aplicada a cada link do menu — inclui borda sutil para dar aspecto premium.
     // `last:border-0` zera a borda do último item de cada seção (relativo ao seu pai direto).
     const menuLinkClass = 'mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all border-b border-white/[0.06] last:border-0';
 
+    // Auditoria 2026-04-28: a antiga seção "Segurança e Privacidade" tinha
+    // dois links (Usuários + Auditoria de Logs) que apontavam para o mesmo
+    // master.html via tabs. Agora há um único ponto de entrada — "Configurações
+    // e Privacidade" — exclusivo para Super Adm. As abas continuam dentro da
+    // página, mas o usuário não precisa mais escolher pela sidebar.
     let adminMenuHtml = '';
-    if (userProfile === 'master' || userProfile === 'super_admin') {
+    if (userProfile === 'super_admin') {
         adminMenuHtml = `
             <div class="mt-2 pt-4 px-2">
                 <p class="text-[9px] font-bold text-blue-200/40 uppercase tracking-widest px-2 mb-2 hidden group-hover:block transition-all duration-300">Segurança e Privacidade</p>
 
-                <a data-menu="usuarios" class="${isUsuariosActive} ${menuLinkClass}" href="${prefix}master.html">
-                    <span class="material-symbols-outlined shrink-0 text-[20px]">manage_accounts</span>
-                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Usuários</span>
-                </a>
-
-                <a data-menu="auditoria" class="${isAuditoriaActive} ${menuLinkClass}" href="${prefix}master.html?tab=logs">
-                    <span class="material-symbols-outlined shrink-0 text-[20px] text-blue-400">policy</span>
-                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Auditoria (Logs)</span>
+                <a data-menu="configuracoes_privacidade" class="${isConfiguracoesActive} ${menuLinkClass}" href="${prefix}master.html">
+                    <span class="material-symbols-outlined shrink-0 text-[20px]">admin_panel_settings</span>
+                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Configurações e Privacidade</span>
                 </a>
             </div>
         `;
@@ -77,12 +77,13 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Custo de Folha</span>
                 </a>
 
-                ${showProductionMenus ? `
+                <!-- Contas a Pagar — Fase 1 ativada (auditoria 2026-04-28). -->
                 <a data-menu="contas_pagar" class="${isPagarActive} ${menuLinkClass} cursor-pointer" href="${prefix}contas_a_pagar_desktop/code.html">
-                    <span class="material-symbols-outlined shrink-0 text-[20px]">account_balance_wallet</span>
+                    <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('contas_a_pagar_desktop') ? 'text-primary' : ''}">account_balance_wallet</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Contas a Pagar</span>
                 </a>
 
+                ${showProductionMenus ? `
                 <a data-menu="gestao_parceiros" class="${isParceirosActive} ${menuLinkClass} cursor-pointer" href="${prefix}gest_o_de_cadastros_ajuste_de_cores/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px]">group</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Gestão de Parceiros</span>
