@@ -82,65 +82,89 @@
 
     <div class="p-8 space-y-6">
 
-        <!-- FILTROS -->
-        <section class="bg-white rounded-2xl editorial-shadow border border-slate-100 p-5">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-[11px] font-extrabold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-[18px]">tune</span>
-                    Filtros
-                </h3>
-                <button id="btn-limpar-filtros" type="button" class="hidden items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-red-600 px-2 py-1 rounded-lg transition-colors">
-                    <span class="material-symbols-outlined text-base">filter_alt_off</span>
-                    Limpar
-                </button>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Competência</label>
-                    <input id="filtro-competencia" type="month"
-                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
-                </div>
-                <div>
-                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Fornecedor / Cliente</label>
-                    <input id="filtro-entidade" type="text" placeholder="Buscar por nome…"
-                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
-                </div>
-                <div>
-                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Área</label>
-                    <select id="filtro-centro-custo"
-                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white">
-                        <option value="">Todas</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Status</label>
-                    <select id="filtro-status"
-                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white">
-                        <option value="">Todos</option>
-                        <option value="pendente">Pendente</option>
-                        <option value="pago">Pago</option>
-                    </select>
-                </div>
-            </div>
+        <!-- TOPBAR DE FILTROS — botão "Filtros Avançados" + Limpar (fora do modal) + Bulk Delete (Super Adm) -->
+        <section class="flex flex-wrap items-center gap-2.5">
+            <button id="btn-abrir-filtros" type="button"
+                class="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:border-primary hover:bg-primary/5 text-secondary rounded-xl text-xs font-bold transition-all">
+                <span class="material-symbols-outlined text-base text-primary">tune</span>
+                Filtros Avançados
+            </button>
+            <button id="btn-limpar-filtros-topbar" type="button"
+                class="hidden items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-bold transition-colors">
+                <span class="material-symbols-outlined text-base">filter_alt_off</span>
+                Limpar Filtros
+            </button>
+
+            <!-- Chip de filtros ativos (resumo discreto) -->
+            <span id="chip-filtros-ativos" class="hidden text-[11px] font-medium text-slate-500 px-3 py-1 bg-slate-100 rounded-full"></span>
+
+            <div class="flex-1"></div>
+
+            <!-- Bulk delete (Super Adm) — escondido até haver seleção. -->
+            <button id="btn-excluir-selecionados" type="button"
+                class="hidden items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-red-600/20 hover:brightness-110 active:scale-95 transition-all">
+                <span class="material-symbols-outlined text-base">delete_sweep</span>
+                Excluir <span id="excluir-count" data-count>0</span> Selecionados
+            </button>
         </section>
 
-        <!-- KPIs RESUMO -->
+        <!-- KPIs RESUMO — cards premium com ícone, sombra suave e tipografia
+             reforçada nos valores monetários. -->
         <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow">
-                <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1">Total de lançamentos</p>
-                <h3 class="text-2xl font-extrabold text-secondary tabular-nums" id="kpi-total-count">0</h3>
+            <!-- Total de lançamentos (volumetria) -->
+            <div class="relative overflow-hidden bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow hover:shadow-lg transition-shadow">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">Total de lançamentos</p>
+                        <h3 class="font-headline text-3xl font-extrabold text-secondary tabular-nums leading-none" id="kpi-total-count">0</h3>
+                        <p class="text-[10px] text-slate-400 font-medium mt-1.5">no recorte atual</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-secondary/5 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-secondary text-[22px]">receipt_long</span>
+                    </div>
+                </div>
             </div>
-            <div class="bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow">
-                <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1">Valor total</p>
-                <h3 class="text-2xl font-extrabold text-secondary tabular-nums" id="kpi-valor-total">R$ 0,00</h3>
+
+            <!-- Valor total a pagar -->
+            <div class="relative overflow-hidden bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow hover:shadow-lg transition-shadow">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">Total a Pagar</p>
+                        <h3 class="font-headline text-2xl font-extrabold text-secondary tabular-nums leading-none truncate" id="kpi-valor-total">R$ 0,00</h3>
+                        <p class="text-[10px] text-slate-400 font-medium mt-1.5">soma dos lançamentos visíveis</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-primary text-[22px]">account_balance_wallet</span>
+                    </div>
+                </div>
             </div>
-            <div class="bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow">
-                <p class="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest mb-1">Pendentes</p>
-                <h3 class="text-2xl font-extrabold text-amber-600 tabular-nums" id="kpi-pendente">R$ 0,00</h3>
+
+            <!-- Pendentes -->
+            <div class="relative overflow-hidden bg-white rounded-2xl border border-amber-100 p-5 editorial-shadow hover:shadow-lg transition-shadow">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest mb-2">Pendentes</p>
+                        <h3 class="font-headline text-2xl font-extrabold text-amber-600 tabular-nums leading-none truncate" id="kpi-pendente">R$ 0,00</h3>
+                        <p class="text-[10px] text-amber-500/80 font-medium mt-1.5">aguardando baixa</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-amber-600 text-[22px]">schedule</span>
+                    </div>
+                </div>
             </div>
-            <div class="bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow">
-                <p class="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest mb-1">Pagos</p>
-                <h3 class="text-2xl font-extrabold text-emerald-600 tabular-nums" id="kpi-pago">R$ 0,00</h3>
+
+            <!-- Pagos -->
+            <div class="relative overflow-hidden bg-white rounded-2xl border border-emerald-100 p-5 editorial-shadow hover:shadow-lg transition-shadow">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest mb-2">Pagos</p>
+                        <h3 class="font-headline text-2xl font-extrabold text-emerald-600 tabular-nums leading-none truncate" id="kpi-pago">R$ 0,00</h3>
+                        <p class="text-[10px] text-emerald-500/80 font-medium mt-1.5">já liquidados</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-emerald-600 text-[22px]">check_circle</span>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -157,12 +181,18 @@
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 border-b border-slate-100 text-[10px]">
                         <tr>
+                            <!-- Coluna de seleção (Super Adm). Liberada via JS após auth. -->
+                            <th id="th-selecao" class="hidden px-4 py-3 w-10 text-center align-middle">
+                                <input id="cb-selecionar-todos" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer" title="Selecionar todos os visíveis" />
+                            </th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Competência</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Empresa</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Código</th>
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Entidade</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Nome/Descrição</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Valor Original</th>
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Categoria</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Descrição</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Área</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Tipo de Despesa</th>
                             <th class="px-4 py-3 text-center font-bold text-on-surface-variant uppercase tracking-widest">Status</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Ações</th>
                         </tr>
@@ -226,7 +256,7 @@
                 </div>
             </div>
             <div>
-                <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Entidade (Fornecedor/Cliente)</label>
+                <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Nome / Descrição</label>
                 <input id="m-entidade" type="text" required placeholder="Ex: TELEFONICA BRASIL S.A."
                     class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
                 <p id="m-entidade-hint" class="hidden text-[10px] font-medium text-tertiary mt-1.5 flex items-center gap-1">
@@ -251,7 +281,7 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Categoria</label>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Descrição</label>
                     <input id="m-categoria" type="text" placeholder="Ex: Telecomunicações"
                         class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
                 </div>
@@ -425,6 +455,182 @@
     </div>
 </div>
 
+<!-- MODAL: Filtros Avançados -->
+<div id="modal-filtros" class="fixed inset-0 z-[68] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-filtros"></div>
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center">
+                <span class="material-symbols-outlined text-secondary">tune</span>
+            </div>
+            <div class="flex-1">
+                <h3 class="font-headline text-base font-bold text-secondary">Filtros Avançados</h3>
+                <p class="text-[11px] text-slate-400 font-medium">Refine a tabela de lançamentos.</p>
+            </div>
+            <button data-fechar-modal="modal-filtros" class="text-slate-400 hover:text-slate-700 transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Competência</label>
+                <input id="filtro-competencia" type="month"
+                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Nome / Descrição</label>
+                <input id="filtro-entidade" type="text" placeholder="Buscar por nome…"
+                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Área</label>
+                <select id="filtro-centro-custo"
+                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Status</label>
+                <select id="filtro-status"
+                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="">Todos</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="pago">Pago</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-8 flex gap-3">
+            <button id="btn-filtros-limpar-modal" type="button" class="flex-1 px-5 py-2.5 text-slate-500 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all">Limpar Filtros</button>
+            <button id="btn-filtros-aplicar" type="button" class="flex-1 px-5 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all">Aplicar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Editar Lançamento -->
+<div id="modal-editar" class="fixed inset-0 z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-editar"></div>
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] overflow-y-auto">
+        <div class="flex justify-between items-center px-7 pt-7 pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">edit_note</span>
+                </div>
+                <div>
+                    <h3 class="font-headline text-lg font-extrabold text-secondary">Editar Lançamento</h3>
+                    <p id="editar-subtitulo" class="text-[11px] text-slate-400 font-medium truncate">—</p>
+                </div>
+            </div>
+            <button data-fechar-modal="modal-editar" class="text-slate-400 hover:text-secondary transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <form id="form-editar" class="p-7 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Competência (Mês/Ano)</label>
+                    <input id="e-competencia" type="month" required
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Valor Original (R$)</label>
+                    <input id="e-valor" type="number" step="0.01" required min="0" placeholder="0,00"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Nome / Descrição</label>
+                <input id="e-entidade" type="text" required
+                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Descrição</label>
+                    <input id="e-categoria" type="text" placeholder="Ex: Telecomunicações"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Área</label>
+                    <input id="e-centro-custo" type="text" placeholder="Ex: Operacional" list="datalist-cc-editar"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                    <datalist id="datalist-cc-editar"></datalist>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Tipo de Despesa</label>
+                    <select id="e-tipo"
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                        <option value="">—</option>
+                        <option value="Cliente">Cliente</option>
+                        <option value="Fornecedor Externo">Fornecedor Externo</option>
+                        <option value="Fornecedor Interno (PJ)">Fornecedor Interno (PJ)</option>
+                        <option value="Custo de Cliente">Custo de Cliente</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Status</label>
+                    <select id="e-status" required
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                        <option value="pendente">Pendente</option>
+                        <option value="pago">Pago</option>
+                    </select>
+                </div>
+            </div>
+            <div id="msg-form-editar" class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2"></div>
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button type="button" data-fechar-modal="modal-editar" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                <button type="submit" id="btn-salvar-editar"
+                    class="flex items-center gap-2 px-6 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-extrabold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined text-base" id="ico-salvar-editar">save</span>
+                    <span id="lbl-salvar-editar">SALVAR ALTERAÇÕES</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL Premium de Sucesso (alternativa ao toast em ações sensíveis) -->
+<div id="modal-sucesso" class="fixed inset-0 z-[78] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-overlay="modal-sucesso"></div>
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100">
+        <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <span class="material-symbols-outlined text-4xl text-primary">check_circle</span>
+        </div>
+        <h3 class="font-headline text-2xl font-bold text-secondary mb-3 tracking-tight">Tudo certo</h3>
+        <p id="modal-sucesso-msg" class="text-slate-500 text-[13px] mb-8 font-medium">Operação concluída.</p>
+        <button data-fechar-modal="modal-sucesso" class="w-full py-3.5 bg-primary text-[#341100] rounded-xl text-xs font-bold shadow-lg shadow-primary/40 hover:brightness-105 active:scale-95 transition-all">OK</button>
+    </div>
+</div>
+
+<!-- MODAL Premium de Erro -->
+<div id="modal-erro" class="fixed inset-0 z-[82] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-overlay="modal-erro"></div>
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100">
+        <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <span class="material-symbols-outlined text-4xl text-red-500">error</span>
+        </div>
+        <h3 class="font-headline text-2xl font-bold text-secondary mb-3 tracking-tight">Atenção</h3>
+        <p id="modal-erro-mensagem" class="text-slate-500 text-[13px] mb-8 font-medium leading-relaxed">Ocorreu um erro inesperado.</p>
+        <button data-fechar-modal="modal-erro" class="w-full py-3.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">FECHAR</button>
+    </div>
+</div>
+
+<!-- MODAL Premium de Confirmação (substitui window.confirm) -->
+<div id="modal-confirmar" class="fixed inset-0 z-[90] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-confirmar-overlay"></div>
+    <div class="bg-white w-full max-w-md rounded-xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100">
+        <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+            <span id="modal-confirmar-icone" class="material-symbols-outlined text-4xl text-red-500">warning</span>
+        </div>
+        <h3 id="modal-confirmar-titulo" class="font-headline text-xl font-bold text-secondary mb-2 tracking-tight">Confirmar ação</h3>
+        <p id="modal-confirmar-mensagem" class="text-slate-500 text-[13px] font-medium leading-relaxed whitespace-pre-line">Tem certeza?</p>
+        <div class="flex items-center gap-3 mt-7">
+            <button id="btn-confirmar-cancelar" type="button" class="flex-1 px-5 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">Cancelar</button>
+            <button id="btn-confirmar-ok" type="button" class="flex-1 px-5 py-2.5 bg-red-600 text-white rounded-lg text-xs font-bold shadow-lg shadow-red-600/20 hover:brightness-105 active:scale-95 transition-all">Sim, Excluir</button>
+        </div>
+    </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast-cp" class="hidden fixed bottom-6 right-6 z-[80] bg-secondary text-white rounded-xl shadow-2xl px-5 py-3.5 flex items-center gap-3 transform translate-y-2 opacity-0 transition-all duration-300">
     <span class="material-symbols-outlined text-primary" id="toast-cp-icon">check_circle</span>
@@ -460,6 +666,9 @@
     let cacheRegistros = [];          // todos os docs (já filtrados por CC quando aplicável)
     let regrasCache = [];             // RegrasConciliacao em memória pra autoclassificação
     let usuarioLogadoNome = 'Sistema';
+    let isSuperAdm = false;           // Flag — habilita coluna de seleção e bulk delete.
+    const selecaoIds = new Set();     // IDs marcados na tabela (sobrevive a re-renders).
+    const CHUNK_SIZE = 450;           // Tamanho do chunk para writeBatch (limite Firestore: 500).
 
     // FORMATTERS
     const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -468,17 +677,19 @@
         const m = String(yyyymmdd).match(/^(\d{4})-(\d{2})-(\d{2})/);
         return m ? `${m[3]}/${m[2]}/${m[1]}` : yyyymmdd;
     };
-    // Auditoria 2026-04-29: a 1ª coluna da tabela passou de "Vencimento" para
-    // "Competência" (formato MM/AAAA). Aceita tanto `competencia_ref` (já no
-    // formato YYYY-MM, populado pelo ETL e pela inclusão manual) quanto cai
-    // no fallback derivando de `data_vencimento`. O campo `data_vencimento`
-    // permanece intacto no Firestore — necessário para a ordenação cronológica
-    // estrita aplicada na query do onSnapshot.
+    // Auditoria 2026-04-30: armazenamento de `competencia_ref` agora é estrito
+    // em "MM/AAAA" (spec do dia). O renderer aceita os dois formatos para não
+    // quebrar registros legados em "YYYY-MM" e cai em `data_vencimento` quando
+    // ambos faltam. `data_vencimento` segue intacto (ordenação cronológica).
     const fmtCompetencia = (reg) => {
         const ref = String(reg?.competencia_ref || '').trim();
+        // Formato novo: MM/AAAA — devolve direto.
+        if (/^\d{2}\/\d{4}$/.test(ref)) return ref;
+        // Legado: YYYY-MM — converte sob demanda.
         if (/^\d{4}-\d{2}$/.test(ref)) {
             return `${ref.slice(5, 7)}/${ref.slice(0, 4)}`;
         }
+        // Fallback: deriva da data de vencimento.
         const m = String(reg?.data_vencimento || '').match(/^(\d{4})-(\d{2})/);
         return m ? `${m[2]}/${m[1]}` : '—';
     };
@@ -514,6 +725,14 @@
             }
 
             renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
+
+            // Habilita UI de exclusão em lote APENAS para super_admin (espelho
+            // do padrão definido em custo_folha_desktop, auditoria 2026-04-28).
+            isSuperAdm = dadosUser.perfil === 'super_admin';
+            if (isSuperAdm) {
+                const thSel = document.getElementById('th-selecao');
+                if (thSel) thSel.classList.remove('hidden');
+            }
 
             // 3º nível: filtro por Centro de Custo (mesmo padrão do Custo Folha).
             const ccsRestritos = Array.isArray(dadosUser?.permissoes?.filtros?.centrosCusto)
@@ -613,14 +832,24 @@
     }
 
     function aplicarFiltrosTabela(registros) {
-        const compMes = document.getElementById('filtro-competencia').value;       // YYYY-MM
+        const compMes = document.getElementById('filtro-competencia').value;       // YYYY-MM (input HTML)
         const ent = document.getElementById('filtro-entidade').value.trim().toLowerCase();
         const cc = document.getElementById('filtro-centro-custo').value.trim();
         const status = document.getElementById('filtro-status').value;
+        // Pré-cálculo do compMes nos dois formatos: o doc pode estar em MM/AAAA
+        // (novo) ou YYYY-MM (legado), o input HTML está em YYYY-MM.
+        const compMMYYYY = compMes ? `${compMes.slice(5, 7)}/${compMes.slice(0, 4)}` : '';
         return registros.filter(r => {
             if (compMes) {
-                const ref = (r.competencia_ref || (r.data_vencimento || '').slice(0, 7));
-                if (ref !== compMes) return false;
+                const ref = String(r.competencia_ref || '').trim();
+                let bate = false;
+                if (/^\d{2}\/\d{4}$/.test(ref)) bate = ref === compMMYYYY;
+                else if (/^\d{4}-\d{2}$/.test(ref)) bate = ref === compMes;
+                else {
+                    // Fallback: deriva da data_vencimento (legado sem competencia_ref).
+                    bate = String(r.data_vencimento || '').slice(0, 7) === compMes;
+                }
+                if (!bate) return false;
             }
             if (ent && !String(r.entidade || '').toLowerCase().includes(ent)) return false;
             if (cc && String(r.centro_custo || '').trim() !== cc) return false;
@@ -633,17 +862,35 @@
         const corpo = document.getElementById('cp-corpo');
         const vazio = document.getElementById('cp-vazio');
         const hint = document.getElementById('hint-filtro');
-        const btnLimpar = document.getElementById('btn-limpar-filtros');
+        const btnLimparTopbar = document.getElementById('btn-limpar-filtros-topbar');
+        const chip = document.getElementById('chip-filtros-ativos');
 
         const filtrados = aplicarFiltrosTabela(cacheRegistros);
-        const temFiltroAtivo = !!(document.getElementById('filtro-competencia').value
-            || document.getElementById('filtro-entidade').value.trim()
-            || document.getElementById('filtro-centro-custo').value
-            || document.getElementById('filtro-status').value);
+        const filtroComp = document.getElementById('filtro-competencia').value;
+        const filtroEnt = document.getElementById('filtro-entidade').value.trim();
+        const filtroCC = document.getElementById('filtro-centro-custo').value;
+        const filtroStatus = document.getElementById('filtro-status').value;
+        const temFiltroAtivo = !!(filtroComp || filtroEnt || filtroCC || filtroStatus);
 
-        if (btnLimpar) {
-            if (temFiltroAtivo) { btnLimpar.classList.remove('hidden'); btnLimpar.classList.add('flex'); }
-            else { btnLimpar.classList.add('hidden'); btnLimpar.classList.remove('flex'); }
+        // Botão "Limpar Filtros" da topbar — só aparece quando há filtro ativo.
+        if (btnLimparTopbar) {
+            if (temFiltroAtivo) { btnLimparTopbar.classList.remove('hidden'); btnLimparTopbar.classList.add('flex'); }
+            else { btnLimparTopbar.classList.add('hidden'); btnLimparTopbar.classList.remove('flex'); }
+        }
+
+        // Chip resumindo filtros ativos (UX claro de qual recorte está em uso).
+        if (chip) {
+            const partes = [];
+            if (filtroComp) partes.push(`Comp: ${filtroComp.slice(5,7)}/${filtroComp.slice(0,4)}`);
+            if (filtroEnt) partes.push(`Nome: "${filtroEnt}"`);
+            if (filtroCC) partes.push(`Área: ${filtroCC}`);
+            if (filtroStatus) partes.push(`Status: ${filtroStatus}`);
+            if (partes.length) {
+                chip.textContent = partes.join(' · ');
+                chip.classList.remove('hidden');
+            } else {
+                chip.classList.add('hidden');
+            }
         }
 
         // KPIs sobre o filtrado
@@ -670,49 +917,84 @@
             const statusBadge = r.status === 'pago'
                 ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold border border-emerald-100"><span class="material-symbols-outlined text-[12px]">check_circle</span>PAGO</span>'
                 : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-extrabold border border-amber-100"><span class="material-symbols-outlined text-[12px]">schedule</span>PENDENTE</span>';
+            // Coluna de seleção e botão de excluir individual: só Super Adm.
+            const cellSelecao = isSuperAdm
+                ? `<td class="px-4 py-3 text-center align-middle">
+                     <input type="checkbox" data-id="${escapeHTML(r._id)}" data-acao="selecionar"
+                            ${selecaoIds.has(r._id) ? 'checked' : ''}
+                            class="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer" />
+                   </td>`
+                : '';
+            const btnExcluir = isSuperAdm
+                ? `<button data-acao="excluir" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir">
+                       <span class="material-symbols-outlined text-base">delete</span>
+                   </button>`
+                : '';
             return `
-                <tr class="hover:bg-slate-50 transition-colors">
+                <tr class="hover:bg-slate-50 transition-colors" data-row-id="${escapeHTML(r._id)}">
+                    ${cellSelecao}
                     <td class="px-4 py-3 text-xs font-mono font-bold text-secondary" title="Vencimento: ${escapeHTML(fmtData(r.data_vencimento))}">${escapeHTML(fmtCompetencia(r))}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${escapeHTML(r.empresa_origem || '—')}</td>
                     <td class="px-4 py-3 text-xs font-mono text-slate-500">${escapeHTML(r.codigo || '—')}</td>
                     <td class="px-4 py-3 text-xs font-bold text-slate-800">${escapeHTML(r.entidade || '—')}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-secondary tabular-nums">${fmtBRL.format(Number(r.valor_original) || 0)}</td>
                     <td class="px-4 py-3 text-xs text-slate-600">${escapeHTML(r.categoria || '—')}</td>
                     <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${escapeHTML(r.centro_custo || '—')}</td>
+                    <td class="px-4 py-3 text-xs text-slate-500">${escapeHTML(r.tipo_entidade || '—')}</td>
                     <td class="px-4 py-3 text-center">${statusBadge}</td>
                     <td class="px-4 py-3 text-right">
                         <div class="flex justify-end gap-1">
                             <button data-acao="alternar-status" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-emerald-600 transition-colors" title="Alternar status">
                                 <span class="material-symbols-outlined text-base">swap_horiz</span>
                             </button>
-                            <button data-acao="excluir" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir">
-                                <span class="material-symbols-outlined text-base">delete</span>
+                            <button data-acao="editar" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors" title="Editar">
+                                <span class="material-symbols-outlined text-base">edit</span>
                             </button>
+                            ${btnExcluir}
                         </div>
                     </td>
                 </tr>`;
         }).join('');
+
+        // Pós-render: sincroniza estado dos botões de bulk delete e do master cb.
+        atualizarBotaoExcluirSelecionados();
+        sincronizarMasterCheckbox(filtrados);
     }
 
     // ========================================================================
-    // FILTROS UI
+    // FILTROS UI — agora vivem dentro do modal "Filtros Avançados".
+    // O input/change continua refletindo na tabela em tempo real para manter
+    // a sensação de busca-ao-digitar. O botão "Aplicar" apenas fecha o modal.
     // ========================================================================
     ['filtro-competencia', 'filtro-entidade', 'filtro-centro-custo', 'filtro-status'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', renderTabela);
         if (el) el.addEventListener('change', renderTabela);
     });
-    document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
+
+    function limparTodosFiltros() {
         document.getElementById('filtro-competencia').value = '';
         document.getElementById('filtro-entidade').value = '';
         document.getElementById('filtro-centro-custo').value = '';
         document.getElementById('filtro-status').value = '';
         renderTabela();
+    }
+    document.getElementById('btn-abrir-filtros').addEventListener('click', () => abrirModal('modal-filtros'));
+    document.getElementById('btn-filtros-aplicar').addEventListener('click', () => {
+        renderTabela();
+        fecharModal('modal-filtros');
     });
+    // Botão "Limpar Filtros" DENTRO do modal — limpa e mantém o modal aberto
+    // para o usuário poder configurar novos filtros sem reabrir.
+    document.getElementById('btn-filtros-limpar-modal').addEventListener('click', limparTodosFiltros);
+    // Botão "Limpar Filtros" FORA do modal (topbar) — só visível com filtro ativo.
+    document.getElementById('btn-limpar-filtros-topbar').addEventListener('click', limparTodosFiltros);
 
     // ========================================================================
-    // AÇÕES NA TABELA (alternar status / excluir)
+    // AÇÕES NA TABELA — alternar status, editar (modal), excluir (super_adm).
     // ========================================================================
-    document.getElementById('cp-corpo').addEventListener('click', async (e) => {
+    const cpCorpo = document.getElementById('cp-corpo');
+    cpCorpo.addEventListener('click', async (e) => {
         const btn = e.target.closest('button[data-acao]');
         if (!btn) return;
         const id = btn.getAttribute('data-id');
@@ -729,20 +1011,256 @@
                 console.error('[ContasPagar] falha ao alternar status:', err);
                 mostrarToast('Falha ao atualizar status.', 'error', true);
             }
+        } else if (acao === 'editar') {
+            abrirEditar(reg);
         } else if (acao === 'excluir') {
-            if (!confirm(`Excluir o lançamento "${reg.entidade}" (R$ ${fmtBRL.format(Number(reg.valor_original) || 0)})?`)) return;
-            try {
-                await deleteDoc(doc(db, COLECAO, id));
-                mostrarToast('Lançamento excluído.', 'delete');
-            } catch (err) {
-                console.error('[ContasPagar] falha ao excluir:', err);
-                mostrarToast('Falha ao excluir.', 'error', true);
+            // Roteamento via excluirRegistros — mantém UI/confirmação consistente
+            // entre exclusão individual e em lote.
+            await excluirRegistros([reg._id]);
+        }
+    });
+
+    // ── SELEÇÃO MÚLTIPLA — checkbox por linha + master no header ───────────
+    cpCorpo.addEventListener('change', (e) => {
+        const cb = e.target.closest('input[type="checkbox"][data-acao="selecionar"]');
+        if (!cb) return;
+        const id = cb.getAttribute('data-id');
+        if (!id) return;
+        if (cb.checked) selecaoIds.add(id);
+        else selecaoIds.delete(id);
+        atualizarBotaoExcluirSelecionados();
+        sincronizarMasterCheckbox(aplicarFiltrosTabela(cacheRegistros));
+    });
+
+    const cbSelecionarTodos = document.getElementById('cb-selecionar-todos');
+    if (cbSelecionarTodos) {
+        cbSelecionarTodos.addEventListener('change', () => {
+            const visiveis = aplicarFiltrosTabela(cacheRegistros);
+            if (cbSelecionarTodos.checked) {
+                visiveis.forEach(r => selecaoIds.add(r._id));
+            } else {
+                visiveis.forEach(r => selecaoIds.delete(r._id));
             }
+            cpCorpo.querySelectorAll('input[type="checkbox"][data-acao="selecionar"]').forEach(cb => {
+                cb.checked = cbSelecionarTodos.checked;
+            });
+            atualizarBotaoExcluirSelecionados();
+        });
+    }
+
+    function atualizarBotaoExcluirSelecionados() {
+        const btn = document.getElementById('btn-excluir-selecionados');
+        const cnt = document.getElementById('excluir-count');
+        if (!btn || !cnt) return;
+        const n = selecaoIds.size;
+        cnt.textContent = String(n);
+        if (n > 0 && isSuperAdm) {
+            btn.classList.remove('hidden');
+            btn.classList.add('flex');
+        } else {
+            btn.classList.add('hidden');
+            btn.classList.remove('flex');
+        }
+    }
+
+    function sincronizarMasterCheckbox(registrosVisiveis) {
+        if (!cbSelecionarTodos) return;
+        if (!registrosVisiveis || registrosVisiveis.length === 0) {
+            cbSelecionarTodos.checked = false;
+            cbSelecionarTodos.indeterminate = false;
+            return;
+        }
+        const total = registrosVisiveis.length;
+        const marcados = registrosVisiveis.filter(r => selecaoIds.has(r._id)).length;
+        cbSelecionarTodos.checked = marcados === total;
+        cbSelecionarTodos.indeterminate = marcados > 0 && marcados < total;
+    }
+
+    // Botão de bulk delete na topbar.
+    document.getElementById('btn-excluir-selecionados').addEventListener('click', () => {
+        if (selecaoIds.size === 0) return;
+        excluirRegistros([...selecaoIds]);
+    });
+
+    // ── BATCH DELETE — atômico via writeBatch em chunks de 450 docs. ───────
+    async function excluirRegistros(ids) {
+        const lista = (ids || []).filter(Boolean);
+        if (!lista.length) return;
+        if (!isSuperAdm) {
+            return mostrarErro('Apenas Super Adm pode excluir lançamentos.');
+        }
+
+        const ok = await confirmarAcao({
+            titulo: lista.length === 1 ? 'Excluir lançamento' : `Excluir ${lista.length} lançamentos`,
+            mensagem: lista.length === 1
+                ? 'Esta ação remove permanentemente o lançamento. Continuar?'
+                : `Esta ação remove permanentemente ${lista.length} lançamentos. A operação é atômica em lote e não pode ser desfeita. Continuar?`,
+            labelConfirmar: lista.length === 1 ? 'Sim, excluir' : `Sim, excluir ${lista.length}`,
+            labelCancelar: 'Cancelar',
+            tom: 'perigo',
+        });
+        if (!ok) return;
+
+        try {
+            for (let i = 0; i < lista.length; i += CHUNK_SIZE) {
+                const fatia = lista.slice(i, i + CHUNK_SIZE);
+                const batch = writeBatch(db);
+                for (const id of fatia) batch.delete(doc(db, COLECAO, id));
+                await batch.commit();
+            }
+        } catch (err) {
+            console.error('[ContasPagar][BatchDelete] falhou:', err);
+            if (err.code === 'permission-denied') {
+                return mostrarErro('Acesso Negado: seu perfil não tem permissão para excluir Contas a Pagar.');
+            }
+            return mostrarErro('Falha ao excluir: ' + (err.message || 'erro desconhecido'));
+        }
+
+        // Atualização otimista do cache + DOM (não espera o onSnapshot).
+        const idsSet = new Set(lista);
+        cacheRegistros = cacheRegistros.filter(r => !idsSet.has(r._id));
+        lista.forEach(id => selecaoIds.delete(id));
+        renderTabela();
+        mostrarSucesso(lista.length === 1
+            ? 'Lançamento excluído com sucesso.'
+            : `${lista.length} lançamentos excluídos com sucesso.`);
+    }
+
+    // ========================================================================
+    // EDIÇÃO DE REGISTRO — modal CRUD com setDoc(merge:true) só nos campos
+    // alterados. Mantém intactos `regra_aplicada`, `origem`, `criado_por` etc.
+    // ========================================================================
+    let editandoId = null;
+    let editandoSnapshot = null; // snapshot original do registro (para comparar diffs)
+
+    function abrirEditar(reg) {
+        editandoId = reg._id;
+        editandoSnapshot = { ...reg };
+        // Preenche o form. Competência → input type=month exige YYYY-MM.
+        const ref = String(reg.competencia_ref || '').trim();
+        let mesAno = '';
+        if (/^\d{2}\/\d{4}$/.test(ref)) {
+            mesAno = `${ref.slice(3, 7)}-${ref.slice(0, 2)}`;
+        } else if (/^\d{4}-\d{2}$/.test(ref)) {
+            mesAno = ref;
+        } else if (reg.data_vencimento) {
+            mesAno = String(reg.data_vencimento).slice(0, 7);
+        }
+        document.getElementById('e-competencia').value = mesAno;
+        document.getElementById('e-valor').value = Number(reg.valor_original) || 0;
+        document.getElementById('e-entidade').value = reg.entidade || '';
+        document.getElementById('e-categoria').value = reg.categoria || '';
+        document.getElementById('e-centro-custo').value = reg.centro_custo || '';
+        document.getElementById('e-tipo').value = reg.tipo_entidade || '';
+        document.getElementById('e-status').value = reg.status || 'pendente';
+        document.getElementById('editar-subtitulo').textContent = `${reg.codigo || '—'} · ${fmtCompetencia(reg)}`;
+        document.getElementById('msg-form-editar').classList.add('hidden');
+
+        // Datalist de áreas (espelha o de inclusão manual).
+        const dlEdit = document.getElementById('datalist-cc-editar');
+        const dlMan = document.getElementById('datalist-cc-manual');
+        if (dlEdit && dlMan) dlEdit.innerHTML = dlMan.innerHTML;
+
+        abrirModal('modal-editar');
+    }
+
+    function setEditarLoading(estado) {
+        const btn = document.getElementById('btn-salvar-editar');
+        const ico = document.getElementById('ico-salvar-editar');
+        const lbl = document.getElementById('lbl-salvar-editar');
+        btn.disabled = !!estado;
+        if (estado) {
+            ico.textContent = 'progress_activity'; ico.classList.add('spin');
+            lbl.textContent = 'SALVANDO…';
+        } else {
+            ico.textContent = 'save'; ico.classList.remove('spin');
+            lbl.textContent = 'SALVAR ALTERAÇÕES';
+        }
+    }
+
+    document.getElementById('form-editar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!editandoId || !editandoSnapshot) return;
+        const msg = document.getElementById('msg-form-editar');
+
+        const novoMesAno = document.getElementById('e-competencia').value;       // YYYY-MM
+        const novoValor = parseFloat(document.getElementById('e-valor').value);
+        const novaEntidade = document.getElementById('e-entidade').value.trim();
+        const novaCategoria = document.getElementById('e-categoria').value.trim();
+        const novoCC = document.getElementById('e-centro-custo').value.trim();
+        const novoTipo = document.getElementById('e-tipo').value;
+        const novoStatus = document.getElementById('e-status').value;
+
+        if (!novoMesAno || !novaEntidade || !(novoValor > 0)) {
+            msg.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 bg-red-50 text-red-700 border border-red-200';
+            msg.innerHTML = '<span class="material-symbols-outlined text-base">error</span> Preencha competência, entidade e valor (>0).';
+            msg.classList.remove('hidden');
+            return;
+        }
+        if (window._ccPermitidos && novoCC && !window._ccPermitidos.has(novoCC)) {
+            msg.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 bg-red-50 text-red-700 border border-red-200';
+            msg.innerHTML = '<span class="material-symbols-outlined text-base">block</span> Você não tem permissão para gravar nessa Área.';
+            msg.classList.remove('hidden');
+            return;
+        }
+
+        // Constrói payload SOMENTE com os campos efetivamente alterados — assim
+        // setDoc(merge:true) atualiza um subset mínimo e preserva os demais.
+        const novaCompMMYYYY = `${novoMesAno.slice(5,7)}/${novoMesAno.slice(0,4)}`;
+        const novaCompYYYYMMDD_fallback = `${novoMesAno}-01`; // só usado se não havia data_vencimento
+
+        const diff = {};
+        if (novaCompMMYYYY !== String(editandoSnapshot.competencia_ref || '')) {
+            diff.competencia_ref = novaCompMMYYYY;
+            // Se a data_vencimento original cair em um mês diferente, sincroniza
+            // para o dia 01 do novo mês — mantém a ordenação cronológica coerente.
+            const mesAtualVenc = String(editandoSnapshot.data_vencimento || '').slice(0, 7);
+            if (mesAtualVenc !== novoMesAno) {
+                diff.data_vencimento = novaCompYYYYMMDD_fallback;
+            }
+        }
+        if (Number(novoValor) !== Number(editandoSnapshot.valor_original)) diff.valor_original = Number(novoValor);
+        if (novaEntidade !== (editandoSnapshot.entidade || '')) diff.entidade = novaEntidade;
+        if (novaCategoria !== (editandoSnapshot.categoria || '')) diff.categoria = novaCategoria || null;
+        if (novoCC !== (editandoSnapshot.centro_custo || '')) diff.centro_custo = novoCC || null;
+        if (novoTipo !== (editandoSnapshot.tipo_entidade || '')) diff.tipo_entidade = novoTipo || null;
+        if (novoStatus !== (editandoSnapshot.status || '')) diff.status = novoStatus;
+
+        if (Object.keys(diff).length === 0) {
+            fecharModal('modal-editar');
+            mostrarToast('Nenhuma alteração detectada.', 'info');
+            return;
+        }
+        diff.updated_at = serverTimestamp();
+        diff.atualizado_por = usuarioLogadoNome;
+
+        setEditarLoading(true);
+        try {
+            await updateDoc(doc(db, COLECAO, editandoId), diff);
+            // Atualiza cache em memória pra refletir imediatamente.
+            const idx = cacheRegistros.findIndex(r => r._id === editandoId);
+            if (idx >= 0) {
+                cacheRegistros[idx] = { ...cacheRegistros[idx], ...diff };
+                renderTabela();
+            }
+            fecharModal('modal-editar');
+            editandoId = null; editandoSnapshot = null;
+            mostrarToast('Lançamento atualizado.', 'check_circle');
+        } catch (err) {
+            console.error('[ContasPagar][Editar] falhou:', err);
+            msg.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 bg-red-50 text-red-700 border border-red-200';
+            const motivo = err.code === 'permission-denied'
+                ? 'Acesso Negado: seu perfil não tem permissão para editar Contas a Pagar.'
+                : (err.message || 'erro desconhecido');
+            msg.innerHTML = `<span class="material-symbols-outlined text-base">error</span> Falha ao salvar: ${motivo}`;
+            msg.classList.remove('hidden');
+        } finally {
+            setEditarLoading(false);
         }
     });
 
     // ========================================================================
-    // MODAL — Adicionar Manual
+    // MODAIS — abrir/fechar genérico + helpers premium (sucesso/erro/confirma).
     // ========================================================================
     function abrirModal(id) {
         const m = document.getElementById(id);
@@ -764,6 +1282,63 @@
     document.querySelectorAll('[data-modal-overlay]').forEach(o => {
         o.addEventListener('click', () => fecharModal(o.getAttribute('data-modal-overlay')));
     });
+
+    function mostrarSucesso(msg) {
+        document.getElementById('modal-sucesso-msg').textContent = msg || 'Operação concluída.';
+        abrirModal('modal-sucesso');
+    }
+    function mostrarErro(msg) {
+        document.getElementById('modal-erro-mensagem').textContent = msg || 'Ocorreu um erro inesperado.';
+        abrirModal('modal-erro');
+    }
+
+    // Confirmação Premium (substitui window.confirm — feedback do usuário em
+    // 2026-04-29: jamais usar diálogos nativos do browser).
+    const _btnConfirmarOk = document.getElementById('btn-confirmar-ok');
+    const _btnConfirmarCancelar = document.getElementById('btn-confirmar-cancelar');
+    const _overlayConfirmar = document.getElementById('modal-confirmar-overlay');
+    let _resolverConfirmacao = null;
+
+    function confirmarAcao({
+        titulo = 'Confirmar ação',
+        mensagem = 'Tem certeza?',
+        labelConfirmar = 'Sim, Excluir',
+        labelCancelar = 'Cancelar',
+        tom = 'perigo',
+    } = {}) {
+        document.getElementById('modal-confirmar-titulo').textContent = titulo;
+        document.getElementById('modal-confirmar-mensagem').textContent = mensagem;
+        _btnConfirmarOk.textContent = labelConfirmar;
+        _btnConfirmarCancelar.textContent = labelCancelar;
+
+        const icone = document.getElementById('modal-confirmar-icone');
+        const wrap = icone.parentElement;
+        wrap.classList.remove('bg-red-50', 'bg-primary/10');
+        icone.classList.remove('text-red-500', 'text-primary');
+        _btnConfirmarOk.classList.remove('bg-primary', 'text-[#341100]', 'shadow-primary/20', 'bg-red-600', 'text-white', 'shadow-red-600/20');
+        if (tom === 'perigo' || tom === 'erro') {
+            wrap.classList.add('bg-red-50');
+            icone.classList.add('text-red-500');
+            icone.textContent = tom === 'erro' ? 'block' : 'warning';
+            _btnConfirmarOk.classList.add('bg-red-600', 'text-white', 'shadow-red-600/20');
+        } else {
+            wrap.classList.add('bg-primary/10');
+            icone.classList.add('text-primary');
+            icone.textContent = 'help';
+            _btnConfirmarOk.classList.add('bg-primary', 'text-[#341100]', 'shadow-primary/20');
+        }
+        abrirModal('modal-confirmar');
+        return new Promise((resolve) => { _resolverConfirmacao = resolve; });
+    }
+    function _fecharConfirmacao(resp) {
+        fecharModal('modal-confirmar');
+        const r = _resolverConfirmacao;
+        _resolverConfirmacao = null;
+        if (typeof r === 'function') r(resp);
+    }
+    _btnConfirmarOk.addEventListener('click', () => _fecharConfirmacao(true));
+    _btnConfirmarCancelar.addEventListener('click', () => _fecharConfirmacao(false));
+    _overlayConfirmar.addEventListener('click', () => _fecharConfirmacao(false));
 
     document.getElementById('btn-importar-txt').addEventListener('click', () => {
         resetarWizard();
@@ -814,8 +1389,14 @@
     const RE_CLIENTE = /Codigo\s*\/\s*No\s*(\d+)\s*-\s*Ciente\s*:\s*(.+?)\s*$/i;
     // Linha de pagamento: começa com 6 dígitos, hífen, 3 dígitos.
     const RE_PAG_LINHA_INICIO = /^\s*(\d{6})-(\d{3})\b/;
-    // Data BR no formato DD/MM/AAAA — encontrada em qualquer posição da linha.
-    const RE_DATA_BR = /\b(\d{2})\/(\d{2})\/(\d{4})\b/;
+    // Data BR DD/MM/YY OU DD/MM/AAAA — single capture group com a data INTEIRA.
+    // Bug fix 2026-04-30 rev2: a versão anterior usava \b ... \b com três grupos
+    // e ainda falhava em produção (coluna Competência permanecia vazia). Esta
+    // regex permissiva (sem word boundaries) é a referência ditada pelo cliente.
+    // Atenção: a alternação é (?:\d{4}|\d{2}) — \d{4} PRIMEIRO porque a engine
+    // do JS tenta as alternativas da esquerda para a direita e para na primeira
+    // que casa. Se invertêssemos, "15/12/2025" capturaria o ano como "20".
+    const RE_DATA_BR = /(\d{2}\/\d{2}\/(?:\d{4}|\d{2}))/;
     // Valor monetário BR ou anglicano — o ÚLTIMO match na linha tende a ser
     // o valor (após cabeçalho, código, nome, datas).
     const RE_VALOR = /(\-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\-?\d+[.,]\d{2})/g;
@@ -857,9 +1438,22 @@
 
     function parseDataBRtoISO(d, mo, y) {
         // Constrói YYYY-MM-DD com zero-pad. Validação básica de range.
-        const di = parseInt(d, 10), mi = parseInt(mo, 10), yi = parseInt(y, 10);
+        const di = parseInt(d, 10), mi = parseInt(mo, 10);
+        let yi = parseInt(y, 10);
+        // Janela retroativa para anos de 2 dígitos: 00–29 → 20YY; 30–99 → 19YY.
+        if (String(y).length === 2) {
+            yi = yi <= 29 ? 2000 + yi : 1900 + yi;
+        }
         if (di < 1 || di > 31 || mi < 1 || mi > 12 || yi < 1900 || yi > 3000) return null;
         return `${String(yi).padStart(4, '0')}-${String(mi).padStart(2, '0')}-${String(di).padStart(2, '0')}`;
+    }
+
+    // Helper: converte YYYY-MM-DD (ou YYYY-MM) em "MM/AAAA" para o campo
+    // competencia_ref. Spec 2026-04-30: armazenamento em "MM/AAAA" estrito.
+    function refMMYYYY(yyyymmdd) {
+        if (!yyyymmdd) return null;
+        const m = String(yyyymmdd).match(/^(\d{4})-(\d{2})/);
+        return m ? `${m[2]}/${m[1]}` : null;
     }
 
     // Extrai um pagamento de uma linha do spool. Estratégia:
@@ -877,8 +1471,27 @@
         // Tudo após o código-sufixo (ex. "057538-096 ").
         const restoBruto = linha.slice(mIni[0].length).trim();
 
+        // Bug fix 2026-04-30 rev2 — regex permissiva + checagem de null ANTES
+        // do split (estourava TypeError quando a linha não tinha data legível).
+        // Constrói competencia_ref ("MM/AAAA") e dataISO ("YYYY-MM-DD") direto
+        // das partes do split — sem depender de parseDataBRtoISO.
         const mData = restoBruto.match(RE_DATA_BR);
-        const dataISO = mData ? parseDataBRtoISO(mData[1], mData[2], mData[3]) : null;
+        let dataISO = null;
+        let competencia_ref = null;
+        if (mData) {
+            const dataStr = mData[1];
+            const partes = dataStr.split('/');
+            // Sanidade: só prossegue se o split rendeu 3 partes não-vazias.
+            if (partes.length === 3 && partes[0] && partes[1] && partes[2]) {
+                const dia = String(partes[0]).padStart(2, '0');
+                const mes = String(partes[1]).padStart(2, '0');
+                // Conversão segura do ano: 2 dígitos vira 20YY (regra do cliente,
+                // 2026-04-30); 4 dígitos passa direto.
+                const ano = partes[2].length === 2 ? '20' + partes[2] : partes[2];
+                competencia_ref = `${mes}/${ano}`;       // MM/AAAA — formato estrito
+                dataISO = `${ano}-${mes}-${dia}`;         // ordenação cronológica
+            }
+        }
 
         // Valores: pega TODOS os matches numéricos com decimal e usa o último
         // (geralmente o valor depois aparece após nome+data).
@@ -911,7 +1524,7 @@
 
         // Filtros de sanidade: precisa pelo menos do código e do fornecedor.
         if (!fornecedor) return null;
-        return { codigo, fornecedor, data: dataISO, valor, status, categoria };
+        return { codigo, fornecedor, data: dataISO, competencia_ref, valor, status, categoria };
     }
 
     function normalizarStatus(raw) {
@@ -1331,7 +1944,10 @@
                         cliente_origem: pag.clienteAtual || null,
                         fornecedor: pag.fornecedor || null,
                         data_vencimento: pag.data,
-                        competencia_ref: pag.data ? pag.data.slice(0, 7) : null,
+                        // Prefere o competencia_ref já construído pelo parser
+                        // (MM/AAAA direto das partes do split) e cai no derivador
+                        // só se vier ausente — defesa contra linhas sem data.
+                        competencia_ref: pag.competencia_ref || refMMYYYY(pag.data),
                         valor_original: Number(pag.valor) || 0,
                         status: pag.status || 'pendente',
                         categoria: pag.categoria || null,
@@ -1441,7 +2057,7 @@
             const regra = classificarPorRegra(entidade);
             const payload = {
                 data_vencimento: dataVenc,                            // YYYY-MM-DD
-                competencia_ref: dataVenc.slice(0, 7),                // YYYY-MM (filtro)
+                competencia_ref: refMMYYYY(dataVenc),                 // MM/AAAA (spec 2026-04-30)
                 codigo: codigo || null,
                 entidade: entidade,
                 valor_original: Number(valor) || 0,
@@ -1481,10 +2097,15 @@
     function mostrarToast(texto, icone = 'check_circle', erro = false) {
         const t = document.getElementById('toast-cp');
         document.getElementById('toast-cp-text').textContent = texto;
-        document.getElementById('toast-cp-icon').textContent = icone;
-        document.getElementById('toast-cp-icon').className = erro
+        const icoEl = document.getElementById('toast-cp-icon');
+        // Aliases pra ergonomia: 'info' e 'warning' viram ícones próprios.
+        const map = { info: 'info', warning: 'warning' };
+        icoEl.textContent = map[icone] || icone;
+        icoEl.className = erro
             ? 'material-symbols-outlined text-red-400'
-            : 'material-symbols-outlined text-primary';
+            : (icone === 'info' || icone === 'warning')
+                ? 'material-symbols-outlined text-tertiary'
+                : 'material-symbols-outlined text-primary';
         t.classList.remove('hidden');
         requestAnimationFrame(() => {
             t.classList.remove('opacity-0', 'translate-y-2');

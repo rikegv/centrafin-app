@@ -139,8 +139,90 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
                 const auth = getAuth();
                 await signOut(auth);
             } catch (err) { console.error("Erro ao deslogar:", err); }
-            window.location.href = prefix + "login.html"; 
+            window.location.href = prefix + "login.html";
         });
+
+        // Guardião global de inatividade — instalado uma única vez por página
+        // (renderSidebar é o choke point de toda página autenticada).
+        // Spec 2026-04-30: 60 minutos sem interação → signOut + redirect login.
+        installInactivityGuard(prefix);
     }
+}
+
+// ── INACTIVITY GUARD (spec 2026-04-30) ──────────────────────────────────────
+// Conta 60 min de ociosidade. Eventos monitorados: mousemove (throttled 5s),
+// keydown, click, scroll. Após o limite: signOut(), limpa session storage e
+// redireciona para login.html. Idempotente — se renderSidebar for chamada de
+// novo na mesma página (defensivo), o guard antigo é desmontado primeiro.
+const TIMEOUT_INATIVIDADE_MS = 60 * 60 * 1000; // 1 hora exata = 3.600.000 ms
+const THROTTLE_MOUSEMOVE_MS  = 5000;            // mousemove dispara no máx. 1x/5s
+
+let _inactivityHandle = null;
+let _inactivityTimer = null;
+let _lastMouseMoveAt = 0;
+
+function installInactivityGuard(prefix) {
+    // Idempotente: se já instalado, desmonta antes de reinstalar.
+    if (_inactivityHandle && typeof _inactivityHandle.uninstall === 'function') {
+        _inactivityHandle.uninstall();
+    }
+
+    const dispararLogout = async () => {
+        try {
+            console.log('[InactivityGuard] 60 min sem atividade — encerrando sessão.');
+            // Limpa storage local (qualquer state da sessão atual).
+            try { sessionStorage.clear(); } catch (_) {}
+            try {
+                // Preserva preferências de filtros/persistência longa em
+                // localStorage — apenas estado realmente "de sessão" sai.
+                Object.keys(localStorage).forEach(k => {
+                    if (k.startsWith('centrafin.session.')) localStorage.removeItem(k);
+                });
+            } catch (_) {}
+
+            const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js");
+            const auth = getAuth();
+            await signOut(auth);
+        } catch (err) {
+            console.error('[InactivityGuard] falha no signOut:', err);
+        } finally {
+            window.location.replace(prefix + "login.html");
+        }
+    };
+
+    const reagendar = () => {
+        if (_inactivityTimer) clearTimeout(_inactivityTimer);
+        _inactivityTimer = setTimeout(dispararLogout, TIMEOUT_INATIVIDADE_MS);
+    };
+
+    // Handlers — throttling leve em mousemove pra não martelar setTimeout.
+    const onMouseMove = () => {
+        const now = Date.now();
+        if (now - _lastMouseMoveAt < THROTTLE_MOUSEMOVE_MS) return;
+        _lastMouseMoveAt = now;
+        reagendar();
+    };
+    const onAtividade = () => reagendar();
+
+    // Listeners passivos (scroll/touch) para não impactar fluência.
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('keydown',   onAtividade, { passive: true });
+    window.addEventListener('click',     onAtividade, { passive: true });
+    window.addEventListener('scroll',    onAtividade, { passive: true });
+    window.addEventListener('touchstart', onAtividade, { passive: true });
+
+    // Primeiro agendamento — o relógio começa a partir do load da página.
+    reagendar();
+
+    _inactivityHandle = {
+        uninstall() {
+            if (_inactivityTimer) { clearTimeout(_inactivityTimer); _inactivityTimer = null; }
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('keydown', onAtividade);
+            window.removeEventListener('click', onAtividade);
+            window.removeEventListener('scroll', onAtividade);
+            window.removeEventListener('touchstart', onAtividade);
+        }
+    };
 }
 

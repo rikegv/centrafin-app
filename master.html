@@ -30,14 +30,15 @@
         /* Fade-in suave do app shell (auditoria 2026-04-29) — sidebar e main
            entram em opacity 0; ganham fade quando `auth-ok` é setado. Body
            preserva o bg padrão (#f8f9fb). */
-        body > #sidebar-container,
-        body > main {
+        body>#sidebar-container,
+        body>main {
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.4s ease;
         }
-        body.auth-ok > #sidebar-container,
-        body.auth-ok > main {
+
+        body.auth-ok>#sidebar-container,
+        body.auth-ok>main {
             opacity: 1;
             pointer-events: auto;
         }
@@ -77,8 +78,10 @@
 
         <header class="flex justify-between items-center mb-8 border-b border-slate-200 pb-6">
             <div>
-                <h1 class="text-3xl font-extrabold tracking-tight text-secondary font-headline">Configurações e Privacidade</h1>
-                <p class="text-slate-500 text-sm mt-1 font-medium">Gestão de usuários, matriz de permissões e auditoria de logs do ecossistema CentraFin.</p>
+                <h1 class="text-3xl font-extrabold tracking-tight text-secondary font-headline">Configurações e
+                    Privacidade</h1>
+                <p class="text-slate-500 text-sm mt-1 font-medium">Gestão de usuários, matriz de permissões e auditoria
+                    de logs do ecossistema CentraFin.</p>
             </div>
             <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
                 <span class="material-symbols-outlined text-primary">admin_panel_settings</span>
@@ -133,10 +136,12 @@
                                     class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-slate-50 font-medium">
                                     <option value="comum">Usuário Padrão</option>
                                     <option value="master">Usuário Master</option>
-                                    <option value="super_admin" id="opt-super-admin" class="hidden font-extrabold text-primary">Super Admin (Master dos Masters)</option>
+                                    <option value="super_admin" id="opt-super-admin"
+                                        class="hidden font-extrabold text-primary">Super Admin (Master dos Masters)
+                                    </option>
                                 </select>
                             </div>
-                            
+
                             <!-- Matriz de Permissões — Nível 1 (menus) + Nível 2 (modulosDashboard) -->
                             <!-- O conteúdo é injetado por gerarMatrizPermissoes('cad') na inicialização. -->
                             <div id="matriz-cad" class="col-span-full mt-6"></div>
@@ -238,8 +243,10 @@
                         <span class="material-symbols-outlined text-primary text-[20px]">workspaces</span>
                     </div>
                     <div>
-                        <h2 class="font-headline text-base font-extrabold text-secondary">1. Gestão de Áreas (Contas a Pagar)</h2>
-                        <p class="text-[11px] text-slate-400 font-medium">Lista própria do módulo — independente do Custo de Folha. Alimenta os dropdowns de Área das Regras e do Wizard.</p>
+                        <h2 class="font-headline text-base font-extrabold text-secondary">1. Gestão de Áreas (Contas a
+                            Pagar)</h2>
+                        <p class="text-[11px] text-slate-400 font-medium">Lista própria do módulo — independente do
+                            Custo de Folha. Alimenta os dropdowns de Área das Regras e do Wizard.</p>
                     </div>
                 </div>
 
@@ -248,10 +255,14 @@
                     <div class="xl:col-span-1">
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                             <form id="form-area" class="space-y-3">
-                                <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome da Área</label>
-                                <input id="area-nome" type="text" required maxlength="80" placeholder="Ex: Operacional, Diretoria, Atração e Seleção"
+                                <label
+                                    class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome
+                                    da Área</label>
+                                <input id="area-nome" type="text" required maxlength="80"
+                                    placeholder="Ex: Operacional, Diretoria, Atração e Seleção"
                                     class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
-                                <div id="msg-area" class="hidden text-xs font-bold p-2.5 rounded-lg flex items-start gap-2"></div>
+                                <div id="msg-area"
+                                    class="hidden text-xs font-bold p-2.5 rounded-lg flex items-start gap-2"></div>
                                 <button type="submit" id="btn-salvar-area"
                                     class="w-full py-2.5 bg-primary text-secondary font-extrabold rounded-xl shadow-md hover:brightness-105 transition-all flex items-center justify-center gap-2 text-xs">
                                     <span class="material-symbols-outlined text-base">add</span> Adicionar Área
@@ -262,12 +273,16 @@
                     <!-- Listagem de Áreas -->
                     <div class="xl:col-span-2">
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <h3 class="text-xs font-extrabold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                            <div
+                                class="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3
+                                    class="text-xs font-extrabold text-slate-600 uppercase tracking-widest flex items-center gap-2">
                                     <span class="material-symbols-outlined text-slate-400 text-[16px]">list</span>
                                     Áreas cadastradas
                                 </h3>
-                                <span id="contador-areas" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">0 áreas</span>
+                                <span id="contador-areas"
+                                    class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">0
+                                    áreas</span>
                             </div>
                             <div class="max-h-[280px] overflow-y-auto" id="lista-areas-wrapper">
                                 <ul id="lista-areas" class="divide-y divide-slate-100"></ul>
@@ -284,8 +299,10 @@
                         <span class="material-symbols-outlined text-tertiary text-[20px]">rule</span>
                     </div>
                     <div>
-                        <h2 class="font-headline text-base font-extrabold text-secondary">2. Regras de Entidades</h2>
-                        <p class="text-[11px] text-slate-400 font-medium">De-Para usado pelo ETL de conciliação contínua. O dropdown de Área puxa da lista cadastrada acima.</p>
+                        <h2 class="font-headline text-base font-extrabold text-secondary">2. Regras de Fornecedores e
+                            Autonomos</h2>
+                        <p class="text-[11px] text-slate-400 font-medium">De-Para usado pelo ETL de conciliação
+                            contínua. O dropdown de Área puxa da lista cadastrada acima.</p>
                     </div>
                 </div>
 
@@ -299,14 +316,21 @@
                             </div>
                             <form id="form-regra" class="space-y-4">
                                 <div>
-                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Chave de Busca</label>
-                                    <input id="regra-chave" type="text" required maxlength="100" placeholder="Ex: TELEFONICA"
+                                    <label
+                                        class="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Chave
+                                        de Busca</label>
+                                    <input id="regra-chave" type="text" required maxlength="100"
+                                        placeholder="Ex: TELEFONICA"
                                         class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium uppercase focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300 placeholder:normal-case" />
-                                    <p class="text-[10px] text-slate-400 font-medium mt-1">Trecho que o ETL procura no nome da entidade. Sempre em maiúsculas.</p>
+                                    <p class="text-[10px] text-slate-400 font-medium mt-1">Trecho que o ETL procura no
+                                        nome da entidade. Sempre em maiúsculas.</p>
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Tipo de Entidade</label>
-                                    <select id="regra-tipo" required class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-bold text-secondary bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                    <label
+                                        class="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Tipo
+                                        de Entidade</label>
+                                    <select id="regra-tipo" required
+                                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-bold text-secondary bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
                                         <option value="">Selecione…</option>
                                         <option value="Cliente">Cliente</option>
                                         <option value="Fornecedor Externo">Fornecedor Externo</option>
@@ -314,15 +338,18 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Área</label>
+                                    <label
+                                        class="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Área</label>
                                     <!-- Dropdown SELECT (não input/datalist) — força a seleção dentro
                                          do conjunto cadastrado em AreasContasPagar, evitando typos.
                                          Alimentado pelo onSnapshot abaixo. -->
-                                    <select id="regra-cc" required class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium text-secondary bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                    <select id="regra-cc" required
+                                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium text-secondary bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
                                         <option value="">Selecione uma área…</option>
                                     </select>
                                 </div>
-                                <div id="msg-regra" class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2"></div>
+                                <div id="msg-regra"
+                                    class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2"></div>
                                 <button type="submit" id="btn-salvar-regra"
                                     class="w-full py-3 mt-2 bg-secondary text-white font-extrabold rounded-xl shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
                                     <span class="material-symbols-outlined text-base">save</span>
@@ -343,15 +370,21 @@
                                 <div class="flex items-center gap-3">
                                     <span class="material-symbols-outlined text-tertiary text-2xl">rule_settings</span>
                                     <div>
-                                        <h3 class="font-headline font-bold text-base text-secondary">Banco de Regras</h3>
-                                        <p class="text-[11px] text-slate-400 font-medium">Dicionário "De-Para" do ETL.</p>
+                                        <h3 class="font-headline font-bold text-base text-secondary">Banco de Regras
+                                        </h3>
+                                        <p class="text-[11px] text-slate-400 font-medium">Dicionário "De-Para" do ETL.
+                                        </p>
                                     </div>
                                 </div>
-                                <span id="contador-regras" class="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full">0 regras</span>
+                                <span id="contador-regras"
+                                    class="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full">0
+                                    regras</span>
                             </div>
-                            <div class="px-6 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                            <div
+                                class="px-6 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
                                 <div class="relative w-64">
-                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                                    <span
+                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
                                     <input id="busca-regra" type="text"
                                         class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-full text-xs focus:ring-1 focus:ring-tertiary outline-none"
                                         placeholder="Buscar por chave, tipo ou área…" />
@@ -359,7 +392,8 @@
                             </div>
                             <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
                                 <table class="w-full text-left border-collapse">
-                                    <thead class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider sticky top-0 z-10">
+                                    <thead
+                                        class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider sticky top-0 z-10">
                                         <tr>
                                             <th class="px-6 py-3 font-bold">Chave de Busca</th>
                                             <th class="px-6 py-3 font-bold">Tipo</th>
@@ -368,7 +402,10 @@
                                         </tr>
                                     </thead>
                                     <tbody id="tabela-regras" class="divide-y divide-slate-100 text-xs">
-                                        <tr><td colspan="4" class="text-center py-8 text-sm text-slate-400">Carregando regras…</td></tr>
+                                        <tr>
+                                            <td colspan="4" class="text-center py-8 text-sm text-slate-400">Carregando
+                                                regras…</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -382,42 +419,55 @@
     </main>
 
     <!-- Modal de Edição Premium RBAC -->
-    <div id="modal-edicao-usuario" class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
+    <div id="modal-edicao-usuario"
+        class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
         <div class="absolute inset-0 bg-secondary/40 backdrop-blur-sm modal-overlay"></div>
-        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300 max-h-[92vh] overflow-y-auto">
+        <div
+            class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300 max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center gap-3">
                     <span class="material-symbols-outlined text-primary text-3xl">edit_square</span>
                     <div>
                         <h3 class="font-headline text-xl font-extrabold text-secondary">Ajuste de Acessos</h3>
-                        <p class="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Configurações RBAC de Segurança</p>
+                        <p class="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Configurações RBAC de
+                            Segurança</p>
                     </div>
                 </div>
-                <button onclick="window.fecharModalEdicao()" class="text-slate-400 hover:text-secondary transition-colors">
+                <button onclick="window.fecharModalEdicao()"
+                    class="text-slate-400 hover:text-secondary transition-colors">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
 
             <form id="form-editar-usuario" class="space-y-6">
                 <input type="hidden" id="edit-id">
-                
+
                 <div class="grid grid-cols-2 gap-4">
                     <div class="col-span-1">
-                        <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome</label>
-                        <input type="text" id="edit-nome" class="w-full bg-slate-50 border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold text-slate-700 cursor-not-allowed" readonly>
+                        <label
+                            class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome</label>
+                        <input type="text" id="edit-nome"
+                            class="w-full bg-slate-50 border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold text-slate-700 cursor-not-allowed"
+                            readonly>
                     </div>
                     <div class="col-span-1">
-                        <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">E-mail</label>
-                        <input type="text" id="edit-email" class="w-full bg-slate-50 border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold text-slate-700 cursor-not-allowed" readonly>
+                        <label
+                            class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">E-mail</label>
+                        <input type="text" id="edit-email"
+                            class="w-full bg-slate-50 border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold text-slate-700 cursor-not-allowed"
+                            readonly>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Perfil de Acesso</label>
-                    <select id="edit-perfil" required class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-bold text-secondary">
+                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Perfil
+                        de Acesso</label>
+                    <select id="edit-perfil" required
+                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-bold text-secondary">
                         <option value="comum">Usuário Padrão</option>
                         <option value="master">Usuário Master</option>
-                        <option value="super_admin" id="opt-super-admin-edit" class="hidden font-extrabold text-primary">Super Admin (Master dos Masters)</option>
+                        <option value="super_admin" id="opt-super-admin-edit"
+                            class="hidden font-extrabold text-primary">Super Admin (Master dos Masters)</option>
                     </select>
                 </div>
 
@@ -427,8 +477,11 @@
                 <div id="filtro-cc-edit"></div>
 
                 <div class="flex justify-end gap-3 pt-4">
-                    <button type="button" onclick="window.fecharModalEdicao()" class="px-6 py-2.5 text-xs font-extrabold text-slate-400 hover:text-secondary transition-all">Cancelar</button>
-                    <button type="submit" id="btn-atualizar-user" class="px-8 py-2.5 bg-primary text-secondary font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:brightness-105 transition-all text-xs">Salvar Alterações</button>
+                    <button type="button" onclick="window.fecharModalEdicao()"
+                        class="px-6 py-2.5 text-xs font-extrabold text-slate-400 hover:text-secondary transition-all">Cancelar</button>
+                    <button type="submit" id="btn-atualizar-user"
+                        class="px-8 py-2.5 bg-primary text-secondary font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:brightness-105 transition-all text-xs">Salvar
+                        Alterações</button>
                 </div>
             </form>
         </div>
@@ -457,20 +510,20 @@
         // e ALÉM disso um array `menus_permitidos` derivado para retrocompatibilidade
         // com as páginas antigas que ainda checam `menus_permitidos.includes(X)`.
         const MENUS_DEF = [
-            { key: 'dashboardGeral',          label: 'Dashboard Geral',                 desc: 'Visão consolidada e cards executivos', icon: 'dashboard',     legacy: 'dashboard_master' },
-            { key: 'metasFinanceiras',        label: 'Metas Financeiras',               desc: 'Gestão de metas anuais e atingimento', icon: 'track_changes', legacy: 'metas' },
-            { key: 'faturamento',             label: 'Faturamento - Contas a receber', desc: 'Lançamentos, recebíveis e baixas',     icon: 'payments',      legacy: 'contas_receber' },
-            { key: 'contasPagar',             label: 'Contas a Pagar',                 desc: 'Obrigações e conciliação contínua',    icon: 'account_balance_wallet', legacy: 'contas_pagar' },
-            { key: 'custoFolha',              label: 'Custo de Folha',                  desc: 'Importação e dashboard de folha',      icon: 'receipt_long',  legacy: 'custo_folha' },
-            { key: 'configuracoesPrivacidade', label: 'Configurações e Privacidade',    desc: 'Apenas Super Adm — usuários e logs',  icon: 'admin_panel_settings', legacy: 'usuarios', superAdminOnly: true },
+            { key: 'dashboardGeral', label: 'Dashboard Geral', desc: 'Visão consolidada e cards executivos', icon: 'dashboard', legacy: 'dashboard_master' },
+            { key: 'metasFinanceiras', label: 'Metas Financeiras', desc: 'Gestão de metas anuais e atingimento', icon: 'track_changes', legacy: 'metas' },
+            { key: 'faturamento', label: 'Faturamento - Contas a receber', desc: 'Lançamentos, recebíveis e baixas', icon: 'payments', legacy: 'contas_receber' },
+            { key: 'contasPagar', label: 'Contas a Pagar', desc: 'Obrigações e conciliação contínua', icon: 'account_balance_wallet', legacy: 'contas_pagar' },
+            { key: 'custoFolha', label: 'Custo de Folha', desc: 'Importação e dashboard de folha', icon: 'receipt_long', legacy: 'custo_folha' },
+            { key: 'configuracoesPrivacidade', label: 'Configurações e Privacidade', desc: 'Apenas Super Adm — usuários e logs', icon: 'admin_panel_settings', legacy: 'usuarios', superAdminOnly: true },
         ];
         const MODULOS_DEF = [
             { key: 'moduloFaturamento', label: 'Módulo Faturamento', desc: 'Bruto vs Realizado, performance comercial', icon: 'payments' },
-            { key: 'fluxoCaixa',        label: 'Fluxo de Caixa',     desc: 'Entradas, saídas e projeções',              icon: 'account_balance' },
-            { key: 'forecast',          label: 'FORECAST',           desc: 'Headcount projetado e provisões',           icon: 'groups' },
-            { key: 'aging',             label: 'AGING Financeiro',   desc: 'Inadimplência e idade de recebíveis',       icon: 'query_stats', legacy: 'aging' },
-            { key: 'metas',             label: 'Metas Financeiras',  desc: 'Acompanhamento de metas no Dashboard',      icon: 'track_changes' },
-            { key: 'custoFolha',        label: 'Custo de Folha',     desc: 'Card de custo de folha no Dashboard',       icon: 'receipt_long', legacy: 'custo_folha' },
+            { key: 'fluxoCaixa', label: 'Fluxo de Caixa', desc: 'Entradas, saídas e projeções', icon: 'account_balance' },
+            { key: 'forecast', label: 'FORECAST', desc: 'Headcount projetado e provisões', icon: 'groups' },
+            { key: 'aging', label: 'AGING Financeiro', desc: 'Inadimplência e idade de recebíveis', icon: 'query_stats', legacy: 'aging' },
+            { key: 'metas', label: 'Metas Financeiras', desc: 'Acompanhamento de metas no Dashboard', icon: 'track_changes' },
+            { key: 'custoFolha', label: 'Custo de Folha', desc: 'Card de custo de folha no Dashboard', icon: 'receipt_long', legacy: 'custo_folha' },
         ];
 
         function gerarMatrizPermissoes(prefixo) {
@@ -791,8 +844,8 @@
         // mapa abas → seção; clicar em qualquer botão deixa só a seção alvo
         // visível e remarca os botões com a classe ativa.
         const ABAS = [
-            { btn: 'tab-users-btn',  sec: 'section-users',  slug: 'users' },
-            { btn: 'tab-logs-btn',   sec: 'section-logs',   slug: 'logs'  },
+            { btn: 'tab-users-btn', sec: 'section-users', slug: 'users' },
+            { btn: 'tab-logs-btn', sec: 'section-logs', slug: 'logs' },
             { btn: 'tab-regras-btn', sec: 'section-regras', slug: 'regras' },
         ];
         const _classeAtiva = "pb-3 text-sm font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2";
@@ -953,7 +1006,7 @@
                 }
                 const badgeStatus = isAtivo ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-100">ATIVO</span>` : `<span class="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-100">INATIVO</span>`;
                 const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
-                
+
                 // TABELA: Adiciona botão de EDITAR (Premium)
                 tr.innerHTML = `
                     <td class="px-6 py-4"><p class="font-bold text-slate-800 text-sm">${data.nome || 'Usuário'}</p><p class="text-[11px] text-slate-500">${data.email}</p></td>
@@ -1385,7 +1438,7 @@
         }
 
         function escapeHTMLm(s) {
-            return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
         function aplicarBuscaRegras() {
