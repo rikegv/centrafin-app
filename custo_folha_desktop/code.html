@@ -57,6 +57,20 @@
             pointer-events: auto;
         }
     </style>
+  <!-- Tema global (Light & Dark) — centralizado em /theme.css + /theme_manager.js -->
+  <link rel="stylesheet" href="../theme.css?v=20260507n">
+  <script>
+    /* Boot inline ANTES do paint — evita flash branco. */
+    (function () {
+      try {
+        var saved = localStorage.getItem('centrafin-theme');
+        var html = document.documentElement;
+        html.classList.remove('light', 'dark');
+        html.classList.add(saved === 'dark' ? 'dark' : 'light');
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../theme_manager.js?v=20260507n" defer></script>
 </head>
 <body class="bg-slate-50 text-on-surface font-body antialiased">
 

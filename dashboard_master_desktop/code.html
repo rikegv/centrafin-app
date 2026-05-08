@@ -27,6 +27,11 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.45.2/apexcharts.min.js"></script>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <!-- Fonte Única da Verdade: regras matemáticas compartilhadas com o Gerenciador CRF.
+       Define `obterStatusReal`, `obterFaturamentoReal`, `calcularEmpresaAtribuida`,
+       `parseMoedaCRF`, `obterValorLiquido` etc. como globals + aliases legados
+       (calcEmpresaExcel, extrairNum, *Master) para compat. -->
+  <script src="../core_rules.js?v=20260507n"></script>
 
   <style>
     /* Fade-in suave do app shell (auditoria 2026-04-29) — body mantém o bg
@@ -94,7 +99,23 @@
       opacity: 0;
       animation: fadeInUp 0.6s ease-out forwards;
     }
+
   </style>
+
+  <!-- Tema global (Light & Dark) — agora centralizado em /theme.css + /theme_manager.js -->
+  <link rel="stylesheet" href="../theme.css?v=20260507n">
+  <script>
+    /* Boot inline ANTES do paint — evita flash branco ao carregar. */
+    (function () {
+      try {
+        var saved = localStorage.getItem('centrafin-theme');
+        var html = document.documentElement;
+        html.classList.remove('light', 'dark');
+        html.classList.add(saved === 'dark' ? 'dark' : 'light');
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../theme_manager.js?v=20260507n" defer></script>
 </head>
 
 <body class="min-h-screen flex antialiased bg-slate-50">
@@ -112,10 +133,17 @@
           <span class="material-symbols-outlined text-[16px]">arrow_back</span> Voltar ao Início
         </button>
       </div>
-      <button onclick="window.exportarPDF()"
-        class="hidden bg-brandGreen text-brandDarkBlue px-4 py-2 rounded-lg font-bold text-xs shadow-sm items-center gap-2 hover:bg-opacity-90">
-        <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span> Baixar PDF
-      </button>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3" title="Alternar tema">
+          <span class="material-symbols-outlined text-slate-500 text-[18px]">light_mode</span>
+          <button id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro"></button>
+          <span class="material-symbols-outlined text-slate-500 text-[18px]">dark_mode</span>
+        </div>
+        <button onclick="window.exportarPDF()"
+          class="hidden bg-brandGreen text-brandDarkBlue px-4 py-2 rounded-lg font-bold text-xs shadow-sm items-center gap-2 hover:bg-opacity-90">
+          <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span> Baixar PDF
+        </button>
+      </div>
     </header>
 
     <div class="p-6 overflow-hidden relative" id="area-exportacao-pdf">
@@ -129,7 +157,7 @@
 
 
 
-        <div class="grid grid-cols-4 gap-6">
+        <div class="kpi-grid grid grid-cols-4 gap-6">
           <div onclick="window.abrirModulo('tela-faturamento')" data-modulo="moduloFaturamento" id="card-modulo-faturamento" style="animation-delay: 0.1s;"
             class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandGreen mb-4 block">payments</span>
@@ -172,7 +200,7 @@
           </a>
         </div>
 
-        <div class="grid grid-cols-4 gap-6">
+        <div class="kpi-grid grid grid-cols-4 gap-6">
           <div onclick="window.abrirModulo('tela-metas')" data-modulo="metas" id="card-modulo-metas" style="animation-delay: 0.5s;"
             class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandAqua mb-4 block">track_changes</span>
@@ -234,7 +262,7 @@
 
         <div class="w-full h-px bg-gradient-to-r from-transparent via-slate-500/30 to-transparent my-6 shadow-[0_2px_10px_rgba(0,0,0,0.1)]"></div>
         
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="kpi-grid grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <div id="card-wrapper-bruto" class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1">
             <div class="flex items-center justify-between mb-4">
               <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Faturamento Bruto</p>
@@ -270,6 +298,42 @@
               </div>
             </div>
             <h3 class="text-2xl font-extrabold text-red-500" id="kpi-fat-atrasado">R$ 0,00</h3>
+          </div>
+          <!-- KPI Parcelamentos Ativos: clicável, abre modal de detalhamento agrupado por cliente. -->
+          <div id="card-wrapper-parcelamentos" onclick="window.abrirModalParcelamentos()"
+            class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 transition-transform hover:-translate-y-1 cursor-pointer hover:border-indigo-400">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Parcelamentos Ativos</p>
+              <div class="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-indigo-600 text-[18px]">call_split</span>
+              </div>
+            </div>
+            <h3 class="text-2xl font-extrabold text-indigo-600" id="kpi-parcelamentos-residual">R$ 0,00</h3>
+            <p class="text-[11px] font-bold text-slate-500 mt-1"><span id="kpi-parcelamentos-qtd">0</span> parcelamento(s) em aberto</p>
+          </div>
+        </div>
+
+        <!-- ─── Modal Detalhamento de Parcelamentos Ativos ─── -->
+        <div id="modal-parcelamentos"
+          class="fixed inset-0 z-[78] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+          <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-parcelamentos-overlay"></div>
+          <div id="modal-parcelamentos-content"
+            class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative overflow-hidden max-h-[92vh] flex flex-col">
+            <div class="px-7 py-5 bg-gradient-to-r from-indigo-600 to-indigo-500 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-white">call_split</span>
+                </div>
+                <div>
+                  <h3 class="font-headline text-lg font-bold text-white leading-tight">Parcelamentos Ativos</h3>
+                  <p class="text-[11px] text-indigo-50 font-medium">Notas desmembradas em aberto, agrupadas por cliente</p>
+                </div>
+              </div>
+              <button id="btn-fechar-parcelamentos"
+                class="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1.5 transition-colors"><span
+                  class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="px-7 py-6 space-y-4 overflow-y-auto" id="parcelamentos-lista"></div>
           </div>
         </div>
 
@@ -477,8 +541,9 @@
           <div class="col-span-12 bg-brandDarkBlue p-5 rounded-xl border border-brandMidBlue shadow-lg">
             <h2 class="text-sm font-bold text-white mb-4 flex items-center justify-between">
               <span class="flex items-center gap-2"><span
-                  class="material-symbols-outlined text-brandGreen">calendar_month</span> VOLUME E VALOR DIÁRIO (ÚLTIMOS
-                30 DIAS)</span>
+                  class="material-symbols-outlined text-brandGreen">calendar_month</span>
+                <span id="titulo-chart-emissoes-mes">VOLUME E VALOR DIÁRIO</span>
+              </span>
             </h2>
             <div id="chart-emissoes-30dias" class="w-full h-[350px]"></div>
           </div>
@@ -491,29 +556,9 @@
             <div id="chart-emissoes-ano" class="w-full h-[320px]"></div>
           </div>
 
-          <div
-            class="col-span-12 bg-white p-6 rounded-xl border border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] mt-2">
-            <h2 class="text-sm font-bold text-brandDarkBlue mb-5 flex items-center gap-2">
-              <span class="material-symbols-outlined text-brandOrange">format_list_numbered</span> Ranking de
-              Lançamentos
-            </h2>
-            <div class="overflow-x-auto max-h-[350px] overflow-y-auto custom-scroll pr-2">
-              <table class="w-full text-left text-sm">
-                <thead class="sticky top-0 bg-white z-10">
-                  <tr class="border-b border-slate-200 text-slate-400 text-[10px] uppercase tracking-widest">
-                    <th class="pb-3 pt-1 font-extrabold w-16 text-center">Posição</th>
-                    <th class="pb-3 pt-1 font-extrabold">Usuário / Responsável</th>
-                    <th class="pb-3 pt-1 font-extrabold text-right">Qtd. Notas Lançadas</th>
-                  </tr>
-                </thead>
-                <tbody id="tbody-ranking-usuarios">
-                  <tr>
-                    <td colspan="3" class="text-center text-xs text-slate-400 py-6">Aguardando dados...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <!-- Card "Ranking de Lançamentos" desativado a pedido. Estrutura preservada
+               em git history caso seja reativado no futuro. O acumulador `usuariosInclusaoCount`
+               e o renderizador `tbody-ranking-usuarios` foram removidos do JS por consistência. -->
         </div>
 
         <div id="visao-fechamento" class="hidden animate-fade-in mt-6">
@@ -525,8 +570,8 @@
 
             <div class="space-y-10">
               <div>
-                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Bruto
-                  (Soulan)</h3>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
+                  (Soulan) · por Comercial</h3>
                 <div
                   class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
                   <table class="w-full text-left text-sm whitespace-nowrap">
@@ -551,24 +596,13 @@
 
               <div>
                 <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
-                  (Soulan)</h3>
+                  (Soulan) · por Serviço</h3>
                 <div
                   class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
-                  <table class="w-full text-left text-sm whitespace-nowrap">
-                    <thead
-                      class="sticky top-0 z-20 bg-[#002443] text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
-                      <tr>
-                        <th class="sticky left-0 z-30 bg-[#002443] px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
-                          Comercial</th>
-                        <th class="px-2 py-1.5 text-right">Consultoria</th>
-                        <th class="px-2 py-1.5 text-right">Estágio</th>
-                        <th class="px-2 py-1.5 text-right">Fopag</th>
-                        <th class="px-2 py-1.5 text-right">RPO</th>
-                        <th class="px-2 py-1.5 text-right">Temporário</th>
-                        <th class="px-2 py-1.5 text-right">Terceiros</th>
-                        <th class="px-2 py-1.5 text-right text-brandGreen bg-[#003459]">Total Geral</th>
-                      </tr>
-                    </thead>
+                  <!-- Tabela transposta: linhas=Serviço, colunas=Comerciais. Estrutura (thead+tbody)
+                       é regenerada dinamicamente em `renderTabelaPorServico` porque a lista de
+                       comerciais varia conforme o filtro. -->
+                  <table id="tabela-fech-soulan-servico" class="w-full text-left text-sm whitespace-nowrap">
                     <tbody id="tbody-fech-soulan-real"></tbody>
                   </table>
                 </div>
@@ -584,8 +618,8 @@
 
             <div class="space-y-10">
               <div>
-                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Bruto
-                  (Thomas)</h3>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
+                  (Thomas) · por Comercial</h3>
                 <div
                   class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
                   <table class="w-full text-left text-sm whitespace-nowrap">
@@ -611,25 +645,11 @@
 
               <div>
                 <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
-                  (Thomas)</h3>
+                  (Thomas) · por Serviço</h3>
                 <div
                   class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
-                  <table class="w-full text-left text-sm whitespace-nowrap">
-                    <thead
-                      class="sticky top-0 z-20 bg-[#434f55] text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
-                      <tr>
-                        <th class="sticky left-0 z-30 bg-[#434f55] px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
-                          Comercial</th>
-                        <th class="px-2 py-1.5 text-right">Devolutiva</th>
-                        <th class="px-2 py-1.5 text-right">Integração</th>
-                        <th class="px-2 py-1.5 text-right">Subscription</th>
-                        <th class="px-2 py-1.5 text-right">Treinamento</th>
-                        <th class="px-2 py-1.5 text-right">Unidades</th>
-                        <th class="px-2 py-1.5 text-right">Hotmart</th>
-                        <th class="px-2 py-1.5 text-right">Assessment</th>
-                        <th class="px-2 py-1.5 text-right text-[#ffefe8] bg-[#ff5f15]">Total Geral</th>
-                      </tr>
-                    </thead>
+                  <!-- Tabela transposta: linhas=Serviço, colunas=Comerciais. -->
+                  <table id="tabela-fech-thomas-servico" class="w-full text-left text-sm whitespace-nowrap">
                     <tbody id="tbody-fech-thomas-real"></tbody>
                   </table>
                 </div>
@@ -1000,7 +1020,15 @@
       const fIni = document.getElementById('filtro-modal-data-inicio').value;
       const fFim = document.getElementById('filtro-modal-data-fim').value;
 
-      window.filtrosPorAba[aba] = { ini: fIni, fim: fFim, cli: fCli, com: fCom, emp: fEmp, reg: fReg, ser: fSer };
+      // FILTRO GLOBAL: replica o estado em TODAS as abas para que o badge "Filtros Ativos"
+      // e o botão "Limpar Filtros" permaneçam visíveis e operacionais ao trocar de visão.
+      // Antes, o filtro era persistido só em `filtrosPorAba[aba]` (per-aba), então mudar de
+      // Soulan p/ Fechamento "perdia" o badge — agora a tag persiste em qualquer aba.
+      const filtroAplicado = { ini: fIni, fim: fFim, cli: fCli, com: fCom, emp: fEmp, reg: fReg, ser: fSer };
+      window.filtrosPorAba.soulan     = { ...filtroAplicado };
+      window.filtrosPorAba.thomas     = { ...filtroAplicado };
+      window.filtrosPorAba.emissoes   = { ...filtroAplicado };
+      window.filtrosPorAba.fechamento = { ...filtroAplicado };
 
       let filtrados = window.dadosGlobaisFirestore.filter(d => {
         let cli = String(d['Cliente'] || d['cliente'] || "").trim();
@@ -1010,7 +1038,9 @@
         let reg = String(d['Cidade do Cliente'] || d['cidade_cliente'] || d['Região'] || "").trim();
         let ser = String(d['descricao_contrato'] || d['Descrição Do Contrato'] || "").trim().toUpperCase();
 
-        let emp = String(d['empresa_atribuida'] || window.calcEmpresaExcel(ser)).toUpperCase().trim();
+        // Mesmo critério do filtro do Gerenciador (CRF aplicarFiltros): calc tem prioridade sobre override legado.
+        let empCalc = window.calcEmpresaExcel(ser);
+        let emp = String(empCalc || d['empresa_atribuida'] || '').toUpperCase().trim();
 
         if (fCli && cli !== fCli) return false;
         if (fCom && com !== fCom) return false;
@@ -1031,14 +1061,24 @@
         return true;
       });
 
-      window.processarEAtualizarGraficos(filtrados, aba);
+      // Reactividade total: 'todas' re-renderiza Soulan, Thomas, Emissões, Fechamento E os 4 KPIs
+      // a partir do MESMO dataset filtrado. Antes, só a aba ativa atualizava — as demais ficavam
+      // congeladas no dataset global, dando a impressão de filtro ignorado.
+      window.processarEAtualizarGraficos(filtrados, 'todas');
       window.verificarFiltroAtivoNaAba();
       window.fecharModalFiltros();
     };
 
     window.limparFiltrosInterativos = function () {
-      let aba = window.visaoAtivaFaturamento;
-      window.filtrosPorAba[aba] = { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' };
+      // RESET GLOBAL: zera o filtro em TODAS as abas (par com a `aplicarFiltrosModal`),
+      // forçando o badge "Filtros Ativos" a sumir em qualquer visão e re-renderizando
+      // todos os componentes a partir do dataset original.
+      const filtroVazio = { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' };
+      window.filtrosPorAba.soulan     = { ...filtroVazio };
+      window.filtrosPorAba.thomas     = { ...filtroVazio };
+      window.filtrosPorAba.emissoes   = { ...filtroVazio };
+      window.filtrosPorAba.fechamento = { ...filtroVazio };
+
       document.getElementById('filtro-modal-cliente').value = "";
       document.getElementById('filtro-modal-comercial').value = "";
       document.getElementById('filtro-modal-empresa').value = "";
@@ -1047,7 +1087,7 @@
       document.getElementById('filtro-modal-data-inicio').value = "";
       document.getElementById('filtro-modal-data-fim').value = "";
 
-      window.processarEAtualizarGraficos(window.dadosGlobaisFirestore, aba);
+      window.processarEAtualizarGraficos(window.dadosGlobaisFirestore, 'todas');
       window.verificarFiltroAtivoNaAba();
       window.fecharModalFiltros();
     };
@@ -1087,7 +1127,8 @@
           'card-wrapper-protesto',
           'card-wrapper-bruto',
           'card-wrapper-liquido',
-          'card-wrapper-realizado'
+          'card-wrapper-realizado',
+          'card-wrapper-parcelamentos'
       ];
 
       idsOcultarPorAba.forEach(id => {
@@ -1107,10 +1148,12 @@
       }
     };
 
-    window.extrairNum = function (raw) {
-      if (typeof raw === 'number') return raw;
-      return parseFloat(String(raw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-    };
+    // ─── Regras matemáticas removidas ────────────────────────────────────────
+    // `parseMoedaCRF`, `obterValorLiquido`, `calcularFaturamentoReal`,
+    // `obterFaturamentoReal` agora vêm do `core_rules.js` (Fonte Única da Verdade).
+    // Aliases legados (`extrairNum`, `obterValorLiquidoMaster`, `calcularFaturamentoRealMaster`,
+    // `obterFaturamentoRealMaster`) também são definidos lá apontando para as mesmas funções,
+    // então qualquer caller existente continua funcionando sem alteração.
 
     window.parseDataExt = function (raw) {
       if (!raw || raw === "" || raw === "-" || String(raw).toUpperCase().includes("CANCELAD")) return null;
@@ -1143,45 +1186,8 @@
       return null;
     };
 
-    window.obterStatusReal = function (data, hojeData = new Date()) {
-      hojeData.setHours(0, 0, 0, 0);
-      const sRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
-      const baixaRawStr = String(data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || '').toUpperCase();
-
-      if (sRaw.includes("CANC") || baixaRawStr.includes("CANC")) return "Cancelada";
-      if (sRaw.includes("PREJUÍZO") || sRaw.includes("PREJUIZO")) return "PREJUÍZO";
-      if (sRaw.includes("PROTESTO")) return "PROTESTO";
-      if (sRaw.includes("PAGO") || sRaw.includes("RECEBIDO") || sRaw.includes("BAIXADO")) return "RECEBIDO";
-
-      const baixaRaw = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-      if (baixaRaw && String(baixaRaw).trim() !== "" && String(baixaRaw).trim() !== "-") {
-        return "RECEBIDO";
-      }
-
-      const vencRaw = data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto'] || "";
-      const dVenc = window.parseDataExt(vencRaw);
-
-      if (dVenc && !isNaN(dVenc.getTime())) {
-        dVenc.setHours(0, 0, 0, 0);
-        if (dVenc < hojeData) return "VENCIDO";
-        return "A VENCER";
-      }
-
-      if (sRaw.includes("VENCIDO") || sRaw.includes("ATRASADO")) return "VENCIDO";
-      return "A VENCER";
-    };
-
-    window.calcEmpresaExcel = function (desc) {
-      if (!desc) return "";
-      let t = desc.toUpperCase().trim();
-      if (t.includes("TEMPORARIO") || t.includes("TEMPORÁRIO")) return "SOULAN CONSULTORIA";
-      if (t.includes("ESTAGIO") || t.includes("ESTÁGIO")) return "ESTÁGIO";
-      const adm = ["TERCEIROS", "FOPAG", "CONSULTORIA", "RPO"];
-      if (adm.some(k => t.includes(k))) return "SOULAN ADM";
-      const neat = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
-      if (neat.some(k => t.includes(k))) return "NEAT";
-      return "";
-    };
+    // `obterStatusReal` e `calcEmpresaExcel`(=`calcularEmpresaAtribuida`) vêm do `core_rules.js`.
+    // Não duplicar localmente — a regra é única.
 
     window.calcServicoAgrupado = function (desc) {
       if (!desc) return null;
@@ -1261,6 +1267,15 @@
           soulan: { bruto: 0, liquido: 0, realizado: 0, atrasado: 0 },
           thomas: { bruto: 0, liquido: 0, realizado: 0, atrasado: 0 }
         };
+        // Espelho EXATO do `atualizarMetrics` do Gerenciador (CRF):
+        //   valorTotal      → kpiFatGlobal.bruto      (todas não-canceladas)
+        //   totalFatLiquido → kpiFatGlobal.liquido    (todas não-canceladas)
+        //   totalBaixado    → kpiFatGlobal.realizado  (apenas RECEBIDO, espelha "BAIXADO REAL")
+        //   totalVencido    → kpiFatGlobal.atrasado   (apenas VENCIDO)
+        // Sem filtro de ano. Sem filtro de visão. É o número global da base.
+        // As Visões SOULAN/THOMAS continuam controlando os GRÁFICOS abaixo, mas os 4 cards
+        // do topo passam a refletir o conjunto global (paridade total com o Gerenciador).
+        let kpiFatGlobal = { bruto: 0, liquido: 0, realizado: 0, atrasado: 0 };
         let pivotSoulan = {}; let pivotThomas = {};
         let soulanBruto2026 = Array(12).fill(0), soulanBruto2025 = Array(12).fill(0);
         let soulanReal2026 = Array(12).fill(0), soulanReal2025 = Array(12).fill(0);
@@ -1279,11 +1294,37 @@
         let hoje = new Date(); hoje.setHours(0, 0, 0, 0);
         const anoCorrente = hoje.getFullYear();
 
-        for (let i = 29; i >= 0; i--) {
-          let d = new Date(hoje);
-          d.setDate(d.getDate() - i);
-          let isoStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        // ─── Calendário mensal para o gráfico "VOLUME E VALOR DIÁRIO" ───
+        // Antes: janela deslizante dos últimos 30 dias (hoje-29 → hoje).
+        // Agora: dias 1..N do mês alvo, onde:
+        //   - SEM filtro avançado de data → mês ATUAL.
+        //   - COM filtro avançado → mês do `fIni` (data inicial do filtro).
+        // Dias sem emissão aparecem com 0 — mantém a escala mensal completa.
+        let mesAlvo, anoAlvo;
+        const filtroAtivo = window.filtrosPorAba && window.filtrosPorAba[window.visaoAtivaFaturamento];
+        const fIniRaw = filtroAtivo && filtroAtivo.ini;
+        if (fIniRaw && /^\d{4}-\d{2}-\d{2}$/.test(fIniRaw)) {
+          const [a, m] = fIniRaw.split('-');
+          anoAlvo = parseInt(a, 10);
+          mesAlvo = parseInt(m, 10) - 1; // Date é 0-indexed
+        } else {
+          anoAlvo = hoje.getFullYear();
+          mesAlvo = hoje.getMonth();
+        }
+        // Último dia do mês: dia 0 do MÊS SEGUINTE = último dia do mês corrente (28/29/30/31).
+        const ultimoDiaDoMes = new Date(anoAlvo, mesAlvo + 1, 0).getDate();
+
+        for (let dia = 1; dia <= ultimoDiaDoMes; dia++) {
+          const d = new Date(anoAlvo, mesAlvo, dia);
+          const isoStr = `${anoAlvo}-${String(mesAlvo + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
           emissoesPorDia[isoStr] = { qtd: 0, val: 0, date: d };
+        }
+
+        // Atualiza o título do card com o mês corrente do gráfico.
+        const NOMES_MESES_PT = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+        const elTituloMes = document.getElementById('titulo-chart-emissoes-mes');
+        if (elTituloMes) {
+          elTituloMes.textContent = `VOLUME E VALOR DIÁRIO — ${NOMES_MESES_PT[mesAlvo]}/${anoAlvo}`;
         }
 
         let emissaoAnoMesesQtd = Array(12).fill(0);
@@ -1291,80 +1332,75 @@
         let emissaoTotalQtd = 0, emissaoTotalVal = 0, emissaoTotalReal = 0;
         let kpiEmp = { 'SOULAN CONSULTORIA': { qtd: 0, val: 0 }, 'SOULAN ADM': { qtd: 0, val: 0 }, 'ESTÁGIO': { qtd: 0, val: 0 }, 'NEAT': { qtd: 0, val: 0 } };
         let kpiSrv = { 'TEMPORARIO': { qtd: 0, val: 0 }, 'TERCEIROS': { qtd: 0, val: 0 }, 'ESTAGIO': { qtd: 0, val: 0 }, 'NEAT': { qtd: 0, val: 0 }, 'RPO': { qtd: 0, val: 0 }, 'FOPAG': { qtd: 0, val: 0 }, 'CONSULTORIA': { qtd: 0, val: 0 } };
-        let usuariosInclusaoCount = {};
+        // `usuariosInclusaoCount` removido junto com o card "Ranking de Lançamentos".
 
         arrayDeDados.forEach((data) => {
           const vFatura = Number(window.extrairNum(data['valor_fatura'] || data['Valor Fatura'] || data['valor'])) || 0;
-          const vLiquido = Number(window.extrairNum(data['valor_liquido'] || data['Vl. Líquido'] || data['Vl Líquido'])) || 0;
-          const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
+          // Líquido espelhado do Painel: subtrai "Valor Descto." de "Vl. Líquido".
+          const vLiquido = window.obterValorLiquidoMaster(data);
+          const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'] || data['Valor Taxa'] || data['Vl. Taxa'])) || 0;
 
           const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
-          const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+          // Empresa: SEMPRE e SOMENTE via `calcEmpresaExcel` (= `calcularEmpresaAtribuida` do CRF).
+          // SEM fallback para `data['empresa_atribuida']` — esse campo legado, gravado em edições
+          // manuais antigas, estava ressuscitando atribuições obsoletas e gerando os ~R$ 141,59 de
+          // sobra em Soulan. O filtro de empresa do Gerenciador (CRF aplicarFiltros linha ~2810)
+          // também usa SÓ o calc puro. Empresas que não casam com nenhuma regra ficam = '' e
+          // ficam fora de toda visão (exatamente como o filtro do Gerenciador exclui).
+          const empresa = String(window.calcEmpresaExcel(tipoServicoRaw) || '').toUpperCase().trim();
           const servicoAgrupado = window.calcServicoAgrupado(tipoServicoRaw);
 
-          const statusRaw = String(data['status'] || data['Status'] || data['STATUS'] || data['Situação'] || '').toUpperCase().trim();
+          // Espelho EXATO da `atualizarMetrics` do Gerenciador:
+          // status via `obterStatusReal`, cancelados/desmembrados saem de TUDO antes de acumular.
+          // DESMEMBRADO = nota original que foi parcelada — o faturamento real vive nas filhas agora.
+          const hojeStatus = new Date(); hojeStatus.setHours(0, 0, 0, 0);
+          const statusRealNota = window.obterStatusReal(data, hojeStatus);
+          if (statusRealNota === 'Cancelada' || statusRealNota === 'DESMEMBRADO') return;
+
+          const isRecebido = statusRealNota === 'RECEBIDO';
+          const isVencido = statusRealNota === 'VENCIDO';
           const rawBaixa = data['data_baixa'] || data['Dt Baixa'] || data['Data da Baixa'] || data['DATA DA BAIXA'] || data['data_recebimento'] || null;
-          const baixaBruta = String(rawBaixa || '').toUpperCase().trim();
-          const isCancelado = statusRaw.includes("CANCELAD") || baixaBruta.includes("CANCELAD");
 
-          // Parse rigoroso da Dt Baixa — só é "pago" se gerar uma Date JS válida
-          const dtBaixaJS = (!isCancelado && rawBaixa && baixaBruta !== "" && baixaBruta !== "-")
-            ? window.parseDataExt(rawBaixa)
-            : null;
-          const isPago = dtBaixaJS !== null && !isNaN(dtBaixaJS.getTime());
-
-          const isRecebido = !isCancelado && (isPago || statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO"));
-
-          let faturReal = 0;
-          if (isRecebido) {
-            const g1 = ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "CONSULTORIA", "RPO"];
-            const g2 = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
-            if (g1.some(g => tipoServicoRaw.includes(g))) faturReal = vTaxa;
-            else if (g2.some(g => tipoServicoRaw.includes(g))) faturReal = vTaxa * 0.55;
-            else faturReal = vFatura;
-          }
+          // Faturamento Real sempre derivado da Taxa (Grupo A 100% / Grupo B 55%, fallback 0),
+          // computado p/ TODA nota não-cancelada — espelha `totalFatReal` do Gerenciador.
+          const faturReal = window.obterFaturamentoRealMaster(data);
 
           fatBrutoGlobal += vFatura; fatRealGlobal += faturReal;
           fatLiquidoGlobal += vLiquido;
+
+          // Acumulador GLOBAL para diagnóstico (espelho exato do `atualizarMetrics` do CRF).
+          // Sem filtro de ano, sem filtro de visão. Não alimenta cards (cards usam kpiFat[visao]).
+          //   bruto     → valorTotal
+          //   liquido   → totalFatLiquido
+          //   realizado → totalFatReal (TODAS as não-canceladas — não só RECEBIDO)
+          //   atrasado  → totalVencido (apenas VENCIDO)
+          kpiFatGlobal.bruto    += vFatura;
+          kpiFatGlobal.liquido  += vLiquido;
+          kpiFatGlobal.realizado += faturReal;            // mirror totalFatReal
+          if (isVencido) kpiFatGlobal.atrasado += faturReal;
 
           // Parse da data de emissão (usado para KPIs e demais cálculos)
           let dEmissao = window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
           const anoEmissao = (dEmissao && !isNaN(dEmissao.getTime())) ? dEmissao.getFullYear() : null;
 
-          // Acumula KPIs por Visão (Soulan vs Thomas) — restrito ao ano corrente
-          const grupoKpi = empresa === 'NEAT' ? 'thomas' : 'soulan';
-          if (anoEmissao === anoCorrente) {
-            kpiFat[grupoKpi].bruto += vFatura;
-            kpiFat[grupoKpi].liquido += vLiquido;
-            kpiFat[grupoKpi].realizado += faturReal;
+          // Visão SOULAN inclui apenas {SOULAN CONSULTORIA, SOULAN ADM, ESTÁGIO}.
+          // Visão THOMAS inclui apenas {NEAT}.
+          // Notas com empresa vazia/desconhecida NÃO entram em visão alguma — espelho exato do
+          // que acontece no Gerenciador quando o usuário marca essas empresas no filtro de empresa
+          // (Filtros Avançados → Empresa Atribuída): empresas fora da lista são excluídas.
+          // Sem filtro de ano: o `atualizarMetrics` do CRF também não tem `anoEmissao === anoCorrente`.
+          const ehSoulan = (empresa === 'SOULAN CONSULTORIA' || empresa === 'SOULAN ADM' || empresa === 'ESTÁGIO');
+          const ehNeat = (empresa === 'NEAT');
+          let grupoKpi = null;
+          if (ehNeat) grupoKpi = 'thomas';
+          else if (ehSoulan) grupoKpi = 'soulan';
+
+          if (grupoKpi) {
+            kpiFat[grupoKpi].bruto    += vFatura;                  // espelha `valorTotal` filtrado p/ empresa
+            kpiFat[grupoKpi].liquido  += vLiquido;                 // espelha `totalFatLiquido`
+            kpiFat[grupoKpi].realizado += faturReal;               // espelha `totalFatReal` (todas não-canceladas)
+            if (isVencido) kpiFat[grupoKpi].atrasado += faturReal; // espelha `totalVencido`
           }
-
-          // --- INÍCIO DA REGRA EXATA DO CRF (VENCIDO) ---
-          // 1. Calcula o Faturamento Real da nota independente de estar paga
-          let faturRealParaAtraso = 0;
-          const g1Atraso = ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "CONSULTORIA", "RPO", "ESTÁGIO"];
-          const g2Atraso = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
-
-          if (g1Atraso.some(g => tipoServicoRaw.includes(g))) {
-            faturRealParaAtraso = vTaxa;
-          } else if (g2Atraso.some(g => tipoServicoRaw.includes(g))) {
-            faturRealParaAtraso = vTaxa * 0.55;
-          } else {
-            faturRealParaAtraso = vFatura;
-          }
-
-          // 2. Chama a função espelho do CRF
-          const hojeParaAtraso = new Date();
-          hojeParaAtraso.setHours(0, 0, 0, 0);
-          const statusRealNota = window.obterStatusReal(data, hojeParaAtraso);
-
-          // 3. Soma apenas se for "VENCIDO"
-          if (statusRealNota === "VENCIDO") {
-            if (kpiFat[grupoKpi] && typeof kpiFat[grupoKpi].atrasado !== 'undefined') {
-              kpiFat[grupoKpi].atrasado += faturRealParaAtraso;
-            }
-          }
-          // --- FIM DA REGRA EXATA DO CRF ---
           if (dEmissao && !isNaN(dEmissao.getTime())) {
             let dCopy = new Date(dEmissao);
             dCopy.setHours(0, 0, 0, 0);
@@ -1419,44 +1455,38 @@
               if (neatGroup.some(k => tsUpper.includes(k))) { kpiSrv['NEAT'].qtd++; kpiSrv['NEAT'].val += vFatura; }
             }
 
-            if (empresa !== "NEAT") {
+            // Bruto mensal por VISÃO ESTRITA — espelho do filtro de empresa do Gerenciador.
+            // Soulan = {SOULAN CONSULTORIA, SOULAN ADM, ESTÁGIO}, Thomas = {NEAT}. Empresas fora ficam de fora.
+            if (ehSoulan) {
               if (ano === 2026) soulanBruto2026[mes] += vFatura;
               if (ano === 2025) soulanBruto2025[mes] += vFatura;
-            } else if (empresa === "NEAT") {
+            } else if (ehNeat) {
               if (ano === 2026) thomasBruto2026[mes] += vFatura;
               if (ano === 2025) thomasBruto2025[mes] += vFatura;
             }
           }
 
-          if (isRecebido) {
-            let dRef = rawBaixa ?
-              window.parseDataExt(rawBaixa) : null;
-            if (!dRef || isNaN(dRef.getTime())) {
-              let dVencFallback = window.parseDataExt(data['Vencimento'] || data['VENCIMENTO'] || data['Dt Vecto'] || data['Dt Vecto  '] || data['vencimento'] || data['Data de Vencimento']);
-              dRef = (dVencFallback && !isNaN(dVencFallback.getTime())) ? dVencFallback : dEmissao;
-            }
-
-            if (dRef && !isNaN(dRef.getTime())) {
-              let mes = dRef.getMonth();
-              let ano = dRef.getFullYear();
-              if (empresa !== "NEAT") {
-                if (ano === 2026) soulanReal2026[mes] += faturReal;
-                if (ano === 2025) soulanReal2025[mes] += faturReal;
-              } else if (empresa === "NEAT") {
-                if (ano === 2026) thomasReal2026[mes] += faturReal;
-                if (ano === 2025) thomasReal2025[mes] += faturReal;
-              }
+          // Realizado mensal — ROTA DO `totalFatReal` (todas não-canceladas, NÃO só RECEBIDO).
+          // Indexa por mês de EMISSÃO (mesma dimensão do filtro avançado e do gráfico Bruto).
+          // Antes: tinha gate `isRecebido` (que era a rota errada `totalBaixado`) e `empresa !== "NEAT"`
+          // (que era permissivo). Agora: alinhado com o card do Realizado e com o filtro do Gerenciador.
+          if (dEmissao && !isNaN(dEmissao.getTime())) {
+            let mes = dEmissao.getMonth();
+            let ano = dEmissao.getFullYear();
+            if (ehSoulan) {
+              if (ano === 2026) soulanReal2026[mes] += faturReal;
+              if (ano === 2025) soulanReal2025[mes] += faturReal;
+            } else if (ehNeat) {
+              if (ano === 2026) thomasReal2026[mes] += faturReal;
+              if (ano === 2025) thomasReal2025[mes] += faturReal;
             }
           }
 
-          let usuarioInc = String(data['Usuário Inclusão'] || data['usuario_inclusao'] || data['Usuário'] || "").trim();
-          if (usuarioInc && usuarioInc !== "undefined" && usuarioInc !== "null" && usuarioInc !== "N/I") {
-            if (!usuariosInclusaoCount[usuarioInc]) usuariosInclusaoCount[usuarioInc] = 0;
-            usuariosInclusaoCount[usuarioInc]++;
-          }
+          // Acumulador `usuariosInclusaoCount` removido junto com o card "Ranking de Lançamentos".
 
           let cidadeRaw = String(data['Cidade do Cliente'] || data['cidade_cliente'] || data['Região'] || "").toUpperCase().trim();
-          if (cidadeRaw && empresa !== "NEAT") {
+          // Mapa de regiões da Visão Soulan — apenas empresas Soulan estritas (espelho do filtro do CRF).
+          if (cidadeRaw && ehSoulan) {
             let geo = window.traduzirCidadeParaEstado(cidadeRaw);
             if (!mapRegioes[geo.id]) mapRegioes[geo.id] = { id: geo.id, sigla: geo.sigla, nome: geo.estadoNome, val: 0 };
             mapRegioes[geo.id].val += vFatura;
@@ -1475,7 +1505,8 @@
 
           let comercialText = window.mapearComercial(window.obterComercialSeguro(data));
 
-          if (empresa !== "NEAT") {
+          // Charts da Visão Soulan (Bruto vs Real por Serviço, Top Comerciais) — apenas empresas Soulan estritas.
+          if (ehSoulan) {
             if (servicoAgrupado) {
               if (!dadosServico.bruto[servicoAgrupado]) {
                 dadosServico.bruto[servicoAgrupado] = 0;
@@ -1541,9 +1572,13 @@
                   }
                 };
               }
-              pivotSoulan[comercialText].bruto[servC] += vFatura;
+              // Comercial em Faturamento Real (espelha `obterFaturamentoReal` do core_rules.js).
+              // O campo `.bruto` foi convertido para somar faturReal — a tabela rotulada como
+              // "Bruto" agora exibe o Real, em paralelo ao breakdown `.real` por serviço.
+              // Cancelados já saíram via early-return do forEach (mesma regra do CRF).
+              pivotSoulan[comercialText].bruto[servC] += faturReal;
               pivotSoulan[comercialText].real[servC] += faturReal;
-              pivotSoulan[comercialText].bruto.TOTAL += vFatura;
+              pivotSoulan[comercialText].bruto.TOTAL += faturReal;
               pivotSoulan[comercialText].real.TOTAL += faturReal;
             }
           } else if (empresa === "NEAT") {
@@ -1566,13 +1601,65 @@
                   }
                 };
               }
-              pivotThomas[comercialText].bruto[servT] += vFatura;
+              // Mesma regra que Soulan: Comercial em Faturamento Real para a Visão Thomas (NEAT).
+              pivotThomas[comercialText].bruto[servT] += faturReal;
               pivotThomas[comercialText].real[servT] += faturReal;
-              pivotThomas[comercialText].bruto.TOTAL += vFatura;
+              pivotThomas[comercialText].bruto.TOTAL += faturReal;
               pivotThomas[comercialText].real.TOTAL += faturReal;
             }
           }
         });
+
+        // ── Parcelamentos Ativos: agrega filhas (origem_parcelamento === true) por parent_rps ──
+        // Itera sobre o mesmo `arrayDeDados` (passa pelo filtro avançado, igual ao restante).
+        // Filhas DESMEMBRADAS/Canceladas contam como "fechadas" e ficam fora do residual.
+        const hojePar = new Date(); hojePar.setHours(0, 0, 0, 0);
+        const parcelamentosAtivos = {}; // key = parent_id ou parent_rps
+        arrayDeDados.forEach((data) => {
+          if (!data || !data.origem_parcelamento) return;
+          const parentKey = data.parent_id || data.parent_rps || '';
+          if (!parentKey) return;
+          const statusP = window.obterStatusReal(data, hojePar);
+          const vBruto = parseMoedaCRF(data['valor_fatura'] || data['Valor Fatura'] || data['valor']);
+          if (!parcelamentosAtivos[parentKey]) {
+            parcelamentosAtivos[parentKey] = {
+              parent_rps: data.parent_rps || '',
+              cliente: data.cliente || data.Cliente || '-',
+              total_parcelas: data.parcela_total || 0,
+              parcelas_pagas: 0,
+              parcelas_em_aberto: 0,
+              valor_total: 0,
+              valor_residual: 0,
+              filhas: []
+            };
+          }
+          const grupo = parcelamentosAtivos[parentKey];
+          grupo.valor_total += vBruto;
+          if (statusP === 'RECEBIDO') grupo.parcelas_pagas += 1;
+          else if (statusP !== 'Cancelada' && statusP !== 'DESMEMBRADO') {
+            grupo.parcelas_em_aberto += 1;
+            grupo.valor_residual += vBruto;
+          }
+          grupo.filhas.push({
+            indice: data.parcela_indice || 0,
+            rps: data.rps || data['Nº NF'] || '',
+            venc: data.vencimento || data['Dt Vecto'] || '',
+            valor: vBruto,
+            status: statusP
+          });
+        });
+
+        // Apenas grupos com pelo menos 1 parcela em aberto contam como "ativo".
+        const parcelamentosAtivosArr = Object.values(parcelamentosAtivos).filter(g => g.parcelas_em_aberto > 0);
+        const totalResidual = parcelamentosAtivosArr.reduce((acc, g) => acc + g.valor_residual, 0);
+        const qtdAtivos = parcelamentosAtivosArr.length;
+        // Salva globalmente para o modal de detalhamento.
+        window._parcelamentosAtivosDetalhe = parcelamentosAtivosArr.sort((a, b) => b.valor_residual - a.valor_residual);
+        const elParcResidual = document.getElementById('kpi-parcelamentos-residual');
+        const elParcQtd = document.getElementById('kpi-parcelamentos-qtd');
+        if (elParcResidual) elParcResidual.textContent = window.formatMoedaFull(totalResidual);
+        if (elParcQtd) elParcQtd.textContent = qtdAtivos;
+
         if (abaEspecifica === 'todas') {
           const elBrutoTotal = document.getElementById('kpi-bruto-total');
           const elRealTotal = document.getElementById('kpi-real-total');
@@ -1582,7 +1669,10 @@
           if (elLiquidoTotal) elLiquidoTotal.innerText = window.formatMoedaFull(fatLiquidoGlobal);
         }
 
-        // KPIs do Módulo Faturamento (respeitam aba Soulan/Thomas)
+        // Os 4 cards do topo são TODOS por VISÃO agora — espelho do Gerenciador filtrado pela
+        // empresa correspondente. O `kpiFat[visaoKpi]` foi acumulado com filtro estrito de empresa
+        // (SOULAN visão = {SOULAN ADM, SOULAN CONSULTORIA, ESTÁGIO}; THOMAS = {NEAT}) e sem filtro
+        // de ano — exatamente como o `atualizarMetrics` do CRF respondendo ao filtro de empresa.
         const visaoKpi = window.visaoKpiFaturamento || 'soulan';
         const dadosKpi = kpiFat[visaoKpi];
         const elFatBruto = document.getElementById('kpi-fat-bruto');
@@ -1632,40 +1722,7 @@
           document.getElementById('kpi-srv-fopag-val').innerText = window.formatMoedaFull(kpiSrv['FOPAG'].val);
           document.getElementById('kpi-srv-cons-qtd').innerText = window.formatMil(kpiSrv['CONSULTORIA'].qtd);
           document.getElementById('kpi-srv-cons-val').innerText = window.formatMoedaFull(kpiSrv['CONSULTORIA'].val);
-          const tbodyRanking = document.getElementById('tbody-ranking-usuarios');
-          if (tbodyRanking) {
-            let rankingArr = Object.entries(usuariosInclusaoCount).sort((a, b) => b[1] - a[1]);
-            if (rankingArr.length === 0) {
-              tbodyRanking.innerHTML = `<tr><td colspan="3" class="text-center text-xs text-slate-400 py-6">Nenhum usuário detectado neste período.</td></tr>`;
-            } else {
-              tbodyRanking.innerHTML = rankingArr.map((item, index) => {
-                let pos = index + 1;
-                let icon = `<span class="text-slate-400 font-bold text-xs w-6 inline-block text-center">${pos}º</span>`;
-                if (index === 0) icon = '<span class="material-symbols-outlined text-yellow-500 text-[20px]">workspace_premium</span>';
-
-
-                else if (index === 1) icon = '<span class="material-symbols-outlined text-slate-400 text-[20px]">workspace_premium</span>';
-                else if (index === 2) icon = '<span class="material-symbols-outlined text-amber-700 text-[20px]">workspace_premium</span>';
-
-                let initials = item[0].substring(0, 2).toUpperCase();
-
-                return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-all duration-300">
-             
-                                     <td class="py-3 px-2 w-12 text-center shrink-0">${icon}</td>
-                                    <td class="py-3 px-2 flex items-center gap-3">
-                 
-         <div class="w-8 h-8 rounded-full bg-brandLightBlue/20 text-brandMidBlue flex items-center justify-center font-bold text-xs shrink-0">${initials}</div>
-                                        <span class="text-slate-700 font-bold text-xs truncate max-w-[200px]" title="${item[0]}">${item[0]}</span>
-                    
-  </td>
-                                    <td class="py-3 px-2 text-right">
-                                        <span class="bg-brandGreen/20 text-brandDarkBlue px-3 py-1 rounded-lg font-extrabold text-xs shadow-sm">${item[1]}</span>
-           
-                         </td>
-                                </tr>`;
-              }).join('');
-            }
-          }
+          // Renderizador do "Ranking de Lançamentos" removido junto com o card.
 
           if (window.chartEmissoes30Dias) {
             window.chartEmissoes30Dias.updateSeries([
@@ -1857,14 +1914,90 @@
           };
           const colsSoulan = ["CONSULTORIA", "ESTAGIO", "FOPAG", "RPO", "TEMPORARIO", "TERCEIROS"];
           const colsThomas = ["DEVOLUTIVA", "INTEGRAÇÃO", "SUBSCRIPTION", "TREINAMENTO", "UNIDADES", "HOTMART", "ASSESSMENT"];
+          const labelsServicos = {
+            CONSULTORIA: 'Consultoria', ESTAGIO: 'Estágio', FOPAG: 'Fopag', RPO: 'RPO',
+            TEMPORARIO: 'Temporário', TERCEIROS: 'Terceiros',
+            DEVOLUTIVA: 'Devolutiva', 'INTEGRAÇÃO': 'Integração', SUBSCRIPTION: 'Subscription',
+            TREINAMENTO: 'Treinamento', UNIDADES: 'Unidades', HOTMART: 'Hotmart', ASSESSMENT: 'Assessment'
+          };
+
+          // ─── Tabela "Por Serviço" — TRANSPOSTA ─────────────────────────────────
+          // Linhas = SERVIÇOS (cols), Colunas = COMERCIAIS (chaves do pivotDict),
+          // Última coluna = Total Geral por serviço, Última linha = Total Geral por comercial.
+          // Mesmo `tipo='real'` (espelho de `obterFaturamentoReal` do core_rules.js).
+          const renderTabelaPorServico = (pivotDict, cols, tipo, isThomas) => {
+            const sortedComerciais = Object.keys(pivotDict).sort((a, b) => pivotDict[b][tipo].TOTAL - pivotDict[a][tipo].TOTAL);
+            const formatVal = (v) => (!v || v === 0)
+              ? `<span class="text-slate-300">-</span>`
+              : `<span class="text-slate-600 font-semibold">${window.formatMoedaFull(v)}</span>`;
+
+            const headBg = isThomas ? 'bg-[#434f55]' : 'bg-[#002443]';
+            const totalHeadBg = isThomas ? 'bg-[#ff5f15]' : 'bg-[#003459]';
+            const totalHeadText = isThomas ? 'text-[#ffefe8]' : 'text-brandGreen';
+            const footerBg = isThomas ? 'bg-[#ff5f15]' : 'bg-brandGreen/10';
+            const footerBorder = isThomas ? 'border-[#ffefe8]' : 'border-brandGreen';
+            const footerText = isThomas ? 'text-[#ffefe8]' : 'text-brandDarkBlue';
+            const footerCellBg = isThomas ? 'bg-[#ff5f15]' : 'bg-[#f0f9d9]';
+            const totalColBg = isThomas ? 'bg-[#ff5f15]' : 'bg-brandGreen/20';
+
+            // ── thead dinâmico (lista de comerciais varia com o filtro) ──
+            let thead = `<thead class="sticky top-0 z-20 ${headBg} text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
+                <tr>
+                  <th class="sticky left-0 z-30 ${headBg} px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Serviço</th>`;
+            sortedComerciais.forEach(com => {
+              thead += `<th class="px-2 py-1.5 text-right">${com}</th>`;
+            });
+            thead += `<th class="px-2 py-1.5 text-right ${totalHeadText} ${totalHeadBg}">Total Geral</th></tr></thead>`;
+
+            // ── tbody: uma linha por serviço ──
+            if (sortedComerciais.length === 0) {
+              return thead + `<tbody><tr><td colspan="${cols.length + 2}" class="text-center py-4 text-slate-400 text-xs italic">Nenhum dado encontrado para o período/filtros.</td></tr></tbody>`;
+            }
+
+            let tbody = '<tbody>';
+            const totaisPorComercial = {};
+            sortedComerciais.forEach(c => totaisPorComercial[c] = 0);
+            let grandTotal = 0;
+
+            cols.forEach(servico => {
+              const labelServico = labelsServicos[servico] || servico;
+              let totalServico = 0;
+              let row = `<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                  <td class="sticky left-0 z-10 bg-slate-200 group-hover:bg-slate-300 px-2 py-1.5 text-[11px] font-extrabold text-brandDarkBlue border-r-2 border-slate-300 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.05)]">${labelServico}</td>`;
+              sortedComerciais.forEach(com => {
+                const v = (pivotDict[com][tipo][servico]) || 0;
+                totalServico += v;
+                totaisPorComercial[com] += v;
+                row += `<td class="px-2 py-1.5 text-[11px] text-right whitespace-nowrap">${formatVal(v)}</td>`;
+              });
+              grandTotal += totalServico;
+              row += `<td class="px-2 py-1.5 text-[11px] text-right bg-slate-50 font-extrabold text-brandDarkBlue whitespace-nowrap">${formatVal(totalServico)}</td></tr>`;
+              tbody += row;
+            });
+
+            // Rodapé Total Geral por comercial
+            tbody += `<tr class="sticky bottom-0 z-20 ${footerBg} border-t-2 ${footerBorder} shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                <td class="sticky left-0 z-10 ${footerCellBg} px-2 py-1.5 text-[11px] font-extrabold ${footerText} border-r-2 border-slate-300 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.05)]">TOTAL GERAL</td>`;
+            sortedComerciais.forEach(com => {
+              tbody += `<td class="px-2 py-1.5 text-[11px] text-right font-extrabold ${footerText} whitespace-nowrap">${formatVal(totaisPorComercial[com])}</td>`;
+            });
+            tbody += `<td class="px-2 py-1.5 text-[11px] text-right ${totalColBg} font-extrabold ${footerText} whitespace-nowrap">${formatVal(grandTotal)}</td></tr></tbody>`;
+
+            return thead + tbody;
+          };
+
+          // Tabelas "Por Comercial" (originais) — usam o renderTable matricial padrão.
           const tbodySoulanBruto = document.getElementById('tbody-fech-soulan-bruto');
-          const tbodySoulanReal = document.getElementById('tbody-fech-soulan-real');
           const tbodyThomasBruto = document.getElementById('tbody-fech-thomas-bruto');
-          const tbodyThomasReal = document.getElementById('tbody-fech-thomas-real');
           if (tbodySoulanBruto) tbodySoulanBruto.innerHTML = renderTable(pivotSoulan, colsSoulan, 'bruto');
-          if (tbodySoulanReal) tbodySoulanReal.innerHTML = renderTable(pivotSoulan, colsSoulan, 'real');
           if (tbodyThomasBruto) tbodyThomasBruto.innerHTML = renderTable(pivotThomas, colsThomas, 'bruto');
-          if (tbodyThomasReal) tbodyThomasReal.innerHTML = renderTable(pivotThomas, colsThomas, 'real');
+
+          // Tabelas "Por Serviço" — usam o renderTabelaPorServico (TRANSPOSTO).
+          // Reescreve o `<table>` inteiro (thead + tbody) porque o eixo X é dinâmico.
+          const tabelaSoulanServico = document.getElementById('tabela-fech-soulan-servico');
+          const tabelaThomasServico = document.getElementById('tabela-fech-thomas-servico');
+          if (tabelaSoulanServico) tabelaSoulanServico.innerHTML = renderTabelaPorServico(pivotSoulan, colsSoulan, 'real', false);
+          if (tabelaThomasServico) tabelaThomasServico.innerHTML = renderTabelaPorServico(pivotThomas, colsThomas, 'real', true);
 
           const kpiN = document.getElementById('kpi-fech-notas');
           const kpiB = document.getElementById('kpi-fech-bruto');
@@ -2207,27 +2340,30 @@
       };
 
       window.dadosGlobaisFirestore.forEach(data => {
-        const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
+        // Status idêntico ao Gerenciador: usa `obterStatusReal` em vez de detectar inline.
+        // Antes, PREJUÍZO/PROTESTO com baixa caía aqui como Recebido — divergência com o CRF.
+        const hojeMeta = new Date(); hojeMeta.setHours(0, 0, 0, 0);
+        if (window.obterStatusReal(data, hojeMeta) !== 'RECEBIDO') return;
+
         const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-        const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
-
-        if (!isRecebido) return;
-
         let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
         if (!dRef || dRef.getFullYear() != anoFiltro) return;
 
-        const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
         const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
-        const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+        // Mesmo critério da forEach principal: cálculo tem prioridade sobre o override legado.
+        const empresaCalc = window.calcEmpresaExcel(tipoServicoRaw);
+        const empresa = String(empresaCalc || data['empresa_atribuida'] || '').toUpperCase().trim();
 
-        let faturReal = 0;
+        // Atribuição do grupo da meta (somente p/ rotular o bucket — não calcula valor).
         let grupoMeta = null;
+        if (tipoServicoRaw.includes("TEMPORA")) grupoMeta = 'Temporário';
+        else if (tipoServicoRaw.includes("TERCEIROS")) grupoMeta = 'Terceirizados';
+        else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) grupoMeta = 'Estágio & Fopag';
+        else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) grupoMeta = 'Consultoria & RPO';
+        else if (empresa === "NEAT") grupoMeta = 'THOMAS';
 
-        if (tipoServicoRaw.includes("TEMPORA")) { faturReal = vTaxa; grupoMeta = 'Temporário'; }
-        else if (tipoServicoRaw.includes("TERCEIROS")) { faturReal = vTaxa; grupoMeta = 'Terceirizados'; }
-        else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) { faturReal = vTaxa; grupoMeta = 'Estágio & Fopag'; }
-        else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) { faturReal = vTaxa; grupoMeta = 'Consultoria & RPO'; }
-        else if (empresa === "NEAT") { faturReal = vTaxa * 0.55; grupoMeta = 'THOMAS'; }
+        // Valor financeiro espelhado do Painel — Taxa-only, NFD-safe, fallback 0.
+        const faturReal = window.obterFaturamentoRealMaster(data);
 
         if (grupoMeta) faturamentoPorMesProduto[grupoMeta][dRef.getMonth()] += faturReal;
       });
@@ -2422,17 +2558,18 @@
       let faturMes = { 'Consultoria & RPO': 0, 'Estágio & Fopag': 0, 'THOMAS': 0, 'Temporário': 0, 'Terceirizados': 0 };
 
       window.dadosGlobaisFirestore.forEach(data => {
-        const statusRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
-        const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-        const isRecebido = statusRaw.includes("PAGO") || statusRaw.includes("RECEBIDO") || statusRaw.includes("BAIXADO") || (temBaixa && String(temBaixa).trim() !== "" && String(temBaixa).trim() !== "-");
-        if (!isRecebido) return;
+        // Status idêntico ao Gerenciador via `obterStatusReal`.
+        const hojeModal = new Date(); hojeModal.setHours(0, 0, 0, 0);
+        if (window.obterStatusReal(data, hojeModal) !== 'RECEBIDO') return;
 
+        const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
         let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
         if (!dRef || dRef.getFullYear() != ano || dRef.getMonth() != mesIdx) return;
 
-        const vTaxa = Number(window.extrairNum(data['taxa'] || data['Taxa'])) || 0;
         const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
-        const empresa = String(data['empresa_atribuida'] || window.calcEmpresaExcel(tipoServicoRaw)).toUpperCase().trim();
+        // Mesmo critério da forEach principal: cálculo tem prioridade sobre o override legado.
+        const empresaCalc = window.calcEmpresaExcel(tipoServicoRaw);
+        const empresa = String(empresaCalc || data['empresa_atribuida'] || '').toUpperCase().trim();
 
         let grupoMeta = null;
         if (tipoServicoRaw.includes("TEMPORA")) grupoMeta = 'Temporário';
@@ -2441,7 +2578,8 @@
         else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) grupoMeta = 'Consultoria & RPO';
         else if (empresa === "NEAT") grupoMeta = 'THOMAS';
 
-        if (grupoMeta) faturMes[grupoMeta] += (grupoMeta === 'THOMAS' ? vTaxa * 0.55 : vTaxa);
+        // Espelha o Painel: Taxa-only com a regra Grupo A 100% / Grupo B 55%.
+        if (grupoMeta) faturMes[grupoMeta] += window.obterFaturamentoRealMaster(data);
       });
 
       let listHtml = "";
@@ -2490,11 +2628,116 @@
       const c = document.getElementById('modal-detalhe-meta-content');
       m.classList.add('opacity-0'); c.classList.add('scale-95'); setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
     };
+
+    // ─── Modal de Parcelamentos Ativos ───
+    // Lista os grupos de parcelas em aberto agrupados por cliente/parent_rps,
+    // mostrando o status "Pagou X / Faltam Y (R$ residual)".
+    window.abrirModalParcelamentos = function () {
+      const lista = window._parcelamentosAtivosDetalhe || [];
+      const elLista = document.getElementById('parcelamentos-lista');
+      if (!elLista) return;
+
+      if (lista.length === 0) {
+        elLista.innerHTML = `
+          <div class="text-center py-12 opacity-60">
+            <span class="material-symbols-outlined text-5xl text-slate-300">inbox</span>
+            <p class="mt-3 text-sm font-bold text-slate-500">Nenhum parcelamento ativo no recorte atual.</p>
+          </div>`;
+      } else {
+        // Agrupa por cliente p/ apresentação top-level.
+        const porCliente = {};
+        lista.forEach(g => {
+          if (!porCliente[g.cliente]) porCliente[g.cliente] = [];
+          porCliente[g.cliente].push(g);
+        });
+        const fmt = window.formatMoedaFull;
+        let html = '';
+        Object.keys(porCliente).sort().forEach(cliente => {
+          const grupos = porCliente[cliente];
+          const totalCliente = grupos.reduce((acc, g) => acc + g.valor_total, 0);
+          const residualCliente = grupos.reduce((acc, g) => acc + g.valor_residual, 0);
+          html += `
+            <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cliente</p>
+                  <p class="text-sm font-extrabold text-slate-800">${cliente}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Residual em aberto</p>
+                  <p class="text-sm font-extrabold text-indigo-600">${fmt(residualCliente)}</p>
+                </div>
+              </div>
+              <div class="divide-y divide-slate-100">`;
+          grupos.forEach(g => {
+            const faltam = g.parcelas_em_aberto;
+            const pagas = g.parcelas_pagas;
+            const total = g.total_parcelas || g.filhas.length;
+            html += `
+              <div class="px-5 py-3">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs text-slate-700">
+                    <span class="font-bold">RPS Original:</span>
+                    <span class="text-slate-900 font-extrabold">${g.parent_rps || '—'}</span>
+                  </p>
+                  <p class="text-[11px] text-slate-500 font-bold">
+                    Total: <span class="text-slate-800 font-extrabold">${fmt(g.valor_total)}</span>
+                  </p>
+                </div>
+                <p class="text-[11px] text-slate-600">
+                  Dividido em <strong>${total}</strong> parcelas ·
+                  Pagou <strong class="text-emerald-600">${pagas}</strong> ·
+                  Faltam <strong class="text-indigo-600">${faltam}</strong>
+                  (<strong class="text-indigo-700">${fmt(g.valor_residual)}</strong>)
+                </p>
+                <div class="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">`;
+            g.filhas.sort((a, b) => (a.indice || 0) - (b.indice || 0)).forEach(f => {
+              const isPaga = f.status === 'RECEBIDO';
+              const cor = isPaga ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                       : f.status === 'VENCIDO' ? 'bg-red-50 border-red-200 text-red-700'
+                       : 'bg-slate-50 border-slate-200 text-slate-700';
+              html += `
+                <div class="text-[10px] rounded-lg border ${cor} px-2 py-1.5">
+                  <p class="font-extrabold">${f.rps}</p>
+                  <p class="font-medium">${f.venc || '-'}</p>
+                  <p class="font-bold">${fmt(f.valor)}</p>
+                  <p class="text-[9px] uppercase tracking-wider">${f.status}</p>
+                </div>`;
+            });
+            html += `</div></div>`;
+          });
+          html += `</div></div>`;
+        });
+        elLista.innerHTML = html;
+      }
+
+      const m = document.getElementById('modal-parcelamentos');
+      const c = document.getElementById('modal-parcelamentos-content');
+      if (!m || !c) return;
+      m.classList.remove('opacity-0', 'pointer-events-none');
+      c.classList.remove('scale-95');
+    };
+
+    window.fecharModalParcelamentos = function () {
+      const m = document.getElementById('modal-parcelamentos');
+      const c = document.getElementById('modal-parcelamentos-content');
+      if (!m || !c) return;
+      m.classList.add('opacity-0', 'pointer-events-none');
+      c.classList.add('scale-95');
+    };
+
+    // Wire-up dos botões de fechar / overlay.
+    document.addEventListener('DOMContentLoaded', function () {
+      const btnFechar = document.getElementById('btn-fechar-parcelamentos');
+      const overlay = document.getElementById('modal-parcelamentos-overlay');
+      if (btnFechar) btnFechar.addEventListener('click', window.fecharModalParcelamentos);
+      if (overlay) overlay.addEventListener('click', window.fecharModalParcelamentos);
+    });
   </script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { renderSidebar } from "../sidebar.js";
 
@@ -2586,37 +2829,63 @@
         console.error("[DashboardMaster] Falha ao renderizar shell/cards:", error);
       }
 
-      // ETAPA 3 — Dados de módulos. Queries INDEPENDENTES rodam em paralelo
-      // via allSettled — falha/lentidão em uma não afeta a outra e os cards
-      // já estão visíveis (ETAPA 2 acima) independentemente do resultado.
-      const [lancRes, metasRes] = await Promise.allSettled([
-        getDocs(query(collection(db, "Lancamentos"), where("tipo", "==", "receita"))),
-        getDocs(collection(db, "MetasFinanceiras"))
-      ]);
-
-      // Lancamentos (Faturamento / Aging / Fluxo)
-      if (lancRes.status === 'fulfilled') {
+      // ETAPA 3 — Carga de Lançamentos via `onSnapshot` (real-time), espelhando
+      // BYTE-A-BYTE a query do Gerenciador CRF (contas_a_receber_desktop, linha 3209):
+      //
+      //   onSnapshot(collection(db, "Lancamentos"), snap => {
+      //     todasAsNotas = [];
+      //     snap.forEach(doc => {
+      //       const data = doc.data();
+      //       if (data.tipo === 'receita') todasAsNotas.push({ id: doc.id, ...data });
+      //     });
+      //   });
+      //
+      // Antes o Master usava `getDocs` (one-shot) + filtro Firestore `where("tipo","==","receita")`
+      // + filtro JS extra de NF "TOTAL/TOTAIS" + push SEM `id`. Três divergências em relação ao
+      // Gerenciador, qualquer uma delas suficiente p/ produzir os ~R$ 141 de descompasso:
+      //   1) `getDocs` ficava obsoleto se algo era editado/excluído após a carga inicial.
+      //   2) Filtro Firestore exclui docs sem campo `tipo`; filtro JS do Gerenciador também — same.
+      //      Mas `tipo` em outro casing/whitespace divergiria entre Firestore (server-side) e JS.
+      //   3) O bloqueio "TOTAL/TOTAIS" tirava notas que o Gerenciador mantinha — desalinhamento de base.
+      //   4) Sem `id`, o Master não conseguia dedupar por documento.
+      //
+      // A nova carga é idêntica ao Gerenciador. Reprocessa os charts a cada snapshot.
+      onSnapshot(collection(db, "Lancamentos"), (snap) => {
         try {
           window.dadosGlobaisFirestore = [];
-          lancRes.value.forEach(doc => {
+          snap.forEach(doc => {
             const data = doc.data();
-            // 🛑 BLOQUEIO DE LIXO DO EXCEL: Ignora linhas de subtotal que inflavam 65 Milhões
-            const nfStr = String(data['nf'] || data['Nº NF'] || data['Nº NF-e'] || data['NF'] || "").toUpperCase().trim();
-            if (!nfStr.includes('TOTAL') && !nfStr.includes('TOTAIS')) {
-              window.dadosGlobaisFirestore.push(data);
+            if (data.tipo === 'receita') {
+              window.dadosGlobaisFirestore.push({ id: doc.id, ...data });
             }
           });
+
+          // Diagnóstico p/ validação cruzada com o Gerenciador no DevTools.
+          if (window.console && console.info) {
+            const hojeDiag = new Date();
+            console.info('[DashboardMaster] Lancamentos snapshot →', {
+              total: window.dadosGlobaisFirestore.length,
+              naoCanceladas: window.dadosGlobaisFirestore.filter(d => obterStatusReal(d, hojeDiag) !== 'Cancelada').length,
+              somaBruto: window.dadosGlobaisFirestore.reduce((acc, d) => obterStatusReal(d, hojeDiag) === 'Cancelada' ? acc : acc + parseMoedaCRF(d['valor_fatura'] || d['Valor Fatura'] || d['valor']), 0).toFixed(2),
+              somaTotalFatReal: window.dadosGlobaisFirestore.reduce((acc, d) => obterStatusReal(d, hojeDiag) === 'Cancelada' ? acc : acc + obterFaturamentoReal(d), 0).toFixed(2),
+              somaRecebidoReal: window.dadosGlobaisFirestore.reduce((acc, d) => obterStatusReal(d, hojeDiag) === 'RECEBIDO' ? acc + obterFaturamentoReal(d) : acc, 0).toFixed(2)
+            });
+          }
 
           if (typeof window.popularListasFiltro === 'function') window.popularListasFiltro(window.dadosGlobaisFirestore);
           if (typeof window.processarEAtualizarGraficos === 'function') window.processarEAtualizarGraficos(window.dadosGlobaisFirestore, 'todas');
         } catch (err) {
           console.error("[DashboardMaster] Falha ao processar Lancamentos:", err);
         }
-      } else {
-        console.error("[DashboardMaster] Falha ao buscar Lancamentos:", lancRes.reason);
-      }
+      }, (err) => {
+        console.error("[DashboardMaster] Falha no listener de Lancamentos:", err);
+      });
 
-      // Metas Financeiras
+      // Metas Financeiras (one-shot é suficiente — metas mudam raramente).
+      const metasRes = await Promise.allSettled([
+        getDocs(collection(db, "MetasFinanceiras"))
+      ]).then(res => res[0]);
+
       if (metasRes.status === 'fulfilled') {
         try {
           window.dadosMetasGlobais = [];
@@ -2675,6 +2944,7 @@
       </div>
     </div>
   </div>
+
 </body>
 
 </html>

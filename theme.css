@@ -1,0 +1,171 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Centra Fin — Tema global (Light & Dark)
+   Carregado em todos os HTMLs do sistema. Boot inline em cada página define
+   `class="light|dark"` em <html> antes do paint p/ evitar flash branco.
+   Persistência: localStorage('centrafin-theme').
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --bg-page: #f3f4f6;
+  --bg-card: #ffffff;
+  --bg-card-elev: #f8f9fb;
+  --bg-input: #f3f4f6;
+  --bg-modal: #ffffff;
+  --bg-thead: #f3f4f6;
+  --text-primary: #191c1e;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-subtle: #e2e8f0;
+  --border-divider: #f1f5f9;
+  --shadow-card: 0 8px 30px rgb(0 0 0 / 0.08);
+  --shadow-card-hover: 0 24px 60px -12px rgb(0 0 0 / 0.18);
+}
+html.dark {
+  --bg-page: #121417;
+  --bg-card: #1c1f23;
+  --bg-card-elev: #23272d;
+  --bg-input: #23272d;
+  --bg-modal: #1c1f23;
+  --bg-thead: #16181c;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-divider: rgba(255, 255, 255, 0.06);
+  --shadow-card: 0 8px 30px rgb(0 0 0 / 0.45);
+  --shadow-card-hover: 0 24px 60px -12px rgb(0 0 0 / 0.65);
+  color-scheme: dark;
+}
+
+/* Página + tipografia base */
+html.dark body { background-color: var(--bg-page) !important; color: var(--text-primary) !important; }
+
+/* Superfícies (Tailwind utility remap) */
+html.dark .bg-white,
+html.dark .bg-surface-container-lowest { background-color: var(--bg-card) !important; }
+html.dark .bg-surface-container-low,
+html.dark .bg-surface-container,
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-100 { background-color: var(--bg-card-elev) !important; }
+
+/* bg-brandDarkBlue: cor de marca dos cards de gráficos no Master.
+   Mantém a identidade mas escurece um pouco mais no dark p/ destacar do fundo. */
+html.dark .bg-brandDarkBlue { background-color: #001a32 !important; }
+
+/* Bordas */
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/70,
+html.dark .border-surface-variant\/20,
+html.dark .border-surface-variant\/30 { border-color: var(--border-subtle) !important; }
+html.dark .divide-slate-100 > * + * { border-color: var(--border-divider) !important; }
+
+/* Tipografia (cor; nunca tamanho/peso) */
+html.dark .text-on-surface,
+html.dark .text-secondary,
+html.dark .text-brandDarkBlue,
+html.dark .text-slate-700,
+html.dark .text-slate-800,
+html.dark .text-slate-900 { color: var(--text-primary) !important; }
+html.dark .text-on-surface-variant,
+html.dark .text-slate-500,
+html.dark .text-slate-600 { color: var(--text-secondary) !important; }
+html.dark .text-slate-400,
+html.dark .text-on-surface-variant\/70,
+html.dark .text-on-surface-variant\/40 { color: var(--text-muted) !important; }
+
+/* Tabela */
+html.dark table thead { background-color: var(--bg-thead) !important; }
+html.dark table thead th { color: var(--text-secondary) !important; border-color: var(--border-subtle) !important; }
+html.dark table tbody tr { background-color: var(--bg-card) !important; }
+html.dark table tbody tr:hover { background-color: var(--bg-card-elev) !important; }
+html.dark table tbody td { color: var(--text-primary) !important; border-color: var(--border-divider) !important; }
+
+/* Inputs / selects / textareas */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle) !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: var(--text-muted) !important; }
+
+/* Modais (mantém gradients indigo dos headers) */
+html.dark .bg-white.rounded-2xl,
+html.dark .bg-white.rounded-xl { background-color: var(--bg-modal) !important; }
+
+/* Sombras */
+html.dark .shadow-sm { box-shadow: 0 1px 2px rgb(0 0 0 / 0.4) !important; }
+html.dark .shadow-md { box-shadow: 0 4px 8px rgb(0 0 0 / 0.4) !important; }
+html.dark .shadow-lg { box-shadow: 0 10px 20px rgb(0 0 0 / 0.5) !important; }
+
+/* Tints leves de utilidade */
+html.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.12) !important; }
+html.dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.12) !important; }
+html.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.12) !important; }
+html.dark .bg-cyan-50 { background-color: rgba(6, 182, 212, 0.14) !important; }
+html.dark .bg-indigo-50 { background-color: rgba(99, 102, 241, 0.16) !important; }
+html.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.14) !important; }
+html.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.14) !important; }
+html.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.14) !important; }
+
+/* ApexCharts: legendas/eixos/grids visíveis no dark */
+html.dark .apexcharts-text tspan { fill: #cbd5e1 !important; }
+html.dark .apexcharts-legend-text { color: #cbd5e1 !important; }
+html.dark .apexcharts-gridline { stroke: rgba(255, 255, 255, 0.06) !important; }
+html.dark .apexcharts-tooltip {
+  background: #1c1f23 !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ─── Lift-up Premium em filhos diretos de .kpi-grid ─── */
+.kpi-grid > * {
+  transition: transform .28s cubic-bezier(.2, .8, .2, 1), box-shadow .28s ease;
+  will-change: transform;
+}
+.kpi-grid > *:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* ─── Toggle pill ─── */
+#theme-toggle {
+  width: 44px; height: 24px; border-radius: 999px;
+  background: linear-gradient(135deg, #cbd5e1, #e2e8f0);
+  position: relative; cursor: pointer; border: 1px solid #cbd5e1;
+  transition: background .25s ease;
+  flex-shrink: 0;
+}
+#theme-toggle::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 999px;
+  background: white; box-shadow: 0 2px 4px rgb(0 0 0 / 0.2);
+  transition: transform .25s ease, background .25s ease;
+}
+html.dark #theme-toggle {
+  background: linear-gradient(135deg, #4338ca, #6366f1);
+  border-color: #4338ca;
+}
+html.dark #theme-toggle::after { transform: translateX(20px); background: #0f172a; }
+
+/* Container do toggle quando auto-montado em página sem header próprio */
+#theme-toggle-floating {
+  position: fixed; top: 14px; right: 18px; z-index: 9999;
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+}
+html.dark #theme-toggle-floating {
+  background: rgba(28, 31, 35, 0.85);
+  border-color: var(--border-subtle);
+}
+#theme-toggle-floating .material-symbols-outlined {
+  font-size: 16px; color: var(--text-secondary);
+}

@@ -61,6 +61,20 @@
       border-bottom: 4px solid #cbd5e1 !important;
     }
   </style>
+  <!-- Tema global (Light & Dark) — centralizado em /theme.css + /theme_manager.js -->
+  <link rel="stylesheet" href="../theme.css?v=20260507n">
+  <script>
+    /* Boot inline ANTES do paint — evita flash branco. */
+    (function () {
+      try {
+        var saved = localStorage.getItem('centrafin-theme');
+        var html = document.documentElement;
+        html.classList.remove('light', 'dark');
+        html.classList.add(saved === 'dark' ? 'dark' : 'light');
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../theme_manager.js?v=20260507n" defer></script>
 </head>
 
 <body class="min-h-screen flex antialiased bg-slate-50">

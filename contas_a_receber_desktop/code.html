@@ -148,16 +148,36 @@
       background: #94a3b8;
       border-radius: 4px;
     }
+
   </style>
+  <!-- Tema global (Light & Dark) — agora centralizado em /theme.css + /theme_manager.js -->
+  <link rel="stylesheet" href="../theme.css?v=20260507n">
+  <script>
+    /* Boot inline ANTES do paint — evita flash branco ao carregar. */
+    (function () {
+      try {
+        var saved = localStorage.getItem('centrafin-theme');
+        var html = document.documentElement;
+        html.classList.remove('light', 'dark');
+        html.classList.add(saved === 'dark' ? 'dark' : 'light');
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../theme_manager.js?v=20260507n" defer></script>
 </head>
 
 <body class="bg-surface-container-low text-on-surface flex min-h-screen">
   <div id="sidebar-container"></div>
 
   <main class="flex-1 ml-20 p-8">
-    <header class="flex items-center mb-6 border-b border-slate-200 pb-4">
+    <header class="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
       <div>
         <h1 class="text-lg font-extrabold text-brandDarkBlue font-manrope uppercase tracking-wider">Gerenciador CRF</h1>
+      </div>
+      <div class="flex items-center gap-3" title="Alternar tema">
+        <span class="material-symbols-outlined text-on-surface-variant text-[18px]" id="theme-icon-sun">light_mode</span>
+        <button id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro"></button>
+        <span class="material-symbols-outlined text-on-surface-variant text-[18px]" id="theme-icon-moon">dark_mode</span>
       </div>
     </header>
 
@@ -170,7 +190,7 @@
         inadimplência da operação.</p>
     </div>
 
-    <section class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
+    <section id="kpi-grid-crf" class="kpi-grid grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
       <div
         class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm flex flex-col justify-between min-h-[160px]">
         <div>
@@ -214,17 +234,28 @@
         <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider mb-0.5">Fat. Real</p>
         <h3 id="card-faturamento-real" class="text-base font-extrabold font-manrope text-on-surface">R$ 0,00</h3>
       </div>
-      <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-variant/30 shadow-sm"><span
-          class="p-1 bg-indigo-50 text-indigo-600 rounded-lg inline-flex mb-1"><span
-            class="material-symbols-outlined text-base">calendar_month</span></span>
-        <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider mb-0.5">A Vencer</p>
-        <h3 id="card-total-a-vencer" class="text-base font-extrabold font-manrope text-on-surface">R$ 0,00</h3>
-      </div>
-      <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-variant/30 shadow-sm"><span
-          class="p-1 bg-red-50 text-red-600 rounded-lg inline-flex mb-1"><span
-            class="material-symbols-outlined text-base">warning</span></span>
-        <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider mb-0.5">Vencido</p>
-        <h3 id="card-total-vencido" class="text-base font-extrabold font-manrope text-on-surface">R$ 0,00</h3>
+      <!-- Fluxo de Recebimento: linha vermelha = Vencido, linha azul = A Vencer.
+           Ids `card-total-a-vencer` / `card-total-vencido` preservados p/ não quebrar `atualizarMetrics`. -->
+      <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-variant/30 shadow-sm flex flex-col justify-center gap-2">
+        <div class="flex items-center justify-between mb-0.5">
+          <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider">Fluxo de Recebimento</p>
+          <span class="p-1 bg-indigo-50 text-indigo-600 rounded-lg inline-flex">
+            <span class="material-symbols-outlined text-[13px]">timeline</span>
+          </span>
+        </div>
+        <div class="flex flex-col">
+          <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[10px] text-red-600">warning</span> Vencido
+          </p>
+          <h3 id="card-total-vencido" class="text-xs font-extrabold font-manrope text-red-600">R$ 0,00</h3>
+        </div>
+        <div class="w-full h-px bg-slate-100"></div>
+        <div class="flex flex-col">
+          <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+            <span class="material-symbols-outlined text-[10px] text-indigo-600">calendar_month</span> A Vencer
+          </p>
+          <h3 id="card-total-a-vencer" class="text-xs font-extrabold font-manrope text-indigo-600">R$ 0,00</h3>
+        </div>
       </div>
       <div
         class="bg-surface-container-lowest p-3 rounded-xl border border-surface-variant/30 shadow-sm flex flex-col justify-center gap-2">
@@ -262,6 +293,18 @@
           </p>
           <h3 id="card-total-protesto" class="text-xs font-extrabold font-manrope text-orange-600">R$ 0,00</h3>
         </div>
+      </div>
+
+      <!-- KPI Parcelamentos Ativos: clicável, abre modal de detalhamento agrupado por cliente.
+           Soma residual em aberto das filhas (origem_parcelamento === true). -->
+      <div id="card-wrapper-parcelamentos-crf" onclick="window.abrirModalParcelamentos()"
+        class="bg-surface-container-lowest p-3 rounded-xl border border-indigo-200 shadow-sm cursor-pointer hover:border-indigo-400 hover:shadow-md transition-all">
+        <span class="p-1 bg-indigo-50 text-indigo-600 rounded-lg inline-flex mb-1">
+          <span class="material-symbols-outlined text-base">call_split</span>
+        </span>
+        <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-wider mb-0.5">Parcelamentos Ativos</p>
+        <h3 id="kpi-parcelamentos-residual" class="text-base font-extrabold font-manrope text-indigo-600">R$ 0,00</h3>
+        <p class="text-[9px] font-bold text-on-surface-variant/70 mt-0.5"><span id="kpi-parcelamentos-qtd">0</span> em aberto</p>
       </div>
     </section>
 
@@ -305,65 +348,101 @@
         <table class="w-full text-left border-collapse">
           <thead class="bg-surface-container-low border-b border-surface-variant/20 text-[9px]">
             <tr>
+              <th id="col-selecao-head"
+                class="hidden px-3 py-4 text-center font-bold text-on-surface-variant border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] select-none w-10">
+                <input type="checkbox" id="check-selecao-todos"
+                  title="Selecionar todas as linhas visíveis"
+                  class="rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer">
+              </th>
               <th onclick="window.ordenarTabelaCRF('empresa')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">Empresa<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-empresa">unfold_more</span></div>
+                <div class="flex items-center gap-1">Empresa<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-empresa">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('rps')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">RPS<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-rps">unfold_more</span></div>
+                <div class="flex items-center gap-1">RPS<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-rps">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('servico')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">Tipo de Serviço<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-servico">unfold_more</span></div>
+                <div class="flex items-center gap-1">Tipo de Serviço<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-servico">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('nfe')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] text-indigo-700 cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">Nº NF-e<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-nfe">unfold_more</span></div>
+                <div class="flex items-center gap-1">Nº NF-e<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-nfe">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('cliente')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">Cliente<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-cliente">unfold_more</span></div>
+                <div class="flex items-center gap-1">Cliente<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-cliente">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('cod_cliente')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">Cod. Cliente<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-cod_cliente">unfold_more</span></div>
+                <div class="flex items-center gap-1">Cod. Cliente<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-cod_cliente">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('cnpj')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">CNPJ<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-cnpj">unfold_more</span></div>
+                <div class="flex items-center gap-1">CNPJ<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-cnpj">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('mes_ref')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">Mês Ref.<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-mes_ref">unfold_more</span></div>
+                <div class="flex items-center gap-1">Mês Ref.<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-mes_ref">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('emissao')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">Emissão<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-emissao">unfold_more</span></div>
+                <div class="flex items-center gap-1">Emissão<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-emissao">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('vencimento')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">Vencimento<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-vencimento">unfold_more</span></div>
+                <div class="flex items-center gap-1">Vencimento<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-vencimento">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('baixa')"
                 class="px-4 py-4 text-left font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center gap-1">Data da Baixa<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-baixa">unfold_more</span></div>
+                <div class="flex items-center gap-1">Data da Baixa<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-baixa">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('valor_fatura')"
                 class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center justify-end gap-1">Faturamento Bruto<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-valor_fatura">unfold_more</span></div>
+                <div class="flex items-center justify-end gap-1">Faturamento Bruto<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-valor_fatura">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('valor_liquido')"
                 class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] text-cyan-600 cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center justify-end gap-1">Valor Líquido<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-valor_liquido">unfold_more</span></div>
+                <div class="flex items-center justify-end gap-1">Valor Líquido<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-valor_liquido">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('fat_real')"
                 class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center justify-end gap-1">Fat. Real<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-fat_real">unfold_more</span></div>
+                <div class="flex items-center justify-end gap-1">Fat. Real<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-fat_real">unfold_more</span></div>
               </th>
               <th onclick="window.ordenarTabelaCRF('status')"
                 class="px-4 py-4 text-center font-bold text-on-surface-variant uppercase tracking-widest border-r border-slate-200 shadow-[1px_0_0_rgba(0,0,0,0.03)] cursor-pointer hover:bg-slate-50 transition-colors group select-none">
-                <div class="flex items-center justify-center gap-1">Status<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors" id="icone-sort-status">unfold_more</span></div>
+                <div class="flex items-center justify-center gap-1">Status<span
+                    class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-brandMidBlue transition-colors"
+                    id="icone-sort-status">unfold_more</span></div>
               </th>
               <th class="px-4 py-4 text-right font-bold text-on-surface-variant uppercase tracking-widest">Ações</th>
             </tr>
@@ -436,6 +515,76 @@
         <button id="btn-confirmar-exportar"
           class="px-8 py-2.5 bg-green-600 text-white font-bold text-sm rounded-xl shadow-lg hover:bg-green-700 transition-all flex items-center gap-2"><span
             class="material-symbols-outlined text-lg">download</span> Baixar Planilha Tratam.</button>
+        <button id="btn-exportar-auditoria"
+          title="Gera uma planilha enxuta para conferência: Bruto, Líquido (original) e Faturamento Real (líquido com desconto deduzido)."
+          class="px-8 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-xl shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2"><span
+            class="material-symbols-outlined text-lg">fact_check</span> Excel para Auditoria</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-auditoria-filtros"
+    class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" id="modal-auditoria-filtros-overlay"></div>
+    <div id="modal-auditoria-filtros-content"
+      class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative overflow-hidden">
+      <div class="px-7 py-5 bg-gradient-to-r from-indigo-600 to-indigo-500 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+            <span class="material-symbols-outlined text-white">fact_check</span>
+          </div>
+          <div>
+            <h3 class="font-headline text-lg font-bold text-white leading-tight">Filtros de Auditoria</h3>
+            <p class="text-[11px] text-indigo-100 font-medium">Selecione o escopo antes de gerar o relatório</p>
+          </div>
+        </div>
+        <button id="btn-fechar-auditoria-filtros"
+          class="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1.5 transition-colors"><span
+            class="material-symbols-outlined">close</span></button>
+      </div>
+
+      <div class="px-7 py-6 space-y-5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Empresa</label>
+          <select id="auditoria-empresa"
+            class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-inner bg-white">
+            <option value="__TODAS__" selected>Todas as Empresas</option>
+          </select>
+          <p class="text-[10px] text-slate-400 mt-1.5 font-medium">Empresas extraídas dos lançamentos atuais.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Data Inicial</label>
+            <input type="date" id="auditoria-data-inicio"
+              class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-inner">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Data Final</label>
+            <input type="date" id="auditoria-data-fim"
+              class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-inner">
+          </div>
+        </div>
+
+        <div class="bg-indigo-50/70 border border-indigo-100 rounded-xl px-4 py-3 flex items-start gap-3">
+          <span class="material-symbols-outlined text-indigo-500 text-lg shrink-0">info</span>
+          <p class="text-[11px] text-indigo-900 leading-relaxed">
+            O período é aplicado sobre a <strong>Data de Emissão</strong> dos lançamentos. O <strong>Faturamento Real</strong> é calculado sobre o valor da <strong>Taxa</strong>, sendo <strong>100% para Mão de Obra</strong> e <strong>55% para Serviços NEAT</strong>.
+          </p>
+        </div>
+
+        <div id="auditoria-feedback"
+          class="hidden text-[11px] font-bold rounded-lg px-3 py-2 border"></div>
+      </div>
+
+      <div class="px-7 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+        <button id="btn-cancelar-auditoria-filtros"
+          class="px-6 py-2.5 text-slate-500 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all border border-slate-200">Cancelar</button>
+        <button id="btn-gerar-auditoria"
+          class="px-7 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-xl shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+          <span id="auditoria-btn-icon" class="material-symbols-outlined text-lg">download</span>
+          <span id="auditoria-btn-label">Gerar Relatório</span>
+        </button>
       </div>
     </div>
   </div>
@@ -521,6 +670,20 @@
               (R$)</label><input type="number" step="0.01" id="campo-valor-liquido"
               class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
               placeholder="0.00"></div>
+          <div class="col-span-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+              Faturamento Real (R$)
+              <span class="text-[9px] font-bold text-indigo-500 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded uppercase tracking-wider">Override</span>
+            </label>
+            <input type="number" step="0.01" id="campo-faturamento-real"
+              class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-indigo-50/30"
+              placeholder="Calculado automaticamente">
+            <p id="campo-faturamento-real-hint" class="text-[10px] text-slate-400 mt-1 font-medium">Deixe em branco para usar o cálculo automático sobre a Taxa.</p>
+          </div>
+          <div class="col-span-1"><label class="block text-xs font-bold text-slate-700 mb-1">Data de
+              Emissão</label><input type="date" id="campo-data-emissao"
+              class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
+          </div>
           <div class="col-span-1"><label class="block text-xs font-bold text-slate-700 mb-1">Data de
               Vencimento</label><input type="date" id="campo-vencimento" required
               class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
@@ -600,7 +763,8 @@
           class="text-slate-400 hover:text-slate-700 transition-colors bg-slate-50 p-2 rounded-full"><span
             class="material-symbols-outlined">close</span></button>
       </div>
-      <div id="vis-detalhes-grid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
+      <div id="vis-banner-divergencia" class="mb-5"></div>
+      <div id="vis-detalhes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
       </div>
       <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 sticky bottom-0 bg-white z-20">
         <button id="btn-visualizar-fechar"
@@ -818,6 +982,51 @@
     </div>
   </div>
 
+  <div id="barra-selecao-massa"
+    class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[55] bg-white border border-red-200 rounded-2xl shadow-2xl shadow-red-500/10 px-5 py-3 flex items-center gap-4">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+        <span class="material-symbols-outlined text-red-600">checklist</span>
+      </div>
+      <div class="flex flex-col leading-tight">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Seleção em massa</span>
+        <span class="text-sm font-extrabold text-slate-800"><span id="qtd-selecionados-massa">0</span> lançamento(s) selecionado(s)</span>
+      </div>
+    </div>
+    <div class="h-9 w-px bg-slate-200"></div>
+    <button id="btn-limpar-selecao-massa"
+      class="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-base">backspace</span> Limpar
+    </button>
+    <button id="btn-excluir-selecionados-massa"
+      class="px-5 py-2.5 bg-red-600 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-red-500/30 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2">
+      <span class="material-symbols-outlined text-base">delete_forever</span> Excluir Selecionados
+    </button>
+  </div>
+
+  <div id="modal-excluir-massa"
+    class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-excluir-massa-overlay"></div>
+    <div id="modal-excluir-massa-content"
+      class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100">
+      <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+        <span class="material-symbols-outlined text-5xl text-red-500">warning</span>
+      </div>
+      <h3 class="font-headline text-2xl font-bold text-[#002443] mb-3 tracking-tight">Excluir em massa?</h3>
+      <p class="text-slate-500 text-[14px] mb-2 font-medium">Você está prestes a remover <strong id="qtd-excluir-massa" class="text-red-600 text-lg">0</strong> lançamento(s) permanentemente.</p>
+      <p class="text-[11px] text-slate-400 mb-7 font-medium uppercase tracking-wider">Ação irreversível · restrita a Super Admin</p>
+      <div class="flex gap-3">
+        <button id="btn-cancelar-excluir-massa"
+          class="flex-1 py-4 border-2 border-slate-100 text-slate-400 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">Cancelar</button>
+        <button id="btn-confirmar-excluir-massa"
+          class="flex-1 py-4 bg-red-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-red-500/30 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+          <span id="icone-confirmar-excluir-massa" class="material-symbols-outlined text-base">delete_sweep</span>
+          <span id="label-confirmar-excluir-massa">Excluir todos</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-confirmar-faturamento"
     class="fixed inset-0 z-[65] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
     <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-confirmar-overlay"></div>
@@ -911,27 +1120,175 @@
     </div>
   </div>
 
-  <div id="modal-auditoria-servicos" class="fixed inset-0 z-[110] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+  <div id="modal-auditoria-servicos"
+    class="fixed inset-0 z-[110] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
     <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onclick="window.fecharModalAuditoria()"></div>
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[85vh] flex flex-col">
-        <div class="flex items-center gap-3 mb-4 text-red-500">
-            <span class="material-symbols-outlined text-4xl">policy</span>
-            <h3 class="font-headline text-xl font-bold text-slate-800 tracking-tight">Auditoria de Serviços</h3>
-        </div>
-        <p class="text-slate-600 text-sm mb-4 leading-relaxed">
-            O sistema identificou <strong id="count-auditoria-servicos" class="text-red-600 font-black">0</strong> notas com serviços não mapeados. O Faturamento Real destas notas foi zerado temporariamente por segurança financeira.
-        </p>
-        <div class="overflow-y-auto custom-scroll pr-2 flex-1 border border-slate-200 rounded-xl bg-slate-50 p-4 mb-6">
-            <div id="lista-auditoria-servicos" class="space-y-1"></div>
-        </div>
-        <button onclick="window.fecharModalAuditoria()" class="w-full py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 active:scale-95 transition-all">Ciente, vou corrigir depois</button>
+    <div
+      class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[85vh] flex flex-col">
+      <div class="flex items-center gap-3 mb-4 text-red-500">
+        <span class="material-symbols-outlined text-4xl">policy</span>
+        <h3 class="font-headline text-xl font-bold text-slate-800 tracking-tight">Auditoria de Serviços</h3>
+      </div>
+      <p class="text-slate-600 text-sm mb-4 leading-relaxed">
+        O sistema identificou <strong id="count-auditoria-servicos" class="text-red-600 font-black">0</strong> notas com
+        serviços não mapeados. O Faturamento Real destas notas foi zerado temporariamente por segurança financeira.
+      </p>
+      <div class="overflow-y-auto custom-scroll pr-2 flex-1 border border-slate-200 rounded-xl bg-slate-50 p-4 mb-6">
+        <div id="lista-auditoria-servicos" class="space-y-1"></div>
+      </div>
+      <button onclick="window.fecharModalAuditoria()"
+        class="w-full py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 active:scale-95 transition-all">Ciente,
+        vou corrigir depois</button>
     </div>
   </div>
+
+  <!-- ─── Modal Parcelar Lançamento ───
+       Acionado pelo botão "call_split" na coluna Ações. Pede o número de parcelas, mostra
+       preview das datas (D+30, D+60... com obterProximoDiaUtil) e valores divididos.
+       Ao confirmar: cria N filhas com `origem_parcelamento:true` e marca a original como DESMEMBRADO. -->
+  <div id="modal-parcelamento"
+    class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-parcelamento-overlay"></div>
+    <div id="modal-parcelamento-content"
+      class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-7 py-5 bg-gradient-to-r from-indigo-600 to-indigo-500 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-white">call_split</span>
+          </div>
+          <div>
+            <h3 class="font-headline text-lg font-bold text-white leading-tight">Parcelar Lançamento</h3>
+            <p class="text-[11px] text-indigo-50 font-medium">Desmembra a nota original em N parcelas com vencimentos D+30, D+60...</p>
+          </div>
+        </div>
+        <button id="btn-fechar-parcelamento"
+          class="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1.5 transition-colors"><span
+            class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="px-7 py-6 space-y-5 overflow-y-auto">
+        <div id="parcelamento-resumo" class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1.5"></div>
+        <div class="flex items-end gap-4">
+          <div class="flex-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Número de Parcelas</label>
+            <input type="number" id="parcelamento-n" min="2" max="36" value="2"
+              class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+          </div>
+          <button id="btn-recalcular-parcelas"
+            class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">refresh</span> Recalcular
+          </button>
+        </div>
+        <div id="parcelamento-preview-container" class="hidden">
+          <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Preview das parcelas</p>
+          <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white max-h-[280px] overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-[10px] uppercase tracking-wider text-slate-600 sticky top-0">
+                <tr>
+                  <th class="py-2 px-3">#</th>
+                  <th class="py-2 px-3">RPS Filha</th>
+                  <th class="py-2 px-3">Vencimento</th>
+                  <th class="py-2 px-3 text-right">Bruto</th>
+                  <th class="py-2 px-3 text-right">Líquido</th>
+                  <th class="py-2 px-3 text-right">Taxa</th>
+                  <th class="py-2 px-3 text-right">Real</th>
+                </tr>
+              </thead>
+              <tbody id="parcelamento-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="parcelamento-feedback" class="hidden text-[11px] font-bold rounded-lg px-3 py-2 border"></div>
+      </div>
+      <div class="px-7 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+        <button id="btn-cancelar-parcelamento"
+          class="px-6 py-2.5 text-slate-500 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all border border-slate-200">Cancelar</button>
+        <button id="btn-confirmar-parcelamento"
+          class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all flex items-center gap-2 shadow-md">
+          <span id="icone-confirmar-parcelamento" class="material-symbols-outlined text-lg">call_split</span>
+          <span id="label-confirmar-parcelamento">Confirmar Desmembramento</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Modal Detalhamento de Parcelamentos Ativos (visualização) ───
+       Espelho do modal do Dashboard Master: agrupa filhas por cliente / parent_rps,
+       mostra "Pagou X / Faltam Y (residual)" e os cards de cada parcela. -->
+  <div id="modal-parcelamentos"
+    class="fixed inset-0 z-[78] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-parcelamentos-overlay"></div>
+    <div id="modal-parcelamentos-content"
+      class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-7 py-5 bg-gradient-to-r from-indigo-600 to-indigo-500 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-white">call_split</span>
+          </div>
+          <div>
+            <h3 class="font-headline text-lg font-bold text-white leading-tight">Parcelamentos Ativos</h3>
+            <p class="text-[11px] text-indigo-50 font-medium">Notas desmembradas em aberto, agrupadas por cliente</p>
+          </div>
+        </div>
+        <button id="btn-fechar-parcelamentos"
+          class="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1.5 transition-colors"><span
+            class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="px-7 py-6 space-y-4 overflow-y-auto" id="parcelamentos-lista"></div>
+    </div>
+  </div>
+
+  <!-- ─── Modal Confirmação: Desfazer Parcelamento ───
+       Aparece para a nota mãe (status=DESMEMBRADO) ao clicar no ícone "undo" da tabela.
+       Ao confirmar: deleta todas as filhas (parent_id ou parent_rps) e restaura a mãe
+       removendo a marcação DESMEMBRADO em writeBatch atômico. -->
+  <div id="modal-desfazer-parcelamento"
+    class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-desfazer-parcelamento-overlay"></div>
+    <div id="modal-desfazer-parcelamento-content"
+      class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative overflow-hidden">
+      <div class="px-7 py-5 bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-white">undo</span>
+          </div>
+          <div>
+            <h3 class="font-headline text-lg font-bold text-white leading-tight">Desfazer Parcelamento</h3>
+            <p class="text-[11px] text-amber-50 font-medium">Restauração da nota original</p>
+          </div>
+        </div>
+        <button id="btn-fechar-desfazer-parcelamento"
+          class="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1.5 transition-colors"><span
+            class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="px-7 py-6 space-y-3">
+        <p class="text-sm text-on-surface font-medium leading-relaxed">
+          Deseja desfazer este parcelamento? As parcelas geradas serão excluídas e a nota original será restaurada.
+        </p>
+        <div id="desfazer-parcelamento-resumo" class="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-[12px] text-on-surface space-y-1"></div>
+        <div id="desfazer-parcelamento-feedback" class="hidden text-[11px] font-bold rounded-lg px-3 py-2 border"></div>
+      </div>
+      <div class="px-7 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+        <button id="btn-cancelar-desfazer-parcelamento"
+          class="px-6 py-2.5 text-slate-500 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all border border-slate-200">Cancelar</button>
+        <button id="btn-confirmar-desfazer-parcelamento"
+          class="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl transition-all flex items-center gap-2 shadow-md">
+          <span id="icone-confirmar-desfazer-parcelamento" class="material-symbols-outlined text-lg">undo</span>
+          <span id="label-confirmar-desfazer-parcelamento">Confirmar Restauração</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fonte Única da Verdade: regras matemáticas compartilhadas com o Dashboard Master.
+       Carregado ANTES do módulo p/ que `obterStatusReal`, `obterFaturamentoReal`,
+       `calcularEmpresaAtribuida`, `parseMoedaCRF`, `obterValorLiquido` etc. estejam
+       disponíveis como globals dentro do escopo do <script type="module">. -->
+  <script src="../core_rules.js?v=20260507n"></script>
 
   <script type="module">
     import { renderSidebar } from "../sidebar.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, doc, setDoc, onSnapshot, deleteDoc, getDoc, serverTimestamp, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, setDoc, onSnapshot, deleteDoc, getDoc, serverTimestamp, query, where, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -972,6 +1329,8 @@
             return;
           }
 
+          window.isSuperAdmin = dadosUser.perfil === 'super_admin';
+          if (window.aplicarTogglesSuperAdmin) window.aplicarTogglesSuperAdmin();
           renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
         } else {
           await signOut(auth);
@@ -1038,6 +1397,10 @@
     }
     carregarSugestoes();
 
+    // `parseMoedaCRF` e `extrairISOLocal` agora vêm do `core_rules.js` (Fonte Única da Verdade).
+    // Como são `function` declaradas no escopo global do script, ficam disponíveis aqui dentro
+    // do <script type="module"> como identifiers livres — sem precisar de `window.` no chamador.
+
     function formatarDataBR(entrada) {
       if (entrada === null || entrada === undefined || entrada === "" || entrada === "-") return "-";
       try {
@@ -1064,45 +1427,7 @@
       }
     }
 
-    function obterStatusReal(data, hojeData = new Date()) {
-      hojeData.setHours(0, 0, 0, 0);
-      const sRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
-      const baixaRawStr = String(data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || '').toUpperCase();
-
-      // INTERCEPTAÇÃO ABSOLUTA: CANCELAMENTO (Pode estar no status ou na data da baixa)
-      if (sRaw.includes("CANC") || baixaRawStr.includes("CANC")) return "Cancelada";
-
-      if (sRaw.includes("PREJUÍZO") || sRaw.includes("PREJUIZO")) return "PREJUÍZO";
-      if (sRaw.includes("PROTESTO")) return "PROTESTO";
-      if (sRaw.includes("PAGO") || sRaw.includes("RECEBIDO") || sRaw.includes("BAIXADO")) return "RECEBIDO";
-
-      const baixaRaw = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-      if (baixaRaw && String(baixaRaw).trim() !== "" && String(baixaRaw).trim() !== "-") {
-        return "RECEBIDO";
-      }
-
-      const vencRaw = data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto'] || "";
-      let dVenc = null;
-      if (vencRaw) {
-        if (vencRaw.toDate) dVenc = vencRaw.toDate();
-        else if (vencRaw instanceof Date) dVenc = vencRaw;
-        else if (typeof vencRaw === 'number') dVenc = new Date((vencRaw - 25569) * 86400 * 1000);
-        else {
-          const s = String(vencRaw).trim();
-          if (s.includes('/')) dVenc = new Date(`${s.split('/')[2]}-${s.split('/')[1]}-${s.split('/')[0]}`);
-          else dVenc = new Date(s);
-        }
-      }
-
-      if (dVenc && !isNaN(dVenc.getTime())) {
-        dVenc.setHours(0, 0, 0, 0);
-        if (dVenc < hojeData) return "VENCIDO";
-        return "A VENCER";
-      }
-
-      if (sRaw.includes("VENCIDO") || sRaw.includes("ATRASADO")) return "VENCIDO";
-      return "A VENCER";
-    }
+    // `obterStatusReal` agora vem do `core_rules.js`.
 
     const modalVisualizar = document.getElementById('modal-visualizar');
     const modalVisualizarContent = document.getElementById('modal-visualizar-content');
@@ -1123,49 +1448,120 @@
       const data = todasAsNotas.find(d => d.id === id);
       if (!data) return;
 
+      const banner = document.getElementById('vis-banner-divergencia');
+      if (banner) {
+        banner.innerHTML = '';
+        const tipoDiv = data.tipo_divergencia || '';
+        const saldo = parseMoedaCRF(data.saldo_residual);
+        if (tipoDiv === "DEBITO") {
+          banner.innerHTML = `<div class="p-4 rounded-xl border flex items-center gap-4 bg-red-50 border-red-200 text-red-900"><span class="material-symbols-outlined text-red-600 text-2xl">warning</span><div class="font-bold text-sm">⚠️ ATENÇÃO: DÉBITO PENDENTE — O cliente pagou a MENOR. Diferença: ${formatadorMoeda.format(Math.abs(saldo))}</div></div>`;
+        } else if (tipoDiv === "CREDITO") {
+          banner.innerHTML = `<div class="p-4 rounded-xl border flex items-center gap-4 bg-emerald-50 border-emerald-200 text-emerald-900"><span class="material-symbols-outlined text-emerald-600 text-2xl">check_circle</span><div class="font-bold text-sm">✅ CRÉDITO A FAVOR — O cliente pagou a MAIOR. Saldo de Crédito: ${formatadorMoeda.format(Math.abs(saldo))}</div></div>`;
+        } else if (tipoDiv === "PAGO INTEGRAL") {
+          banner.innerHTML = `<div class="p-4 rounded-xl border flex items-center gap-4 bg-slate-50 border-slate-200 text-slate-700"><span class="material-symbols-outlined text-slate-500 text-2xl">done_all</span><div class="font-bold text-sm">✔️ Pagamento Integral sem divergências</div></div>`;
+        }
+      }
+
       const grid = document.getElementById('vis-detalhes-grid');
       if (grid) {
-        grid.innerHTML = "";
-        const tipoDiv = data.tipo_divergencia || '';
-        const saldo = parseFloat(data.saldo_residual || 0);
-        if (tipoDiv === "DEBITO") {
-          const divBanner = document.createElement('div');
-          divBanner.className = 'col-span-full p-4 rounded-xl mb-4 border flex items-center gap-4 bg-red-50 border-red-200 text-red-900';
-          divBanner.innerHTML = `<span class="material-symbols-outlined text-red-600 text-2xl">warning</span><div class="font-bold">⚠️ ATENÇÃO: DÉBITO PENDENTE - O cliente pagou a MENOR. Diferença: ${formatadorMoeda.format(Math.abs(saldo))}</div>`;
-          grid.appendChild(divBanner);
-        } else if (tipoDiv === "CREDITO") {
-          const divBanner = document.createElement('div');
-          divBanner.className = 'col-span-full p-4 rounded-xl mb-4 border flex items-center gap-4 bg-emerald-50 border-emerald-200 text-emerald-900';
-          divBanner.innerHTML = `<span class="material-symbols-outlined text-emerald-600 text-2xl">check_circle</span><div class="font-bold">✅ CRÉDITO A FAVOR - O cliente pagou a MAIOR. Saldo de Crédito: ${formatadorMoeda.format(Math.abs(saldo))}</div>`;
-          grid.appendChild(divBanner);
-        } else if (tipoDiv === "PAGO INTEGRAL") {
-          const divBanner = document.createElement('div');
-          divBanner.className = 'col-span-full p-4 rounded-xl mb-4 border flex items-center gap-4 bg-slate-50 border-slate-200 text-slate-700';
-          divBanner.innerHTML = `<span class="material-symbols-outlined text-slate-500 text-2xl">done_all</span><div class="font-bold">✔️ Pagamento Integral sem divergências</div>`;
-          grid.appendChild(divBanner);
-        }
+        grid.innerHTML = '';
 
-        const ignorarChaves = ['id', 'tipo', 'data_importacao', 'data_criacao', 'data_edicao', 'origem', 'historico_comercial'];
-        const chaves = Object.keys(data).filter(key => !ignorarChaves.includes(key)).sort();
-        chaves.forEach(key => {
-          let value = data[key];
-          const kLower = key.toLowerCase();
+        const descContrato = data['descricao_contrato'] || data['Descrição Do Contrato'] || data['descricao'] || '';
+        const empresa = calcularEmpresaAtribuida(descContrato) || (data.empresa_atribuida || '-');
+        const cliente = data['cliente'] || data['Cliente'] || '-';
+        const codCliente = data['codigo_cliente'] || data['Cd.Cliente'] || '-';
+        const cnpj = data['cnpj'] || data['CNPJ Cliente'] || '-';
 
-          if (value === null || value === undefined || value === "") value = "-";
-          else if (typeof value === 'object' && value.seconds) value = new Date(value.seconds * 1000).toLocaleDateString('pt-BR');
-          else if (typeof value === 'number' && (kLower.includes('dt ')
-            || kLower.includes('data') || kLower.includes('venc') || kLower.includes('emiss')))
-            value = formatarDataBR(value);
-          else if (typeof value === 'number' && (kLower.includes('valor') || kLower.includes('taxa'))) value = formatadorMoeda.format(value);
+        const rps = data.rps || data['Nº NF'] || data['NF'] || '-';
+        const numeroNFe = data.numero_nfe || data['Nº NF-e'] || '-';
+        const emissaoFmt = formatarDataBR(data['data_emissao'] || data['Dt Emissao'] || '');
+        const mesRefBase = data['mes_referencia'] || (emissaoFmt !== '-' ? emissaoFmt.substring(3) : '');
+        const mesRef = formatarMesRef(mesRefBase);
 
-          const displayKey = key.replace(/_/g, ' ').toUpperCase();
-          const div = document.createElement('div');
-          if (kLower.includes('obs') || kLower.includes('descri')) div.className = "col-span-full bg-slate-50 p-4 rounded-xl border border-slate-100";
-          else div.className = "col-span-1";
+        const vFatura = parseMoedaCRF(data['valor_fatura'] || data['Valor Fatura'] || data['valor']);
+        const vLiquido = obterValorLiquido(data);
+        const vTaxa = parseMoedaCRF(data['taxa'] || data['Taxa'] || data['Valor Taxa'] || data['Vl. Taxa']);
+        const vDesconto = parseMoedaCRF(data['Valor Descto.'] || data['valor_desconto'] || data['Valor Desconto']);
 
-          div.innerHTML = `<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${displayKey}</p><p class="text-sm font-semibold text-slate-800 mt-1 break-words">${value}</p>`;
-          grid.appendChild(div);
-        });
+        const faturReal = obterFaturamentoReal(data);
+        const isManual = data.faturamento_real_manual !== undefined && data.faturamento_real_manual !== null && data.faturamento_real_manual !== '';
+        const vencimentoFmt = formatarDataBR(data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto'] || '');
+        const baixaFmt = formatarDataBR(data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || '');
+        const statusReal = obterStatusReal(data, new Date());
+
+        const statusBadge = (() => {
+          const map = {
+            'RECEBIDO': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+            'VENCIDO': 'bg-red-100 text-red-700 border-red-200',
+            'A VENCER': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+            'PREJUÍZO': 'bg-red-900 text-white border-red-900',
+            'PROTESTO': 'bg-orange-100 text-orange-800 border-orange-200',
+            'Cancelada': 'bg-slate-200 text-slate-700 border-slate-300'
+          };
+          return map[statusReal] || 'bg-slate-100 text-slate-700 border-slate-200';
+        })();
+
+        const itemRow = (label, value, opts) => {
+          const o = opts || {};
+          const valueClass = o.valueClass || 'text-slate-900';
+          const valueExtra = o.suffix || '';
+          return `<div class="flex flex-col">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${label}</span>
+            <span class="text-sm font-semibold ${valueClass} mt-0.5 break-words">${value || '-'}${valueExtra}</span>
+          </div>`;
+        };
+
+        const blocoTpl = (titulo, icone, cor, conteudoHtml) => `
+          <section class="rounded-2xl border border-slate-200 bg-[#F8FAFC] p-5 shadow-sm">
+            <header class="flex items-center gap-2.5 pb-3 mb-4 border-b border-slate-200/70">
+              <div class="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm border border-slate-100">
+                <span class="material-symbols-outlined text-base ${cor}">${icone}</span>
+              </div>
+              <h4 class="font-headline text-sm font-bold text-slate-800 uppercase tracking-wider">${titulo}</h4>
+            </header>
+            <div class="grid grid-cols-2 gap-x-5 gap-y-3.5">
+              ${conteudoHtml}
+            </div>
+          </section>
+        `;
+
+        // BLOCO 1 — Empresa & Cliente
+        const bloco1 = blocoTpl('Empresa & Cliente', 'apartment', 'text-blue-600', [
+          itemRow('Empresa', `<span class="font-extrabold text-[#002443]">${empresa}</span>`),
+          itemRow('Cliente', cliente, { valueClass: 'text-slate-900' }),
+          itemRow('Cód. Cliente', codCliente),
+          itemRow('CNPJ', cnpj)
+        ].join(''));
+
+        // BLOCO 2 — Nota / Serviço
+        const bloco2 = blocoTpl('Nota & Serviço', 'description', 'text-amber-600', [
+          itemRow('RPS', `<span class="font-extrabold">${rps}</span>`),
+          itemRow('Nº NF-e', numeroNFe),
+          `<div class="col-span-2">${itemRow('Tipo de Serviço', descContrato || '-')}</div>`,
+          itemRow('Competência', mesRef),
+          itemRow('Emissão', emissaoFmt)
+        ].join(''));
+
+        // BLOCO 3 — Valores Financeiros
+        const bloco3 = blocoTpl('Valores Financeiros', 'payments', 'text-emerald-600', [
+          itemRow('Faturamento Bruto', formatadorMoeda.format(vFatura)),
+          itemRow('Valor Líquido', `<span class="text-cyan-700 font-extrabold">${formatadorMoeda.format(vLiquido)}</span>`),
+          itemRow('Taxa', formatadorMoeda.format(vTaxa)),
+          itemRow('Desconto', vDesconto > 0 ? `<span class="text-red-600 font-extrabold">${formatadorMoeda.format(vDesconto)}</span>` : formatadorMoeda.format(0))
+        ].join(''));
+
+        // BLOCO 4 — Faturamento Real & Status
+        const fatRealBadge = isManual
+          ? `<span class="ml-2 px-1.5 py-0.5 text-[9px] font-extrabold rounded bg-indigo-100 text-indigo-700 uppercase tracking-wider">Manual</span>`
+          : `<span class="ml-2 px-1.5 py-0.5 text-[9px] font-extrabold rounded bg-slate-200 text-slate-600 uppercase tracking-wider">Auto</span>`;
+        const bloco4 = blocoTpl('Faturamento Real & Status', 'verified', 'text-indigo-600', [
+          itemRow('Faturamento Real', `<span class="text-indigo-700 font-extrabold">${formatadorMoeda.format(faturReal)}</span>${fatRealBadge}`),
+          `<div class="flex flex-col"><span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</span><span class="mt-1 inline-flex w-fit px-2.5 py-0.5 text-[10px] font-extrabold rounded-full uppercase tracking-wider border ${statusBadge}">${statusReal}</span></div>`,
+          itemRow('Vencimento', vencimentoFmt),
+          itemRow('Data da Baixa', baixaFmt)
+        ].join(''));
+
+        grid.innerHTML = bloco1 + bloco2 + bloco3 + bloco4;
       }
 
       const btnEditar = document.getElementById('btn-visualizar-editar');
@@ -1210,6 +1606,9 @@
 
         const extraContainer = document.getElementById('campos-extras-container');
         if (extraContainer) extraContainer.classList.add('hidden');
+
+        const fatRealHint = document.getElementById('campo-faturamento-real-hint');
+        if (fatRealHint) fatRealHint.textContent = 'Deixe em branco para usar o cálculo automático sobre a Taxa.';
 
         const modalTitle = document.querySelector('#modal-receita h3');
         if (modalTitle) modalTitle.textContent = "Nova Receita / Faturamento";
@@ -1331,10 +1730,10 @@
           const obj = {};
           const descContrato = d['descricao_contrato'] || d['Descrição Do Contrato'] || d['descricao'] || '-';
           const vFaturaRaw = d['valor_fatura'] || d['Valor Fatura'] || d['valor'] || 0;
-          const vFatura = typeof vFaturaRaw === 'number' ? vFaturaRaw : parseFloat(String(vFaturaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+          const vFatura = parseMoedaCRF(vFaturaRaw);
 
-          const vTaxaRaw = d['taxa'] || d['Taxa'] || 0;
-          const vTaxa = typeof vTaxaRaw === 'number' ? vTaxaRaw : parseFloat(String(vTaxaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+          const vTaxaRaw = d['taxa'] || d['Taxa'] || d['Valor Taxa'] || d['Vl. Taxa'] || 0;
+          const vTaxa = parseMoedaCRF(vTaxaRaw);
 
           selectedCols.forEach(col => {
             if (col === "Calc: Empresa Atribuída") obj[col] = calcularEmpresaAtribuida(descContrato);
@@ -1359,6 +1758,233 @@
         XLSX.writeFile(wb, nomeArquivo);
 
         fecharModalExportar();
+      });
+    }
+
+    const modalAuditoriaFiltros = document.getElementById('modal-auditoria-filtros');
+    const modalAuditoriaContent = document.getElementById('modal-auditoria-filtros-content');
+    const btnExportarAuditoria = document.getElementById('btn-exportar-auditoria');
+    const btnFecharAuditoriaFiltros = document.getElementById('btn-fechar-auditoria-filtros');
+    const btnCancelarAuditoriaFiltros = document.getElementById('btn-cancelar-auditoria-filtros');
+    const overlayAuditoriaFiltros = document.getElementById('modal-auditoria-filtros-overlay');
+    const btnGerarAuditoria = document.getElementById('btn-gerar-auditoria');
+    const auditoriaEmpresaSel = document.getElementById('auditoria-empresa');
+    const auditoriaInicioInp = document.getElementById('auditoria-data-inicio');
+    const auditoriaFimInp = document.getElementById('auditoria-data-fim');
+    const auditoriaFeedback = document.getElementById('auditoria-feedback');
+    const auditoriaBtnIcon = document.getElementById('auditoria-btn-icon');
+    const auditoriaBtnLabel = document.getElementById('auditoria-btn-label');
+
+    function toastAuditoria(msg, cor) {
+      const t = document.createElement('div');
+      t.className = `fixed top-6 right-6 z-[70] px-5 py-3 rounded-xl shadow-2xl text-white font-bold text-xs ${cor}`;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2800);
+    }
+
+    function popularEmpresasAuditoria() {
+      if (!auditoriaEmpresaSel) return;
+      const set = new Set();
+      todasAsNotas.forEach(d => {
+        const desc = d['descricao_contrato'] || d['Descrição Do Contrato'] || d['descricao'] || '';
+        const emp = calcularEmpresaAtribuida(desc);
+        if (emp) set.add(emp);
+      });
+      const empresas = Array.from(set).sort();
+      auditoriaEmpresaSel.innerHTML = '<option value="__TODAS__" selected>Todas as Empresas</option>' +
+        empresas.map(e => `<option value="${e}">${e}</option>`).join('');
+    }
+
+    function abrirModalAuditoriaFiltros() {
+      popularEmpresasAuditoria();
+      if (auditoriaFeedback) auditoriaFeedback.classList.add('hidden');
+      modalAuditoriaFiltros.classList.remove('opacity-0', 'pointer-events-none');
+      modalAuditoriaContent.classList.remove('scale-95');
+    }
+
+    function fecharModalAuditoriaFiltros() {
+      modalAuditoriaFiltros.classList.add('opacity-0', 'pointer-events-none');
+      modalAuditoriaContent.classList.add('scale-95');
+    }
+
+    if (btnExportarAuditoria) {
+      btnExportarAuditoria.addEventListener('click', () => {
+        fecharModalExportar();
+        setTimeout(abrirModalAuditoriaFiltros, 180);
+      });
+    }
+    if (btnFecharAuditoriaFiltros) btnFecharAuditoriaFiltros.addEventListener('click', fecharModalAuditoriaFiltros);
+    if (btnCancelarAuditoriaFiltros) btnCancelarAuditoriaFiltros.addEventListener('click', fecharModalAuditoriaFiltros);
+    if (overlayAuditoriaFiltros) overlayAuditoriaFiltros.addEventListener('click', fecharModalAuditoriaFiltros);
+
+    function setAuditoriaFeedback(msg, tipo) {
+      if (!auditoriaFeedback) return;
+      const cores = {
+        erro: 'bg-red-50 text-red-700 border-red-200',
+        info: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+      };
+      auditoriaFeedback.className = `text-[11px] font-bold rounded-lg px-3 py-2 border ${cores[tipo] || cores.info}`;
+      auditoriaFeedback.textContent = msg;
+      auditoriaFeedback.classList.remove('hidden');
+    }
+
+    function setAuditoriaLoading(loading) {
+      if (!btnGerarAuditoria) return;
+      btnGerarAuditoria.disabled = loading;
+      if (loading) {
+        if (auditoriaBtnIcon) {
+          auditoriaBtnIcon.textContent = 'progress_activity';
+          auditoriaBtnIcon.classList.add('animate-spin');
+        }
+        if (auditoriaBtnLabel) auditoriaBtnLabel.textContent = 'Gerando…';
+      } else {
+        if (auditoriaBtnIcon) {
+          auditoriaBtnIcon.textContent = 'download';
+          auditoriaBtnIcon.classList.remove('animate-spin');
+        }
+        if (auditoriaBtnLabel) auditoriaBtnLabel.textContent = 'Gerar Relatório';
+      }
+    }
+
+    function parseDataAuditoria(raw) {
+      if (raw === null || raw === undefined || raw === '' || raw === '-') return null;
+      let d = null;
+      if (raw && typeof raw.toDate === 'function') d = raw.toDate();
+      else if (raw instanceof Date) d = raw;
+      else if (typeof raw === 'number') d = new Date((raw - 25569) * 86400 * 1000);
+      else {
+        const s = String(raw).trim();
+        if (s.includes('/')) {
+          const p = s.split('/');
+          if (p.length === 3) d = new Date(`${p[2].padStart(4, '20')}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}T00:00:00`);
+        } else if (s.includes('-')) {
+          const p = s.split('T')[0].split('-');
+          if (p.length === 3) d = new Date(`${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}T00:00:00`);
+        } else {
+          d = new Date(s);
+        }
+      }
+      if (d && !isNaN(d.getTime())) { d.setHours(0, 0, 0, 0); return d; }
+      return null;
+    }
+
+    if (btnGerarAuditoria) {
+      btnGerarAuditoria.addEventListener('click', () => {
+        if (auditoriaFeedback) auditoriaFeedback.classList.add('hidden');
+
+        const empresaSel = auditoriaEmpresaSel ? auditoriaEmpresaSel.value : '__TODAS__';
+        const dtIni = auditoriaInicioInp ? auditoriaInicioInp.value : '';
+        const dtFim = auditoriaFimInp ? auditoriaFimInp.value : '';
+
+        if (dtIni && dtFim && dtIni > dtFim) {
+          setAuditoriaFeedback('Data inicial não pode ser maior que a final.', 'erro');
+          return;
+        }
+
+        setAuditoriaLoading(true);
+
+        setTimeout(() => {
+          try {
+            // FONTE ÚNICA: o array que alimenta a tabela e o KPI. O Excel deve ser espelho fiel.
+            // Fallback para `todasAsNotas` somente se a tela ainda não rodou `aplicarFiltros` uma vez.
+            const baseTela = Array.isArray(window.docsFiltradosAtual) && window.docsFiltradosAtual.length
+              ? window.docsFiltradosAtual
+              : todasAsNotas;
+
+            const hojeAud = new Date(); hojeAud.setHours(0, 0, 0, 0);
+            const filtrados = baseTela.filter(d => {
+              // Paridade com o KPI: notas Canceladas não entram nem no card nem no Excel.
+              if (obterStatusReal(d, hojeAud) === 'Cancelada') return false;
+
+              const descContrato = d['descricao_contrato'] || d['Descrição Do Contrato'] || d['descricao'] || '';
+              const empresa = calcularEmpresaAtribuida(descContrato) || '';
+              if (empresaSel !== '__TODAS__' && empresa !== empresaSel) return false;
+
+              if (dtIni || dtFim) {
+                // Mesmo helper TZ-safe usado no `aplicarFiltros` da tela — sem round-trip por UTC.
+                const iso = extrairISOLocal(d['data_emissao'] || d['Dt Emissao']);
+                if (!iso) return false;
+                if (dtIni && iso < dtIni) return false;
+                if (dtFim && iso > dtFim) return false;
+              }
+              return true;
+            });
+
+            if (filtrados.length === 0) {
+              setAuditoriaLoading(false);
+              setAuditoriaFeedback('Nenhum lançamento encontrado para os filtros selecionados.', 'erro');
+              return;
+            }
+
+            const linhas = filtrados.map(d => {
+              const descContrato = d['descricao_contrato'] || d['Descrição Do Contrato'] || d['descricao'] || '';
+              const empresa = calcularEmpresaAtribuida(descContrato) || '';
+              const rps = d.rps || d['Nº NF'] || d['NF'] || '';
+              const cliente = d['cliente'] || d['Cliente'] || '';
+              const emissao = parseDataAuditoria(d['data_emissao'] || d['Dt Emissao']);
+              const vencimento = parseDataAuditoria(d['vencimento'] || d['Dt Vecto  '] || d['Dt Vecto']);
+              const baixa = parseDataAuditoria(d['data_baixa'] || d['Dt Baixa'] || d['data_recebimento']);
+              const mesRefBase = d['mes_referencia'] || (emissao ? `${String(emissao.getMonth() + 1).padStart(2, '0')}/${emissao.getFullYear()}` : '');
+              const mesRef = formatarMesRef(mesRefBase);
+
+              const vFatura = parseMoedaCRF(d['valor_fatura'] || d['Valor Fatura'] || d['valor']);
+              const valorLiquido = obterValorLiquido(d);
+              const faturamentoReal = Number((obterFaturamentoReal(d) || 0).toFixed(2));
+
+              return [
+                empresa, rps, descContrato, cliente, mesRef,
+                emissao || '', vencimento || '', baixa || '',
+                vFatura, valorLiquido, faturamentoReal
+              ];
+            });
+
+            const cabecalho = [
+              'Empresa', 'RPS', 'Tipo de Serviço', 'Cliente', 'Mes Ref.',
+              'Emissão', 'Vencimento', 'Data da Baixa',
+              'Faturamento Bruto', 'Valor Liquido', 'Faturamento Real'
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet([cabecalho, ...linhas], { cellDates: true });
+
+            const fmtData = 'dd/mm/yyyy';
+            const fmtMoeda = '"R$" #,##0.00;[Red]"R$" -#,##0.00';
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let r = 1; r <= range.e.r; r++) {
+              ['F', 'G', 'H'].forEach(col => {
+                const ref = `${col}${r + 1}`;
+                const cell = ws[ref];
+                if (cell && cell.v instanceof Date) { cell.t = 'd'; cell.z = fmtData; }
+                else if (cell && cell.v === '') { delete ws[ref]; }
+              });
+              ['I', 'J', 'K'].forEach(col => {
+                const ref = `${col}${r + 1}`;
+                const cell = ws[ref];
+                if (cell) { cell.t = 'n'; cell.z = fmtMoeda; }
+              });
+            }
+
+            ws['!cols'] = [
+              { wch: 22 }, { wch: 12 }, { wch: 32 }, { wch: 32 }, { wch: 12 },
+              { wch: 12 }, { wch: 12 }, { wch: 14 },
+              { wch: 16 }, { wch: 16 }, { wch: 16 }
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Auditoria');
+            const sufixoEmpresa = empresaSel === '__TODAS__' ? 'todas' : empresaSel.replace(/\s+/g, '_');
+            const sufixoPeriodo = (dtIni || dtFim) ? `_${dtIni || 'inicio'}_a_${dtFim || 'fim'}` : '';
+            XLSX.writeFile(wb, `Auditoria_Faturamento_${sufixoEmpresa}${sufixoPeriodo}.xlsx`);
+
+            setAuditoriaLoading(false);
+            toastAuditoria(`Auditoria gerada: ${linhas.length} lançamento(s).`, 'bg-indigo-600');
+            fecharModalAuditoriaFiltros();
+          } catch (err) {
+            console.error('[Auditoria] erro:', err);
+            setAuditoriaLoading(false);
+            setAuditoriaFeedback('Falha ao gerar a planilha. Verifique o console.', 'erro');
+          }
+        }, 60);
       });
     }
 
@@ -1463,15 +2089,25 @@
           const actualHeader = rawAoA[headerIndex];
           const cleanedRows = [];
 
+          // Tokens de cabeçalho/rodapé do relatório legado que NUNCA podem entrar no ETL.
+          const TOKENS_LIXO = ['PLANILHA DE FATURAMENTO', 'EMPRESA:', 'AGENCIAMENTO', 'CONTRATADO'];
+          const normalizarCelula = (v) => String(v || '')
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .trim().toUpperCase();
+
           for (let i = headerIndex + 1; i < rawAoA.length; i++) {
             const row = rawAoA[i];
             if (row.every(cell => cell === null || cell === undefined || String(cell).trim() === "")) continue;
             const firstCellNormalized = String(row[0] || "").trim().toUpperCase();
+            const firstCellSemAcento = normalizarCelula(row[0]);
             if (firstCellNormalized.includes('TEMPORÁRIO') || firstCellNormalized.includes('TEMPORARIO')) continue;
             if (firstCellNormalized === 'Nº NF' || firstCellNormalized === 'NF') continue;
             // REGRA DE SEGURANÇA: IGNORAR TOTALIZADORES
             if (firstCellNormalized.includes('TOTAL') || firstCellNormalized.includes('TOTAIS')) continue;
             if (row.some(c => String(c).trim().toUpperCase().includes('TOTAL GERAL'))) continue;
+            // SANITIZAÇÃO ETL: descartar cabeçalhos/rodapés do relatório legado
+            // (ex.: "Planilha de Faturamento", "Empresa:", "Agenciamento", "Contratado").
+            if (TOKENS_LIXO.some(tok => firstCellSemAcento.includes(tok))) continue;
 
             cleanedRows.push(row);
           }
@@ -1479,7 +2115,7 @@
           if (cleanedRows.length === 0) throw new Error("A planilha não contém dados válidos.");
           const headerMap = {};
           actualHeader.forEach((col, idx) => { if (col) headerMap[String(col).trim().toUpperCase()] = idx; });
-          const mappedData = cleanedRows.map((row) => {
+          const mappedRaw = cleanedRows.map((row) => {
             const obj = {};
             COLUNAS_OBRIGATORIAS.forEach(colName => {
               const idxNoExcel = headerMap[colName.toUpperCase()];
@@ -1487,6 +2123,15 @@
             });
             return obj;
           });
+          // SANITIZAÇÃO ETL — descartar linhas sem dado financeiro real:
+          // Cliente="Cliente não informado" E Valor Fatura=0 são rodapés/placeholders.
+          const mappedData = mappedRaw.filter((item) => {
+            const clienteNorm = normalizarCelula(item['Cliente']);
+            const vFaturaParsed = parseMoedaCRF(item['Valor Fatura']);
+            if (clienteNorm === 'CLIENTE NAO INFORMADO' && vFaturaParsed === 0) return false;
+            return true;
+          });
+          if (mappedData.length === 0) throw new Error("A planilha não contém dados válidos após a sanitização.");
 
           let totalVazios = 0;
           const errosPorLinha = {};
@@ -1621,6 +2266,22 @@
               if (val === null || val === undefined || String(val).trim() === "") val = isNumeric ? 0 : "";
               docData[col] = val;
             });
+
+            // ETL — preservar as colunas RAW para que os KPIs derivem ao vivo `Vl. Líquido − Valor Descto.`.
+            // Usar o parser format-aware `parseMoedaCRF` (BR/US/Number) — o BR-estrito antigo inflava 100x
+            // quando o XLSX devolvia uma célula em formato US ("1234.56" → 123456).
+            const vlLiquidoBruto = parseMoedaCRF(item['Vl. Líquido'] !== undefined ? item['Vl. Líquido'] : item['Valor Líquido']);
+            const valorDesconto = parseMoedaCRF(item['Valor Descto.'] !== undefined ? item['Valor Descto.'] : item['Desconto']);
+            const valorLiquidoFinal = Number((vlLiquidoBruto - valorDesconto).toFixed(2));
+            // Preserva o bruto da planilha — fonte de verdade para o cálculo ao vivo.
+            docData['Vl. Líquido'] = vlLiquidoBruto;
+            docData['Valor Descto.'] = valorDesconto;
+            // Derivado, salvo apenas como fallback (lançamentos manuais / leitores legados).
+            docData['valor_liquido'] = valorLiquidoFinal;
+            // Taxa é a base do Faturamento Real (100% Mão de Obra / 55% NEAT) — normalizar para Number já no ETL.
+            // Cobre variações de cabeçalho da planilha legada: "Taxa" / "Valor Taxa" / "Vl. Taxa".
+            docData['Taxa'] = parseMoedaCRF(item['Taxa'] || item['Valor Taxa'] || item['Vl. Taxa'] || 0);
+
             docData.rps = item['Nº NF'] || item['N° NF'] || item['NF'] || "";
             docData.numero_nfe = item['Nº NF-e'] || item['N° NF-e'] || "";
             docData.tipo = 'receita';
@@ -1633,8 +2294,8 @@
             if (!docData.status) docData.status = statusBase;
             docData.data_importacao = new Date();
 
-            const vFatura = typeof item['Valor Fatura'] === 'number' ? item['Valor Fatura'] : parseFloat(String(item['Valor Fatura'] || 0).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-            const vBaixa = typeof item['Valor Baixa'] === 'number' ? item['Valor Baixa'] : parseFloat(String(item['Valor Baixa'] || item['Pagto Parcial'] || 0).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+            const vFatura = parseMoedaCRF(item['Valor Fatura']);
+            const vBaixa = parseMoedaCRF(item['Valor Baixa'] || item['Pagto Parcial']);
             const saldo_residual = vFatura - vBaixa;
             docData.saldo_residual = saldo_residual;
 
@@ -1707,7 +2368,7 @@
     async function processarSalvamentoImportacao(novos, atualizados, btnOriginalText) {
       try {
         btnProcessar.disabled = true;
-        btnProcessar.textContent = "Salvando no banco...";
+        btnProcessar.textContent = "Carregando, aguarde!";
         btnProcessar.classList.add('opacity-70');
 
         for (const docData of novos) {
@@ -1828,8 +2489,11 @@
       const cliente = document.getElementById('campo-cliente').value;
       const valor_fatura = Number(document.getElementById('campo-valor').value);
       const valor_liquido = Number(document.getElementById('campo-valor-liquido').value);
+      const fatRealRaw = document.getElementById('campo-faturamento-real').value;
+      const faturamento_real_manual = fatRealRaw === '' ? null : Number(fatRealRaw);
       const vencimento = document.getElementById('campo-vencimento').value;
       const data_recebimento = document.getElementById('campo-data-recebimento').value;
+      const data_emissao = document.getElementById('campo-data-emissao').value;
       const mes_referencia = document.getElementById('campo-mes-referencia').value;
       const status = document.getElementById('campo-status').value;
 
@@ -1849,8 +2513,11 @@
           valor_fatura: valor_fatura,
           valor: valor_fatura,
           valor_liquido: valor_liquido,
+          faturamento_real_manual: faturamento_real_manual,
           vencimento: vencimento,
           data_recebimento: data_recebimento || "",
+          data_emissao: data_emissao || "",
+          'Dt Emissao': data_emissao || "",
           mes_referencia: mes_referencia,
           status: status,
           empresa_atribuida: empresa_atribuida,
@@ -1926,17 +2593,8 @@
       return s;
     }
 
-    function calcularFaturamentoReal(descricaoContrato, valorFatura, valorTaxa = 0) {
-      const descRaw = String(descricaoContrato || "").toUpperCase();
-      const desc = descRaw.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove acentos
-      const valor = Number(valorFatura) || 0;
-      const taxa = Number(valorTaxa) || 0;
-      const grupo1 = ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "CONSULTORIA", "RPO"];
-      const grupo2 = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRACAO", "UNIDADES", "DEVOLUTIVA", "ASSESSMENT", "HOTMART"];
-      if (grupo1.some(g => desc.includes(g))) return taxa;
-      if (grupo2.some(g => desc.includes(g))) return valor * 0.55;
-      return 0; // Trava de segurança: não inflar faturamento
-    }
+    // `calcularFaturamentoReal`, `obterValorLiquido` e `obterFaturamentoReal` agora vêm
+    // do `core_rules.js` (Fonte Única da Verdade compartilhada com o Dashboard Master).
 
     window.auditarServicosNaoMapeados = function (notas) {
       const grupo1 = ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "CONSULTORIA", "RPO"];
@@ -2095,10 +2753,7 @@
     }
 
     function parseMoneySortCRF(raw) {
-      if (raw === null || raw === undefined || raw === '') return 0;
-      if (typeof raw === 'number') return raw;
-      const n = parseFloat(String(raw).replace(/[R$\s.]/g, '').replace(',', '.'));
-      return isNaN(n) ? 0 : n;
+      return parseMoedaCRF(raw);
     }
 
     function obterValorSortCRF(data, coluna) {
@@ -2134,12 +2789,9 @@
         case 'valor_fatura':
           return { tipo: 'numero', valor: parseMoneySortCRF(data['valor_fatura'] || data['Valor Fatura'] || data['valor']) };
         case 'valor_liquido':
-          return { tipo: 'numero', valor: parseMoneySortCRF(data['valor_liquido'] || data['Vl. Líquido'] || data['Vl Líquido']) };
-        case 'fat_real': {
-          const vF = parseMoneySortCRF(data['valor_fatura'] || data['Valor Fatura'] || data['valor']);
-          const vT = parseMoneySortCRF(data['taxa'] || data['Taxa']);
-          return { tipo: 'numero', valor: parseMoneySortCRF(calcularFaturamentoReal(descContrato, vF, vT)) };
-        }
+          return { tipo: 'numero', valor: Number(obterValorLiquido(data)) || 0 };
+        case 'fat_real':
+          return { tipo: 'numero', valor: Number(obterFaturamentoReal(data)) || 0 };
         case 'status':
           return { tipo: 'texto', valor: String(obterStatusReal(data, hoje) || '') };
         default:
@@ -2206,14 +2858,14 @@
           const cliente = String(data['cliente'] || data['Cliente'] || "");
           const codCliente = String(data['codigo_cliente'] || data['Cd.Cliente'] || "");
           const cnpj = String(data['cnpj'] || data['CNPJ Cliente'] || "");
-          const tipoServico = String(data['descricao'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "");
+          const tipoServico = String(data['descricao'] || data['Descrição Do Contrato'] || data['Tipo de Serviço'] || data['tipo_servico'] || "");
           const emissaoRaw = data['data_emissao'] || data['Dt Emissao'] || '';
           const emissaoFormatada = formatarDataBR(emissaoRaw);
           const mesRefRaw = data['mes_referencia'] || (emissaoFormatada !== '-' ? emissaoFormatada.substring(3) : '');
           const vencRaw = data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto'] || "";
           const baixaRaw = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || "";
           const vFaturaRaw = data['valor_fatura'] || data['Valor Fatura'] || data['valor'] || 0;
-          const vTaxaRaw = data['taxa'] || data['Taxa'] || 0;
+          const vTaxaRaw = data['taxa'] || data['Taxa'] || data['Valor Taxa'] || data['Vl. Taxa'] || 0;
           const faturRealVal = calcularFaturamentoReal(tipoServico, vFaturaRaw, vTaxaRaw);
           const statusReal = obterStatusReal(data, hoje);
           const empresaCalcBusca = calcularEmpresaAtribuida(tipoServico) || '';
@@ -2228,24 +2880,11 @@
           let bateTipo = fTipoArr.includes("Todos") || fTipoArr.some(tipo => norm(tipoServico).includes(norm(tipo)));
           const checarPeriodo = (raw, inicio, fim) => {
             if (!inicio && !fim) return true;
-            if (!raw) return false;
-            let d;
-            if (raw.toDate) d = raw.toDate();
-            else if (raw instanceof Date) d = raw;
-            else if (typeof raw === 'number') d = new Date((raw - 25569) * 86400 * 1000);
-            else {
-              const s = String(raw).trim();
-              if (s.includes('/')) d = new Date(`${s.split('/')[2]}-${s.split('/')[1]}-${s.split('/')[0]}`);
-              else d = new Date(s);
-            }
-            if (d && !isNaN(d.getTime())) {
-              d.setHours(0, 0, 0, 0);
-              const iso = d.toISOString().split('T')[0];
-              if (inicio && iso < inicio) return false;
-              if (fim && iso > fim) return false;
-              return true;
-            }
-            return false;
+            const iso = extrairISOLocal(raw);
+            if (!iso) return false;
+            if (inicio && iso < inicio) return false;
+            if (fim && iso > fim) return false;
+            return true;
           };
           const bateVenc = checarPeriodo(vencRaw, vInicio, vFim);
           const bateEmissao = checarPeriodo(emissaoRaw, eInicio, eFim);
@@ -2255,6 +2894,7 @@
           return bateBusca && bateTipo && bateStatus && bateEmpresa && bateVenc && bateEmissao && bateBaixa;
         } catch (fErr) { return false; }
       });
+      window.docsFiltradosAtual = docsFiltrados;
 
       const totalItens = docsFiltrados.length;
       const totalPaginas = Math.ceil(totalItens / itensPorPagina) || 1;
@@ -2265,7 +2905,7 @@
 
       elTabelaCorpo.innerHTML = "";
       if (docsPagina.length === 0) {
-        elTabelaCorpo.innerHTML = `<tr id="empty-state"><td colspan="16" class="px-6 py-12 text-center text-on-surface-variant"><div class="flex flex-col items-center gap-3"><span class="material-symbols-outlined text-4xl opacity-20">inventory_2</span><p class="font-bold">Nenhum lançamento encontrado.</p><p class="text-xs">Refine seus filtros ou realize uma nova busca.</p></div></td></tr>`;
+        elTabelaCorpo.innerHTML = `<tr id="empty-state"><td colspan="17" class="px-6 py-12 text-center text-on-surface-variant"><div class="flex flex-col items-center gap-3"><span class="material-symbols-outlined text-4xl opacity-20">inventory_2</span><p class="font-bold">Nenhum lançamento encontrado.</p><p class="text-xs">Refine seus filtros ou realize uma nova busca.</p></div></td></tr>`;
         elFooterCount.textContent = "Mostrando 0 de 0 faturas";
         renderizarPaginacao(1);
         atualizarMetrics(docsFiltrados);
@@ -2298,14 +2938,13 @@
           const baixaRaw = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || '-';
           const baixa = formatarDataBR(baixaRaw);
           const vFaturaRaw = data['valor_fatura'] || data['Valor Fatura'] || data['valor'] || 0;
-          const vFatura = typeof vFaturaRaw === 'number' ? vFaturaRaw : parseFloat(String(vFaturaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+          const vFatura = parseMoedaCRF(vFaturaRaw);
 
-          const vLiquidoRaw = data['valor_liquido'] || data['Vl. Líquido'] || data['Vl Líquido'] || 0;
-          const vLiquido = typeof vLiquidoRaw === 'number' ? vLiquidoRaw : parseFloat(String(vLiquidoRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+          const vLiquido = obterValorLiquido(data);
 
-          const vTaxaRaw = data['taxa'] || data['Taxa'] || 0;
-          const vTaxa = typeof vTaxaRaw === 'number' ? vTaxaRaw : parseFloat(String(vTaxaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-          const faturReal = calcularFaturamentoReal(descContrato, vFatura, vTaxa);
+          const vTaxaRaw = data['taxa'] || data['Taxa'] || data['Valor Taxa'] || data['Vl. Taxa'] || 0;
+          const vTaxa = parseMoedaCRF(vTaxaRaw);
+          const faturReal = obterFaturamentoReal(data);
 
           const statusReal = obterStatusReal(data, hoje);
           let statusClass = "bg-primary-container/20 text-on-primary-fixed-variant";
@@ -2316,7 +2955,10 @@
           if (statusReal === "PREJUÍZO") statusClass = "bg-red-900 text-white shadow-sm";
           if (statusReal === "PROTESTO") statusClass = "bg-orange-100 text-orange-800 border border-orange-200";
           const cellClass = "px-4 py-3 text-[10px] text-on-surface-variant font-medium border-r border-slate-100 last:border-r-0 shadow-[1px_0_0_rgba(0,0,0,0.02)]";
+          const cellSelClass = window.isSuperAdmin ? "" : "hidden";
+          const isChecked = window.idsSelecionadosMassa && window.idsSelecionadosMassa.has(data.id) ? "checked" : "";
           tr.innerHTML = `
+            <td class="${cellSelClass} px-3 py-3 text-center border-r border-slate-100 w-10"><input type="checkbox" class="row-check-massa rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer" data-id="${data.id}" ${isChecked}></td>
             <td class="${cellClass} font-bold text-[#002443] bg-slate-50">${empresaCalc}</td>
             <td class="${cellClass} font-bold text-[11px]">${rps}</td>
             <td class="${cellClass} truncate max-w-[150px]" title="${descContrato}">${descContrato}</td>
@@ -2338,6 +2980,10 @@
               <div class="flex justify-end gap-1.5 transition-opacity">
                 <button onclick="window.abrirVisualizacao('${data.id}')" class="p-1 text-on-surface-variant hover:text-blue-500 hover:bg-blue-50 rounded transition-all" title="Visualizar Detalhes"><span class="material-symbols-outlined text-base">visibility</span></button>
                 <button onclick="window.abrirEdicao('${data.id}')" class="p-1 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-all" title="Editar"><span class="material-symbols-outlined text-base">edit</span></button>
+                ${statusReal === 'DESMEMBRADO'
+                  ? `<button onclick="window.confirmarDesfazerParcelamento('${data.id}', '${rps}', '${cliente}')" class="p-1 text-on-surface-variant hover:text-amber-600 hover:bg-amber-50 rounded transition-all" title="Desfazer Parcelamento"><span class="material-symbols-outlined text-base">undo</span></button>`
+                  : `<button onclick="window.abrirParcelamento('${data.id}')" class="p-1 text-on-surface-variant hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all" title="Parcelar"><span class="material-symbols-outlined text-base">call_split</span></button>`
+                }
                 <button onclick="window.confirmarExclusao('${data.id}', '${rps}', '${cliente}')" class="p-1 text-on-surface-variant hover:text-red-500 hover:bg-red-50 rounded transition-all" title="Excluir"><span class="material-symbols-outlined text-base">delete</span></button>
               </div>
             </td>
@@ -2348,6 +2994,7 @@
       elFooterCount.textContent = `Mostrando ${inicio + 1}-${Math.min(fim, totalItens)} de ${totalItens} faturas`;
       renderizarPaginacao(totalPaginas);
       atualizarMetrics(docsFiltrados);
+      if (typeof atualizarBarraSelMassa === 'function') atualizarBarraSelMassa();
       const btnLimparRapido = document.getElementById('btn-limpar-filtros-rapido');
       if (btnLimparRapido) {
         if (termo !== "" || !fTipoArr.includes("Todos") || !fStatusArr.includes("Todos") || vInicio || vFim || eInicio || eFim || bInicio || bFim) {
@@ -2408,14 +3055,13 @@
         const descContrato = data['descricao_contrato'] || data['Descrição Do Contrato'] || data['descricao'] || '-';
 
         const vFaturaRaw = data['valor_fatura'] || data['Valor Fatura'] || data['valor'] || 0;
-        const vFatura = typeof vFaturaRaw === 'number' ? vFaturaRaw : parseFloat(String(vFaturaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+        const vFatura = parseMoedaCRF(vFaturaRaw);
 
-        const vLiquidoRaw = data['valor_liquido'] || data['Vl. Líquido'] || data['Vl Líquido'] || 0;
-        const vLiquido = typeof vLiquidoRaw === 'number' ? vLiquidoRaw : parseFloat(String(vLiquidoRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+        const vLiquido = obterValorLiquido(data);
 
-        const vTaxaRaw = data['taxa'] || data['Taxa'] || 0;
-        const vTaxa = typeof vTaxaRaw === 'number' ? vTaxaRaw : parseFloat(String(vTaxaRaw).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-        const faturReal = calcularFaturamentoReal(descContrato, vFatura, vTaxa);
+        const vTaxaRaw = data['taxa'] || data['Taxa'] || data['Valor Taxa'] || data['Vl. Taxa'] || 0;
+        const vTaxa = parseMoedaCRF(vTaxaRaw);
+        const faturReal = obterFaturamentoReal(data);
         const statusReal = obterStatusReal(data, hoje);
 
         if (statusReal === "Cancelada") {
@@ -2423,6 +3069,9 @@
           // Importante: Notas canceladas não devem ser somadas no faturamento nem consideradas como recebidas.
           return;
         }
+        // DESMEMBRADO: nota original que foi parcelada — o faturamento real agora vive nas filhas.
+        // Sai de TODOS os KPIs para evitar duplicidade (a soma das filhas reproduz o total).
+        if (statusReal === "DESMEMBRADO") return;
 
         valorTotal += Number(vFatura);
         totalFatReal += Number(faturReal);
@@ -2459,6 +3108,55 @@
       if (elCardBaixadoLiquido) elCardBaixadoLiquido.textContent = formatadorMoeda.format(totalBaixadoLiquido);
       if (elCardPrejuizo) elCardPrejuizo.textContent = formatadorMoeda.format(totalPrejuizo);
       if (elCardProtesto) elCardProtesto.textContent = formatadorMoeda.format(totalProtesto);
+
+      // ── Parcelamentos Ativos: agrega filhas (origem_parcelamento === true) por parent_id/parent_rps ──
+      // Itera sobre `docs` (mesmo recorte de filtro), igual ao Dashboard Master, e usa
+      // `obterStatusReal` (core_rules.js) p/ classificar cada filha. Filhas DESMEMBRADAS/Canceladas
+      // contam como "fechadas" e ficam fora do residual.
+      const parcelamentosAtivos = {}; // key = parent_id || parent_rps
+      docs.forEach((data) => {
+        if (!data || !data.origem_parcelamento) return;
+        const parentKey = data.parent_id || data.parent_rps || '';
+        if (!parentKey) return;
+        const statusP = obterStatusReal(data, hoje);
+        const vBruto = parseMoedaCRF(data['valor_fatura'] || data['Valor Fatura'] || data['valor']);
+        if (!parcelamentosAtivos[parentKey]) {
+          parcelamentosAtivos[parentKey] = {
+            parent_rps: data.parent_rps || '',
+            cliente: data.cliente || data.Cliente || '-',
+            total_parcelas: data.parcela_total || 0,
+            parcelas_pagas: 0,
+            parcelas_em_aberto: 0,
+            valor_total: 0,
+            valor_residual: 0,
+            filhas: []
+          };
+        }
+        const grupo = parcelamentosAtivos[parentKey];
+        grupo.valor_total += vBruto;
+        if (statusP === 'RECEBIDO') grupo.parcelas_pagas += 1;
+        else if (statusP !== 'Cancelada' && statusP !== 'DESMEMBRADO') {
+          grupo.parcelas_em_aberto += 1;
+          grupo.valor_residual += vBruto;
+        }
+        grupo.filhas.push({
+          indice: data.parcela_indice || 0,
+          rps: data.rps || data['Nº NF'] || '',
+          venc: data.vencimento || data['Dt Vecto'] || '',
+          valor: vBruto,
+          status: statusP
+        });
+      });
+
+      // Apenas grupos com pelo menos 1 parcela em aberto contam como "ativo".
+      const parcelamentosAtivosArr = Object.values(parcelamentosAtivos).filter(g => g.parcelas_em_aberto > 0);
+      const totalResidualP = parcelamentosAtivosArr.reduce((acc, g) => acc + g.valor_residual, 0);
+      const qtdAtivosP = parcelamentosAtivosArr.length;
+      window._parcelamentosAtivosDetalhe = parcelamentosAtivosArr.sort((a, b) => b.valor_residual - a.valor_residual);
+      const elParcResidual = document.getElementById('kpi-parcelamentos-residual');
+      const elParcQtd = document.getElementById('kpi-parcelamentos-qtd');
+      if (elParcResidual) elParcResidual.textContent = formatadorMoeda.format(totalResidualP);
+      if (elParcQtd) elParcQtd.textContent = qtdAtivosP;
     }
 
     const mExcluir = document.getElementById('modal-excluir-confirmacao');
@@ -2504,16 +3202,146 @@
       });
     }
 
-    function calcularEmpresaAtribuida(tipoServico) {
-      const desc = String(tipoServico || "").toUpperCase();
-      if (desc.includes("TEMPORARIO")) return "SOULAN CONSULTORIA";
-      if (desc.includes("ESTAGIO")) return "ESTÁGIO";
-      const adm = ["TERCEIROS", "FOPAG", "CONSULTORIA", "ASSESSMENT", "RPO"];
-      if (adm.some(k => desc.includes(k))) return "SOULAN ADM";
-      const neat = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART"];
-      if (neat.some(k => desc.includes(k))) return "NEAT";
-      return "";
+    // ───────────────────────────── Exclusão em massa (super_admin) ─────────────────────────────
+    window.idsSelecionadosMassa = new Set();
+    const colSelHead = document.getElementById('col-selecao-head');
+    const checkSelTodos = document.getElementById('check-selecao-todos');
+    const barraSelMassa = document.getElementById('barra-selecao-massa');
+    const qtdSelMassa = document.getElementById('qtd-selecionados-massa');
+    const btnLimparSelMassa = document.getElementById('btn-limpar-selecao-massa');
+    const btnExcluirSelMassa = document.getElementById('btn-excluir-selecionados-massa');
+    const modalExcluirMassa = document.getElementById('modal-excluir-massa');
+    const modalExcluirMassaContent = document.getElementById('modal-excluir-massa-content');
+    const overlayExcluirMassa = document.getElementById('modal-excluir-massa-overlay');
+    const btnCancelarMassa = document.getElementById('btn-cancelar-excluir-massa');
+    const btnConfirmarMassa = document.getElementById('btn-confirmar-excluir-massa');
+    const qtdExcluirMassa = document.getElementById('qtd-excluir-massa');
+    const iconConfirmarMassa = document.getElementById('icone-confirmar-excluir-massa');
+    const labelConfirmarMassa = document.getElementById('label-confirmar-excluir-massa');
+
+    window.aplicarTogglesSuperAdmin = function () {
+      const ehSuper = !!window.isSuperAdmin;
+      if (colSelHead) colSelHead.classList.toggle('hidden', !ehSuper);
+      if (!ehSuper) {
+        window.idsSelecionadosMassa.clear();
+      }
+      // Re-renderiza a tabela para aplicar/remover a coluna de checkbox em cada linha.
+      if (typeof aplicarFiltros === 'function') aplicarFiltros();
+      atualizarBarraSelMassa();
+    };
+
+    function atualizarBarraSelMassa() {
+      const n = window.idsSelecionadosMassa.size;
+      if (qtdSelMassa) qtdSelMassa.textContent = n;
+      if (barraSelMassa) barraSelMassa.classList.toggle('hidden', n === 0 || !window.isSuperAdmin);
+      if (checkSelTodos) {
+        const visiveis = Array.from(document.querySelectorAll('.row-check-massa'));
+        const totalVis = visiveis.length;
+        const marcadasVis = visiveis.filter(c => c.checked).length;
+        checkSelTodos.checked = totalVis > 0 && marcadasVis === totalVis;
+        checkSelTodos.indeterminate = marcadasVis > 0 && marcadasVis < totalVis;
+      }
     }
+
+    if (elTabelaCorpo) {
+      elTabelaCorpo.addEventListener('change', (ev) => {
+        const cb = ev.target;
+        if (!cb || !cb.classList || !cb.classList.contains('row-check-massa')) return;
+        const id = cb.dataset.id;
+        if (!id) return;
+        if (cb.checked) window.idsSelecionadosMassa.add(id);
+        else window.idsSelecionadosMassa.delete(id);
+        atualizarBarraSelMassa();
+      });
+    }
+
+    if (checkSelTodos) {
+      checkSelTodos.addEventListener('change', () => {
+        const visiveis = Array.from(document.querySelectorAll('.row-check-massa'));
+        visiveis.forEach(cb => {
+          cb.checked = checkSelTodos.checked;
+          const id = cb.dataset.id;
+          if (!id) return;
+          if (checkSelTodos.checked) window.idsSelecionadosMassa.add(id);
+          else window.idsSelecionadosMassa.delete(id);
+        });
+        atualizarBarraSelMassa();
+      });
+    }
+
+    if (btnLimparSelMassa) {
+      btnLimparSelMassa.addEventListener('click', () => {
+        window.idsSelecionadosMassa.clear();
+        document.querySelectorAll('.row-check-massa').forEach(cb => { cb.checked = false; });
+        atualizarBarraSelMassa();
+      });
+    }
+
+    function abrirModalExcluirMassa() {
+      if (qtdExcluirMassa) qtdExcluirMassa.textContent = window.idsSelecionadosMassa.size;
+      modalExcluirMassa.classList.remove('opacity-0', 'pointer-events-none');
+      modalExcluirMassaContent.classList.remove('scale-95');
+    }
+    function fecharModalExcluirMassa() {
+      modalExcluirMassa.classList.add('opacity-0', 'pointer-events-none');
+      modalExcluirMassaContent.classList.add('scale-95');
+    }
+
+    if (btnExcluirSelMassa) {
+      btnExcluirSelMassa.addEventListener('click', () => {
+        if (!window.isSuperAdmin) return;
+        if (window.idsSelecionadosMassa.size === 0) return;
+        abrirModalExcluirMassa();
+      });
+    }
+    if (btnCancelarMassa) btnCancelarMassa.addEventListener('click', fecharModalExcluirMassa);
+    if (overlayExcluirMassa) overlayExcluirMassa.addEventListener('click', fecharModalExcluirMassa);
+
+    if (btnConfirmarMassa) {
+      btnConfirmarMassa.addEventListener('click', async () => {
+        if (!window.isSuperAdmin) return;
+        const ids = Array.from(window.idsSelecionadosMassa);
+        if (ids.length === 0) { fecharModalExcluirMassa(); return; }
+
+        btnConfirmarMassa.disabled = true;
+        if (iconConfirmarMassa) { iconConfirmarMassa.textContent = 'progress_activity'; iconConfirmarMassa.classList.add('animate-spin'); }
+        if (labelConfirmarMassa) labelConfirmarMassa.textContent = 'Excluindo…';
+
+        try {
+          // writeBatch suporta até 500 operações por commit — fatiamos em blocos de 450.
+          const TAM = 450;
+          let removidos = 0;
+          for (let i = 0; i < ids.length; i += TAM) {
+            const batch = writeBatch(db);
+            ids.slice(i, i + TAM).forEach(id => batch.delete(doc(db, 'Lancamentos', id)));
+            await batch.commit();
+            removidos += Math.min(TAM, ids.length - i);
+          }
+          await registrarLog('EXCLUSÃO MASSA', `Apagou ${removidos} lançamento(s) via seleção múltipla.`);
+          window.idsSelecionadosMassa.clear();
+          atualizarBarraSelMassa();
+          fecharModalExcluirMassa();
+        } catch (err) {
+          console.error('Erro ao excluir em massa:', err);
+          if (err.code === 'permission-denied') {
+            const mErro = document.getElementById('modal-erro');
+            const mErroMsg = document.getElementById('modal-erro-mensagem');
+            if (mErroMsg) mErroMsg.textContent = 'Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.';
+            if (mErro) mErro.classList.remove('opacity-0', 'pointer-events-none');
+          } else {
+            alert('Erro ao excluir lançamentos em massa.');
+          }
+        } finally {
+          btnConfirmarMassa.disabled = false;
+          if (iconConfirmarMassa) { iconConfirmarMassa.textContent = 'delete_sweep'; iconConfirmarMassa.classList.remove('animate-spin'); }
+          if (labelConfirmarMassa) labelConfirmarMassa.textContent = 'Excluir todos';
+        }
+      });
+    }
+
+
+    // `calcularEmpresaAtribuida` agora vem do `core_rules.js`.
+
 
     window.abrirEdicao = (id) => {
       const data = todasAsNotas.find(d => d.id === id);
@@ -2533,12 +3361,9 @@
         const cliente = data['cliente'] || data['Cliente'] || "";
         const status = obterStatusReal(data, new Date());
 
-        const parseValor = (v) => {
-          if (typeof v === 'number') return v;
-          return parseFloat(String(v || 0).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-        };
+        const parseValor = parseMoedaCRF;
         const valorFatura = parseValor(data['valor_fatura'] || data['Valor Fatura'] || data['valor'] || 0);
-        const valorLiquido = parseValor(data['valor_liquido'] || data['Vl. Líquido'] || data['Vl Líquido'] || 0);
+        const valorLiquido = obterValorLiquido(data);
         const formatForInput = (raw) => {
           if (!raw) return "";
           try {
@@ -2561,10 +3386,24 @@
         setVal('campo-cliente', cliente);
         setVal('campo-valor', valorFatura);
         setVal('campo-valor-liquido', valorLiquido);
+        const fatRealEl = document.getElementById('campo-faturamento-real');
+        const fatRealHint = document.getElementById('campo-faturamento-real-hint');
+        if (fatRealEl) {
+          const manualRaw = data.faturamento_real_manual;
+          const temManual = manualRaw !== undefined && manualRaw !== null && manualRaw !== '';
+          fatRealEl.value = temManual ? parseValor(manualRaw) : '';
+          if (fatRealHint) {
+            const fatAuto = calcularFaturamentoReal(descContrato, parseValor(data['valor_fatura'] || data['Valor Fatura'] || data['valor']), parseValor(data['taxa'] || data['Taxa'] || data['Valor Taxa'] || data['Vl. Taxa']));
+            fatRealHint.innerHTML = temManual
+              ? `Override ativo. Valor calculado seria <strong>${formatadorMoeda.format(fatAuto)}</strong>. Limpe o campo para voltar ao automático.`
+              : `Valor calculado: <strong>${formatadorMoeda.format(fatAuto)}</strong>. Preencha para sobrescrever.`;
+          }
+        }
         setVal('campo-vencimento', formatForInput(data['vencimento'] || data['Dt Vecto  '] || data['Dt Vecto'] || ""));
         setVal('campo-data-recebimento', formatForInput(data['data_recebimento'] || data['Dt Baixa'] || ""));
         const emissaoRaw = data['Dt Emissao'] || data['data_emissao'] || data['data_criacao'] || "";
         const emissaoISO = formatForInput(emissaoRaw);
+        setVal('campo-data-emissao', emissaoISO);
         if (emissaoISO) setVal('campo-mes-referencia', emissaoISO.substring(0, 7));
         else if (data['mes_referencia']) setVal('campo-mes-referencia', data['mes_referencia']);
 
@@ -2575,7 +3414,7 @@
         const extraGrid = document.getElementById('campos-extras-dinamicos');
         if (extraGrid) {
           extraGrid.innerHTML = "";
-          const chavesFixas = ['nf', 'Nº NF', 'Nº NF-e', 'NF', 'descricao_contrato', 'Descrição Do Contrato', 'descricao', 'cliente', 'Cliente', 'status', 'Status', 'Situação', 'valor_fatura', 'Valor Fatura', 'valor', 'valor_liquido', 'Vl. Líquido', 'Vl Líquido', 'vencimento', 'Dt Vecto  ', 'Dt Vecto', 'data_recebimento', 'Dt Baixa', 'data_emissao', 'Dt Emissao', 'data_criacao', 'mes_referencia', 'empresa_atribuida', 'observacoes', 'Obs. Emissão', 'id', 'tipo', 'data_importacao', 'data_edicao', 'origem', 'historico_comercial'];
+          const chavesFixas = ['nf', 'Nº NF', 'Nº NF-e', 'NF', 'descricao_contrato', 'Descrição Do Contrato', 'descricao', 'cliente', 'Cliente', 'status', 'Status', 'Situação', 'valor_fatura', 'Valor Fatura', 'valor', 'valor_liquido', 'Vl. Líquido', 'Vl Líquido', 'faturamento_real_manual', 'vencimento', 'Dt Vecto  ', 'Dt Vecto', 'data_recebimento', 'Dt Baixa', 'data_emissao', 'Dt Emissao', 'data_criacao', 'mes_referencia', 'empresa_atribuida', 'observacoes', 'Obs. Emissão', 'id', 'tipo', 'data_importacao', 'data_edicao', 'origem', 'historico_comercial'];
           let temExtra = false;
           Object.keys(data).sort().forEach(key => {
             if (!chavesFixas.includes(key)) {
@@ -2603,12 +3442,501 @@
         abrirModal();
       } catch (edErr) { console.error("❌ Erro crítico ao abrir edição:", edErr); }
     };
+
+    // ────────────────── Módulo de Parcelamento (Split) ──────────────────
+    // Desmembra uma nota original em N parcelas:
+    //   - Datas: D+30, D+60... ajustadas via `obterProximoDiaUtil` (core_rules.js).
+    //   - Valores: divisão exata de Bruto, Líquido, Taxa por N. Real recalculado por Taxa/N.
+    //   - RPS filhas: `<rps original>-<i>` (1..N).
+    //   - Filhas marcadas: `origem_parcelamento:true`, `parent_rps`, `parent_id`, `parcela_indice`, `parcela_total`.
+    //   - Original recebe `status:'DESMEMBRADO'` → sai de TODOS os KPIs via `obterStatusReal`.
+    let _parcelamentoNota = null; // referência da nota selecionada na linha
+
+    function fmtBR(d) {
+      if (!(d instanceof Date) || isNaN(d.getTime())) return '-';
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }
+
+    function calcularParcelas(nota, n) {
+      // Base: vencimento original. Fallback: emissão. Cada parcela = base + 30*i dias, ajustado p/ dia útil.
+      const baseRaw = nota['vencimento'] || nota['Dt Vecto  '] || nota['Dt Vecto'] || nota['data_emissao'] || nota['Dt Emissao'];
+      let baseDate = null;
+      if (baseRaw) {
+        const s = String(baseRaw).trim();
+        if (s.includes('/')) {
+          const p = s.split('/');
+          if (p.length === 3) baseDate = new Date(parseInt(p[2],10), parseInt(p[1],10)-1, parseInt(p[0],10));
+        } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+          const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          baseDate = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+        } else if (baseRaw && baseRaw.toDate) {
+          baseDate = baseRaw.toDate();
+        }
+      }
+      if (!baseDate) baseDate = new Date();
+      baseDate.setHours(0,0,0,0);
+
+      const vBruto    = parseMoedaCRF(nota['valor_fatura'] || nota['Valor Fatura'] || nota['valor']);
+      const vLiquido  = obterValorLiquido(nota);
+      const vTaxa     = parseMoedaCRF(nota['taxa'] || nota['Taxa'] || nota['Valor Taxa'] || nota['Vl. Taxa']);
+      const desc      = nota['descricao_contrato'] || nota['Descrição Do Contrato'] || nota['Tipo de Serviço'] || '';
+
+      const parcelas = [];
+      for (let i = 1; i <= n; i++) {
+        const venc = new Date(baseDate.getTime());
+        venc.setDate(venc.getDate() + 30 * i);
+        const vencDiaUtil = obterProximoDiaUtil(venc);
+        const taxaParc = Number((vTaxa / n).toFixed(2));
+        // Real da filha: recalculado pela mesma fonte da verdade, usando a Taxa fatiada.
+        const realParc = calcularFaturamentoReal(desc, vBruto / n, taxaParc);
+        parcelas.push({
+          indice: i,
+          venc: vencDiaUtil,
+          bruto: Number((vBruto / n).toFixed(2)),
+          liquido: Number((vLiquido / n).toFixed(2)),
+          taxa: taxaParc,
+          real: Number((realParc || 0).toFixed(2))
+        });
+      }
+      return parcelas;
+    }
+
+    function renderPreviewParcelas(nota, n) {
+      const parcelas = calcularParcelas(nota, n);
+      const tbody = document.getElementById('parcelamento-preview-tbody');
+      const container = document.getElementById('parcelamento-preview-container');
+      const rpsBase = String(nota.rps || nota['Nº NF'] || nota['NF'] || '').trim();
+      const fmt = formatadorMoeda;
+      tbody.innerHTML = parcelas.map(p => `
+        <tr class="border-b border-slate-100">
+          <td class="py-2 px-3 font-bold text-slate-700">${p.indice}/${n}</td>
+          <td class="py-2 px-3 font-bold text-indigo-700">${rpsBase}-${p.indice}</td>
+          <td class="py-2 px-3 text-slate-700">${fmtBR(p.venc)}</td>
+          <td class="py-2 px-3 text-right text-slate-700">${fmt.format(p.bruto)}</td>
+          <td class="py-2 px-3 text-right text-cyan-700">${fmt.format(p.liquido)}</td>
+          <td class="py-2 px-3 text-right text-slate-600">${fmt.format(p.taxa)}</td>
+          <td class="py-2 px-3 text-right font-extrabold text-primary">${fmt.format(p.real)}</td>
+        </tr>
+      `).join('');
+      container.classList.remove('hidden');
+      return parcelas;
+    }
+
+    function abrirModalParcelamento() {
+      const m = document.getElementById('modal-parcelamento');
+      const c = document.getElementById('modal-parcelamento-content');
+      m.classList.remove('opacity-0', 'pointer-events-none');
+      c.classList.remove('scale-95');
+    }
+    function fecharModalParcelamento() {
+      const m = document.getElementById('modal-parcelamento');
+      const c = document.getElementById('modal-parcelamento-content');
+      m.classList.add('opacity-0', 'pointer-events-none');
+      c.classList.add('scale-95');
+      _parcelamentoNota = null;
+      const fb = document.getElementById('parcelamento-feedback');
+      if (fb) fb.classList.add('hidden');
+    }
+
+    window.abrirParcelamento = function (id) {
+      const nota = todasAsNotas.find(d => d.id === id);
+      if (!nota) return;
+      const statusReal = obterStatusReal(nota, new Date());
+      if (statusReal === 'Cancelada' || statusReal === 'DESMEMBRADO') {
+        const fb = document.getElementById('parcelamento-feedback');
+        if (fb) {
+          fb.textContent = 'Esta nota não pode ser parcelada (já está ' + statusReal + ').';
+          fb.className = 'text-[11px] font-bold rounded-lg px-3 py-2 border bg-red-50 border-red-200 text-red-700';
+          fb.classList.remove('hidden');
+        }
+        return;
+      }
+      _parcelamentoNota = nota;
+      const fmt = formatadorMoeda;
+      const resumoEl = document.getElementById('parcelamento-resumo');
+      if (resumoEl) {
+        const rps = String(nota.rps || nota['Nº NF'] || nota['NF'] || '-').trim();
+        const cliente = nota.cliente || nota.Cliente || '-';
+        const vBruto = parseMoedaCRF(nota['valor_fatura'] || nota['Valor Fatura'] || nota['valor']);
+        const vReal = obterFaturamentoReal(nota);
+        resumoEl.innerHTML = `
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lançamento original</p>
+          <p class="text-sm font-extrabold text-slate-800">${rps} · ${cliente}</p>
+          <div class="flex gap-6 text-[11px] text-slate-600 mt-1">
+            <div><span class="font-bold text-slate-500">Bruto:</span> <span class="font-extrabold">${fmt.format(vBruto)}</span></div>
+            <div><span class="font-bold text-slate-500">Real:</span> <span class="font-extrabold text-primary">${fmt.format(vReal)}</span></div>
+          </div>
+        `;
+      }
+      document.getElementById('parcelamento-n').value = '2';
+      renderPreviewParcelas(nota, 2);
+      abrirModalParcelamento();
+    };
+
+    // Recalcular preview quando o número de parcelas muda.
+    document.getElementById('btn-recalcular-parcelas').addEventListener('click', () => {
+      if (!_parcelamentoNota) return;
+      const n = Math.max(2, Math.min(36, parseInt(document.getElementById('parcelamento-n').value, 10) || 2));
+      document.getElementById('parcelamento-n').value = n;
+      renderPreviewParcelas(_parcelamentoNota, n);
+    });
+    document.getElementById('parcelamento-n').addEventListener('change', () => {
+      if (!_parcelamentoNota) return;
+      const n = Math.max(2, Math.min(36, parseInt(document.getElementById('parcelamento-n').value, 10) || 2));
+      document.getElementById('parcelamento-n').value = n;
+      renderPreviewParcelas(_parcelamentoNota, n);
+    });
+
+    document.getElementById('btn-fechar-parcelamento').addEventListener('click', fecharModalParcelamento);
+    document.getElementById('btn-cancelar-parcelamento').addEventListener('click', fecharModalParcelamento);
+    document.getElementById('modal-parcelamento-overlay').addEventListener('click', fecharModalParcelamento);
+
+    document.getElementById('btn-confirmar-parcelamento').addEventListener('click', async () => {
+      if (!_parcelamentoNota) return;
+      const btn = document.getElementById('btn-confirmar-parcelamento');
+      const icone = document.getElementById('icone-confirmar-parcelamento');
+      const label = document.getElementById('label-confirmar-parcelamento');
+      const fb = document.getElementById('parcelamento-feedback');
+
+      const n = Math.max(2, Math.min(36, parseInt(document.getElementById('parcelamento-n').value, 10) || 2));
+      const parcelas = calcularParcelas(_parcelamentoNota, n);
+      const notaOriginal = _parcelamentoNota;
+      const rpsBase = String(notaOriginal.rps || notaOriginal['Nº NF'] || notaOriginal['NF'] || '').trim();
+
+      btn.disabled = true;
+      if (icone) { icone.textContent = 'progress_activity'; icone.classList.add('animate-spin'); }
+      if (label) label.textContent = 'Desmembrando…';
+
+      try {
+        const batch = writeBatch(db);
+        // 1) Cria N filhas — todas herdam tudo da original e sobrescrevem o que muda.
+        parcelas.forEach(p => {
+          const childRef = doc(collection(db, 'Lancamentos'));
+          const venc = p.venc;
+          const vencISO = `${venc.getFullYear()}-${String(venc.getMonth()+1).padStart(2,'0')}-${String(venc.getDate()).padStart(2,'0')}`;
+          const vencBR = `${String(venc.getDate()).padStart(2,'0')}/${String(venc.getMonth()+1).padStart(2,'0')}/${venc.getFullYear()}`;
+          const childData = { ...notaOriginal };
+          delete childData.id;
+          // Valores fatiados
+          childData['valor_fatura'] = p.bruto;
+          childData['Valor Fatura'] = p.bruto;
+          childData['valor'] = p.bruto;
+          childData['Vl. Líquido'] = p.bruto; // bruto da planilha — Líquido sai do helper via desconto=0
+          childData['Valor Descto.'] = 0;
+          childData['valor_liquido'] = p.liquido;
+          childData['Taxa'] = p.taxa;
+          childData['taxa'] = p.taxa;
+          childData['faturamento_real_manual'] = p.real;
+          // RPS filho
+          childData['rps'] = `${rpsBase}-${p.indice}`;
+          childData['Nº NF'] = `${rpsBase}-${p.indice}`;
+          // Vencimentos atualizados
+          childData['vencimento'] = vencBR;
+          childData['Dt Vecto'] = vencBR;
+          childData['Dt Vecto  '] = vencBR;
+          // Limpa campos de baixa — filhas nascem A VENCER
+          childData['data_baixa'] = '';
+          childData['Dt Baixa'] = '';
+          childData['data_recebimento'] = '';
+          childData['Valor Baixa'] = 0;
+          childData['Status'] = 'A VENCER';
+          childData['status'] = 'A VENCER';
+          childData['saldo_residual'] = p.bruto;
+          childData['tipo_divergencia'] = '';
+          // Marcação de origem
+          childData['origem_parcelamento'] = true;
+          childData['parent_id'] = notaOriginal.id;
+          childData['parent_rps'] = rpsBase;
+          childData['parcela_indice'] = p.indice;
+          childData['parcela_total'] = n;
+          childData['data_parcelamento'] = new Date();
+          batch.set(childRef, childData);
+        });
+        // 2) Marca a original como DESMEMBRADO (sai do KPI via core_rules.js).
+        batch.update(doc(db, 'Lancamentos', notaOriginal.id), {
+          'status': 'DESMEMBRADO',
+          'Status': 'DESMEMBRADO',
+          'desmembrado_em': new Date(),
+          'parcelas_geradas': n,
+          'data_edicao': new Date()
+        });
+        await batch.commit();
+        await registrarLog('PARCELAMENTO', `Desmembrou NF ${rpsBase} em ${n} parcelas (cliente: ${notaOriginal.cliente || notaOriginal.Cliente || '-'}).`);
+
+        if (fb) {
+          fb.textContent = `${n} parcelas criadas com sucesso. A nota original foi marcada como DESMEMBRADO.`;
+          fb.className = 'text-[11px] font-bold rounded-lg px-3 py-2 border bg-green-50 border-green-200 text-green-700';
+          fb.classList.remove('hidden');
+        }
+        setTimeout(fecharModalParcelamento, 1400);
+      } catch (err) {
+        console.error('[Parcelamento] erro:', err);
+        if (fb) {
+          fb.textContent = err.code === 'permission-denied'
+            ? 'Acesso Negado: seu perfil não tem permissão para parcelar.'
+            : `Falha ao parcelar: ${err.message}`;
+          fb.className = 'text-[11px] font-bold rounded-lg px-3 py-2 border bg-red-50 border-red-200 text-red-700';
+          fb.classList.remove('hidden');
+        }
+      } finally {
+        btn.disabled = false;
+        if (icone) { icone.textContent = 'call_split'; icone.classList.remove('animate-spin'); }
+        if (label) label.textContent = 'Confirmar Desmembramento';
+      }
+    });
+
+    // ────────────────── Desfazer Parcelamento (UNDO Split) ──────────────────
+    // Restaura uma nota mãe com status DESMEMBRADO ao seu estado anterior:
+    //   1) Busca todas as filhas (parent_id == idMae OU parent_rps == rpsMae) e DELETA;
+    //   2) Atualiza a mãe: limpa `status`/`Status` (DESMEMBRADO sai) e os marcadores
+    //      de parcelamento (`desmembrado_em`, `parcelas_geradas`).
+    //   - `obterStatusReal` (core_rules.js) re-classifica automaticamente a mãe
+    //     a partir de `data_baixa`/`vencimento` — sem precisar persistir o status
+    //     anterior. Se ela tinha baixa → volta a RECEBIDO; sem baixa → A VENCER/VENCIDO.
+    //   - Tudo em writeBatch atômico: se uma operação falhar, nada é alterado.
+    //   - Filhas não têm essa rota (têm origem_parcelamento=true e nunca status=DESMEMBRADO).
+    let _desfazerParcAlvo = null;
+
+    function abrirModalDesfazerParcelamento() {
+      const m = document.getElementById('modal-desfazer-parcelamento');
+      const c = document.getElementById('modal-desfazer-parcelamento-content');
+      m.classList.remove('opacity-0', 'pointer-events-none');
+      c.classList.remove('scale-95');
+    }
+    function fecharModalDesfazerParcelamento() {
+      const m = document.getElementById('modal-desfazer-parcelamento');
+      const c = document.getElementById('modal-desfazer-parcelamento-content');
+      m.classList.add('opacity-0', 'pointer-events-none');
+      c.classList.add('scale-95');
+      _desfazerParcAlvo = null;
+      const fb = document.getElementById('desfazer-parcelamento-feedback');
+      if (fb) { fb.classList.add('hidden'); fb.textContent = ''; }
+    }
+
+    window.confirmarDesfazerParcelamento = function (id, rps, cliente) {
+      const nota = todasAsNotas.find(n => n.id === id);
+      if (!nota) return;
+      _desfazerParcAlvo = nota;
+
+      // Conta as filhas no array em memória (mais rápido que query). É só visual,
+      // o writeBatch consultará o Firestore de verdade.
+      const filhasMem = todasAsNotas.filter(n =>
+        n.origem_parcelamento === true && (n.parent_id === id || n.parent_rps === (nota.rps || nota['Nº NF']))
+      );
+      const totalFilhas = filhasMem.length;
+      const recebidas = filhasMem.filter(n => obterStatusReal(n, new Date()) === 'RECEBIDO').length;
+
+      const resumo = document.getElementById('desfazer-parcelamento-resumo');
+      if (resumo) {
+        resumo.innerHTML = `
+          <p><strong>Cliente:</strong> ${cliente || nota.cliente || '-'}</p>
+          <p><strong>RPS Original:</strong> ${rps || nota.rps || '-'}</p>
+          <p><strong>Parcelas geradas:</strong> ${nota.parcelas_geradas || totalFilhas}</p>
+          <p><strong>Já recebidas:</strong> ${recebidas} de ${totalFilhas}</p>
+          ${recebidas > 0
+            ? '<p class="text-red-700 font-bold mt-1">⚠ Há parcelas marcadas como RECEBIDAS. Elas também serão excluídas — confirme apenas se as baixas forem intencionalmente revertidas.</p>'
+            : ''}
+        `;
+      }
+      abrirModalDesfazerParcelamento();
+    };
+
+    document.getElementById('btn-fechar-desfazer-parcelamento').addEventListener('click', fecharModalDesfazerParcelamento);
+    document.getElementById('btn-cancelar-desfazer-parcelamento').addEventListener('click', fecharModalDesfazerParcelamento);
+    document.getElementById('modal-desfazer-parcelamento-overlay').addEventListener('click', fecharModalDesfazerParcelamento);
+
+    document.getElementById('btn-confirmar-desfazer-parcelamento').addEventListener('click', async () => {
+      if (!_desfazerParcAlvo) return;
+      const nota = _desfazerParcAlvo;
+      const btn = document.getElementById('btn-confirmar-desfazer-parcelamento');
+      const icone = document.getElementById('icone-confirmar-desfazer-parcelamento');
+      const label = document.getElementById('label-confirmar-desfazer-parcelamento');
+      const fb = document.getElementById('desfazer-parcelamento-feedback');
+      btn.disabled = true;
+      if (icone) { icone.textContent = 'progress_activity'; icone.classList.add('animate-spin'); }
+      if (label) label.textContent = 'Restaurando...';
+
+      try {
+        const rpsMae = nota.rps || nota['Nº NF'] || '';
+
+        // 1) Busca filhas: prioriza parent_id; fallback parent_rps caso o id não tenha sido gravado.
+        let filhasDocs = [];
+        if (nota.id) {
+          const qById = query(collection(db, 'Lancamentos'), where('parent_id', '==', nota.id));
+          const snapById = await getDocs(qById);
+          snapById.forEach(d => filhasDocs.push(d));
+        }
+        if (filhasDocs.length === 0 && rpsMae) {
+          const qByRps = query(collection(db, 'Lancamentos'), where('parent_rps', '==', rpsMae));
+          const snapByRps = await getDocs(qByRps);
+          snapByRps.forEach(d => filhasDocs.push(d));
+        }
+
+        // 2) writeBatch: deleta filhas + restaura mãe atomicamente.
+        //    O status canônico é re-derivado por `obterStatusReal` a partir de
+        //    `data_baixa`/`vencimento`. Limpando status/Status, a marca DESMEMBRADO some.
+        const batch = writeBatch(db);
+        filhasDocs.forEach(d => batch.delete(doc(db, 'Lancamentos', d.id)));
+        batch.update(doc(db, 'Lancamentos', nota.id), {
+          'status': '',
+          'Status': '',
+          'desmembrado_em': null,
+          'parcelas_geradas': null,
+          'data_edicao': new Date()
+        });
+        await batch.commit();
+        await registrarLog('DESFEZ PARCELAMENTO',
+          `Restaurou NF ${rpsMae} (cliente: ${nota.cliente || nota.Cliente || '-'}) — ${filhasDocs.length} parcela(s) excluída(s).`);
+
+        if (fb) {
+          fb.textContent = `Parcelamento desfeito com sucesso. ${filhasDocs.length} parcela(s) excluída(s) e nota original restaurada.`;
+          fb.className = 'text-[11px] font-bold rounded-lg px-3 py-2 border bg-green-50 border-green-200 text-green-700';
+          fb.classList.remove('hidden');
+        }
+        // O onSnapshot de `Lancamentos` já dispara aplicarFiltros + atualizarMetrics
+        // automaticamente, então a tabela e os KPIs se reconfiguram sozinhos.
+        setTimeout(fecharModalDesfazerParcelamento, 1400);
+      } catch (err) {
+        console.error('[DesfazerParcelamento] erro:', err);
+        if (fb) {
+          fb.textContent = err.code === 'permission-denied'
+            ? 'Acesso Negado: seu perfil não tem permissão para desfazer parcelamentos.'
+            : `Falha ao desfazer: ${err.message}`;
+          fb.className = 'text-[11px] font-bold rounded-lg px-3 py-2 border bg-red-50 border-red-200 text-red-700';
+          fb.classList.remove('hidden');
+        }
+      } finally {
+        btn.disabled = false;
+        if (icone) { icone.textContent = 'undo'; icone.classList.remove('animate-spin'); }
+        if (label) label.textContent = 'Confirmar Restauração';
+      }
+    });
+
+    // ─── Modal de Parcelamentos Ativos (visualização) ───
+    // Espelho do Dashboard Master: lista os grupos de parcelas em aberto agrupados por
+    // cliente, mostrando o status "Pagou X / Faltam Y (R$ residual)" e os cards de cada
+    // parcela filha. Lê `window._parcelamentosAtivosDetalhe`, alimentado pelo accumulator
+    // dentro de `atualizarMetrics` (mesmo recorte de filtro da tela).
+    window.abrirModalParcelamentos = function () {
+      const lista = window._parcelamentosAtivosDetalhe || [];
+      const elLista = document.getElementById('parcelamentos-lista');
+      if (!elLista) return;
+
+      if (lista.length === 0) {
+        elLista.innerHTML = `
+          <div class="text-center py-12 opacity-60">
+            <span class="material-symbols-outlined text-5xl text-slate-300">inbox</span>
+            <p class="mt-3 text-sm font-bold text-slate-500">Nenhum parcelamento ativo no recorte atual.</p>
+          </div>`;
+      } else {
+        const porCliente = {};
+        lista.forEach(g => {
+          if (!porCliente[g.cliente]) porCliente[g.cliente] = [];
+          porCliente[g.cliente].push(g);
+        });
+        const fmt = (v) => formatadorMoeda.format(v || 0);
+        let html = '';
+        Object.keys(porCliente).sort().forEach(cliente => {
+          const grupos = porCliente[cliente];
+          const totalCliente = grupos.reduce((acc, g) => acc + g.valor_total, 0);
+          const residualCliente = grupos.reduce((acc, g) => acc + g.valor_residual, 0);
+          html += `
+            <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cliente</p>
+                  <p class="text-sm font-extrabold text-slate-800">${cliente}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Residual em aberto</p>
+                  <p class="text-sm font-extrabold text-indigo-600">${fmt(residualCliente)}</p>
+                </div>
+              </div>
+              <div class="divide-y divide-slate-100">`;
+          grupos.forEach(g => {
+            const faltam = g.parcelas_em_aberto;
+            const pagas = g.parcelas_pagas;
+            const total = g.total_parcelas || g.filhas.length;
+            html += `
+              <div class="px-5 py-3">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs text-slate-700">
+                    <span class="font-bold">RPS Original:</span>
+                    <span class="text-slate-900 font-extrabold">${g.parent_rps || '—'}</span>
+                  </p>
+                  <p class="text-[11px] text-slate-500 font-bold">
+                    Total: <span class="text-slate-800 font-extrabold">${fmt(g.valor_total)}</span>
+                  </p>
+                </div>
+                <p class="text-[11px] text-slate-600">
+                  Dividido em <strong>${total}</strong> parcelas ·
+                  Pagou <strong class="text-emerald-600">${pagas}</strong> ·
+                  Faltam <strong class="text-indigo-600">${faltam}</strong>
+                  (<strong class="text-indigo-700">${fmt(g.valor_residual)}</strong>)
+                </p>
+                <div class="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">`;
+            g.filhas.sort((a, b) => (a.indice || 0) - (b.indice || 0)).forEach(f => {
+              const isPaga = f.status === 'RECEBIDO';
+              const cor = isPaga ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                       : f.status === 'VENCIDO' ? 'bg-red-50 border-red-200 text-red-700'
+                       : 'bg-slate-50 border-slate-200 text-slate-700';
+              html += `
+                <div class="text-[10px] rounded-lg border ${cor} px-2 py-1.5">
+                  <p class="font-extrabold">${f.rps}</p>
+                  <p class="font-medium">${f.venc || '-'}</p>
+                  <p class="font-bold">${fmt(f.valor)}</p>
+                  <p class="text-[9px] uppercase tracking-wider">${f.status}</p>
+                </div>`;
+            });
+            html += `</div></div>`;
+          });
+          html += `</div></div>`;
+        });
+        elLista.innerHTML = html;
+      }
+
+      const m = document.getElementById('modal-parcelamentos');
+      const c = document.getElementById('modal-parcelamentos-content');
+      if (!m || !c) return;
+      m.classList.remove('opacity-0', 'pointer-events-none');
+      c.classList.remove('scale-95');
+    };
+
+    window.fecharModalParcelamentos = function () {
+      const m = document.getElementById('modal-parcelamentos');
+      const c = document.getElementById('modal-parcelamentos-content');
+      if (!m || !c) return;
+      m.classList.add('opacity-0', 'pointer-events-none');
+      c.classList.add('scale-95');
+    };
+
+    // Wire-up dos botões de fechar / overlay (executa imediatamente — DOM já existe nesse ponto).
+    {
+      const btnFecharP = document.getElementById('btn-fechar-parcelamentos');
+      const overlayP = document.getElementById('modal-parcelamentos-overlay');
+      if (btnFecharP) btnFecharP.addEventListener('click', window.fecharModalParcelamentos);
+      if (overlayP) overlayP.addEventListener('click', window.fecharModalParcelamentos);
+    }
+
     onSnapshot(collection(db, "Lancamentos"), (snapshot) => {
       todasAsNotas = [];
       snapshot.forEach(doc => {
         const data = doc.data();
         if (data.tipo === 'receita') todasAsNotas.push({ id: doc.id, ...data });
       });
+
+      // Diagnóstico de paridade c/ Dashboard Master — abra o DevTools nas duas abas
+      // e compare estes dois objetos. Se algum campo diferir, a base não é idêntica.
+      if (window.console && console.info) {
+        const hojeDiag = new Date();
+        console.info('[GerenciadorCRF] Lancamentos snapshot →', {
+          total: todasAsNotas.length,
+          naoCanceladas: todasAsNotas.filter(d => obterStatusReal(d, hojeDiag) !== 'Cancelada').length,
+          somaBruto: todasAsNotas.reduce((acc, d) => obterStatusReal(d, hojeDiag) === 'Cancelada' ? acc : acc + parseMoedaCRF(d['valor_fatura'] || d['Valor Fatura'] || d['valor']), 0).toFixed(2),
+          somaTotalFatReal: todasAsNotas.reduce((acc, d) => obterStatusReal(d, hojeDiag) === 'Cancelada' ? acc : acc + obterFaturamentoReal(d), 0).toFixed(2),
+          somaRecebidoReal: todasAsNotas.reduce((acc, d) => obterStatusReal(d, hojeDiag) === 'RECEBIDO' ? acc + obterFaturamentoReal(d) : acc, 0).toFixed(2)
+        });
+      }
 
       todasAsNotas.sort((a, b) => {
         const getEmissao = (doc) => {
@@ -2630,6 +3958,7 @@
       console.error("Erro ao escutar Lancamentos:", err);
     });
   </script>
+
 </body>
 
 </html>

@@ -46,6 +46,20 @@
         .editorial-shadow { box-shadow: 0px 20px 40px rgba(25, 28, 30, 0.06); }
         .spin { animation: cp-spin 0.9s linear infinite; }
     </style>
+  <!-- Tema global (Light & Dark) — centralizado em /theme.css + /theme_manager.js -->
+  <link rel="stylesheet" href="../theme.css?v=20260507n">
+  <script>
+    /* Boot inline ANTES do paint — evita flash branco. */
+    (function () {
+      try {
+        var saved = localStorage.getItem('centrafin-theme');
+        var html = document.documentElement;
+        html.classList.remove('light', 'dark');
+        html.classList.add(saved === 'dark' ? 'dark' : 'light');
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../theme_manager.js?v=20260507n" defer></script>
 </head>
 <body class="bg-slate-50 antialiased">
 
@@ -108,64 +122,80 @@
             </button>
         </section>
 
-        <!-- KPIs RESUMO — cards premium com ícone, sombra suave e tipografia
-             reforçada nos valores monetários. -->
+        <!-- RÉGUA DO TEMPO — fluxo preditivo de caixa em 4 horizontes:
+             Atrasadas · A Vencer (7d) · Provisões · Pagas (Mês). -->
         <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <!-- Total de lançamentos (volumetria) -->
-            <div class="relative overflow-hidden bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow hover:shadow-lg transition-shadow">
+            <!-- 🔴 Atrasadas — pendentes/provisões com vencimento < hoje -->
+            <div class="relative overflow-hidden bg-gradient-to-br from-white to-red-50/40 rounded-2xl border border-red-100 p-5 editorial-shadow hover:shadow-xl transition-all">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-red-500"></div>
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">Total de lançamentos</p>
-                        <h3 class="font-headline text-3xl font-extrabold text-secondary tabular-nums leading-none" id="kpi-total-count">0</h3>
-                        <p class="text-[10px] text-slate-400 font-medium mt-1.5">no recorte atual</p>
+                        <p class="text-[10px] font-extrabold text-red-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                            Atrasadas
+                        </p>
+                        <h3 class="font-headline text-2xl font-extrabold text-red-700 tabular-nums leading-none truncate" id="kpi-atrasadas">R$ 0,00</h3>
+                        <p class="text-[10px] text-red-500/80 font-medium mt-1.5"><span id="kpi-atrasadas-count">0</span> vencidas</p>
                     </div>
-                    <div class="w-11 h-11 rounded-xl bg-secondary/5 flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-secondary text-[22px]">receipt_long</span>
+                    <div class="w-11 h-11 rounded-xl bg-red-100 flex items-center justify-center shrink-0 shadow-inner">
+                        <span class="material-symbols-outlined text-red-600 text-[22px]">warning</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Valor total a pagar -->
-            <div class="relative overflow-hidden bg-white rounded-2xl border border-slate-100 p-5 editorial-shadow hover:shadow-lg transition-shadow">
+            <!-- 🟡 A Vencer (7 dias) -->
+            <div class="relative overflow-hidden bg-gradient-to-br from-white to-amber-50/40 rounded-2xl border border-amber-100 p-5 editorial-shadow hover:shadow-xl transition-all">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-amber-400"></div>
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">Total a Pagar</p>
-                        <h3 class="font-headline text-2xl font-extrabold text-secondary tabular-nums leading-none truncate" id="kpi-valor-total">R$ 0,00</h3>
-                        <p class="text-[10px] text-slate-400 font-medium mt-1.5">soma dos lançamentos visíveis</p>
+                        <p class="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest mb-2">A Vencer · 7 dias</p>
+                        <h3 class="font-headline text-2xl font-extrabold text-amber-600 tabular-nums leading-none truncate" id="kpi-a-vencer">R$ 0,00</h3>
+                        <p class="text-[10px] text-amber-500/80 font-medium mt-1.5"><span id="kpi-a-vencer-count">0</span> próximas</p>
                     </div>
-                    <div class="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-primary text-[22px]">account_balance_wallet</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pendentes -->
-            <div class="relative overflow-hidden bg-white rounded-2xl border border-amber-100 p-5 editorial-shadow hover:shadow-lg transition-shadow">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest mb-2">Pendentes</p>
-                        <h3 class="font-headline text-2xl font-extrabold text-amber-600 tabular-nums leading-none truncate" id="kpi-pendente">R$ 0,00</h3>
-                        <p class="text-[10px] text-amber-500/80 font-medium mt-1.5">aguardando baixa</p>
-                    </div>
-                    <div class="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                    <div class="w-11 h-11 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 shadow-inner">
                         <span class="material-symbols-outlined text-amber-600 text-[22px]">schedule</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Pagos -->
-            <div class="relative overflow-hidden bg-white rounded-2xl border border-emerald-100 p-5 editorial-shadow hover:shadow-lg transition-shadow">
+            <!-- 🔵 Provisões -->
+            <div class="relative overflow-hidden bg-gradient-to-br from-white to-tertiary/5 rounded-2xl border border-tertiary/30 p-5 editorial-shadow hover:shadow-xl transition-all">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-tertiary"></div>
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest mb-2">Pagos</p>
-                        <h3 class="font-headline text-2xl font-extrabold text-emerald-600 tabular-nums leading-none truncate" id="kpi-pago">R$ 0,00</h3>
-                        <p class="text-[10px] text-emerald-500/80 font-medium mt-1.5">já liquidados</p>
+                        <p class="text-[10px] font-extrabold text-tertiary uppercase tracking-widest mb-2">Provisões</p>
+                        <h3 class="font-headline text-2xl font-extrabold text-tertiary tabular-nums leading-none truncate" id="kpi-provisoes">R$ 0,00</h3>
+                        <p class="text-[10px] text-tertiary/80 font-medium mt-1.5"><span id="kpi-provisoes-count">0</span> provisionadas</p>
                     </div>
-                    <div class="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                    <div class="w-11 h-11 rounded-xl bg-tertiary/15 flex items-center justify-center shrink-0 shadow-inner">
+                        <span class="material-symbols-outlined text-tertiary text-[22px]">savings</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🟢 Pagas (Mês Atual / Competência filtrada) -->
+            <div class="relative overflow-hidden bg-gradient-to-br from-white to-emerald-50/40 rounded-2xl border border-emerald-100 p-5 editorial-shadow hover:shadow-xl transition-all">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest mb-2">Pagas · Mês</p>
+                        <h3 class="font-headline text-2xl font-extrabold text-emerald-600 tabular-nums leading-none truncate" id="kpi-pago">R$ 0,00</h3>
+                        <p class="text-[10px] text-emerald-500/80 font-medium mt-1.5"><span id="kpi-pago-count">0</span> liquidadas</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0 shadow-inner">
                         <span class="material-symbols-outlined text-emerald-600 text-[22px]">check_circle</span>
                     </div>
                 </div>
             </div>
+        </section>
+
+        <!-- Sub-resumo: total de lançamentos no recorte (mantido após refator
+             da Régua do Tempo para preservar contexto de volumetria). -->
+        <section class="flex items-center gap-3 text-[11px] font-bold text-slate-500">
+            <span class="material-symbols-outlined text-base text-slate-400">receipt_long</span>
+            <span><span id="kpi-total-count" class="text-secondary font-extrabold">0</span> lançamentos no recorte</span>
+            <span class="text-slate-300">·</span>
+            <span>Total: <span id="kpi-valor-total" class="text-secondary font-extrabold">R$ 0,00</span></span>
         </section>
 
         <!-- TABELA -->
@@ -275,6 +305,7 @@
                     <select id="m-status" required
                         class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white">
                         <option value="pendente">Pendente</option>
+                        <option value="provisionado">Provisionado</option>
                         <option value="pago">Pago</option>
                     </select>
                 </div>
@@ -290,6 +321,28 @@
                     <input id="m-centro-custo" type="text" placeholder="Ex: Operacional"
                         class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" list="datalist-cc-manual" />
                     <datalist id="datalist-cc-manual"></datalist>
+                </div>
+            </div>
+            <!-- Motor de Recorrência: gera N parcelas mensais a partir do
+                 vencimento informado, mantendo valor/descrição/categoria. -->
+            <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                    <input id="m-recorrente" type="checkbox"
+                        class="mt-1 w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer" />
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-extrabold text-secondary flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-tertiary text-[16px]">event_repeat</span>
+                            Tornar despesa recorrente
+                        </p>
+                        <p class="text-[10px] text-slate-500 font-medium mt-0.5">Gera parcelas mensais automáticas com mesmo valor e descrição.</p>
+                    </div>
+                </label>
+                <div id="m-recorrencia-config" class="hidden mt-3 pl-7 flex items-center gap-3">
+                    <label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Repetir por</label>
+                    <input id="m-recorrencia-meses" type="number" min="1" max="60" step="1" value="12"
+                        class="w-20 border border-slate-200 rounded-lg py-2 px-2.5 text-sm font-bold text-secondary text-center tabular-nums focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                    <span class="text-[11px] font-bold text-slate-500">meses</span>
+                    <span class="text-[10px] text-slate-400 italic ml-auto" id="m-recorrencia-info">→ 12 lançamentos</span>
                 </div>
             </div>
             <div id="msg-form-manual" class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2"></div>
@@ -495,6 +548,9 @@
                     class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
                     <option value="">Todos</option>
                     <option value="pendente">Pendente</option>
+                    <option value="provisionado">Provisionado</option>
+                    <option value="atrasado">Atrasado (calculado)</option>
+                    <option value="a_vencer">A Vencer (calculado)</option>
                     <option value="pago">Pago</option>
                 </select>
             </div>
@@ -572,6 +628,7 @@
                     <select id="e-status" required
                         class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
                         <option value="pendente">Pendente</option>
+                        <option value="provisionado">Provisionado</option>
                         <option value="pago">Pago</option>
                     </select>
                 </div>
@@ -694,6 +751,53 @@
         return m ? `${m[2]}/${m[1]}` : '—';
     };
     const escapeHTML = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    // ── HELPERS DE DATA — Régua do Tempo + Motor de Recorrência ─────────────
+    // Hoje em ISO (YYYY-MM-DD) calculado em horário local — usado nas
+    // comparações de "atrasada" / "a vencer 7 dias". Recalculado a cada
+    // chamada para evitar drift quando a aba ficar aberta por muito tempo.
+    const hojeISO = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    // Soma N dias a uma string YYYY-MM-DD e devolve outra string YYYY-MM-DD.
+    const adicionarDias = (yyyymmdd, n) => {
+        const m = String(yyyymmdd).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return yyyymmdd;
+        const d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+        d.setDate(d.getDate() + n);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    // Soma N meses a YYYY-MM-DD com clamp de "fim do mês" (Mar-31 + 1m → Abr-30).
+    // Usado pelo motor de recorrência para gerar parcelas futuras coerentes.
+    const adicionarMeses = (yyyymmdd, n) => {
+        const m = String(yyyymmdd).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return yyyymmdd;
+        let ano = parseInt(m[1], 10);
+        let mes = parseInt(m[2], 10) + n;
+        let dia = parseInt(m[3], 10);
+        while (mes > 12) { mes -= 12; ano += 1; }
+        while (mes < 1)  { mes += 12; ano -= 1; }
+        const ultDia = new Date(ano, mes, 0).getDate(); // mes (1..12) é "+1" interno → daí o "0" devolve último dia do mês desejado
+        if (dia > ultDia) dia = ultDia;
+        return `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    };
+    // Calcula o status de exibição (badge) com base no status persistido +
+    // data de vencimento. NÃO altera o dado bruto no Firestore — só o que
+    // aparece na tabela e nos KPIs da Régua do Tempo.
+    //   pago         → 'pago'         (verde)
+    //   provisionado → 'provisionado' (azul)
+    //   pendente + venc < hoje  → 'atrasado'  (vermelho)
+    //   pendente + venc >= hoje → 'a_vencer'  (amarelo)
+    const statusVisual = (reg, hoje) => {
+        const st = String(reg?.status || '').toLowerCase();
+        if (st === 'pago') return 'pago';
+        if (st === 'provisionado') return 'provisionado';
+        if (st === 'cancelado') return 'cancelado';
+        const venc = String(reg?.data_vencimento || '');
+        if (venc && venc < hoje) return 'atrasado';
+        return 'a_vencer';
+    };
 
     // ========================================================================
     // AUTH + GUARDIÃO + CC FILTER
@@ -853,7 +957,16 @@
             }
             if (ent && !String(r.entidade || '').toLowerCase().includes(ent)) return false;
             if (cc && String(r.centro_custo || '').trim() !== cc) return false;
-            if (status && String(r.status || '').toLowerCase() !== status) return false;
+            if (status) {
+                // Status do filtro: 'pendente'/'pago'/'provisionado' batem com
+                // o campo bruto. 'atrasado' e 'a_vencer' são CALCULADOS via
+                // statusVisual e dependem da data_vencimento vs hoje.
+                if (status === 'atrasado' || status === 'a_vencer') {
+                    if (statusVisual(r, hojeISO()) !== status) return false;
+                } else if (String(r.status || '').toLowerCase() !== status) {
+                    return false;
+                }
+            }
             return true;
         });
     }
@@ -893,14 +1006,49 @@
             }
         }
 
-        // KPIs sobre o filtrado
-        const total = filtrados.reduce((s, r) => s + (Number(r.valor_original) || 0), 0);
-        const pend = filtrados.filter(r => r.status === 'pendente').reduce((s, r) => s + (Number(r.valor_original) || 0), 0);
-        const pago = filtrados.filter(r => r.status === 'pago').reduce((s, r) => s + (Number(r.valor_original) || 0), 0);
+        // RÉGUA DO TEMPO — agregações sobre o recorte filtrado.
+        //   atrasadas   : pendente AND venc < hoje           (vermelho)
+        //   a_vencer    : pendente AND hoje <= venc <= hoje+7 (amarelo)
+        //   provisoes   : status === 'provisionado'           (azul)
+        //   pagas       : status === 'pago' (Mês/recorte)     (verde)
+        // Total/contagem geral mantidos no sub-resumo abaixo da régua.
+        const hoje = hojeISO();
+        const limite7 = adicionarDias(hoje, 7);
+        let totAtrasado = 0, cntAtrasado = 0;
+        let totAVencer = 0, cntAVencer = 0;
+        let totProv = 0, cntProv = 0;
+        let totPago = 0, cntPago = 0;
+        let total = 0;
+        for (const r of filtrados) {
+            const v = Number(r.valor_original) || 0;
+            total += v;
+            const visual = statusVisual(r, hoje);
+            if (visual === 'pago') {
+                totPago += v; cntPago++;
+            } else if (visual === 'provisionado') {
+                totProv += v; cntProv++;
+            } else if (visual === 'atrasado') {
+                totAtrasado += v; cntAtrasado++;
+            } else if (visual === 'a_vencer') {
+                // Apenas as que vencem nos próximos 7 dias (inclusive hoje)
+                // entram no card "A Vencer 7 dias". Demais (venc > hoje+7)
+                // ficam fora dessa janela preditiva.
+                const venc = String(r.data_vencimento || '');
+                if (venc && venc >= hoje && venc <= limite7) {
+                    totAVencer += v; cntAVencer++;
+                }
+            }
+        }
         document.getElementById('kpi-total-count').textContent = filtrados.length.toLocaleString('pt-BR');
         document.getElementById('kpi-valor-total').textContent = fmtBRL.format(total);
-        document.getElementById('kpi-pendente').textContent = fmtBRL.format(pend);
-        document.getElementById('kpi-pago').textContent = fmtBRL.format(pago);
+        document.getElementById('kpi-atrasadas').textContent = fmtBRL.format(totAtrasado);
+        document.getElementById('kpi-atrasadas-count').textContent = cntAtrasado.toLocaleString('pt-BR');
+        document.getElementById('kpi-a-vencer').textContent = fmtBRL.format(totAVencer);
+        document.getElementById('kpi-a-vencer-count').textContent = cntAVencer.toLocaleString('pt-BR');
+        document.getElementById('kpi-provisoes').textContent = fmtBRL.format(totProv);
+        document.getElementById('kpi-provisoes-count').textContent = cntProv.toLocaleString('pt-BR');
+        document.getElementById('kpi-pago').textContent = fmtBRL.format(totPago);
+        document.getElementById('kpi-pago-count').textContent = cntPago.toLocaleString('pt-BR');
 
         if (filtrados.length === 0) {
             corpo.innerHTML = '';
@@ -914,9 +1062,17 @@
         hint.textContent = `${filtrados.length} ${filtrados.length === 1 ? 'lançamento' : 'lançamentos'}`;
 
         corpo.innerHTML = filtrados.map(r => {
-            const statusBadge = r.status === 'pago'
-                ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold border border-emerald-100"><span class="material-symbols-outlined text-[12px]">check_circle</span>PAGO</span>'
-                : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-extrabold border border-amber-100"><span class="material-symbols-outlined text-[12px]">schedule</span>PENDENTE</span>';
+            // Badge inteligente — calcula visual a partir de status + venc.
+            const visual = statusVisual(r, hoje);
+            const badgeMap = {
+                pago:         { bg: 'bg-emerald-50', txt: 'text-emerald-700', bd: 'border-emerald-100', ico: 'check_circle', lbl: 'PAGO' },
+                provisionado: { bg: 'bg-tertiary/10', txt: 'text-tertiary',   bd: 'border-tertiary/30', ico: 'savings',       lbl: 'PROVISIONADO' },
+                atrasado:     { bg: 'bg-red-50',     txt: 'text-red-700',     bd: 'border-red-200',     ico: 'warning',       lbl: 'ATRASADO' },
+                a_vencer:     { bg: 'bg-amber-50',   txt: 'text-amber-700',   bd: 'border-amber-100',   ico: 'schedule',      lbl: 'A VENCER' },
+                cancelado:    { bg: 'bg-slate-100',  txt: 'text-slate-500',   bd: 'border-slate-200',   ico: 'block',         lbl: 'CANCELADO' },
+            };
+            const b = badgeMap[visual] || badgeMap.a_vencer;
+            const statusBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${b.bg} ${b.txt} text-[10px] font-extrabold border ${b.bd}"><span class="material-symbols-outlined text-[12px]">${b.ico}</span>${b.lbl}</span>`;
             // Coluna de seleção e botão de excluir individual: só Super Adm.
             const cellSelecao = isSuperAdm
                 ? `<td class="px-4 py-3 text-center align-middle">
@@ -1999,7 +2155,22 @@
         // Default vencimento = hoje
         const hoje = new Date().toISOString().slice(0, 10);
         document.getElementById('m-vencimento').value = hoje;
+        // Reseta UI do motor de recorrência (toggle + meses).
+        document.getElementById('m-recorrente').checked = false;
+        document.getElementById('m-recorrencia-config').classList.add('hidden');
+        document.getElementById('m-recorrencia-meses').value = 12;
+        document.getElementById('m-recorrencia-info').textContent = '→ 12 lançamentos';
         abrirModal('modal-manual');
+    });
+
+    // Toggle de recorrência: mostra/esconde o input de meses + atualiza preview.
+    document.getElementById('m-recorrente').addEventListener('change', (e) => {
+        const cfg = document.getElementById('m-recorrencia-config');
+        cfg.classList.toggle('hidden', !e.target.checked);
+    });
+    document.getElementById('m-recorrencia-meses').addEventListener('input', (e) => {
+        const n = Math.max(1, Math.min(60, parseInt(e.target.value, 10) || 1));
+        document.getElementById('m-recorrencia-info').textContent = `→ ${n} ${n === 1 ? 'lançamento' : 'lançamentos'}`;
     });
 
     // Sugestão de classificação ao digitar entidade — usa banco de regras.
@@ -2055,9 +2226,14 @@
         try {
             // Preenche tipo_entidade automaticamente quando há regra match.
             const regra = classificarPorRegra(entidade);
-            const payload = {
-                data_vencimento: dataVenc,                            // YYYY-MM-DD
-                competencia_ref: refMMYYYY(dataVenc),                 // MM/AAAA (spec 2026-04-30)
+            // Motor de Recorrência: se o toggle estiver ligado, gera N parcelas
+            // mensais a partir do vencimento informado. N=1 quando desligado.
+            const recorrente = document.getElementById('m-recorrente').checked;
+            let nParcelas = 1;
+            if (recorrente) {
+                nParcelas = Math.max(1, Math.min(60, parseInt(document.getElementById('m-recorrencia-meses').value, 10) || 1));
+            }
+            const basePayload = {
                 codigo: codigo || null,
                 entidade: entidade,
                 valor_original: Number(valor) || 0,
@@ -2065,15 +2241,50 @@
                 categoria: categoria || null,
                 centro_custo: centroCusto || null,
                 tipo_entidade: regra ? regra.tipo_entidade : null,
-                origem: 'manual',
+                origem: recorrente ? 'manual_recorrente' : 'manual',
                 regra_aplicada: regra ? regra.chave_busca : null,
                 criado_por: usuarioLogadoNome,
                 created_at: serverTimestamp(),
                 updated_at: serverTimestamp(),
             };
-            await addDoc(collection(db, COLECAO), payload);
+
+            if (nParcelas === 1) {
+                // Caminho single-doc original (mantém comportamento prévio).
+                await addDoc(collection(db, COLECAO), {
+                    ...basePayload,
+                    data_vencimento: dataVenc,
+                    competencia_ref: refMMYYYY(dataVenc),
+                });
+            } else {
+                // Recorrência: writeBatch com docs sequenciais. Cada parcela
+                // recebe data_vencimento e competencia_ref incrementados em
+                // +i meses. ID auto-gerado via doc(collection) p/ ficar
+                // compatível com regras do Firestore (não colide com chaves
+                // do ETL). Tag `parcela_idx` / `parcelas_total` permite
+                // rastrear o grupo no futuro (cancelar/editar em massa).
+                const grupoId = `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                const batch = writeBatch(db);
+                for (let i = 0; i < nParcelas; i++) {
+                    const venc = i === 0 ? dataVenc : adicionarMeses(dataVenc, i);
+                    const ref = doc(collection(db, COLECAO));
+                    batch.set(ref, {
+                        ...basePayload,
+                        data_vencimento: venc,
+                        competencia_ref: refMMYYYY(venc),
+                        recorrencia_id: grupoId,
+                        parcela_idx: i + 1,
+                        parcelas_total: nParcelas,
+                    });
+                }
+                await batch.commit();
+            }
             fecharModal('modal-manual');
-            mostrarToast('Lançamento adicionado com sucesso.', 'check_circle');
+            mostrarToast(
+                nParcelas === 1
+                    ? 'Lançamento adicionado com sucesso.'
+                    : `${nParcelas} parcelas recorrentes geradas com sucesso.`,
+                'check_circle'
+            );
         } catch (err) {
             console.error('[ContasPagar] addDoc falhou:', err);
             msg.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 bg-red-50 text-red-700 border border-red-200';
