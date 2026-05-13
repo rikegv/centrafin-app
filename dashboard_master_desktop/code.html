@@ -31,7 +31,7 @@
        Define `obterStatusReal`, `obterFaturamentoReal`, `calcularEmpresaAtribuida`,
        `parseMoedaCRF`, `obterValorLiquido` etc. como globals + aliases legados
        (calcEmpresaExcel, extrairNum, *Master) para compat. -->
-  <script src="../core_rules.js?v=20260507n"></script>
+  <script src="../core_rules.js?v=20260508a"></script>
 
   <style>
     /* Fade-in suave do app shell (auditoria 2026-04-29) — body mantém o bg
@@ -103,7 +103,7 @@
   </style>
 
   <!-- Tema global (Light & Dark) — agora centralizado em /theme.css + /theme_manager.js -->
-  <link rel="stylesheet" href="../theme.css?v=20260507n">
+  <link rel="stylesheet" href="../theme.css?v=20260508a">
   <script>
     /* Boot inline ANTES do paint — evita flash branco ao carregar. */
     (function () {
@@ -115,7 +115,7 @@
       } catch (e) {}
     })();
   </script>
-  <script src="../theme_manager.js?v=20260507n" defer></script>
+  <script src="../theme_manager.js?v=20260508a" defer></script>
 </head>
 
 <body class="min-h-screen flex antialiased bg-slate-50">
@@ -204,9 +204,9 @@
           <div onclick="window.abrirModulo('tela-metas')" data-modulo="metas" id="card-modulo-metas" style="animation-delay: 0.5s;"
             class="card-entry-anim bg-brandDarkBlue p-8 rounded-2xl border border-brandMidBlue shadow-lg cursor-pointer group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             <span class="material-symbols-outlined text-4xl text-brandAqua mb-4 block">track_changes</span>
-            <h3 class="text-white text-xl font-extrabold mb-2">Metas Financeiras</h3>
-            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Gestão de metas anuais e acompanhamento de atingimento por
-              produto.</p>
+            <h3 class="text-white text-xl font-extrabold mb-2">Acompanhamento de Metas</h3>
+            <p class="text-brandPaleBlue text-sm mb-6 w-4/5">Atingimento mensal por produto e visão consolidada das metas
+              cadastradas.</p>
             <span
               class="text-brandAqua text-xs font-bold flex items-center gap-1 group-hover:gap-3 transition-all">Acessar
               Painel <span class="material-symbols-outlined text-[14px]">arrow_forward</span></span>
@@ -235,6 +235,10 @@
             <button id="btn-thomas" onclick="window.alternarVisao('thomas')"
               class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
               <span class="material-symbols-outlined text-[16px]">psychology</span> Visão THOMAS
+            </button>
+            <button id="btn-contasreceber" onclick="window.alternarVisao('contasreceber')"
+              class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
+              <span class="material-symbols-outlined text-[16px]">payments</span> Contas a Receber
             </button>
             <button id="btn-emissoes" onclick="window.alternarVisao('emissoes')"
               class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
@@ -424,6 +428,137 @@
           </div>
         </div>
 
+        <!-- ─── Visão: Contas a Receber ───
+             Fonte de dados: array filtrado pelo modal de filtros globais. Iteração via
+             `obterStatusReal` / `obterFaturamentoReal` do core_rules.js.
+             4 KPIs com lift+glow, 2 charts e 1 tabela Top10 sem lift (não bugar tooltip). -->
+        <div id="visao-contas-receber" class="hidden animate-fade-in">
+
+          <!-- KPIs com lift-up Premium -->
+          <div class="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10">
+              <div class="flex items-center justify-between mb-4">
+                <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Total a Vencer</p>
+                <div class="w-8 h-8 rounded-full bg-brandLightBlue/10 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-brandLightBlue text-[18px]">schedule</span>
+                </div>
+              </div>
+              <h3 class="text-2xl font-extrabold text-brandLightBlue" id="kpi-cr-avencer">R$ 0,00</h3>
+              <p class="text-[11px] font-bold text-slate-400 mt-1"><span id="kpi-cr-avencer-qtd">0</span> nota(s)</p>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10">
+              <div class="flex items-center justify-between mb-4">
+                <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Total Vencido</p>
+                <div class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-red-500 text-[18px]">warning</span>
+                </div>
+              </div>
+              <h3 class="text-2xl font-extrabold text-red-500" id="kpi-cr-vencido">R$ 0,00</h3>
+              <p class="text-[11px] font-bold text-slate-400 mt-1"><span id="kpi-cr-vencido-qtd">0</span> nota(s)</p>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10">
+              <div class="flex items-center justify-between mb-4">
+                <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Índice de Inadimplência</p>
+                <div class="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-amber-500 text-[18px]">percent</span>
+                </div>
+              </div>
+              <h3 class="text-2xl font-extrabold text-amber-500" id="kpi-cr-inad">0,00%</h3>
+              <p class="text-[11px] font-bold text-slate-400 mt-1">Vencido / Faturamento Real</p>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-5 relative z-10 cursor-pointer hover:border-indigo-400"
+              onclick="window.abrirModalParcelamentos()" title="Abrir detalhamento dos parcelamentos">
+              <div class="flex items-center justify-between mb-4">
+                <p class="text-slate-500 font-semibold text-xs uppercase tracking-wider">Parcelamentos Ativos</p>
+                <div class="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-indigo-600 text-[18px]">call_split</span>
+                </div>
+              </div>
+              <h3 class="text-2xl font-extrabold text-indigo-600" id="kpi-cr-parc-residual">R$ 0,00</h3>
+              <p class="text-[11px] font-bold text-slate-400 mt-1"><span id="kpi-cr-parc-qtd">0</span> em aberto</p>
+            </div>
+          </div>
+
+          <!-- Pill de filtro cruzado ativo (aparece ao clicar em fatia/barra) -->
+          <div id="cr-crossfilter-bar" class="hidden flex-wrap items-center gap-2 mb-3"></div>
+
+          <!-- Charts principais — bg-brandDarkBlue (identidade) — SEM lift -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-brandDarkBlue p-6 rounded-xl border border-brandMidBlue shadow-lg">
+              <h3 class="text-sm font-extrabold text-white flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-red-400">donut_large</span>
+                Vencidos por Empresa
+              </h3>
+              <div id="chart-cr-vencidos-empresa" class="w-full h-[320px]"></div>
+            </div>
+            <div class="bg-brandDarkBlue p-6 rounded-xl border border-brandMidBlue shadow-lg">
+              <h3 class="text-sm font-extrabold text-white flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-amber-400">stacked_bar_chart</span>
+                Faixas de Atraso (Aging)
+              </h3>
+              <div id="chart-cr-aging-faixas" class="w-full h-[320px]"></div>
+            </div>
+          </div>
+
+          <!-- Linha 2: Inadimplência Mensal (full width) -->
+          <div class="mb-6">
+            <div class="bg-brandDarkBlue p-6 rounded-xl border border-brandMidBlue shadow-lg">
+              <h3 class="text-sm font-extrabold text-white flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-red-400">trending_down</span>
+                Inadimplência Mês a Mês (<span id="cr-inad-mensal-ano"></span>)
+              </h3>
+              <div id="chart-cr-inad-mensal" class="w-full h-[320px]"></div>
+            </div>
+          </div>
+
+          <!-- Linha 3: Recebimentos Esperados — FULL WIDTH p/ espalhar 31 colunas sem atropelar -->
+          <div class="mb-6">
+            <div class="bg-brandDarkBlue p-6 rounded-xl border border-brandMidBlue shadow-lg">
+              <h3 class="text-sm font-extrabold text-white flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-brandGreen">calendar_today</span>
+                Recebimentos Esperados (<span id="cr-rec-diarios-mes"></span>)
+              </h3>
+              <div id="chart-cr-rec-diarios" class="w-full h-[380px]"></div>
+            </div>
+          </div>
+
+          <!-- Tabela de Devedores (sem lift, scroll vertical) -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2">
+                <span class="material-symbols-outlined text-brandDarkBlue">leaderboard</span>
+                Devedores <span id="cr-devedores-count" class="text-[10px] font-bold text-slate-400 ml-1"></span>
+              </h3>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Clique no cabeçalho p/ ordenar</span>
+            </div>
+            <div class="overflow-x-auto max-h-[400px] overflow-y-auto custom-scroll">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider sticky top-0 z-10">
+                  <tr>
+                    <th class="px-6 py-3 font-extrabold w-12">#</th>
+                    <th class="px-6 py-3 font-extrabold cursor-pointer select-none hover:text-brandDarkBlue transition-colors"
+                        onclick="window.crToggleSort('cliente')" id="cr-th-cliente">
+                      <span class="inline-flex items-center gap-1">Cliente <span id="cr-arrow-cliente" class="text-slate-300">↕</span></span>
+                    </th>
+                    <th class="px-6 py-3 font-extrabold text-right cursor-pointer select-none hover:text-brandDarkBlue transition-colors"
+                        onclick="window.crToggleSort('valor')" id="cr-th-valor">
+                      <span class="inline-flex items-center gap-1">Valor Vencido <span id="cr-arrow-valor" class="text-slate-300">↕</span></span>
+                    </th>
+                    <th class="px-6 py-3 font-extrabold text-right cursor-pointer select-none hover:text-brandDarkBlue transition-colors"
+                        onclick="window.crToggleSort('dias')" id="cr-th-dias">
+                      <span class="inline-flex items-center gap-1">Dias em Atraso <span id="cr-arrow-dias" class="text-slate-300">▼</span></span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-cr-top10" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <div id="visao-emissoes" class="hidden grid grid-cols-12 gap-6 animate-fade-in">
 
           <div class="col-span-12 flex justify-between items-center mb-2 mt-2">
@@ -559,6 +694,38 @@
           <!-- Card "Ranking de Lançamentos" desativado a pedido. Estrutura preservada
                em git history caso seja reativado no futuro. O acumulador `usuariosInclusaoCount`
                e o renderizador `tbody-ranking-usuarios` foram removidos do JS por consistência. -->
+
+          <!-- ─── Matriz de Fechamento por Serviço (Tipo de Serviço × Dia de Emissão) ───
+               Duas tabelas-pivot:
+                 1) "Valor da Fatura"  → soma de `parseMoedaCRF(valor_fatura)` (Faturamento Bruto)
+                 2) "Faturamento Real" → soma de `obterFaturamentoReal(nota)` (regra Taxa-only do core_rules)
+               Colunas dinâmicas: apenas dias com pelo menos 1 lançamento. Primeira coluna
+               (nome do serviço) é sticky no scroll horizontal. -->
+          <div class="col-span-12 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-4">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2">
+                <span class="material-symbols-outlined text-brandGreen">payments</span>
+                Faturamento Bruto
+              </h3>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Σ Valor da Fatura · Serviço × Dia de Emissão · <span id="fech-emissoes-bruto-scope" class="text-brandLightBlue">(mês vigente)</span>
+              </span>
+            </div>
+            <div id="fech-emissoes-bruto-table" class="overflow-x-auto max-h-[460px] overflow-y-auto custom-scroll"></div>
+          </div>
+
+          <div class="col-span-12 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-2">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2">
+                <span class="material-symbols-outlined text-brandLightBlue">verified</span>
+                Faturamento Real
+              </h3>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Σ obterFaturamentoReal · Serviço × Dia de Emissão · <span id="fech-emissoes-real-scope" class="text-brandLightBlue">(mês vigente)</span>
+              </span>
+            </div>
+            <div id="fech-emissoes-real-table" class="overflow-x-auto max-h-[460px] overflow-y-auto custom-scroll"></div>
+          </div>
         </div>
 
         <div id="visao-fechamento" class="hidden animate-fade-in mt-6">
@@ -720,7 +887,7 @@
         </div>
 
         <!-- LINHA 1: Gauges -->
-        <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+        <div class="kpi-grid grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
           <div onclick="window.filtrarPorProduto('GERAL')"
             class="bg-brandDarkBlue p-6 rounded-xl shadow-lg text-center transform hover:scale-[1.02] active:scale-95 transition-all outline outline-2 outline-brandGreen/30 min-h-[240px] flex flex-col justify-between cursor-pointer group">
             <h3 class="text-sm font-black text-brandGreen uppercase tracking-widest mb-1 group-hover:underline">META
@@ -765,15 +932,26 @@
           </div>
         </div>
 
-        <!-- LINHA 2: Gráfico Anual vs Faturamento -->
-        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
-          <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-4"><span
-              class="material-symbols-outlined text-brandAqua">bar_chart</span> Meta vs Faturamento Realizado (Global)
-          </h3>
-          <div id="chart-meta-anual-fat" class="w-full h-[250px]"></div>
+        <!-- LINHA 2: Comparação Anual — Bruto (esq) vs Realizado (dir), side-by-side.
+             Lift-up REMOVIDO (eram chart containers — atrapalhava tooltip). -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-4">
+              <span class="material-symbols-outlined text-brandLightBlue">bar_chart</span>
+              Meta Anual Bruta vs Faturamento Bruto
+            </h3>
+            <div id="chart-meta-anual-bruto" class="w-full h-[250px]"></div>
+          </div>
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-4">
+              <span class="material-symbols-outlined text-brandAqua">bar_chart</span>
+              Meta vs Faturamento Realizado (Global)
+            </h3>
+            <div id="chart-meta-anual-fat" class="w-full h-[250px]"></div>
+          </div>
         </div>
 
-        <!-- LINHA 3: Gráfico Mensal Consolidado -->
+        <!-- LINHA 3: Gráfico Mensal Consolidado (sem lift — chart container) -->
         <div class="grid grid-cols-1 gap-6 mb-6">
           <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
             <div class="absolute top-0 left-0 w-1.5 h-full bg-brandOrange"></div>
@@ -832,21 +1010,21 @@
           </div>
         </div>
 
-        <div class="col-span-1">
+        <div class="col-span-1" data-filtro-campo="cliente">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Cliente</label>
           <select id="filtro-modal-cliente"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
             <option value="">Todos os Clientes</option>
           </select>
         </div>
-        <div class="col-span-1">
+        <div class="col-span-1" data-filtro-campo="comercial">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Comercial</label>
           <select id="filtro-modal-comercial"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
             <option value="">Todos os Comerciais</option>
           </select>
         </div>
-        <div class="col-span-1">
+        <div class="col-span-1" data-filtro-campo="empresa">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Empresa</label>
           <select id="filtro-modal-empresa"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
@@ -857,14 +1035,14 @@
             <option value="ESTÁGIO">ESTÁGIO</option>
           </select>
         </div>
-        <div class="col-span-1">
+        <div class="col-span-1" data-filtro-campo="regiao">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Região (Estado)</label>
           <select id="filtro-modal-regiao"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
             <option value="">Todas as Regiões</option>
           </select>
         </div>
-        <div class="col-span-2">
+        <div class="col-span-2" data-filtro-campo="servico">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Descrição / Serviço</label>
           <select id="filtro-modal-servico"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
@@ -891,7 +1069,8 @@
       soulan: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
       thomas: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
       emissoes: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
-      fechamento: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' }
+      fechamento: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
+      contasreceber: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' }
     };
 
     window.verificarFiltroAtivoNaAba = function () {
@@ -951,6 +1130,36 @@
         document.getElementById('filtro-modal-empresa').value = f.emp;
         document.getElementById('filtro-modal-regiao').value = f.reg;
         document.getElementById('filtro-modal-servico').value = f.ser;
+      }
+
+      // ── Aba "Contas a Receber": esconde Comercial/Região/Serviço e repopula
+      // a lista de Clientes apenas com os clientes presentes no array já filtrado.
+      const isCR = aba === 'contasreceber';
+      document.querySelectorAll('[data-filtro-campo]').forEach(div => {
+        const campo = div.getAttribute('data-filtro-campo');
+        if (isCR && (campo === 'comercial' || campo === 'regiao' || campo === 'servico')) {
+          div.classList.add('hidden');
+        } else {
+          div.classList.remove('hidden');
+        }
+      });
+      if (isCR) {
+        // Repopula Clientes do array atual da tela (ignora os demais sets).
+        const baseCR = window._ultimoArrayProcessado || window.dadosGlobaisFirestore || [];
+        const sClientes = new Set();
+        baseCR.forEach(d => {
+          const cli = String(d['Cliente'] || d['cliente'] || '').trim();
+          if (cli) sClientes.add(cli);
+        });
+        const elCli = document.getElementById('filtro-modal-cliente');
+        if (elCli) {
+          const atual = elCli.value;
+          elCli.innerHTML = '<option value="">Todos os Clientes</option>';
+          Array.from(sClientes).sort().forEach(c => {
+            elCli.innerHTML += `<option value="${c}">${c}</option>`;
+          });
+          elCli.value = atual;
+        }
       }
 
       const m = document.getElementById('modal-filtros'); const c = document.getElementById('modal-content');
@@ -1025,10 +1234,13 @@
       // Antes, o filtro era persistido só em `filtrosPorAba[aba]` (per-aba), então mudar de
       // Soulan p/ Fechamento "perdia" o badge — agora a tag persiste em qualquer aba.
       const filtroAplicado = { ini: fIni, fim: fFim, cli: fCli, com: fCom, emp: fEmp, reg: fReg, ser: fSer };
-      window.filtrosPorAba.soulan     = { ...filtroAplicado };
-      window.filtrosPorAba.thomas     = { ...filtroAplicado };
-      window.filtrosPorAba.emissoes   = { ...filtroAplicado };
-      window.filtrosPorAba.fechamento = { ...filtroAplicado };
+      window.filtrosPorAba.soulan        = { ...filtroAplicado };
+      window.filtrosPorAba.thomas        = { ...filtroAplicado };
+      window.filtrosPorAba.emissoes      = { ...filtroAplicado };
+      window.filtrosPorAba.fechamento    = { ...filtroAplicado };
+      window.filtrosPorAba.contasreceber = { ...filtroAplicado };
+      // Cross-filter "dia" se torna obsoleto ao trocar o período global → reseta.
+      if (window._crCrossFilter) window._crCrossFilter.dia = null;
 
       let filtrados = window.dadosGlobaisFirestore.filter(d => {
         let cli = String(d['Cliente'] || d['cliente'] || "").trim();
@@ -1074,10 +1286,14 @@
       // forçando o badge "Filtros Ativos" a sumir em qualquer visão e re-renderizando
       // todos os componentes a partir do dataset original.
       const filtroVazio = { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' };
-      window.filtrosPorAba.soulan     = { ...filtroVazio };
-      window.filtrosPorAba.thomas     = { ...filtroVazio };
-      window.filtrosPorAba.emissoes   = { ...filtroVazio };
-      window.filtrosPorAba.fechamento = { ...filtroVazio };
+      window.filtrosPorAba.soulan        = { ...filtroVazio };
+      window.filtrosPorAba.thomas        = { ...filtroVazio };
+      window.filtrosPorAba.emissoes      = { ...filtroVazio };
+      window.filtrosPorAba.fechamento    = { ...filtroVazio };
+      window.filtrosPorAba.contasreceber = { ...filtroVazio };
+
+      // Limpa filtros cruzados da aba CR (clicks em fatias/barras)
+      window._crCrossFilter = { empresa: null, faixa: null, dia: null };
 
       document.getElementById('filtro-modal-cliente').value = "";
       document.getElementById('filtro-modal-comercial').value = "";
@@ -1096,11 +1312,13 @@
       window.visaoAtivaFaturamento = visao;
       document.getElementById('visao-soulan').classList.toggle('hidden', visao !== 'soulan');
       document.getElementById('visao-thomas').classList.toggle('hidden', visao !== 'thomas');
+      document.getElementById('visao-contas-receber').classList.toggle('hidden', visao !== 'contasreceber');
       document.getElementById('visao-emissoes').classList.toggle('hidden', visao !== 'emissoes');
       document.getElementById('visao-fechamento').classList.toggle('hidden', visao !== 'fechamento');
       const configs = {
         'soulan': { isImage: true, icon: '../assets/soulan.png', text: 'Visão SOULAN' },
         'thomas': { isImage: true, icon: '../assets/thomas.png', text: 'Visão THOMAS' },
+        'contasreceber': { isImage: false, icon: 'payments', text: 'Contas a Receber' },
         'emissoes': { isImage: false, icon: 'receipt_long', text: 'Emissões Diárias' },
         'fechamento': { isImage: false, icon: 'lock_clock', text: 'Fechamento' }
       };
@@ -1134,9 +1352,16 @@
       idsOcultarPorAba.forEach(id => {
           const el = document.getElementById(id);
           if (el) {
-              el.style.display = (visao === 'emissoes' || visao === 'fechamento') ? 'none' : 'block';
+              el.style.display = (visao === 'emissoes' || visao === 'fechamento' || visao === 'contasreceber') ? 'none' : 'block';
           }
       });
+
+      // Garante que os KPIs próprios da aba sejam recalculados ao abrir.
+      if (visao === 'contasreceber') {
+        try {
+          window.atualizarContasReceber(window._ultimoArrayProcessado || window.dadosGlobaisFirestore);
+        } catch (e) { console.warn('[ContasReceber] erro ao atualizar ao trocar aba:', e); }
+      }
 
       // Atualiza visão dos KPIs ao trocar aba Soulan/Thomas
       if (visao === 'soulan' || visao === 'thomas') {
@@ -1146,6 +1371,590 @@
           window._ultimaAbaProcessada || 'todas'
         );
       }
+    };
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Aba "Contas a Receber" — accumulator + render multi-camadas
+    // - Estado: array base (já filtrado pelo modal global) + cross-filter local
+    //   (empresa, faixa de atraso) + estado de ordenação da tabela.
+    // - Fonte única: itera o mesmo array, classifica via `obterStatusReal` e
+    //   acumula via `obterFaturamentoReal` (core_rules.js). Sem chamadas Firebase.
+    // ────────────────────────────────────────────────────────────────────────
+
+    window._crBaseArray = [];
+    // empresa: null|'EMPRESA'  faixa: null|'1-15'|'16-30'|'+30'  dia: null|1..31 (dia do mesRef)
+    window._crCrossFilter = { empresa: null, faixa: null, dia: null };
+    window._crSort = { col: 'dias', dir: 'desc' };          // padrão: maior risco primeiro
+
+    // Tabela: alterna ordenação em uma coluna.
+    window.crToggleSort = function (col) {
+      const cur = window._crSort;
+      if (cur.col === col) {
+        cur.dir = cur.dir === 'desc' ? 'asc' : 'desc';
+      } else {
+        cur.col = col;
+        cur.dir = (col === 'cliente') ? 'asc' : 'desc';
+      }
+      window._crRenderTabela();
+      window._crAtualizarSetasTabela();
+    };
+
+    window._crAtualizarSetasTabela = function () {
+      ['cliente', 'valor', 'dias'].forEach(c => {
+        const el = document.getElementById('cr-arrow-' + c);
+        if (!el) return;
+        if (window._crSort.col === c) {
+          el.textContent = window._crSort.dir === 'desc' ? '▼' : '▲';
+          el.className = 'text-brandDarkBlue font-extrabold';
+        } else {
+          el.textContent = '↕';
+          el.className = 'text-slate-300';
+        }
+      });
+    };
+
+    // Limpa o filtro cruzado (chamado pelas pílulas).
+    window.crLimparCrossFilter = function (campo) {
+      if (!campo) { window._crCrossFilter = { empresa: null, faixa: null, dia: null }; }
+      else { window._crCrossFilter[campo] = null; }
+      if (Array.isArray(window._crBaseArray)) {
+        window.atualizarContasReceber(window._crBaseArray, true);
+      }
+    };
+
+    window._crRenderCrossFilterBar = function () {
+      const bar = document.getElementById('cr-crossfilter-bar');
+      if (!bar) return;
+      const cf = window._crCrossFilter;
+      const ativos = [];
+      if (cf.empresa) ativos.push({ campo: 'empresa', label: 'Empresa: ' + cf.empresa });
+      if (cf.faixa) ativos.push({ campo: 'faixa', label: 'Faixa: ' + cf.faixa });
+      if (cf.dia !== null && cf.dia !== undefined) ativos.push({ campo: 'dia', label: 'Vence dia: ' + String(cf.dia).padStart(2, '0') });
+      if (ativos.length === 0) { bar.classList.add('hidden'); bar.classList.remove('flex'); bar.innerHTML = ''; return; }
+      bar.classList.remove('hidden');
+      bar.classList.add('flex');
+      bar.innerHTML = ativos.map(a => `
+        <button onclick="window.crLimparCrossFilter('${a.campo}')"
+          class="inline-flex items-center gap-1.5 bg-brandLightBlue/20 text-brandDarkBlue text-[11px] font-bold px-3 py-1.5 rounded-full hover:bg-brandLightBlue/30 transition">
+          <span class="material-symbols-outlined text-[14px]">filter_alt</span>
+          ${a.label}
+          <span class="material-symbols-outlined text-[14px]">close</span>
+        </button>
+      `).join('') + `
+        <button onclick="window.crLimparCrossFilter()"
+          class="text-[11px] font-bold text-slate-500 hover:text-brandOrange underline ml-2">Limpar todos</button>
+      `;
+    };
+
+    // ── Helper: extrai dias de atraso de uma nota. Retorna -Infinity se sem data.
+    function _crDiasAtraso(data, hoje) {
+      const dVenc = window.parseDataLocal(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  '] || '');
+      if (!dVenc || isNaN(dVenc.getTime())) return null;
+      dVenc.setHours(0, 0, 0, 0);
+      return Math.max(0, Math.floor((hoje - dVenc) / 86400000));
+    }
+
+    function _crBucketFaixa(dias) {
+      if (dias === null) return '+30';
+      if (dias <= 15) return '1-15';
+      if (dias <= 30) return '16-30';
+      return '+30';
+    }
+
+    function _crEmpresaDaNota(data) {
+      const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || '').toUpperCase().trim();
+      const empresaCalc = window.calcularEmpresaAtribuida(tipoServicoRaw);
+      return (String(empresaCalc || data['empresa_atribuida'] || 'OUTROS').toUpperCase().trim()) || 'OUTROS';
+    }
+
+    // ── Renderiza a tabela respeitando o cross-filter atual e a ordenação.
+    window._crRenderTabela = function () {
+      const tbody = document.getElementById('tbody-cr-top10');
+      if (!tbody) return;
+      const fmt = window.formatMoedaFull;
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      const cf = window._crCrossFilter;
+      const ctx = window._crCtxRef || {};
+      const filterByDia = (cf.dia !== null && cf.dia !== undefined) && (ctx.mesRef !== undefined);
+
+      const devedoresMap = {};
+      (window._crBaseArray || []).forEach(data => {
+        if (!data) return;
+        const statusReal = window.obterStatusReal(data, hoje);
+        if (statusReal === 'Cancelada' || statusReal === 'DESMEMBRADO') return;
+
+        if (filterByDia) {
+          // Cross-filter dia: tabela exibe TODAS as notas vencendo naquele dia
+          // (A VENCER + VENCIDO + PROTESTO etc), aceitando que "Devedores" temporariamente
+          // vira "Notas vencendo no dia X". Sem dia: comportamento normal (só VENCIDO).
+          const dVenc = window.parseDataLocal(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  '] || '');
+          if (!dVenc) return;
+          if (dVenc.getFullYear() !== ctx.anoRef || dVenc.getMonth() !== ctx.mesRef || dVenc.getDate() !== cf.dia) return;
+        } else {
+          if (statusReal !== 'VENCIDO') return;
+        }
+
+        const empresa = _crEmpresaDaNota(data);
+        const dias = _crDiasAtraso(data, hoje);
+        const faixa = _crBucketFaixa(dias);
+        if (cf.empresa && cf.empresa !== empresa) return;
+        if (cf.faixa && cf.faixa !== faixa) return;
+        const faturReal = window.obterFaturamentoReal(data);
+        const cliente = String(data.cliente || data.Cliente || data['Razão Social'] || '—').trim() || '—';
+        if (!devedoresMap[cliente]) devedoresMap[cliente] = { valor: 0, diasMax: 0 };
+        devedoresMap[cliente].valor += faturReal;
+        if (dias !== null && dias > devedoresMap[cliente].diasMax) devedoresMap[cliente].diasMax = dias;
+      });
+
+      const lista = Object.entries(devedoresMap)
+        .map(([cli, info]) => ({ cliente: cli, valor: info.valor, dias: info.diasMax }));
+
+      const sortCol = window._crSort.col;
+      const dir = window._crSort.dir;
+      lista.sort((a, b) => {
+        let va, vb;
+        if (sortCol === 'cliente') { va = a.cliente.toLowerCase(); vb = b.cliente.toLowerCase(); }
+        else if (sortCol === 'valor') { va = a.valor; vb = b.valor; }
+        else { va = a.dias; vb = b.dias; }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      const count = lista.length;
+      const elCount = document.getElementById('cr-devedores-count');
+      if (elCount) elCount.textContent = count > 0 ? `(${count})` : '';
+
+      if (lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 text-xs italic">Nenhum devedor no recorte atual.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = lista.map((d, i) => {
+        const corDias = d.dias > 30 ? 'text-red-500' : d.dias > 15 ? 'text-amber-500' : 'text-slate-600';
+        return `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-6 py-3 text-slate-400 font-bold text-xs">${i + 1}</td>
+            <td class="px-6 py-3 text-slate-700 font-bold text-sm">${d.cliente}</td>
+            <td class="px-6 py-3 text-right text-red-500 font-extrabold text-sm">${fmt(d.valor)}</td>
+            <td class="px-6 py-3 text-right ${corDias} font-extrabold text-sm">${d.dias} dia${d.dias === 1 ? '' : 's'}</td>
+          </tr>`;
+      }).join('');
+    };
+
+    // ── Entry-point chamado pelo `processarEAtualizarGraficos`.
+    // `apenasReRender=true` indica que veio de uma interação cruzada — o array base já está OK.
+
+    // ─── Categorizador "Tipo de Serviço" (regra de negócio do cliente) ─────────
+    // Normalização NFD (remove acentos) + UPPER + TRIM → blindagem contra typos/acentos.
+    // ORDEM IMPORTA — primeiro match ganha.
+    // Sem fallback "OUTROS": descrições não mapeadas viram "🚨 PENDENTE: <descricao>"
+    // para que a Matriz Pivot exponha o nome cru e o cliente possa auditar a regra comercial.
+    window.categorizarTipoServico = function (descricao) {
+      const descRaw = (descricao == null ? '' : String(descricao)).trim();
+      if (!descRaw) return '🚨 PENDENTE: (sem descrição)';
+      const strNormalizada = descRaw.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+      if (!strNormalizada) return '🚨 PENDENTE: ' + descRaw;
+
+      if (strNormalizada.includes('TEMPORARIO')) return 'TEMPORARIO';
+      if (strNormalizada.includes('ESTAGIO')) return 'ESTAGIO';
+      if (strNormalizada.includes('TERCEIROS')) return 'TERCEIROS';
+      if (strNormalizada.includes('FOPAG')) return 'FOPAG';
+      if (strNormalizada.includes('RPO')) return 'RPO';
+      if (strNormalizada.includes('CONSULTORIA')) return 'CONSULTORIA';
+      if (strNormalizada.includes('HOTMART')) return 'HOTMART';
+      // NEAT: palavras-chave já sem acento (string normalizada).
+      if (/(TREINAMENTO|PROCESSAMENTO\s+DE\s+PPA|SUBSCRIPTION|HR\s+METRICS|INTEGRACAO|UNIDADES|DEVOLUTIVA|ASSESSMENT)/.test(strNormalizada)) return 'NEAT';
+
+      return '🚨 PENDENTE: ' + descRaw;
+    };
+
+    // ─── Matriz de Fechamento por Serviço (aba Emissões Diárias) ─────────────
+    // Pivot: Tipo de Serviço (via `categorizarTipoServico`) × Dia de Emissão.
+    // Duas tabelas: Faturamento Bruto + Faturamento Real. Colunas dinâmicas.
+    // Filtra Cancelada/DESMEMBRADO via `obterStatusReal`.
+    // REGRA TEMPORAL: sem filtro de período ativo → restringe localmente ao mês vigente.
+    window.renderFechamentoEmissoesServico = function (arrayDeDados) {
+      if (!Array.isArray(arrayDeDados)) return;
+      const elBrutoWrap = document.getElementById('fech-emissoes-bruto-table');
+      const elRealWrap = document.getElementById('fech-emissoes-real-table');
+      if (!elBrutoWrap && !elRealWrap) return;
+
+      const hojeF = new Date(); hojeF.setHours(0, 0, 0, 0);
+
+      // Sem filtro global de período → restringe localmente ao mês vigente.
+      // (filtrosPorAba.emissoes é sincronizado por aplicarFiltrosModal/limparFiltrosInterativos.)
+      const filtroAba = (window.filtrosPorAba && window.filtrosPorAba.emissoes) || {};
+      const temFiltroData = !!(filtroAba.ini || filtroAba.fim);
+      const mesAtualF = hojeF.getMonth();
+      const anoAtualF = hojeF.getFullYear();
+
+      let arrFiltrado = arrayDeDados;
+      if (!temFiltroData) {
+        arrFiltrado = arrayDeDados.filter(d => {
+          const dE = window.parseDataExt(d && (d['data_emissao'] || d['Dt Emissao'] || d['data_criacao']));
+          return dE && !isNaN(dE.getTime()) && dE.getMonth() === mesAtualF && dE.getFullYear() === anoAtualF;
+        });
+      }
+
+      // Sufixo do título reflete o escopo temporal aplicado.
+      const sufixoEscopo = temFiltroData ? '(filtro global aplicado)' : '(mês vigente)';
+      const elScopeB = document.getElementById('fech-emissoes-bruto-scope');
+      const elScopeR = document.getElementById('fech-emissoes-real-scope');
+      if (elScopeB) elScopeB.textContent = sufixoEscopo;
+      if (elScopeR) elScopeR.textContent = sufixoEscopo;
+
+      // pivot[servico][isoDay] = number
+      const pivotBruto = {};
+      const pivotReal = {};
+      const colKeysSet = new Set();
+
+      arrFiltrado.forEach(data => {
+        if (!data) return;
+        const status = window.obterStatusReal(data, hojeF);
+        if (status === 'Cancelada' || status === 'DESMEMBRADO') return;
+
+        const dEmissao = window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
+        if (!dEmissao || isNaN(dEmissao.getTime())) return;
+
+        // Categoriza Tipo de Serviço — substitui a string crua por bucket canônico.
+        const descricao = data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || '';
+        const servico = window.categorizarTipoServico(descricao);
+
+        const iso = `${dEmissao.getFullYear()}-${String(dEmissao.getMonth() + 1).padStart(2, '0')}-${String(dEmissao.getDate()).padStart(2, '0')}`;
+
+        // Bruto: SOMENTE valor_fatura (regra de negócio explícita do cliente — ignora Vl. Líquido).
+        const vBruto = window.parseMoedaCRF(data['valor_fatura'] || data['Valor Fatura'] || data['valor']);
+        const vReal = window.obterFaturamentoReal(data);
+
+        if (!pivotBruto[servico]) pivotBruto[servico] = {};
+        if (!pivotReal[servico]) pivotReal[servico] = {};
+        pivotBruto[servico][iso] = (pivotBruto[servico][iso] || 0) + vBruto;
+        pivotReal[servico][iso]  = (pivotReal[servico][iso]  || 0) + vReal;
+        colKeysSet.add(iso);
+      });
+
+      const colKeys = Array.from(colKeysSet).sort();
+      const colHeaders = colKeys.map(iso => {
+        const partes = iso.split('-');
+        return `${partes[2]}/${partes[1]}`;
+      });
+      const servicos = Object.keys(pivotBruto).sort();
+
+      const fmt = window.formatMoedaFull;
+
+      const emptyHTML = `<div class="text-center py-10 text-slate-400 text-xs italic font-medium">Sem movimentações de emissão no recorte atual.</div>`;
+      if (servicos.length === 0 || colKeys.length === 0) {
+        if (elBrutoWrap) elBrutoWrap.innerHTML = emptyHTML;
+        if (elRealWrap) elRealWrap.innerHTML = emptyHTML;
+        return;
+      }
+
+      // Constrói o HTML de UMA matriz (Bruto OU Real). Sticky col 1 + sticky thead.
+      function buildTable(pivot) {
+        const colTotals = {}; colKeys.forEach(k => colTotals[k] = 0);
+        let grandTotal = 0;
+
+        let bodyHTML = '';
+        servicos.forEach((srv, i) => {
+          let rowTotal = 0;
+          let cells = '';
+          const zebraBg = i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40';
+          colKeys.forEach(iso => {
+            const v = (pivot[srv] && pivot[srv][iso]) || 0;
+            rowTotal += v;
+            colTotals[iso] += v;
+            cells += `<td class="px-3 py-2 text-right text-[11px] whitespace-nowrap ${v > 0 ? 'text-slate-700' : 'text-slate-300'}">${v > 0 ? fmt(v) : '—'}</td>`;
+          });
+          grandTotal += rowTotal;
+          bodyHTML += `
+            <tr class="${zebraBg} hover:bg-slate-100/60 transition-colors border-b border-slate-100">
+              <td class="sticky left-0 z-10 ${zebraBg} px-4 py-2 text-[11px] font-extrabold text-brandDarkBlue border-r border-slate-200 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.03)]">${srv}</td>
+              ${cells}
+              <td class="px-3 py-2 text-right text-[11px] font-extrabold text-brandDarkBlue bg-slate-100/70 whitespace-nowrap">${fmt(rowTotal)}</td>
+            </tr>
+          `;
+        });
+
+        // Footer "Total Geral"
+        let footerCells = '';
+        colKeys.forEach(iso => {
+          footerCells += `<td class="px-3 py-2 text-right text-[11px] font-extrabold text-white whitespace-nowrap">${fmt(colTotals[iso])}</td>`;
+        });
+        const footerHTML = `
+          <tr class="bg-brandDarkBlue text-white">
+            <td class="sticky left-0 z-10 bg-brandDarkBlue px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider border-r border-brandMidBlue whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.1)]">Total Geral</td>
+            ${footerCells}
+            <td class="px-3 py-2 text-right text-[11px] font-extrabold text-brandGreen bg-brandMidBlue whitespace-nowrap">${fmt(grandTotal)}</td>
+          </tr>
+        `;
+
+        let headerCells = '';
+        colHeaders.forEach(h => {
+          headerCells += `<th class="px-3 py-2 text-right text-[10px] font-extrabold text-brandPaleBlue uppercase tracking-wider whitespace-nowrap">${h}</th>`;
+        });
+
+        return `
+          <table class="w-full text-left text-sm border-collapse">
+            <thead class="bg-brandDarkBlue sticky top-0 z-20">
+              <tr>
+                <th class="sticky left-0 z-30 bg-brandDarkBlue px-4 py-2.5 text-left text-[10px] font-extrabold text-brandPaleBlue uppercase tracking-widest whitespace-nowrap shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Tipo de Serviço</th>
+                ${headerCells}
+                <th class="px-3 py-2.5 text-right text-[10px] font-extrabold text-brandGreen uppercase tracking-widest whitespace-nowrap bg-brandMidBlue">Total Geral</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${bodyHTML}
+              ${footerHTML}
+            </tbody>
+          </table>
+        `;
+      }
+
+      if (elBrutoWrap) elBrutoWrap.innerHTML = buildTable(pivotBruto);
+      if (elRealWrap) elRealWrap.innerHTML = buildTable(pivotReal);
+    };
+
+    window.atualizarContasReceber = function (arrayDeDados, apenasReRender) {
+      if (!apenasReRender) {
+        if (!arrayDeDados || !Array.isArray(arrayDeDados)) return;
+        window._crBaseArray = arrayDeDados;
+      }
+      const arrBase = window._crBaseArray;
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      const cf = window._crCrossFilter;
+      const fmt = window.formatMoedaFull;
+
+      // ── Acumuladores ──
+      // ESPELHO EXATO do `atualizarMetrics` do CRF:
+      //   - card-total-a-vencer  → soma `obterValorLiquido` (vLiquido)  ←── REGRA CRÍTICA
+      //   - card-total-vencido   → soma `obterFaturamentoReal` (faturReal)
+      //   - card-faturamento-real → soma `obterFaturamentoReal` p/ todas não-canceladas/não-desmembradas
+      // O cliente reportou R$ 6.157.085,31 no card "A Vencer" do CRF — esse valor é LÍQUIDO,
+      // não Faturamento Real. Por isso a barra A Vencer deste dashboard usa `obterValorLiquido`
+      // no acumulador, mantendo paridade absoluta com o KPI canônico do Gerenciador.
+      let totalAVencer = 0, qtdAVencer = 0;
+      let totalVencido = 0, qtdVencido = 0;
+      let totalFatReal = 0;
+      const vencidoPorEmpresa = {};        // sem filtro cruzado (donut completo OU restrito por faixa)
+      const faixaAging = { '1-15': 0, '16-30': 0, '+30': 0 };
+
+      // Inadimplência mensal (ano vigente do array — usa o ano dos dados)
+      // Mapa: mês 0-11 → { fatRealMes, vencidoMes }
+      const inadMensal = Array.from({ length: 12 }, () => ({ fatReal: 0, vencido: 0 }));
+      let anoVigente = null;
+
+      // ── Recebimentos Esperados Diários — regra temporal ───────────────────
+      // Regra de negócio: "esperado" = futuro. O passado já é caixa (RECEBIDO) ou
+      // inadimplência (VENCIDO) — não cabe aqui.
+      //   - Filtro: somente notas com statusReal === 'A VENCER'.
+      //   - Valor: obterValorLiquido (mesma escala do card "Total a Vencer", para
+      //     que a soma das barras represente exatamente a fração do A Vencer
+      //     pertencente ao mês de referência).
+      //   - Eixo X: range dinâmico
+      //       Mês atual  → diaInicio = hoje.getDate()
+      //       Mês futuro → diaInicio = 1
+      //       Mês passado → range vazio (mensagem noData)
+      const fIni = (window.filtrosPorAba && window.filtrosPorAba.soulan && window.filtrosPorAba.soulan.ini) || '';
+      let mesRef, anoRef;
+      if (fIni && /^\d{4}-\d{2}-\d{2}$/.test(fIni)) {
+        const partes = fIni.split('-');
+        anoRef = parseInt(partes[0], 10);
+        mesRef = parseInt(partes[1], 10) - 1;
+      } else {
+        const h = new Date(); mesRef = h.getMonth(); anoRef = h.getFullYear();
+      }
+      const diasNoMesRef = new Date(anoRef, mesRef + 1, 0).getDate();
+      const mesAtualIdx = hoje.getMonth();
+      const anoAtualIdx = hoje.getFullYear();
+      const recIsMesAtual  = (anoRef === anoAtualIdx && mesRef === mesAtualIdx);
+      const recIsPassado   = (anoRef < anoAtualIdx) || (anoRef === anoAtualIdx && mesRef < mesAtualIdx);
+      // Sentinela: 32 garante diaInicio > diasNoMesRef → numDias === 0 (range vazio).
+      const diaInicioRec = recIsPassado ? 32 : (recIsMesAtual ? hoje.getDate() : 1);
+      const numDiasRec = Math.max(0, diasNoMesRef - diaInicioRec + 1);
+      const recebimentosDiarios = Array(numDiasRec).fill(0);
+
+      // Contexto do mês de referência para que `_crRenderTabela` consiga interpretar `cf.dia`.
+      window._crCtxRef = { mesRef: mesRef, anoRef: anoRef };
+
+      // ── PASS 1 (main): KPIs + Donut + Aging — respeita cf.dia (cross-filter clicado em rec-diarios)
+      arrBase.forEach(data => {
+        if (!data) return;
+        const statusReal = window.obterStatusReal(data, hoje);
+        if (statusReal === 'Cancelada' || statusReal === 'DESMEMBRADO') return;
+
+        // Cross-filter dia: só conta notas que vencem no dia clicado dentro do mesRef.
+        if (cf.dia !== null && cf.dia !== undefined) {
+          const dVencCheck = window.parseDataLocal(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  '] || '');
+          if (!dVencCheck) return;
+          if (dVencCheck.getFullYear() !== anoRef || dVencCheck.getMonth() !== mesRef || dVencCheck.getDate() !== cf.dia) return;
+        }
+
+        const faturReal = window.obterFaturamentoReal(data);
+        totalFatReal += faturReal;
+        const dias = _crDiasAtraso(data, hoje);
+        const faixa = _crBucketFaixa(dias);
+        const empresa = _crEmpresaDaNota(data);
+
+        if (statusReal === 'A VENCER') {
+          totalAVencer += window.obterValorLiquido(data);
+          qtdAVencer++;
+        } else if (statusReal === 'VENCIDO') {
+          totalVencido += faturReal;
+          qtdVencido++;
+          if (!cf.faixa || cf.faixa === faixa) {
+            vencidoPorEmpresa[empresa] = (vencidoPorEmpresa[empresa] || 0) + faturReal;
+          }
+          if (!cf.empresa || cf.empresa === empresa) {
+            faixaAging[faixa] = (faixaAging[faixa] || 0) + faturReal;
+          }
+        }
+      });
+
+      // ── PASS 2: Recebimentos Diários — IGNORA cf.dia (queremos ver TODOS os dias do mês),
+      // mas RESPEITA cross-filter empresa (consistência visual com o donut).
+      arrBase.forEach(data => {
+        if (!data) return;
+        const statusReal = window.obterStatusReal(data, hoje);
+        if (statusReal !== 'A VENCER') return;
+        if (cf.empresa) {
+          const emp = _crEmpresaDaNota(data);
+          if (emp !== cf.empresa) return;
+        }
+        const dVenc = window.parseDataLocal(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  '] || '');
+        if (!dVenc || isNaN(dVenc.getTime())) return;
+        if (dVenc.getFullYear() !== anoRef || dVenc.getMonth() !== mesRef) return;
+        const diaNota = dVenc.getDate();
+        if (diaNota < diaInicioRec || diaNota > diasNoMesRef) return;
+        recebimentosDiarios[diaNota - diaInicioRec] += window.obterValorLiquido(data);
+      });
+
+      // ── PASS 3: Inadimplência Mensal — INDEPENDENTE do date filter, sempre 12 meses do ano vigente.
+      // Respeita filtros NÃO-DATE (empresa/cliente do modal + cross-filter empresa).
+      const filtroAbaCR = (window.filtrosPorAba && window.filtrosPorAba.contasreceber) || {};
+      let anoChartInad = (new Date()).getFullYear();
+      let mesSelecChart = null;
+      if (filtroAbaCR.ini && /^\d{4}-\d{2}/.test(filtroAbaCR.ini)) {
+        const partes = filtroAbaCR.ini.split('-');
+        anoChartInad = parseInt(partes[0], 10);
+        mesSelecChart = parseInt(partes[1], 10) - 1;
+      }
+      window._crChartAnoInad = anoChartInad;
+      window._crChartMesSelec = mesSelecChart;
+      const empFilterUpper = filtroAbaCR.emp ? filtroAbaCR.emp.toUpperCase() : null;
+      const cliFilter = filtroAbaCR.cli || '';
+      (window.dadosGlobaisFirestore || []).forEach(data => {
+        if (!data) return;
+        // Filtros não-date do modal
+        const cliNota = String(data['Cliente'] || data['cliente'] || '').trim();
+        if (cliFilter && cliNota !== cliFilter) return;
+        if (empFilterUpper) {
+          const emp = _crEmpresaDaNota(data);
+          if (emp !== empFilterUpper) return;
+        }
+        // Cross-filter empresa
+        if (cf.empresa) {
+          const emp = _crEmpresaDaNota(data);
+          if (emp !== cf.empresa) return;
+        }
+        const statusReal = window.obterStatusReal(data, hoje);
+        if (statusReal === 'Cancelada' || statusReal === 'DESMEMBRADO') return;
+        const dVenc = window.parseDataLocal(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  '] || '');
+        if (!dVenc || isNaN(dVenc.getTime())) return;
+        if (dVenc.getFullYear() !== anoChartInad) return;
+        const faturRealInad = window.obterFaturamentoReal(data);
+        inadMensal[dVenc.getMonth()].fatReal += faturRealInad;
+        if (statusReal === 'VENCIDO') inadMensal[dVenc.getMonth()].vencido += faturRealInad;
+      });
+      anoVigente = anoChartInad;
+
+      // ── KPIs ──
+      const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      setText('kpi-cr-avencer', fmt(totalAVencer));
+      setText('kpi-cr-avencer-qtd', String(qtdAVencer));
+      setText('kpi-cr-vencido', fmt(totalVencido));
+      setText('kpi-cr-vencido-qtd', String(qtdVencido));
+      const inad = totalFatReal > 0 ? (totalVencido / totalFatReal) * 100 : 0;
+      setText('kpi-cr-inad', inad.toFixed(2).replace('.', ',') + '%');
+      // Parcelamentos (mesma fonte do KPI global)
+      const parcArr = window._parcelamentosAtivosDetalhe || [];
+      const parcResidual = parcArr.reduce((a, g) => a + (g.valor_residual || 0), 0);
+      setText('kpi-cr-parc-residual', fmt(parcResidual));
+      setText('kpi-cr-parc-qtd', String(parcArr.length));
+
+      // ── Donut empresa ──
+      if (window.chartVencidosEmpresa) {
+        const entries = Object.entries(vencidoPorEmpresa).sort((a, b) => b[1] - a[1]);
+        window.chartVencidosEmpresa.updateOptions({ labels: entries.map(e => e[0]) }, false, false);
+        window.chartVencidosEmpresa.updateSeries(entries.map(e => Math.round(e[1] * 100) / 100));
+      }
+
+      // ── Bar Aging ──
+      if (window.chartAgingFaixas) {
+        window.chartAgingFaixas.updateSeries([{
+          name: 'Valor Vencido',
+          data: [
+            Math.round(faixaAging['1-15'] * 100) / 100,
+            Math.round(faixaAging['16-30'] * 100) / 100,
+            Math.round(faixaAging['+30'] * 100) / 100
+          ]
+        }]);
+      }
+
+      // ── Chart Inadimplência Mensal (sempre 12 meses, com mês selecionado destacado) ──
+      const elInadAno = document.getElementById('cr-inad-mensal-ano');
+      if (elInadAno) elInadAno.textContent = String(anoVigente || new Date().getFullYear());
+      if (window.chartCrInadMensal) {
+        const nomesMesShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        const mesSel = window._crChartMesSelec;
+        // Cada bar é um objeto {x, y, fillColor}. fillColor=override → solido escurecido nos demais.
+        // O bar do mês selecionado fica SEM fillColor → herda o gradiente premium original.
+        const dataObjs = inadMensal.map((m, idx) => {
+          const v = Math.round(m.vencido * 100) / 100;
+          if (mesSel !== null && mesSel !== undefined && idx !== mesSel) {
+            return { x: nomesMesShort[idx], y: v, fillColor: '#450a0a' }; // red-950 escuro
+          }
+          return { x: nomesMesShort[idx], y: v };
+        });
+        const percs = inadMensal.map(m => m.fatReal > 0 ? (m.vencido / m.fatReal) * 100 : 0);
+        window._crPercInadMensal = percs;
+        window.chartCrInadMensal.updateSeries([{ name: 'Inadimplência', data: dataObjs }]);
+      }
+
+      // ── Chart Recebimentos Diários (range dinâmico baseado em hoje vs mês ref) ──
+      const nomesMes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const elMesRef = document.getElementById('cr-rec-diarios-mes');
+      if (elMesRef) {
+        const sufixo = recIsPassado ? ' · período passado'
+                     : recIsMesAtual ? ` · a partir do dia ${hoje.getDate()}`
+                     : '';
+        elMesRef.textContent = `${nomesMes[mesRef]}/${anoRef}${sufixo}`;
+      }
+      if (window.chartCrRecDiarios) {
+        if (recIsPassado) {
+          // Cenário C: mês passado → série vazia + mensagem noData centralizada.
+          window.chartCrRecDiarios.updateOptions({
+            noData: { text: 'Não há recebimentos futuros para períodos passados.', align: 'center', verticalAlign: 'middle', style: { color: '#cbd5e1', fontSize: '13px', fontWeight: 600 } },
+            xaxis: { categories: [] }
+          }, false, false);
+          window.chartCrRecDiarios.updateSeries([{ name: 'Recebimentos Esperados', data: [] }]);
+        } else {
+          // Cenários A (mês atual, partindo de hoje) e B (mês futuro, dia 1).
+          const cats = Array.from({ length: numDiasRec }, (_, i) => String(diaInicioRec + i).padStart(2, '0'));
+          window.chartCrRecDiarios.updateOptions({
+            noData: { text: '' },
+            xaxis: { categories: cats }
+          }, false, false);
+          window.chartCrRecDiarios.updateSeries([{
+            name: 'Recebimentos Esperados',
+            data: recebimentosDiarios.map(v => Math.round(v * 100) / 100)
+          }]);
+        }
+      }
+
+      // ── Tabela ── (já usa _crBaseArray + cross-filter via _crRenderTabela)
+      window._crRenderTabela();
+      window._crAtualizarSetasTabela();
+      window._crRenderCrossFilterBar();
     };
 
     // ─── Regras matemáticas removidas ────────────────────────────────────────
@@ -1688,6 +2497,18 @@
         window._ultimoArrayProcessado = arrayDeDados;
         window._ultimaAbaProcessada = abaEspecifica;
 
+        // Aba "Contas a Receber": recalcula KPIs + charts + Top10 com o array já filtrado.
+        // Roda em 'todas' e quando a aba está explicitamente ativa.
+        if (abaEspecifica === 'todas' || abaEspecifica === 'contasreceber') {
+          try { window.atualizarContasReceber(arrayDeDados); } catch (e) { console.warn('[ContasReceber]', e); }
+        }
+
+        // Aba "Emissões Diárias": além dos charts existentes, renderiza as 2 matrizes
+        // de Fechamento por Serviço (Bruto + Real). Mesmo array filtrado pelo modal global.
+        if (abaEspecifica === 'todas' || abaEspecifica === 'emissoes') {
+          try { window.renderFechamentoEmissoesServico(arrayDeDados); } catch (e) { console.warn('[FechamentoEmissoes]', e); }
+        }
+
         if (abaEspecifica === 'todas' || abaEspecifica === 'emissoes') {
           let emissoesArr = Object.values(emissoesPorDia).sort((a, b) => a.date - b.date);
           let labels30Dias = emissoesArr.map(item => `${item.date.getDate().toString().padStart(2, '0')}/${(item.date.getMonth() + 1).toString().padStart(2, '0')}`);
@@ -2173,6 +2994,251 @@
         series: [{ name: 'Qtd Notas', type: 'column', data: [] }, { name: 'Valor Faturado (R$)', type: 'column', data: [] }]
       });
       window.chartEmissoesAno.render();
+
+      // ─── Contas a Receber ───
+      // Charts sentam sobre cards `bg-brandDarkBlue` (#1) — foreColor claro p/ legibilidade.
+      // Tooltips e dataLabels passam pela função `formatMoedaFull` (#2) p/ não vazar centavos.
+      // dataPointSelection (#6) aciona cross-filter local da aba (window._crCrossFilter).
+      const crForeColor = '#cbd5e1';  // slate-300 — elegante sobre brandDarkBlue
+      const crLabelStyle = { colors: crForeColor, fontSize: '11px', fontWeight: 'bold' };
+
+      // Paleta Soulan p/ gradientes: bases escuras → highlights claros (volume + luz).
+      const crGradColorsBase = ['#dc2626', '#d97706', '#1d4ed8', '#7e22ce', '#047857', '#0e7490', '#9a3412', '#0369a1'];
+      const crGradColorsTo   = ['#f87171', '#fbbf24', '#60a5fa', '#c084fc', '#6ee7b7', '#67e8f9', '#fb923c', '#7dd3fc'];
+
+      if (document.querySelector('#chart-cr-vencidos-empresa')) {
+        window.chartVencidosEmpresa = new ApexCharts(document.querySelector('#chart-cr-vencidos-empresa'), {
+          chart: {
+            type: 'donut', height: 320, foreColor: crForeColor,
+            toolbar: { show: false }, background: 'transparent',
+            events: {
+              dataPointSelection: function (event, chartContext, config) {
+                const labels = (config && config.w && config.w.config && config.w.config.labels) || [];
+                const empresa = labels[config.dataPointIndex];
+                if (empresa) {
+                  window._crCrossFilter.empresa = (window._crCrossFilter.empresa === empresa) ? null : empresa;
+                  window.atualizarContasReceber(window._crBaseArray, true);
+                }
+              }
+            }
+          },
+          series: [],
+          labels: [],
+          colors: crGradColorsBase,
+          fill: {
+            type: 'gradient',
+            gradient: {
+              shade: 'dark', type: 'diagonal2', shadeIntensity: 0.6,
+              gradientToColors: crGradColorsTo,
+              inverseColors: false, opacityFrom: 1, opacityTo: 0.85,
+              stops: [0, 100]
+            }
+          },
+          stroke: { colors: ['#002443'], width: 2 },
+          legend: { position: 'bottom', fontSize: '11px', fontWeight: 'bold', labels: { colors: crForeColor } },
+          plotOptions: {
+            pie: {
+              donut: {
+                size: '65%',
+                labels: {
+                  show: true,
+                  name: { color: crForeColor, fontSize: '13px', fontWeight: 'bold' },
+                  value: { color: '#ffffff', fontSize: '16px', fontWeight: 'extrabold', formatter: function (v) { return window.formatMoedaFull(Number(v) || 0); } },
+                  total: {
+                    show: true, label: 'Total Vencido', color: crForeColor,
+                    formatter: function (w) {
+                      const sum = (w.globals.seriesTotals || []).reduce((a, b) => a + b, 0);
+                      return window.formatMoedaFull(Math.round(sum * 100) / 100);
+                    }
+                  }
+                }
+              }
+            }
+          },
+          dataLabels: { enabled: true, style: { colors: ['#ffffff'], fontSize: '11px', fontWeight: 'extrabold' }, dropShadow: { enabled: false }, formatter: function (val) { return (Number(val) || 0).toFixed(1) + '%'; } },
+          tooltip: { theme: 'dark', y: { formatter: function (v) { return window.formatMoedaFull(Math.round((Number(v) || 0) * 100) / 100); } } }
+        });
+        window.chartVencidosEmpresa.render();
+      }
+
+      if (document.querySelector('#chart-cr-aging-faixas')) {
+        window.chartAgingFaixas = new ApexCharts(document.querySelector('#chart-cr-aging-faixas'), {
+          chart: {
+            type: 'bar', height: 320, foreColor: crForeColor,
+            toolbar: { show: false }, background: 'transparent',
+            events: {
+              dataPointSelection: function (event, chartContext, config) {
+                const faixas = ['1-15', '16-30', '+30'];
+                const f = faixas[config.dataPointIndex];
+                if (f) {
+                  window._crCrossFilter.faixa = (window._crCrossFilter.faixa === f) ? null : f;
+                  window.atualizarContasReceber(window._crBaseArray, true);
+                }
+              }
+            }
+          },
+          series: [{ name: 'Valor Vencido', data: [0, 0, 0] }],
+          plotOptions: { bar: { borderRadius: 8, columnWidth: '55%', distributed: true, dataLabels: { position: 'top' } } },
+          colors: ['#b45309', '#9a3412', '#7f1d1d'],   // amber-700, orange-800, red-900 (base)
+          fill: {
+            type: 'gradient',
+            gradient: {
+              shade: 'dark', type: 'vertical', shadeIntensity: 0.5,
+              gradientToColors: ['#fbbf24', '#fb923c', '#f87171'],  // amber-400, orange-400, red-400 (top)
+              inverseColors: false, opacityFrom: 1, opacityTo: 0.9,
+              stops: [0, 100]
+            }
+          },
+          xaxis: { categories: ['1 a 15 dias', '16 a 30 dias', '+30 dias'], labels: { style: crLabelStyle } },
+          yaxis: { labels: { style: { colors: crForeColor }, formatter: function (v) { return window.formatMil(v); } } },
+          dataLabels: { enabled: true, formatter: function (v) { return window.formatMoedaFull(Math.round((Number(v) || 0) * 100) / 100); }, offsetY: -20, style: { fontSize: '11px', colors: ['#ffffff'], fontWeight: 'extrabold' } },
+          legend: { show: false },
+          grid: { borderColor: 'rgba(255,255,255,0.08)' },
+          tooltip: { theme: 'dark', y: { formatter: function (v) { return window.formatMoedaFull(Math.round((Number(v) || 0) * 100) / 100); } } }
+        });
+        window.chartAgingFaixas.render();
+      }
+
+      // Inadimplência Mês a Mês (#10) — colunas, value + % no tooltip/datalabel.
+      // Click no mês aplica filtro global de período (ini=01/MM/AAAA, fim=último dia).
+      if (document.querySelector('#chart-cr-inad-mensal')) {
+        window.chartCrInadMensal = new ApexCharts(document.querySelector('#chart-cr-inad-mensal'), {
+          chart: {
+            type: 'bar', height: 320, foreColor: crForeColor, toolbar: { show: false }, background: 'transparent',
+            events: {
+              dataPointSelection: function (event, chartContext, config) {
+                const mes = config.dataPointIndex;
+                if (mes === undefined || mes < 0 || mes > 11) return;
+                const ano = window._crChartAnoInad || (new Date()).getFullYear();
+                const lastDay = new Date(ano, mes + 1, 0).getDate();
+                const iniStr = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+                const fimStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                const filtroAba = (window.filtrosPorAba && window.filtrosPorAba.contasreceber) || {};
+                // Toggle: clicar de novo no mesmo mês limpa o filtro de data
+                const toggleOff = (filtroAba.ini === iniStr && filtroAba.fim === fimStr);
+                document.getElementById('filtro-modal-data-inicio').value = toggleOff ? '' : iniStr;
+                document.getElementById('filtro-modal-data-fim').value = toggleOff ? '' : fimStr;
+                // Cross-filter "dia" é específico de um mês — limpa ao trocar período.
+                window._crCrossFilter.dia = null;
+                window.aplicarFiltrosModal();
+              }
+            }
+          },
+          series: [{ name: 'Inadimplência', data: Array(12).fill(0) }],
+          plotOptions: { bar: { borderRadius: 6, columnWidth: '60%', dataLabels: { position: 'top' } } },
+          colors: ['#7f1d1d'],   // red-900 (base)
+          fill: {
+            type: 'gradient',
+            gradient: {
+              shade: 'dark', type: 'vertical', shadeIntensity: 0.6,
+              gradientToColors: ['#f87171'],   // red-400 (highlight no topo)
+              inverseColors: false, opacityFrom: 1, opacityTo: 0.9,
+              stops: [0, 100]
+            }
+          },
+          xaxis: { categories: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'], labels: { style: crLabelStyle } },
+          yaxis: { labels: { style: { colors: crForeColor }, formatter: function (v) { return window.formatMil(v); } } },
+          dataLabels: {
+            enabled: true, offsetY: -18, style: { fontSize: '10px', colors: ['#ffffff'], fontWeight: 'extrabold' },
+            formatter: function (val, opts) {
+              const v = Math.round((Number(val) || 0) * 100) / 100;
+              if (v === 0) return '';
+              const perc = (window._crPercInadMensal && window._crPercInadMensal[opts.dataPointIndex]) || 0;
+              return window.formatMil(v) + ' (' + perc.toFixed(1) + '%)';
+            }
+          },
+          grid: { borderColor: 'rgba(255,255,255,0.08)' },
+          tooltip: {
+            theme: 'dark',
+            y: {
+              formatter: function (val, opts) {
+                const v = Math.round((Number(val) || 0) * 100) / 100;
+                const perc = (window._crPercInadMensal && window._crPercInadMensal[opts.dataPointIndex]) || 0;
+                return window.formatMoedaFull(v) + ' · ' + perc.toFixed(2) + '%';
+              }
+            }
+          }
+        });
+        window.chartCrInadMensal.render();
+      }
+
+      // Recebimentos Esperados Diários (#11) — full width, 31 colunas legíveis, gradiente Soulan verde.
+      // DataLabels ATIVOS no topo das barras com formato compacto ("R$ 50k" / "R$ 1,2M")
+      // para leitura imediata sem precisar do tooltip. Cor #f1f5f9 (slate-50) garante
+      // legibilidade sobre o gradiente esmeralda → claro.
+      const formatCompactoBRL = function (v) {
+        const n = Number(v) || 0;
+        if (n === 0) return '';
+        if (n >= 1000000) return 'R$ ' + (n / 1000000).toFixed(1).replace('.', ',') + 'M';
+        if (n >= 1000) return 'R$ ' + Math.round(n / 1000) + 'k';
+        return 'R$ ' + Math.round(n);
+      };
+      if (document.querySelector('#chart-cr-rec-diarios')) {
+        window.chartCrRecDiarios = new ApexCharts(document.querySelector('#chart-cr-rec-diarios'), {
+          chart: {
+            type: 'bar', height: 380, foreColor: crForeColor, toolbar: { show: false }, background: 'transparent',
+            events: {
+              dataPointSelection: function (event, chartContext, config) {
+                // Cats são strings "01"…"31" — parseInt cobre ambas.
+                const cats = (config && config.w && config.w.config && config.w.config.xaxis && config.w.config.xaxis.categories) || [];
+                const dayStr = cats[config.dataPointIndex];
+                const day = parseInt(dayStr, 10);
+                if (!day) return;
+                // Toggle: clicar de novo no mesmo dia limpa o filtro.
+                window._crCrossFilter.dia = (window._crCrossFilter.dia === day) ? null : day;
+                window.atualizarContasReceber(window._crBaseArray, true);
+              }
+            }
+          },
+          series: [{ name: 'Recebimentos Esperados', data: [] }],
+          plotOptions: { bar: { borderRadius: 4, columnWidth: '75%', dataLabels: { position: 'top' } } },
+          colors: ['#047857'],
+          fill: {
+            type: 'gradient',
+            gradient: {
+              shade: 'dark', type: 'vertical', shadeIntensity: 0.55,
+              gradientToColors: ['#6ee7b7'],
+              inverseColors: false, opacityFrom: 1, opacityTo: 0.9,
+              stops: [0, 100]
+            }
+          },
+          xaxis: {
+            categories: [],
+            tickPlacement: 'on',
+            labels: {
+              show: true,
+              style: { colors: crForeColor, fontSize: '10px', fontWeight: 'bold' },
+              rotate: 0, rotateAlways: false, hideOverlappingLabels: false, trim: false
+            },
+            axisTicks: { show: true, color: 'rgba(255,255,255,0.15)' }
+          },
+          yaxis: { labels: { style: { colors: crForeColor }, formatter: function (v) { return window.formatMil(v); } } },
+          // DataLabels acima das colunas — compacto + cor clara WCAG sobre o gradiente.
+          dataLabels: {
+            enabled: true,
+            formatter: formatCompactoBRL,
+            offsetY: -18,
+            style: { fontSize: '9px', colors: ['#f1f5f9'], fontWeight: 'extrabold' },
+            background: { enabled: false },
+            dropShadow: { enabled: false }
+          },
+          legend: { show: true, position: 'top', horizontalAlign: 'left', labels: { colors: crForeColor }, fontSize: '11px', fontWeight: 'bold', markers: { width: 12, height: 12, radius: 3 } },
+          // padding.top extra dá respiro para a dataLabel não encostar no topo do gráfico.
+          grid: { borderColor: 'rgba(255,255,255,0.08)', xaxis: { lines: { show: false } }, padding: { top: 20 } },
+          tooltip: { theme: 'dark', y: { formatter: function (v) { return window.formatMoedaFull(Math.round((Number(v) || 0) * 100) / 100); } } },
+          // Cenário "mês passado" → series fica vazia e este texto centralizado aparece.
+          noData: { text: '', align: 'center', verticalAlign: 'middle', style: { color: '#cbd5e1', fontSize: '13px', fontWeight: 600 } },
+          // Responsivo: se a tela ficar < 900px, oculta sobreposições para evitar atropelo.
+          responsive: [{
+            breakpoint: 900,
+            options: {
+              xaxis: { labels: { hideOverlappingLabels: true, style: { fontSize: '9px' } } },
+              dataLabels: { style: { fontSize: '8px' } }
+            }
+          }]
+        });
+        window.chartCrRecDiarios.render();
+      }
     });
 
     window.mapaDadosGlobais = [];
@@ -2295,6 +3361,23 @@
         window.chartMetaAnualFat.render();
       }
 
+      // Meta Anual Bruta vs Faturamento Bruto Acumulado (lado esquerdo do par).
+      // Bar 1: `meta.total` somada das metas cadastradas para o ano (Meta Anual Bruta).
+      // Bar 2: `parseMoedaCRF(valor_fatura)` acumulado no período, exclui Cancelada/DESMEMBRADO.
+      if (document.querySelector("#chart-meta-anual-bruto")) {
+        window.chartMetaAnualBruto = new ApexCharts(document.querySelector("#chart-meta-anual-bruto"), {
+          chart: { height: 250, type: 'bar', toolbar: { show: false } },
+          plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 8, dataLabels: { position: 'top' } } },
+          colors: ['#002443', '#59a4d8'],
+          series: [{ name: 'Meta Anual Bruta', data: [0] }, { name: 'Faturamento Bruto', data: [0] }],
+          xaxis: { categories: ['Total Acumulado'], labels: { show: false } },
+          dataLabels: { enabled: true, formatter: function (val) { return window.formatMoedaFull(val); }, style: { colors: ['#fff'] }, offsetX: -20 },
+          tooltip: { shared: true, intersect: false, y: { formatter: function (val) { return window.formatMoedaFull(val); } } },
+          legend: { position: 'top' }
+        });
+        window.chartMetaAnualBruto.render();
+      }
+
       if (document.querySelector("#chart-metas-mensal")) {
         window.chartMetasMensal = new ApexCharts(document.querySelector("#chart-metas-mensal"), {
           chart: { height: 350, type: 'bar', toolbar: { show: false } },
@@ -2330,7 +3413,18 @@
       const anoFiltro = document.getElementById('filtro-ano-dash-metas').value;
       const mesesFiltro = window.mesesSelecionadosMetas; // Array de meses selecionados [0, 1, 2...]
 
-      // 1. Processar Lançamentos (Realizado em todos os meses para o ano)
+      // 1. Processar Lançamentos:
+      //    - Realizado: `obterFaturamentoReal` (espelha CRF "Faturamento Realizado").
+      //    - Bruto: `parseMoedaCRF(valor_fatura)` (espelha CRF "Faturamento Bruto") —
+      //      alimenta o lado direito do chart "Meta Anual Bruta vs Faturamento Bruto".
+      //    Ambos excluem Cancelada/DESMEMBRADO via `obterStatusReal`.
+      let faturamentoBrutoPorMesProduto = {
+        'Consultoria & RPO': Array(12).fill(0),
+        'Estágio & Fopag': Array(12).fill(0),
+        'THOMAS': Array(12).fill(0),
+        'Temporário': Array(12).fill(0),
+        'Terceirizados': Array(12).fill(0)
+      };
       let faturamentoPorMesProduto = {
         'Consultoria & RPO': Array(12).fill(0),
         'Estágio & Fopag': Array(12).fill(0),
@@ -2340,13 +3434,17 @@
       };
 
       window.dadosGlobaisFirestore.forEach(data => {
-        // Status idêntico ao Gerenciador: usa `obterStatusReal` em vez de detectar inline.
-        // Antes, PREJUÍZO/PROTESTO com baixa caía aqui como Recebido — divergência com o CRF.
+        // FONTE ÚNICA DA VERDADE: filtro idêntico ao KPI "Faturamento Realizado" do CRF
+        // (sai apenas Cancelada/DESMEMBRADO). Todas as demais (RECEBIDO/A VENCER/VENCIDO/
+        // PROTESTO/PREJUÍZO) somam — espelho exato do `totalFatReal` do `atualizarMetrics`.
+        // Anchor temporal: data de EMISSÃO (não baixa) p/ que A VENCER/VENCIDO entrem
+        // no mês em que foram faturados, como no CRF.
         const hojeMeta = new Date(); hojeMeta.setHours(0, 0, 0, 0);
-        if (window.obterStatusReal(data, hojeMeta) !== 'RECEBIDO') return;
+        const statusRealMeta = window.obterStatusReal(data, hojeMeta);
+        if (statusRealMeta === 'Cancelada' || statusRealMeta === 'DESMEMBRADO') return;
 
-        const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-        let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
+        let dRef = window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao'])
+          || window.parseDataExt(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  ']);
         if (!dRef || dRef.getFullYear() != anoFiltro) return;
 
         const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
@@ -2368,12 +3466,54 @@
         if (grupoMeta) faturamentoPorMesProduto[grupoMeta][dRef.getMonth()] += faturReal;
       });
 
+      // 1.b — Faturamento BRUTO acumulado (parallel pass).
+      // Diferente do realizado, não exige status RECEBIDO. Conta TODAS as notas que
+      // não estão Canceladas/DESMEMBRADAS — é o "Faturamento Bruto" do CRF (KPI
+      // `card-valor-total`). Anchor temporal: data de EMISSÃO (preferida) ou
+      // vencimento como fallback. Filtrado pelo mesmo `produtoFiltroMetas`.
+      window.dadosGlobaisFirestore.forEach(data => {
+        const hojeBruto = new Date(); hojeBruto.setHours(0, 0, 0, 0);
+        const statusBruto = window.obterStatusReal(data, hojeBruto);
+        if (statusBruto === 'Cancelada' || statusBruto === 'DESMEMBRADO') return;
+
+        const dEmissao = window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao'])
+          || window.parseDataExt(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  ']);
+        if (!dEmissao || dEmissao.getFullYear() != anoFiltro) return;
+
+        const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
+        const empresaCalc = window.calcEmpresaExcel(tipoServicoRaw);
+        const empresa = String(empresaCalc || data['empresa_atribuida'] || '').toUpperCase().trim();
+
+        let grupoMetaB = null;
+        if (tipoServicoRaw.includes("TEMPORA")) grupoMetaB = 'Temporário';
+        else if (tipoServicoRaw.includes("TERCEIROS")) grupoMetaB = 'Terceirizados';
+        else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) grupoMetaB = 'Estágio & Fopag';
+        else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) grupoMetaB = 'Consultoria & RPO';
+        else if (empresa === "NEAT") grupoMetaB = 'THOMAS';
+        if (!grupoMetaB) return;
+
+        const vBruto = window.parseMoedaCRF(data['valor_fatura'] || data['Valor Fatura'] || data['valor']);
+        faturamentoBrutoPorMesProduto[grupoMetaB][dEmissao.getMonth()] += vBruto;
+      });
+
+      // 1.c — Meta Anual Bruta: consome EXCLUSIVAMENTE o campo NOVO `meta.total_bruto`
+      // (Sessão 2 do modal "Gestão das Metas" — Meta de Faturamento Bruto / Vendas).
+      // Registros legados sem o campo somam 0 — não inflam a meta com valores reais.
+      let metaAnualBrutaTotal = 0;
+      (window.dadosMetasGlobais || []).forEach(meta => {
+        if (meta.ano != anoFiltro) return;
+        if (window.produtoFiltroMetas && window.produtoFiltroMetas !== 'GERAL'
+            && window.produtoFiltroMetas !== meta.produto) return;
+        metaAnualBrutaTotal += Number(meta.total_bruto || 0);
+      });
+
       // 2. Processar Metas e Cálculo Acumulado
       const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
       const nomesMesesFull = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
       let metaTotalPeriodo = 0;
       let realTotalPeriodo = 0;
+      let brutoTotalPeriodo = 0;
 
       let serieMetaMensal = Array(12).fill(0);
       let serieRealMensal = Array(12).fill(0);
@@ -2383,6 +3523,7 @@
       [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(mIdx => {
         let somaRealMes = 0;
         let somaMetaMes = 0;
+        let somaBrutoMes = 0;
 
         Object.keys(faturamentoPorMesProduto).forEach(grupo => {
           // Para o cálculo dos meses individuais, não filtramos por grupo se estiver no Geral
@@ -2391,6 +3532,7 @@
           }
 
           somaRealMes += faturamentoPorMesProduto[grupo][mIdx];
+          somaBrutoMes += (faturamentoBrutoPorMesProduto[grupo] ? faturamentoBrutoPorMesProduto[grupo][mIdx] : 0);
           const metaDoc = window.dadosMetasGlobais.find(m => m.ano == anoFiltro && m.produto === grupo);
           if (metaDoc && metaDoc.meses) {
             somaMetaMes += (metaDoc.meses[refMeses[mIdx]] || 0);
@@ -2405,6 +3547,7 @@
           categoriasX.push(nomesMesesFull[mIdx]);
           realTotalPeriodo += somaRealMes;
           metaTotalPeriodo += somaMetaMes;
+          brutoTotalPeriodo += somaBrutoMes;
         }
       });
 
@@ -2488,6 +3631,13 @@
         window.chartMetaAnualFat.updateSeries([
           { name: 'Meta Total', data: [metaTotalPeriodo] },
           { name: 'Faturamento Real', data: [realTotalPeriodo] }
+        ]);
+      }
+      // Chart Meta Anual Bruta vs Faturamento Bruto (lado esquerdo).
+      if (window.chartMetaAnualBruto) {
+        window.chartMetaAnualBruto.updateSeries([
+          { name: 'Meta Anual Bruta', data: [metaAnualBrutaTotal] },
+          { name: 'Faturamento Bruto', data: [brutoTotalPeriodo] }
         ]);
       }
 

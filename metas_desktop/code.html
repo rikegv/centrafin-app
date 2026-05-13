@@ -63,7 +63,7 @@
         }
     </style>
   <!-- Tema global (Light & Dark) — centralizado em /theme.css + /theme_manager.js -->
-  <link rel="stylesheet" href="../theme.css?v=20260507n">
+  <link rel="stylesheet" href="../theme.css?v=20260508a">
   <script>
     /* Boot inline ANTES do paint — evita flash branco. */
     (function () {
@@ -75,7 +75,7 @@
       } catch (e) {}
     })();
   </script>
-  <script src="../theme_manager.js?v=20260507n" defer></script>
+  <script src="../theme_manager.js?v=20260508a" defer></script>
 </head>
 
 <body class="min-h-screen flex antialiased bg-slate-50">
@@ -117,7 +117,7 @@
                             <tr>
                                 <th class="px-6 py-4 w-[10%]">Ano</th>
                                 <th class="px-6 py-4 w-[40%]">Produto / Serviço</th>
-                                <th class="px-6 py-4 text-right w-[30%]">Meta Anual Bruta</th>
+                                <th class="px-6 py-4 text-right w-[30%]">Metas Anuais (Bruta · Real)</th>
                                 <th class="px-6 py-4 text-center w-[20%]">Ações</th>
                             </tr>
                         </thead>
@@ -177,19 +177,40 @@
                 </div>
             </div>
 
+            <!-- ─── Sessão 1: Meta de Faturamento REAL (CAIXA) ───
+                 Inputs preservam IDs `mes-${mes}` para não quebrar o histórico — campo
+                 Firestore segue gravando em `meta.meses` e `meta.total` (legado). -->
             <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 mb-6">
-                <h3
-                    class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[16px]">calendar_month</span> Desdobramento Mensal
+                <h3 class="text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px] text-brandGreen">savings</span>
+                    Meta de Faturamento Real (Caixa)
                 </h3>
-
                 <div class="grid grid-cols-3 md:grid-cols-4 gap-4" id="grid-meses">
                 </div>
             </div>
 
-            <div class="flex justify-between items-center bg-brandDarkBlue p-4 rounded-xl shadow-inner mb-8">
-                <span class="text-brandPaleBlue font-bold text-sm">META ANUAL TOTAL:</span>
-                <span class="text-brandGreen font-extrabold text-2xl" id="display-total">R$ 0,00</span>
+            <!-- ─── Sessão 2: Meta de Faturamento BRUTO (VENDAS) ───
+                 Inputs novos `mes-bruto-${mes}` — campo Firestore: `meta.meses_bruto` e
+                 `meta.total_bruto`. Campos LEGADOS (sem meses_bruto no doc) → tudo zero. -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 mb-6">
+                <h3 class="text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px] text-brandLightBlue">receipt_long</span>
+                    Meta de Faturamento Bruto (Vendas)
+                </h3>
+                <div class="grid grid-cols-3 md:grid-cols-4 gap-4" id="grid-meses-bruto">
+                </div>
+            </div>
+
+            <!-- Rodapé com TOTAIS DUAIS lado a lado -->
+            <div class="grid grid-cols-2 gap-4 bg-brandDarkBlue p-4 rounded-xl shadow-inner mb-8">
+                <div class="flex flex-col">
+                    <span class="text-brandPaleBlue text-[10px] font-bold uppercase tracking-widest mb-1">Meta Anual Bruta Total</span>
+                    <span class="text-brandLightBlue font-extrabold text-xl" id="display-total-bruto">R$ 0,00</span>
+                </div>
+                <div class="flex flex-col text-right">
+                    <span class="text-brandPaleBlue text-[10px] font-bold uppercase tracking-widest mb-1">Meta Anual Real Total</span>
+                    <span class="text-brandGreen font-extrabold text-xl" id="display-total">R$ 0,00</span>
+                </div>
             </div>
 
             <div class="flex gap-3 justify-end">
@@ -298,28 +319,42 @@
             window.calcularTotalMeta();
         };
 
-        // Gerar os 12 inputs no Modal
+        // Gerar os 24 inputs (12 reais + 12 brutos) no Modal.
+        // IDs preservam o padrão antigo `mes-${mes}` para não quebrar histórico — bruto usa `mes-bruto-${mes}`.
+        const buildInputCell = (mes, idx, prefix, focusColor) => `
+            <div>
+              <label class="text-slate-500 text-[10px] font-bold uppercase mb-1 block">${nomesMeses[idx]}</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">R$</span>
+                <input type="text" id="${prefix}${mes}" onkeyup="window.aplicarMascaraMoeda(this)"
+                  class="w-full bg-white border border-slate-200 text-brandDarkBlue text-xs font-bold rounded-lg pl-8 pr-3 py-2 outline-none focus:border-${focusColor} transition-colors text-right"
+                  value="0,00">
+              </div>
+            </div>`;
+
         window.gerarInputsMeses = () => {
-            const grid = document.getElementById('grid-meses');
-            grid.innerHTML = meses.map((mes, index) => `
-        <div>
-          <label class="text-slate-500 text-[10px] font-bold uppercase mb-1 block">${nomesMeses[index]}</label>
-          <div class="relative">
-            <span class="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">R$</span>
-            <input type="text" id="mes-${mes}" onkeyup="window.aplicarMascaraMoeda(this)" class="w-full bg-white border border-slate-200 text-brandDarkBlue text-xs font-bold rounded-lg pl-8 pr-3 py-2 outline-none focus:border-brandGreen transition-colors text-right" value="0,00">
-          </div>
-        </div>
-      `).join('');
+            const gridReal = document.getElementById('grid-meses');
+            const gridBruto = document.getElementById('grid-meses-bruto');
+            if (gridReal) gridReal.innerHTML = meses.map((mes, idx) => buildInputCell(mes, idx, 'mes-', 'brandGreen')).join('');
+            if (gridBruto) gridBruto.innerHTML = meses.map((mes, idx) => buildInputCell(mes, idx, 'mes-bruto-', 'brandLightBlue')).join('');
         };
 
+        // Calcula AMBOS os totais (Real + Bruto) e atualiza os dois displays.
+        // Retorna { real, bruto } para callers que precisam dos dois valores na hora de salvar.
         window.calcularTotalMeta = () => {
-            let total = 0;
+            let totalReal = 0;
+            let totalBruto = 0;
             meses.forEach(mes => {
-                let valStr = document.getElementById(`mes-${mes}`).value;
-                total += window.parseMoeda(valStr);
+                const elReal = document.getElementById(`mes-${mes}`);
+                const elBruto = document.getElementById(`mes-bruto-${mes}`);
+                if (elReal) totalReal += window.parseMoeda(elReal.value);
+                if (elBruto) totalBruto += window.parseMoeda(elBruto.value);
             });
-            document.getElementById('display-total').innerText = window.formatMoeda(total);
-            return total;
+            const elTotalReal = document.getElementById('display-total');
+            const elTotalBruto = document.getElementById('display-total-bruto');
+            if (elTotalReal) elTotalReal.innerText = window.formatMoeda(totalReal);
+            if (elTotalBruto) elTotalBruto.innerText = window.formatMoeda(totalBruto);
+            return { real: totalReal, bruto: totalBruto };
         };
 
         window.preencherFiltroAnos = () => {
@@ -357,12 +392,26 @@
 
                 tbody.innerHTML = filtradas.map((meta, index) => {
                     const zebraClass = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30';
-                    const mesesGrid = meses.map((m, idx) => `
-                        <div class="flex flex-col border-r border-slate-200 last:border-0 px-2 py-1 text-center min-w-0 group/mes hover:bg-white transition-colors">
-                            <span class="text-[9px] text-slate-400 font-extrabold uppercase mb-0.5">${nomesMeses[idx].substring(0,3)}</span>
-                            <span class="text-[10px] text-brandDarkBlue font-extrabold truncate">${window.formatMoeda(meta.meses[m] || 0).replace('R$', '').trim()}</span>
-                        </div>
-                    `).join('');
+                    const mesesReal = meta.meses || {};
+                    const mesesBruto = meta.meses_bruto || {};
+                    // Cada célula mensal mostra Bruto (azul) acima e Real (verde) abaixo.
+                    // Se a meta for legada (sem meses_bruto), a linha bruta exibe "—".
+                    const mesesGrid = meses.map((m, idx) => {
+                        const valReal = Number(mesesReal[m] || 0);
+                        const valBruto = Number(mesesBruto[m] || 0);
+                        const txtBruto = valBruto > 0 ? window.formatMoeda(valBruto).replace('R$', '').trim() : '—';
+                        const txtReal = window.formatMoeda(valReal).replace('R$', '').trim();
+                        return `
+                            <div class="flex flex-col border-r border-slate-200 last:border-0 px-2 py-1 text-center min-w-0 hover:bg-white transition-colors">
+                                <span class="text-[8.5px] text-slate-400 font-extrabold uppercase mb-0.5">${nomesMeses[idx].substring(0,3)}</span>
+                                <span class="text-[9px] text-brandLightBlue font-extrabold truncate" title="Bruto">${txtBruto}</span>
+                                <span class="text-[9px] text-brandGreen font-extrabold truncate" title="Real">${txtReal}</span>
+                            </div>
+                        `;
+                    }).join('');
+
+                    const totalBrutoVal = Number(meta.total_bruto || 0);
+                    const totalRealVal = Number(meta.total || 0);
 
                     return `
                         <!-- Linha Principal -->
@@ -375,9 +424,15 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-right">
-                                <div class="flex flex-col items-end">
-                                    <span class="font-black text-brandGreen text-base leading-none">${window.formatMoeda(meta.total)}</span>
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">Valor Consolidado</span>
+                                <div class="flex flex-col items-end gap-0.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Bruta:</span>
+                                        <span class="font-black text-brandLightBlue text-sm leading-none">${totalBrutoVal > 0 ? window.formatMoeda(totalBrutoVal) : '—'}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Real:</span>
+                                        <span class="font-black text-brandGreen text-sm leading-none">${window.formatMoeda(totalRealVal)}</span>
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-center">
@@ -413,14 +468,27 @@
 
             const ano = document.getElementById('input-ano').value;
             const produto = document.getElementById('input-produto').value;
-            const total = window.calcularTotalMeta();
+            const totais = window.calcularTotalMeta(); // { real, bruto }
 
+            // Real: campos legados preservados — `meta.meses[jan|fev|...]` e `meta.total`.
+            // Bruto: campos NOVOS aditivos — `meta.meses_bruto[jan|fev|...]` e `meta.total_bruto`.
             let valoresMeses = {};
+            let valoresMesesBruto = {};
             meses.forEach(mes => {
                 valoresMeses[mes] = window.parseMoeda(document.getElementById(`mes-${mes}`).value);
+                const elBruto = document.getElementById(`mes-bruto-${mes}`);
+                valoresMesesBruto[mes] = elBruto ? window.parseMoeda(elBruto.value) : 0;
             });
 
-            const metaData = { ano, produto, total, meses: valoresMeses, atualizadoEm: new Date().toISOString() };
+            const metaData = {
+                ano,
+                produto,
+                total: totais.real,
+                meses: valoresMeses,
+                total_bruto: totais.bruto,
+                meses_bruto: valoresMesesBruto,
+                atualizadoEm: new Date().toISOString()
+            };
 
             try {
                 if (window.idMetaEdicao) {
@@ -477,8 +545,12 @@
             document.getElementById('input-ano').value = new Date().getFullYear();
             document.getElementById('input-produto').selectedIndex = 0;
 
+            // Reset dos 24 inputs (Real + Bruto)
             meses.forEach(mes => {
-                document.getElementById(`mes-${mes}`).value = "0,00";
+                const elReal = document.getElementById(`mes-${mes}`);
+                const elBruto = document.getElementById(`mes-bruto-${mes}`);
+                if (elReal) elReal.value = "0,00";
+                if (elBruto) elBruto.value = "0,00";
             });
             window.calcularTotalMeta();
 
@@ -496,9 +568,17 @@
             document.getElementById('input-ano').value = meta.ano;
             document.getElementById('input-produto').value = meta.produto;
 
+            // ── Real: campo legado `meta.meses` (existe sempre).
+            // ── Bruto: campo novo `meta.meses_bruto` (pode não existir em registros antigos → fallback 0).
+            const mesesReal = meta.meses || {};
+            const mesesBruto = meta.meses_bruto || {};
             meses.forEach(mes => {
-                let val = meta.meses[mes] || 0;
-                document.getElementById(`mes-${mes}`).value = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const valReal = Number(mesesReal[mes] || 0);
+                const valBruto = Number(mesesBruto[mes] || 0);
+                const elReal = document.getElementById(`mes-${mes}`);
+                const elBruto = document.getElementById(`mes-bruto-${mes}`);
+                if (elReal) elReal.value = valReal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (elBruto) elBruto.value = valBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             });
             window.calcularTotalMeta();
 

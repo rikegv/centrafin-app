@@ -62,7 +62,7 @@
     }
   </style>
   <!-- Tema global (Light & Dark) — centralizado em /theme.css + /theme_manager.js -->
-  <link rel="stylesheet" href="../theme.css?v=20260507n">
+  <link rel="stylesheet" href="../theme.css?v=20260508a">
   <script>
     /* Boot inline ANTES do paint — evita flash branco. */
     (function () {
@@ -74,7 +74,7 @@
       } catch (e) {}
     })();
   </script>
-  <script src="../theme_manager.js?v=20260507n" defer></script>
+  <script src="../theme_manager.js?v=20260508a" defer></script>
 </head>
 
 <body class="min-h-screen flex antialiased bg-slate-50">
@@ -433,6 +433,11 @@
     };
   </script>
 
+  <!-- Fonte Única da Verdade: regras matemáticas compartilhadas com o Gerenciador CRF.
+       Carregado ANTES do módulo p/ que `obterStatusReal`, `obterFaturamentoReal` e
+       `parseMoedaCRF` estejam disponíveis como globals dentro do <script type="module">. -->
+  <script src="../core_rules.js?v=20260508a"></script>
+
   <!-- FIREBASE + GUARDIAO + DADOS -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -605,6 +610,11 @@
 
     // ==========================================
     // CARGA INICIAL (Firestore -> Array Global)
+    // ──────────────────────────────────────────
+    // FONTE ÚNICA DA VERDADE: o AGING usa as mesmas funções do Gerenciador CRF
+    // (`obterStatusReal`, `obterFaturamentoReal`, `parseMoedaCRF`) via core_rules.js.
+    // Notas Canceladas e DESMEMBRADAS são filtradas ANTES de qualquer soma — espelho
+    // exato do `atualizarMetrics` do CRF — para que os totais batam no centavo.
     // ==========================================
     async function carregarDadosAging() {
       try {
@@ -612,6 +622,8 @@
         const querySnapshot = await getDocs(q);
 
         window._todosLancamentosAging = [];
+        const hojeAging = new Date(); hojeAging.setHours(0, 0, 0, 0);
+        let pulosCanc = 0, pulosDesm = 0;
 
         querySnapshot.forEach(docSnap => {
           const dados = docSnap.data();
@@ -620,16 +632,21 @@
           const nfStr = String(dados['nf'] || dados['Nº NF'] || dados['Nº NF-e'] || dados['NF'] || "").toUpperCase().trim();
           if (nfStr.includes('TOTAL') || nfStr.includes('TOTAIS')) return;
 
-          // ---- MAPEAMENTO EXATO DOS CAMPOS DO FIRESTORE ----
-          // Datas: Serial do Excel nos campos "Dt Vecto" e "Dt Baixa"
+          // ── Status canônico via core_rules.js — Cancelada/DESMEMBRADO saem AQUI,
+          //    como no Gerenciador CRF. Demais status (RECEBIDO/A VENCER/VENCIDO/PREJUÍZO/PROTESTO)
+          //    seguem para o AGING e são reclassificados pela lógica temporal abaixo.
+          const statusReal = window.obterStatusReal(dados, hojeAging);
+          if (statusReal === 'Cancelada') { pulosCanc++; return; }
+          if (statusReal === 'DESMEMBRADO') { pulosDesm++; return; }
+
+          // ---- MAPEAMENTO DOS CAMPOS DO FIRESTORE ----
           const dataVencimento = excelToJSDate(dados['Dt Vecto'] || dados['vencimento'] || dados['data_vencimento']);
           const dataBaixa = excelToJSDate(dados['Dt Baixa'] || dados['data_baixa'] || dados['data_recebimento']);
 
-          // Valor: OBRIGATORIAMENTE "Vl. Líquido" como fonte primária
-          const valor = extrairNum(
-            dados['Vl. Líquido'] || dados['Vl Líquido'] || dados['valor_liquido'] ||
-            dados['valor_fatura'] || dados['Valor Fatura'] || dados['valor'] || 0
-          );
+          // ── Valor: agora segue a mesma rota do Gerenciador (obterFaturamentoReal)
+          //    para que "Total Recebido" do AGING bata com "Faturamento Realizado" do CRF.
+          //    Group A: 100% do bruto. Group B: 55% do bruto. Senão: Taxa.
+          const valor = window.obterFaturamentoReal(dados);
 
           // Servico: normalização estrita para as 4 categorias do negócio
           const servicoBruto = String(dados['Descrição Do Contrato'] || dados['descricao_contrato'] || dados['Serviço'] || dados['servico'] || dados['tipo_servico'] || '').toUpperCase().trim();
@@ -648,12 +665,13 @@
             _dataBaixa: dataBaixa,
             _servico: servico,
             _valor: valor,
+            _status: statusReal,           // RECEBIDO / A VENCER / VENCIDO / PREJUÍZO / PROTESTO
             _nf: nfStr,
             _cliente: String(dados['Cliente'] || dados['cliente'] || dados['Razão Social'] || dados['razao_social'] || '').trim()
           });
         });
 
-        console.log(`[Aging] Total de registros carregados: ${window._todosLancamentosAging.length}`);
+        console.log(`[Aging] Carregados ${window._todosLancamentosAging.length} registros (filtrados: ${pulosCanc} canceladas, ${pulosDesm} desmembradas).`);
 
         // Atualizar timestamp
         const agora = new Date();
@@ -706,7 +724,11 @@
         r._dataVencimento.getFullYear() === anoSelecionado &&
         arrayMesesFiltro.includes(r._dataVencimento.getMonth())
       );
+      // ── "Recebido": só conta `_status === 'RECEBIDO'` (vem do core_rules.js).
+      //    Notas em PROTESTO/PREJUÍZO mesmo com `_dataBaixa` saem daqui — espelho
+      //    exato do CRF, onde elas têm KPIs próprios (não entram em `totalBaixado`).
       let recebidoKpi = registros.filter(r =>
+        r._status === 'RECEBIDO' &&
         r._dataBaixa &&
         r._dataBaixa.getFullYear() === anoSelecionado &&
         arrayMesesFiltro.includes(r._dataBaixa.getMonth())
@@ -768,15 +790,18 @@
       }
 
       // ---- KPI: INADIMPLENCIA REAL ----
+      // Não-pago = `_status !== 'RECEBIDO'` (PROTESTO/PREJUÍZO/VENCIDO contam),
+      // espelhando a regra do CRF onde só RECEBIDO tira do "atrasado".
       const vencidosAteHoje = receberKpi.filter(r => r._dataVencimento && r._dataVencimento <= hoje);
       const totalVencido = vencidosAteHoje.reduce((s, r) => s + r._valor, 0);
-      const naoPagoVencido = vencidosAteHoje.filter(r => !r._dataBaixa).reduce((s, r) => s + r._valor, 0);
+      const naoPagoVencido = vencidosAteHoje.filter(r => r._status !== 'RECEBIDO').reduce((s, r) => s + r._valor, 0);
       const taxaInadimplencia = totalVencido > 0 ? (naoPagoVencido / totalVencido) * 100 : 0;
       document.getElementById('kpi-inadimplencia').textContent = taxaInadimplencia.toFixed(2) + '%';
 
       // ---- GRAFICOS (Baseados no Ano selecionado, filtrados por mês) ----
+      // O chart de "Recebido" usa o mesmo filtro do KPI: `_status === 'RECEBIDO'`.
       const baseReceberGrafico = registros.filter(r => r._dataVencimento && r._dataVencimento.getFullYear() === anoSelecionado);
-      let baseRecebidoGrafico = registros.filter(r => r._dataBaixa && r._dataBaixa.getFullYear() === anoSelecionado);
+      let baseRecebidoGrafico = registros.filter(r => r._status === 'RECEBIDO' && r._dataBaixa && r._dataBaixa.getFullYear() === anoSelecionado);
       if (filtroSubCard) {
         baseRecebidoGrafico = baseRecebidoGrafico.filter(r => {
           if (!r._dataVencimento || !r._dataBaixa) return false;
@@ -1129,8 +1154,10 @@
       if (!tbody) return;
       const tipoFiltro = window.filtroCardAging || null;
 
-      // Universo "Outras Competências": baixa no ano selecionado E mes/ano da baixa != mes/ano do vencimento
+      // Universo "Outras Competências": baixa no ano selecionado E mes/ano da baixa != mes/ano do vencimento.
+      // Restrito a `_status === 'RECEBIDO'` p/ espelhar o KPI "Recuperado" (PROTESTO/PREJUÍZO ficam fora).
       const recuperados = registros.filter(r => {
+        if (r._status !== 'RECEBIDO') return false;
         if (!r._dataBaixa || !r._dataVencimento) return false;
         if (r._dataBaixa.getFullYear() !== anoSelecionado) return false;
         const mesVenc = r._dataVencimento.getFullYear() * 12 + r._dataVencimento.getMonth();

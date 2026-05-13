@@ -64,7 +64,7 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
 
                 <a data-menu="metas" class="${isMetasActive} ${menuLinkClass}" href="${prefix}metas_desktop/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('metas_desktop') ? 'text-primary' : ''}">track_changes</span>
-                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Metas Financeiras</span>
+                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Gestão das Metas</span>
                 </a>
 
                 <a data-menu="contas_receber" class="${isFatActive} ${menuLinkClass} cursor-pointer" href="${prefix}contas_a_receber_desktop/code.html">

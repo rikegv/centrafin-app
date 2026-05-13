@@ -41,7 +41,9 @@
       'chartComercialGlobal', 'chartThomasBrutoGlobal', 'chartThomasRealGlobal',
       'chartThomasServicoGlobal', 'chartThomasComercialGlobal',
       'chartEmissoes30Dias', 'chartEmissoesAno',
-      'chartMetaAnualFat', 'chartMetasMensal'
+      'chartMetaAnualFat', 'chartMetaAnualBruto', 'chartMetasMensal',
+      'chartVencidosEmpresa', 'chartAgingFaixas',
+      'chartCrInadMensal', 'chartCrRecDiarios'
     ];
     keysGlobais.forEach(function (k) {
       var c = window[k];

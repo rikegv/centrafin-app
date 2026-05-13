@@ -27,7 +27,14 @@
       "Bash(python)",
       "Bash(node --check contas_a_receber_desktop/code.html)",
       "Bash(awk 'NR==2019{for\\(i=1;i<=length\\($0\\);i++\\){c=substr\\($0,i,1\\); printf \"%d:%04x \", i, ord\\(c\\)}}' \"c:/Users/Henrique/Desktop/centrafin-app/contas_a_receber_desktop/code.html\")",
-      "Bash(python3)"
+      "Bash(python3)",
+      "Bash(python3 -c ' *)",
+      "Bash(awk 'NR>=562 && NR<=700' \"c:/Users/Henrique/Desktop/centrafin-app/dashboard_master_desktop/code.html\")",
+      "Bash(awk 'NR>=670 && NR<=730' \"c:/Users/Henrique/Desktop/centrafin-app/dashboard_master_desktop/code.html\")",
+      "PowerShell($path = 'dashboard_master_desktop\\\\code.html'; $bytes = [System.IO.File]::ReadAllBytes\\($path\\); $text = [System.Text.Encoding]::UTF8.GetString\\($bytes\\); $old = \"replace\\(/[`u0300-`u036f]/g, ''\\)\"; $new = 'replace\\(/[̀-ͯ]/g, \"\"\\)'; if \\($text.Contains\\($old\\)\\) { $text = $text.Replace\\($old, $new\\); [System.IO.File]::WriteAllBytes\\($path, [System.Text.Encoding]::UTF8.GetBytes\\($text\\)\\); 'ok' } else { 'not-found' })",
+      "PowerShell($path = 'dashboard_master_desktop\\\\code.html'; $bytes = [System.IO.File]::ReadAllBytes\\($path\\); $text = [System.Text.Encoding]::UTF8.GetString\\($bytes\\); $old = \"replace\\(/[$\\([char]0x0300\\)-$\\([char]0x036F\\)]/g, ''\\)\"; $new = \"replace\\(/[̀-ͯ]/g, ''\\)\"; if \\($text.Contains\\($old\\)\\) { $text = $text.Replace\\($old, $new\\); [System.IO.File]::WriteAllBytes\\($path, [System.Text.Encoding]::UTF8.GetBytes\\($text\\)\\); 'replaced' } else { 'not-found' })",
+      "PowerShell($path = 'dashboard_master_desktop\\\\code.html'; $bytes = [System.IO.File]::ReadAllBytes\\($path\\); $text = [System.Text.Encoding]::UTF8.GetString\\($bytes\\); $old = \"replace\\(/[$\\([char]0x0300\\)-$\\([char]0x036F\\)]/g, ''\\)\"; $new = 'replace\\(/[̀-ͯ]/g, \"\"\\)'; if \\($text.Contains\\($old\\)\\) { $text = $text.Replace\\($old, $new\\); [System.IO.File]::WriteAllBytes\\($path, [System.Text.Encoding]::UTF8.GetBytes\\($text\\)\\); 'replaced' } else { 'not-found' })",
+      "PowerShell($path = 'dashboard_master_desktop\\\\code.html'; $bytes = [System.IO.File]::ReadAllBytes\\($path\\); $text = [System.Text.Encoding]::UTF8.GetString\\($bytes\\); $bs = [char]92; $old = \"replace\\(/[$\\([char]0x0300\\)-$\\([char]0x036F\\)]/g, \" + [char]34 + [char]34 + \"\\)\"; $new = \"replace\\(/[\" + $bs + \"u0300-\" + $bs + \"u036f]/g, \" + [char]34 + [char]34 + \"\\)\"; if \\($text.Contains\\($old\\)\\) { $text = $text.Replace\\($old, $new\\); [System.IO.File]::WriteAllBytes\\($path, [System.Text.Encoding]::UTF8.GetBytes\\($text\\)\\); 'replaced' } else { 'not-found' })"
     ]
   }
 }

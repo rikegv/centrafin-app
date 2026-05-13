@@ -1,0 +1,79 @@
+{
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "consultarFaturamento",
+        "description": "Consulta dados AGREGADOS de faturamento. NAO retorna registros individuais — apenas totais calculados pelo core_rules. Use quando o usuario perguntar sobre valores de faturamento, receita, realizado, liquido ou bruto.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "tipo_faturamento": {
+              "type": "string",
+              "enum": ["bruto", "liquido", "realizado"],
+              "description": "Tipo de metrica. bruto=valor total NF. liquido=bruto menos descontos. realizado=calculo 100%/55% por tipo de servico."
+            },
+            "mes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12,
+              "description": "Mes de referencia (1=Jan, 12=Dez). Omitir para consultar ano inteiro."
+            },
+            "ano": {
+              "type": "integer",
+              "minimum": 2020,
+              "maximum": 2030,
+              "description": "Ano de referencia. Se nao especificado, usar ano atual."
+            },
+            "empresa": {
+              "type": "string",
+              "enum": ["SOULAN CONSULTORIA", "SOULAN ADM", "ESTAGIO", "NEAT", "TODAS"],
+              "description": "Empresa do grupo. SOULAN CONSULTORIA=Temporario. SOULAN ADM=Terceiros/FOPAG/Consultoria/RPO. ESTAGIO=estagio. NEAT=Treinamento/Assessment etc. TODAS=consolidado."
+            },
+            "periodo": {
+              "type": "string",
+              "enum": ["mes", "trimestre", "semestre", "ano"],
+              "description": "Granularidade temporal. Default: mes quando mes e informado, ano caso contrario."
+            },
+            "tipo_servico": {
+              "type": "string",
+              "enum": ["TEMPORARIO", "ESTAGIO", "TERCEIROS", "FOPAG", "CONSULTORIA", "RPO", "TREINAMENTO", "ASSESSMENT", "SUBSCRIPTION", "TODOS"],
+              "description": "Filtro por tipo de servico. Opcional."
+            },
+            "agrupar_por": {
+              "type": "string",
+              "enum": ["empresa", "servico", "mes", "nenhum"],
+              "description": "Agrupamento dos resultados. Default: nenhum."
+            }
+          },
+          "required": ["empresa", "ano"],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "consultarStatusNotas",
+        "description": "Consulta distribuicao de notas por status (A Vencer, Vencido, Recebido, Cancelada). Use para perguntas sobre inadimplencia e notas em aberto.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "mes": { "type": "integer", "minimum": 1, "maximum": 12 },
+            "ano": { "type": "integer", "minimum": 2020, "maximum": 2030 },
+            "empresa": {
+              "type": "string",
+              "enum": ["SOULAN CONSULTORIA", "SOULAN ADM", "ESTAGIO", "NEAT", "TODAS"]
+            },
+            "status": {
+              "type": "string",
+              "enum": ["A VENCER", "VENCIDO", "RECEBIDO", "Cancelada", "TODOS"]
+            }
+          },
+          "required": ["ano"],
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

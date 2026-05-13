@@ -69,7 +69,7 @@
         }
     </style>
   <!-- Tema global (Light & Dark) — centralizado em /theme.css + /theme_manager.js -->
-  <link rel="stylesheet" href="./theme.css?v=20260507n">
+  <link rel="stylesheet" href="./theme.css?v=20260508a">
   <script>
     /* Boot inline ANTES do paint — evita flash branco. */
     (function () {
@@ -81,7 +81,7 @@
       } catch (e) {}
     })();
   </script>
-  <script src="./theme_manager.js?v=20260507n" defer></script>
+  <script src="./theme_manager.js?v=20260508a" defer></script>
 </head>
 
 <body class="text-slate-800 flex min-h-screen">
@@ -525,7 +525,7 @@
         // com as páginas antigas que ainda checam `menus_permitidos.includes(X)`.
         const MENUS_DEF = [
             { key: 'dashboardGeral', label: 'Dashboard Geral', desc: 'Visão consolidada e cards executivos', icon: 'dashboard', legacy: 'dashboard_master' },
-            { key: 'metasFinanceiras', label: 'Metas Financeiras', desc: 'Gestão de metas anuais e atingimento', icon: 'track_changes', legacy: 'metas' },
+            { key: 'metasFinanceiras', label: 'Gestão das Metas', desc: 'Cadastro de metas anuais por produto', icon: 'track_changes', legacy: 'metas' },
             { key: 'faturamento', label: 'Faturamento - Contas a receber', desc: 'Lançamentos, recebíveis e baixas', icon: 'payments', legacy: 'contas_receber' },
             { key: 'contasPagar', label: 'Contas a Pagar', desc: 'Obrigações e conciliação contínua', icon: 'account_balance_wallet', legacy: 'contas_pagar' },
             { key: 'custoFolha', label: 'Custo de Folha', desc: 'Importação e dashboard de folha', icon: 'receipt_long', legacy: 'custo_folha' },
@@ -536,7 +536,7 @@
             { key: 'fluxoCaixa', label: 'Fluxo de Caixa', desc: 'Entradas, saídas e projeções', icon: 'account_balance' },
             { key: 'forecast', label: 'FORECAST', desc: 'Headcount projetado e provisões', icon: 'groups' },
             { key: 'aging', label: 'AGING Financeiro', desc: 'Inadimplência e idade de recebíveis', icon: 'query_stats', legacy: 'aging' },
-            { key: 'metas', label: 'Metas Financeiras', desc: 'Acompanhamento de metas no Dashboard', icon: 'track_changes' },
+            { key: 'metas', label: 'Acompanhamento de Metas', desc: 'Atingimento de metas no Dashboard Geral', icon: 'track_changes' },
             { key: 'custoFolha', label: 'Custo de Folha', desc: 'Card de custo de folha no Dashboard', icon: 'receipt_long', legacy: 'custo_folha' },
         ];
 
