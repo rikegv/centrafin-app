@@ -1,0 +1,219 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   CentraFin — Checkbox Multi-Select (upgrade reutilizável)
+   ─────────────────────────────────────────────────────────────────────────
+   Pega <select multiple data-checkbox-multi> e troca a UI nativa (que pede
+   Ctrl+clique) por um dropdown com checkboxes. Mantém o <select> escondido
+   como source-of-truth — todo código existente que faz:
+       Array.from(sel.selectedOptions)
+       option.selected = true
+       Array.from(sel.options)
+   continua funcionando sem mudanças.
+
+   Convenções:
+   - O option com value="Todos" é tratado como SENTINELA (limpar marca-o
+     sozinho; marcar outro item desmarca o sentinela).
+   - O atributo opcional `data-placeholder` no <select> define o label do
+     trigger quando nada está selecionado. Se ausente, usa o texto do
+     option "Todos".
+   - Para notificar o upgrader de mudanças externas (setMultiValues etc.),
+     dispare `new Event('cb-multi-sync')` no <select>. O upgrader também
+     observa childList do <select> (populadores reativos funcionam direto).
+
+   API: window.CentraCheckboxMulti.upgrade(selectEl)
+        window.CentraCheckboxMulti.upgradeAll()
+   ───────────────────────────────────────────────────────────────────────── */
+
+(function () {
+  'use strict';
+
+  var SENTINELA = 'Todos';
+
+  function escapeHTML(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function upgrade(sel) {
+    if (!sel || sel.tagName !== 'SELECT' || !sel.multiple) return;
+    if (sel._cbMultiUpgraded) return;
+    sel._cbMultiUpgraded = true;
+
+    var optTodos = sel.querySelector('option[value="' + SENTINELA + '"]');
+    var placeholder = sel.dataset.placeholder
+      || (optTodos ? optTodos.textContent.trim() : 'Selecionar…');
+
+    // Esconde o <select> nativo mantendo no DOM (source-of-truth).
+    sel.style.display = 'none';
+    sel.setAttribute('aria-hidden', 'true');
+    sel.setAttribute('tabindex', '-1');
+
+    // Wrapper relativo (panel posicionado absolute).
+    var wrap = document.createElement('div');
+    wrap.className = 'relative cb-multi-wrap';
+    wrap.setAttribute('data-cb-multi-for', sel.id || '');
+    sel.parentNode.insertBefore(wrap, sel);
+    wrap.appendChild(sel);
+
+    // Trigger (botão) — visual coerente com inputs do design system.
+    var trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'cb-multi-trigger w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium bg-white text-left flex items-center justify-between hover:border-primary/40 focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all shadow-inner';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.innerHTML =
+      '<span data-cb-label class="truncate text-slate-500 flex-1">' + escapeHTML(placeholder) + '</span>' +
+      '<span class="material-symbols-outlined text-slate-400 text-[18px] transition-transform shrink-0 ml-2" data-cb-chevron>expand_more</span>';
+    wrap.appendChild(trigger);
+
+    // Panel — sai do flow, posicionado abaixo do trigger.
+    var panel = document.createElement('div');
+    panel.className = 'cb-multi-panel hidden absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto p-1.5';
+    panel.setAttribute('role', 'listbox');
+    panel.setAttribute('aria-multiselectable', 'true');
+    wrap.appendChild(panel);
+
+    function getOptionsArr() {
+      return Array.from(sel.options);
+    }
+
+    function nonSentinelSelected() {
+      return getOptionsArr().filter(function (o) {
+        return o.selected && o.value !== SENTINELA;
+      });
+    }
+
+    function updateLabel() {
+      var label = trigger.querySelector('[data-cb-label]');
+      if (!label) return;
+      var marcados = nonSentinelSelected();
+      var todosSelecionado = optTodosElement() ? optTodosElement().selected : false;
+      if (!marcados.length || todosSelecionado) {
+        label.textContent = placeholder;
+        label.classList.add('text-slate-500');
+        label.classList.remove('text-slate-800', 'font-bold');
+      } else if (marcados.length === 1) {
+        label.textContent = marcados[0].textContent.trim();
+        label.classList.remove('text-slate-500');
+        label.classList.add('text-slate-800', 'font-bold');
+      } else {
+        label.textContent = marcados.length + ' selecionados';
+        label.classList.remove('text-slate-500');
+        label.classList.add('text-slate-800', 'font-bold');
+      }
+    }
+
+    function optTodosElement() {
+      // Re-busca a cada chamada — o option pode ser recriado pelos populadores.
+      return sel.querySelector('option[value="' + SENTINELA + '"]');
+    }
+
+    function renderPanel() {
+      var opts = getOptionsArr();
+      if (!opts.length) {
+        panel.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-3 px-2">Nenhuma opção disponível.</p>';
+        return;
+      }
+      var html = opts.map(function (opt, idx) {
+        var isSent = opt.value === SENTINELA;
+        var checked = opt.selected ? 'checked' : '';
+        var labelClasses = isSent
+          ? 'text-[12px] font-extrabold text-slate-700 border-b border-slate-100 pb-2 mb-1'
+          : 'text-[12px] font-semibold text-slate-700';
+        var rowExtra = isSent ? 'cb-multi-sent' : '';
+        return '' +
+          '<label class="cb-multi-row ' + rowExtra + ' flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-primary/5 transition-colors">' +
+            '<input type="checkbox" data-cb-idx="' + idx + '" ' + checked +
+              ' class="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer shrink-0">' +
+            '<span class="' + labelClasses + ' flex-1 truncate" title="' + escapeHTML(opt.textContent.trim()) + '">' +
+              escapeHTML(opt.textContent.trim()) +
+            '</span>' +
+          '</label>';
+      }).join('');
+      panel.innerHTML = html;
+
+      panel.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          var idx = Number(cb.dataset.cbIdx);
+          var opt = sel.options[idx];
+          if (!opt) return;
+          var todosOpt = optTodosElement();
+
+          if (cb.checked) {
+            if (opt.value === SENTINELA) {
+              // Sentinela ligada: desmarca tudo mais.
+              getOptionsArr().forEach(function (o) {
+                o.selected = (o.value === SENTINELA);
+              });
+            } else {
+              opt.selected = true;
+              if (todosOpt) todosOpt.selected = false;
+            }
+          } else {
+            opt.selected = false;
+            // Se desmarcou TUDO, religa a sentinela para evitar estado vazio.
+            var algoMarcado = getOptionsArr().some(function (o) { return o.selected; });
+            if (!algoMarcado && todosOpt) todosOpt.selected = true;
+          }
+
+          renderPanel();
+          updateLabel();
+          // Notifica listeners externos (getMultiValues lê o estado atualizado).
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      });
+    }
+
+    function setPanelOpen(open) {
+      panel.classList.toggle('hidden', !open);
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      var chev = trigger.querySelector('[data-cb-chevron]');
+      if (chev) chev.classList.toggle('rotate-180', open);
+    }
+
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var willOpen = panel.classList.contains('hidden');
+      // Re-render preguiçoso ao abrir — pega estado eventualmente alterado
+      // externamente entre interações.
+      if (willOpen) {
+        renderPanel();
+        updateLabel();
+      }
+      setPanelOpen(willOpen);
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!wrap.contains(e.target)) setPanelOpen(false);
+    });
+
+    // Re-render quando o <select> é re-populado (populadores reativos).
+    var moOpts = new MutationObserver(function () {
+      renderPanel();
+      updateLabel();
+    });
+    moOpts.observe(sel, { childList: true });
+
+    // Sync explícito disparado pelo código consumidor (setMultiValues etc.).
+    sel.addEventListener('cb-multi-sync', function () {
+      renderPanel();
+      updateLabel();
+    });
+
+    renderPanel();
+    updateLabel();
+  }
+
+  function upgradeAll(scope) {
+    var root = scope || document;
+    root.querySelectorAll('select[multiple][data-checkbox-multi]').forEach(upgrade);
+  }
+
+  window.CentraCheckboxMulti = { upgrade: upgrade, upgradeAll: upgradeAll };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { upgradeAll(); });
+  } else {
+    upgradeAll();
+  }
+})();

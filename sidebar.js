@@ -74,7 +74,7 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
 
                 <a data-menu="custo_folha" class="${isCustoFolhaActive} ${menuLinkClass} cursor-pointer" href="${prefix}custo_folha_desktop/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('custo_folha_desktop') ? 'text-primary' : ''}">receipt_long</span>
-                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Custo de Folha</span>
+                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Gerenciador Folha</span>
                 </a>
 
                 <!-- Contas a Pagar — Fase 1 ativada (auditoria 2026-04-28). -->
@@ -96,8 +96,25 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
                 ${adminMenuHtml}
             </div>
 
+            <!-- TOGGLE DE TEMA — integrado ao menu (auditoria 2026-05-14).
+                 O wrapper inteiro responde ao clique (data-theme-toggle); o
+                 #theme-toggle dentro mantém o pill visual já estilizado pelo
+                 theme.css e o foco por teclado quando a sidebar está aberta.
+                 O ícone mostra o tema que será ATIVADO se o usuário clicar —
+                 preenchido na inicialização e re-sincronizado pelo
+                 theme_manager.js a cada toggle. -->
+            <div class="mt-auto px-2 pt-4 border-t border-white/5">
+                <div data-theme-toggle title="Alternar tema claro/escuro"
+                     class="text-blue-100/70 hover:text-white hover:bg-white/5 mx-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer">
+                    <span id="sidebar-theme-icon" class="material-symbols-outlined shrink-0 text-[20px]">dark_mode</span>
+                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap flex-1">Alterar tema</span>
+                    <button id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro"
+                            class="hidden group-hover:block shrink-0"></button>
+                </div>
+            </div>
+
             <!-- LOGOUT -->
-            <div class="mt-auto px-2 pt-4 pb-4 border-t border-white/5">
+            <div class="px-2 pt-2 pb-4 border-t border-white/5">
                 <a href="#" id="btn-logout" class="text-red-400 hover:text-white hover:bg-red-500/20 rounded-xl px-3 py-3 flex items-center gap-3 transition-all cursor-pointer">
                     <span class="material-symbols-outlined shrink-0 text-[20px]">logout</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Sair do Sistema</span>
@@ -109,6 +126,21 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     const container = document.getElementById('sidebar-container');
     if (container) {
         container.innerHTML = sidebarHtml;
+
+        // Sincroniza o ícone do toggle de tema com o tema corrente (light_mode
+        // se está dark, dark_mode se está light). Se o theme_manager ainda
+        // não carregou (defer), fazemos um fallback inline lendo a classe do
+        // <html> diretamente — sem isso, o ícone fica fixo em "dark_mode" no
+        // primeiro paint após F5.
+        if (window.CentraTheme && typeof window.CentraTheme.syncIcon === 'function') {
+            window.CentraTheme.syncIcon();
+        } else {
+            const iconEl = document.getElementById('sidebar-theme-icon');
+            if (iconEl) {
+                iconEl.textContent = document.documentElement.classList.contains('dark')
+                    ? 'light_mode' : 'dark_mode';
+            }
+        }
 
         // OCULTAÇÃO DINÂMICA baseada em permissões
         if (userProfile === 'super_admin') {

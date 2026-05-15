@@ -12,6 +12,10 @@
     rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Multi-select por checkbox (upgrade reutilizável). Auditoria 2026-05-14:
+       substitui o `<select multiple>` nativo (Ctrl+clique) por dropdown com
+       caixas de seleção, mantendo o <select> escondido como source-of-truth. -->
+  <script src="../assets/checkbox_multi.js?v=20260514a" defer></script>
   <script id="tailwind-config">
     tailwind.config = {
       theme: {
@@ -173,11 +177,6 @@
     <header class="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
       <div>
         <h1 class="text-lg font-extrabold text-brandDarkBlue font-manrope uppercase tracking-wider">Gerenciador CRF</h1>
-      </div>
-      <div class="flex items-center gap-3" title="Alternar tema">
-        <span class="material-symbols-outlined text-on-surface-variant text-[18px]" id="theme-icon-sun">light_mode</span>
-        <button id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro"></button>
-        <span class="material-symbols-outlined text-on-surface-variant text-[18px]" id="theme-icon-moon">dark_mode</span>
       </div>
     </header>
 
@@ -794,9 +793,8 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="space-y-5">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Tipo de Serviço <span
-                class="text-[9px] text-slate-400 normal-case">(Segure Ctrl para vários)</span></label>
-            <select id="filtro-tipo-servico" multiple size="6"
+            <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Tipo de Serviço</label>
+            <select id="filtro-tipo-servico" multiple size="6" data-checkbox-multi data-placeholder="Todos os Serviços"
               class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-inner">
               <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Serviços</option>
               <option value="UNIDADES">UNIDADES</option>
@@ -812,9 +810,8 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Status <span
-                class="text-[9px] text-slate-400 normal-case">(Segure Ctrl para vários)</span></label>
-            <select id="filtro-status" multiple size="6"
+            <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Status</label>
+            <select id="filtro-status" multiple size="6" data-checkbox-multi data-placeholder="Todos os Status"
               class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-inner">
               <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Status</option>
               <option value="RECEBIDO">RECEBIDO</option>
@@ -825,9 +822,8 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Empresa <span
-                class="text-[9px] text-slate-400 normal-case">(Segure Ctrl para vários)</span></label>
-            <select id="filtro-empresa" multiple size="5"
+            <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Empresa</label>
+            <select id="filtro-empresa" multiple size="5" data-checkbox-multi data-placeholder="Todas as Empresas"
               class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-inner">
               <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as Empresas</option>
               <option value="SOULAN CONSULTORIA">SOULAN CONSULTORIA</option>
@@ -2705,7 +2701,11 @@
       btnLimparFiltros.addEventListener('click', () => {
         const resetSelect = (id) => {
           const el = document.getElementById(id);
-          if (el) Array.from(el.options).forEach(opt => opt.selected = opt.value === "Todos");
+          if (!el) return;
+          Array.from(el.options).forEach(opt => opt.selected = opt.value === "Todos");
+          // Auditoria 2026-05-14: notifica o upgrader de checkbox (assets/checkbox_multi.js)
+          // para re-renderizar o UI. Não-op se o upgrade ainda não rodou.
+          try { el.dispatchEvent(new Event('cb-multi-sync')); } catch (_) {}
         };
         resetSelect('filtro-tipo-servico');
         resetSelect('filtro-status');

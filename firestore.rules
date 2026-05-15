@@ -15,9 +15,18 @@ service cloud.firestore {
              (userData.menus_permitidos != null && menuName in userData.menus_permitidos);
     }
 
-    // LANCAMENTOS
+    // LANCAMENTOS — base do Faturamento/CRF.
+    // Auditoria 2026-05-13 (Privilege Segregation): leitura restrita aos menus
+    // que efetivamente leem a coleção (CRF operacional, Dashboard Master,
+    // Aging standalone). Antes era aberta a qualquer autenticado.
+    // Escrita continua exclusiva do admin (mutações via CRF operacional).
     match /Lancamentos/{docId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && (
+        isAdmin()
+        || hasMenu('contas_receber')      // CRF operacional (Nível 1)
+        || hasMenu('dashboard_master')    // Dashboard Geral (Nível 1)
+        || hasMenu('dash_aging')          // Aging standalone (Nível 2)
+      );
       allow write: if request.auth != null && isAdmin();
     }
 
@@ -74,9 +83,17 @@ service cloud.firestore {
       allow write: if request.auth != null && (isAdmin() || hasMenu('custo_folha'));
     }
 
-    // CUSTOS FOLHA — Leitura e Escrita protegidas pelo controle de acesso (Drop & Replace)
+    // CUSTOS FOLHA — Drop & Replace por competência.
+    // Auditoria 2026-05-13 (Privilege Segregation): leitura aberta para quem
+    // tem o Gerenciador (Nível 1) OU o card do Dashboard (Nível 2). Escrita
+    // continua exclusiva do Gerenciador (Nível 1) — Nível 2 é read-only.
     match /CustosFolha/{docId} {
-      allow read, write: if request.auth != null && hasMenu('custo_folha');
+      allow read: if request.auth != null && (
+        isAdmin()
+        || hasMenu('custo_folha')         // Gerenciador Folha (Nível 1)
+        || hasMenu('dash_custo_folha')    // Card no Dashboard / standalone (Nível 2)
+      );
+      allow write: if request.auth != null && (isAdmin() || hasMenu('custo_folha'));
     }
 
     // CONTAS A PAGAR — Fase 1 + Fase 2 (auditoria 2026-04-29).

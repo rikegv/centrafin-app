@@ -6,6 +6,10 @@
     <title>CentraFin | Custo de Folha</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Multi-select por checkbox (upgrade reutilizável). Auditoria 2026-05-14:
+         substitui o `<select multiple>` nativo (Ctrl+clique) por um dropdown
+         com caixas de seleção, mantendo o <select> escondido como source-of-truth. -->
+    <script src="../assets/checkbox_multi.js?v=20260514a" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <script id="tailwind-config">
@@ -85,9 +89,69 @@
                     <span class="material-symbols-outlined text-primary text-[32px] leading-none">payments</span>
                 </div>
                 <div class="min-w-0 flex flex-col justify-center">
-                    <h1 class="font-headline text-3xl font-extrabold text-slate-800 tracking-tight leading-tight [text-shadow:0_1px_2px_rgba(15,23,42,0.08)]">Custo de Folha</h1>
+                    <h1 class="font-headline text-3xl font-extrabold text-slate-800 tracking-tight leading-tight [text-shadow:0_1px_2px_rgba(15,23,42,0.08)]">Gerenciador Folha</h1>
                     <p class="text-[12px] text-slate-400 font-medium mt-1">Importação, histórico e análise consolidada dos custos com pessoal.</p>
                 </div>
+            </div>
+        </section>
+
+        <!-- KPI GRID — totalizadores do que está visível na tabela.
+             Auditoria 2026-05-14: reflete os mesmos `cacheRegistros` filtrados
+             que alimentam a tabela; o cliente pediu Custo Total como destaque
+             principal (1ª coluna), invertendo a ordem das colunas da tabela.
+             Cards usam classes `bg-surface-container-lowest` + `border-surface-variant`
+             do theme.css — já mapeadas pra Dark Mode (não precisa duplicar regras). -->
+        <section id="kpi-grid-folha" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <!-- 1. Custo Total (DESTAQUE) -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-secondary/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all ring-1 ring-secondary/10">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="p-1 bg-secondary/10 text-secondary rounded-lg inline-flex">
+                        <span class="material-symbols-outlined text-base">savings</span>
+                    </span>
+                    <span class="text-[9px] font-bold text-secondary/70 uppercase tracking-widest">Total</span>
+                </div>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Custo Total</p>
+                <h3 id="kpi-custo-total" class="text-lg font-extrabold font-manrope text-secondary leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+            </div>
+            <!-- 2. Salário Bruto -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <span class="p-1 bg-primary/10 text-primary rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">badge</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Salário Bruto</p>
+                <h3 id="kpi-salario-bruto" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+            </div>
+            <!-- 3. Vencimentos -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <span class="p-1 bg-emerald-50 text-emerald-600 rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">payments</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Vencimentos</p>
+                <h3 id="kpi-vencimentos" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+            </div>
+            <!-- 4. Encargos Sociais -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <span class="p-1 bg-indigo-50 text-indigo-600 rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">account_balance</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Encargos Sociais</p>
+                <h3 id="kpi-encargos" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+            </div>
+            <!-- 5. Benefícios Pagos -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <span class="p-1 bg-amber-50 text-amber-600 rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">card_travel</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Benefícios Pagos</p>
+                <h3 id="kpi-beneficios" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+            </div>
+            <!-- 6. Descontos de Benefício -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <span class="p-1 bg-red-50 text-red-600 rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">remove_circle</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Desc. Benefício</p>
+                <h3 id="kpi-descontos-bnf" class="text-base font-extrabold font-manrope text-red-600 leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
             </div>
         </section>
 
@@ -117,6 +181,11 @@
                         <span class="material-symbols-outlined text-base">delete_sweep</span>
                         Excluir <span id="excluir-count" data-count>0</span> Selecionados
                     </button>
+                    <!-- Exportar Base — gera .xlsx com a visão filtrada da tabela (SheetJS). -->
+                    <button id="btn-exportar-excel" type="button" class="flex items-center gap-1.5 px-3 py-2 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-400 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-base">download</span>
+                        Exportar Base
+                    </button>
                     <button id="btn-abrir-importar" type="button" class="flex items-center gap-2 px-5 py-2 bg-primary text-[#341100] rounded-lg text-sm font-bold shadow-sm hover:brightness-105 active:scale-95 transition-all">
                         <span class="material-symbols-outlined text-lg">upload_file</span>
                         Importar
@@ -141,6 +210,7 @@
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">CPF</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Empresa</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Centro de Custo</th>
+                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Salário Bruto</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Vencimentos</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Encargos Sociais</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Benef. Pagos</th>
@@ -276,22 +346,31 @@
         </div>
         <div class="space-y-4">
             <div>
-                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Competência</label>
-                <input id="filtro-competencia" type="month"
-                       class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+                    Competência
+                </label>
+                <select id="filtro-competencia" multiple size="6" data-checkbox-multi data-placeholder="Todas as competências"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as competências</option>
+                </select>
+                <p class="text-[10px] text-slate-400 font-medium mt-1.5">Alimentado automaticamente pelas importações já gravadas.</p>
             </div>
             <div>
-                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Empresa / Filial</label>
-                <select id="filtro-empresa"
-                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white">
-                    <option value="">Todas…</option>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+                    Empresa / Filial
+                </label>
+                <select id="filtro-empresa" multiple size="5" data-checkbox-multi data-placeholder="Todas as Empresas"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as Empresas</option>
                 </select>
             </div>
             <div>
-                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Centro de Custo</label>
-                <select id="filtro_centro_custo"
-                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
-                    <option value="">Todos</option>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+                    Centro de Custo
+                </label>
+                <select id="filtro_centro_custo" multiple size="6" data-checkbox-multi data-placeholder="Todos os Centros"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium bg-white shadow-inner focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Centros</option>
                 </select>
                 <p class="text-[10px] text-slate-400 font-medium mt-1.5">Alimentado automaticamente pelas importações.</p>
             </div>
@@ -514,6 +593,190 @@
     </div>
 </div>
 
+<!-- Modal de Quarentena — Tratamento de Exceções de Centro de Custo -->
+<!-- Motor de Sanitização ETL (auditoria 2026-05-14): pausa a importação quando
+     algum registro chega com centro_custo "sujo" (null/""/"./"-"). O usuário
+     valida cada pendente — itens com Histórico já vêm pré-preenchidos com a
+     sugestão da base; itens Sem Histórico exigem digitação manual. Sem
+     preencher tudo, o botão Aplicar fica desabilitado. -->
+<div id="modal-quarentena" class="fixed inset-0 z-[85] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-quarentena-overlay"></div>
+    <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] overflow-hidden flex flex-col" id="modal-quarentena-content">
+        <div class="flex justify-between items-start gap-4 px-8 pt-7 pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+                    <span class="material-symbols-outlined text-amber-500 text-2xl">rule</span>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="font-headline text-xl font-bold text-secondary tracking-tight">Tratamento de Exceções: Centros de Custo</h3>
+                    <p class="text-[12px] text-slate-500 font-medium mt-0.5">
+                        <span id="quarentena-resumo">Detectamos registros com Centro de Custo em branco ou inválido.</span>
+                    </p>
+                </div>
+            </div>
+            <button id="btn-fechar-quarentena" type="button" class="text-slate-400 hover:text-slate-700 transition-colors shrink-0" title="Cancelar importação">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="px-8 py-5 overflow-y-auto flex-1 space-y-5">
+            <!-- Banner explicativo -->
+            <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3">
+                <span class="material-symbols-outlined text-amber-500 mt-0.5">info</span>
+                <p class="text-[12px] leading-relaxed font-medium">
+                    A importação foi <strong>pausada</strong> até a regularização. Os campos em verde já receberam uma sugestão baseada no histórico do CPF na empresa atual — você pode confirmar ou editar. Os campos em vermelho exigem preenchimento manual.
+                </p>
+            </div>
+
+            <!-- Seção A: Histórico Encontrado -->
+            <div id="quarentena-secao-historico">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-emerald-600 text-base">history</span>
+                        <h4 class="text-[12px] font-bold text-emerald-700 uppercase tracking-widest">A. Histórico Encontrado</h4>
+                    </div>
+                    <span id="quarentena-cont-historico" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">0 registros</span>
+                </div>
+                <div class="border border-emerald-100 rounded-xl overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-emerald-50/60 text-emerald-700">
+                            <tr>
+                                <th class="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest">Funcionário</th>
+                                <th class="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest w-32">CPF</th>
+                                <th class="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest w-24">Origem</th>
+                                <th class="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest">Centro de Custo (sugerido)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quarentena-tbody-historico" class="divide-y divide-slate-100 bg-white"></tbody>
+                    </table>
+                </div>
+                <p id="quarentena-vazio-historico" class="hidden text-[11px] text-slate-400 italic text-center py-3">Nenhum registro com histórico encontrado.</p>
+            </div>
+
+            <!-- Seção B: Sem Histórico -->
+            <div id="quarentena-secao-novos">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-red-500 text-base">person_add</span>
+                        <h4 class="text-[12px] font-bold text-red-600 uppercase tracking-widest">B. Sem Histórico (Novos)</h4>
+                    </div>
+                    <span id="quarentena-cont-novos" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">0 registros</span>
+                </div>
+                <div class="border border-red-100 rounded-xl overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-red-50/60 text-red-700">
+                            <tr>
+                                <th class="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest">Funcionário</th>
+                                <th class="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest w-32">CPF</th>
+                                <th class="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest">Centro de Custo (obrigatório)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quarentena-tbody-novos" class="divide-y divide-slate-100 bg-white"></tbody>
+                    </table>
+                </div>
+                <p id="quarentena-vazio-novos" class="hidden text-[11px] text-slate-400 italic text-center py-3">Todos os pendentes possuem histórico — nada a digitar.</p>
+            </div>
+        </div>
+
+        <div class="px-8 py-4 border-t border-slate-100 flex justify-between items-center gap-3">
+            <div class="text-[11px] text-slate-500 font-medium">
+                <span id="quarentena-status">Preencha os pendentes para liberar a continuação.</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="btn-cancelar-quarentena" type="button" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">
+                    Cancelar Importação
+                </button>
+                <button id="btn-aplicar-quarentena" type="button" disabled class="flex items-center gap-2 px-6 py-2.5 bg-primary text-[#341100] rounded-lg text-xs font-bold shadow-lg shadow-primary/30 hover:brightness-105 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+                    <span class="material-symbols-outlined text-base">task_alt</span>
+                    Aplicar e Continuar Importação
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Configuração de Exportação Excel -->
+<!-- Auditoria 2026-05-14: o botão "Exportar Base" agora abre este modal antes
+     de gerar o arquivo. Os filtros aqui são INDEPENDENTES do estado da tabela
+     ao fundo — o usuário pode exportar uma fatia diferente da que está vendo
+     sem perder a navegação atual. Campos em branco = todos. -->
+<div id="modal-exportar-config" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-exportar-config-overlay"></div>
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100" id="modal-exportar-config-content">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-emerald-600">download</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="font-headline text-base font-bold text-secondary">Configurações do Relatório Excel</h3>
+                <p class="text-[11px] text-slate-400 font-medium">Refine os filtros antes de gerar. Campos em branco = todos.</p>
+            </div>
+            <button id="btn-fechar-exportar-config" type="button" class="text-slate-400 hover:text-slate-700 transition-colors shrink-0">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+                    Empresa / Filial
+                </label>
+                <select id="export-filtro-empresa" multiple size="5" data-checkbox-multi data-placeholder="Todas as Empresas"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as Empresas</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+                    Competência
+                </label>
+                <select id="export-filtro-competencia" multiple size="6" data-checkbox-multi data-placeholder="Todas as competências"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as competências</option>
+                </select>
+                <p class="text-[10px] text-slate-400 font-medium mt-1.5">Sem seleção = todas as competências disponíveis.</p>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+                    Centro de Custo
+                </label>
+                <select id="export-filtro-cc" multiple size="6" data-checkbox-multi data-placeholder="Todos os Centros"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium bg-white shadow-inner focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Centros</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Banner informativo: filtros herdados da tela (paridade KPI↔Excel). -->
+        <div class="mt-5 flex items-start gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-100 text-[11px] text-emerald-700 font-medium">
+            <span class="material-symbols-outlined text-base text-emerald-600 mt-0.5">link</span>
+            <span>Os filtros foram pré-carregados com a visão atual da tabela. Ajuste como preferir antes de gerar — o Excel refletirá exatamente o que estiver selecionado aqui.</span>
+        </div>
+
+        <!-- Aviso (condicional): termo de busca ativo na tabela não vai pro export. -->
+        <div id="export-aviso-busca" class="hidden mt-2 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100 text-[11px] text-amber-800 font-medium">
+            <span class="material-symbols-outlined text-base text-amber-600 mt-0.5">search</span>
+            <span>Termo de busca ativo na tabela: <strong>"<span id="export-aviso-busca-termo"></span>"</strong>. O filtro será aplicado também na exportação.</span>
+        </div>
+
+        <!-- Status / spinner durante a geração -->
+        <div id="export-status" class="hidden mt-5 flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px] text-slate-600 font-medium">
+            <span class="material-symbols-outlined text-base text-emerald-600 spin">progress_activity</span>
+            <span id="export-status-msg">Buscando registros…</span>
+        </div>
+
+        <div class="mt-8 flex gap-3">
+            <button id="btn-cancelar-exportar-config" type="button" class="flex-1 px-5 py-2.5 text-slate-500 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all">
+                Cancelar
+            </button>
+            <button id="btn-gerar-excel" type="button" class="flex-1 flex items-center justify-center gap-1.5 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                <span class="material-symbols-outlined text-base" id="export-btn-icon">download</span>
+                <span id="export-btn-label">Gerar Excel</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script type="module">
     import { renderSidebar } from "../sidebar.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -558,11 +821,14 @@
     const feedbackBody = document.getElementById('feedback-body');
 
     // Filtros de visualização (modal "Filtros Avançados")
-    const filtroCompetencia = document.getElementById('filtro-competencia');
-    const filtroEmpresa = document.getElementById('filtro-empresa');
-    const filtroCc = document.getElementById('filtro_centro_custo'); // <select>
+    const filtroCompetencia = document.getElementById('filtro-competencia'); // <select multiple>
+    const filtroEmpresa = document.getElementById('filtro-empresa');         // <select multiple>
+    const filtroCc = document.getElementById('filtro_centro_custo');         // <select multiple>
     const chipFiltrosAtivos = document.getElementById('chip-filtros-ativos');
-    let filtroCcValor = ''; // filtro client-side aplicado sobre cacheRegistros
+    // Auditoria 2026-05-14: filtroCcValor virou filtroCcValores (array).
+    // Sentinela "Todos" significa "sem filtro de CC". O CC continua sendo
+    // aplicado client-side em `aplicarBusca` (sem ida ao Firestore).
+    let filtroCcValores = ['Todos'];
     // Flag de Super Adm — preenchida no fluxo de auth. Controla a visibilidade
     // da coluna de seleção/exclusão na tabela (linha + cabeçalho), do botão de
     // bulk delete na topbar e do ícone de lixeira por linha. Auditoria
@@ -657,7 +923,38 @@
     const LS_EMP  = 'centrafin.custofolha.empresa';
     const LS_CC   = 'centrafin.custofolha.centrocusto';
 
-    // ── POPULAR DROPDOWNS DE EMPRESAS (Import + Filtros) ─────────────────────
+    // ── HELPERS MULTI-SELECT (padrão CRF — auditoria 2026-05-14) ─────────────
+    // Convenção: o sentinela "Todos" significa "nenhum filtro ativo". Quando
+    // o usuário não seleciona nada ou seleciona "Todos", o getter devolve
+    // ["Todos"]. O caller verifica via `isMultiAll(arr)`.
+    function getMultiValues(sel) {
+        if (!sel) return ['Todos'];
+        const vals = Array.from(sel.selectedOptions).map(o => o.value);
+        if (vals.length === 0 || vals.includes('Todos')) return ['Todos'];
+        return vals;
+    }
+    function isMultiAll(arr) {
+        return !arr || arr.length === 0 || arr.includes('Todos');
+    }
+    function setMultiValues(sel, vals) {
+        if (!sel) return;
+        const wanted = new Set(vals && vals.length ? vals : ['Todos']);
+        let qualquerSelecionado = false;
+        Array.from(sel.options).forEach(opt => {
+            opt.selected = wanted.has(opt.value);
+            if (opt.selected) qualquerSelecionado = true;
+        });
+        if (!qualquerSelecionado) {
+            const todos = sel.querySelector('option[value="Todos"]');
+            if (todos) todos.selected = true;
+        }
+        // Notifica o upgrader de checkbox (assets/checkbox_multi.js) para
+        // re-sincronizar o UI. Não-op nos selects ainda nativos — listener
+        // só existe quando o upgrade aconteceu.
+        try { sel.dispatchEvent(new Event('cb-multi-sync')); } catch (_) {}
+    }
+
+    // ── POPULAR DROPDOWNS DE EMPRESAS (Import + Filtros + Export) ────────────
     let empresasDisponiveis = [];
     let empresasCarregadas = false;
     let onEmpresasCarregadas = null; // callback opcional disparado na primeira carga
@@ -674,18 +971,22 @@
         lista.sort((a, b) => a.localeCompare(b));
         empresasDisponiveis = lista;
 
-        const popula = (sel, placeholder, preservarValor = true) => {
-            const valAtual = preservarValor ? sel.value : '';
-            sel.innerHTML = `<option value="">${placeholder}</option>`;
-            for (const id of lista) {
-                const opt = document.createElement('option');
-                opt.value = id; opt.textContent = id;
-                sel.appendChild(opt);
-            }
-            if (valAtual && lista.includes(valAtual)) sel.value = valAtual;
-        };
-        popula(selectEmpresa, 'Selecione a empresa…');
-        popula(filtroEmpresa, 'Todas…');
+        // selectEmpresa (formulário Importar) continua single-select: placeholder
+        // vazio + opções. Preserva a seleção atual via `sel.value`.
+        const valImport = selectEmpresa.value;
+        selectEmpresa.innerHTML = '<option value="">Selecione a empresa…</option>';
+        for (const id of lista) {
+            const opt = document.createElement('option');
+            opt.value = id; opt.textContent = id;
+            selectEmpresa.appendChild(opt);
+        }
+        if (valImport && lista.includes(valImport)) selectEmpresa.value = valImport;
+
+        // Filtros multi-select: preservam a seleção e injetam a sentinela "Todos"
+        // como primeira opção. Aplicado tanto ao filtro da tabela quanto ao do export.
+        popularMultiEmpresas(filtroEmpresa, 'Todas as Empresas', lista);
+        const exportEmpresa = document.getElementById('export-filtro-empresa');
+        if (exportEmpresa) popularMultiEmpresas(exportEmpresa, 'Todas as Empresas', lista);
 
         if (!empresasCarregadas) {
             empresasCarregadas = true;
@@ -696,6 +997,19 @@
             }
         }
     });
+
+    function popularMultiEmpresas(sel, labelTodos, lista) {
+        const previo = getMultiValues(sel);
+        sel.innerHTML = `<option value="Todos" class="font-bold border-b pb-1 mb-1">${labelTodos}</option>`;
+        for (const id of lista) {
+            const opt = document.createElement('option');
+            opt.value = id; opt.textContent = id;
+            sel.appendChild(opt);
+        }
+        // Preserva seleções que ainda existem; queda em "Todos" se nada bater.
+        const sobrev = previo.filter(v => v === 'Todos' || lista.includes(v));
+        setMultiValues(sel, sobrev.length ? sobrev : ['Todos']);
+    }
 
     // ── POPULAR DROPDOWN DE CENTROS DE CUSTO (Base_Centros_Custo) ────────────
     // A base é alimentada automaticamente pelo ETL (sincronizarCentrosDeCusto).
@@ -710,25 +1024,65 @@
         const visiveis = window._ccPermitidos
             ? nomes.filter(n => window._ccPermitidos.has(n))
             : nomes;
-        const valAtual = filtroCc.value;
-        filtroCc.innerHTML = '<option value="">Todos</option>';
-        for (const n of visiveis) {
-            const opt = document.createElement('option');
-            opt.value = n; opt.textContent = n;
-            filtroCc.appendChild(opt);
-        }
-        // Preserva a seleção atual se ela ainda existir; senão mantém um fantasma
-        // para não perder o filtro ativo quando a base ainda não refletiu.
-        if (valAtual && !nomes.includes(valAtual)) {
-            const opt = document.createElement('option');
-            opt.value = valAtual;
-            opt.textContent = `${valAtual} (não cadastrado)`;
-            filtroCc.appendChild(opt);
-        }
-        filtroCc.value = valAtual || '';
+
+        popularMultiCc(filtroCc, 'Todos os Centros', visiveis, nomes);
+        const exportCc = document.getElementById('export-filtro-cc');
+        if (exportCc) popularMultiCc(exportCc, 'Todos os Centros', visiveis, nomes);
     }, (err) => {
         console.warn('[Base_Centros_Custo] listener falhou:', err?.code || err?.message);
     });
+
+    function popularMultiCc(sel, labelTodos, visiveis, todosNomes) {
+        const previo = getMultiValues(sel);
+        sel.innerHTML = `<option value="Todos" class="font-bold border-b pb-1 mb-1">${labelTodos}</option>`;
+        for (const n of visiveis) {
+            const opt = document.createElement('option');
+            opt.value = n; opt.textContent = n;
+            sel.appendChild(opt);
+        }
+        // Mantém "fantasmas" — CCs selecionados que ainda não vieram da base.
+        const fantasmas = previo.filter(v => v !== 'Todos' && !visiveis.includes(v));
+        for (const v of fantasmas) {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = todosNomes.includes(v) ? v : `${v} (não cadastrado)`;
+            sel.appendChild(opt);
+        }
+        setMultiValues(sel, previo);
+    }
+
+    // ── POPULAR DROPDOWN DE COMPETÊNCIAS — usa o cache de disponíveis ─────────
+    // Auditoria 2026-05-14: competência saiu de <input type="month"> single
+    // para <select multiple>. Lista derivada do mesmo cache que alimenta os
+    // chips do empty-state (descobrirDisponiveis), garantindo que o usuário
+    // só veja meses que de fato existem na base.
+    async function popularMultiCompetencias() {
+        const disp = await descobrirDisponiveis();
+        if (!disp || !disp.length) return;
+        const refs = [...new Set(disp.map(d => d.ref).filter(Boolean))]
+            .sort((a, b) => b.localeCompare(a)); // mais recente primeiro
+        const aplicar = (sel, labelTodos) => {
+            if (!sel) return;
+            const previo = getMultiValues(sel);
+            sel.innerHTML = `<option value="Todos" class="font-bold border-b pb-1 mb-1">${labelTodos}</option>`;
+            for (const ref of refs) {
+                const opt = document.createElement('option');
+                opt.value = ref;
+                opt.textContent = competenciaBRfromRef(ref);
+                sel.appendChild(opt);
+            }
+            // Fantasmas: refs selecionadas que sumiram do disponível (raro).
+            const fantasmas = previo.filter(v => v !== 'Todos' && !refs.includes(v));
+            for (const v of fantasmas) {
+                const opt = document.createElement('option');
+                opt.value = v; opt.textContent = `${competenciaBRfromRef(v)} (sem dados)`;
+                sel.appendChild(opt);
+            }
+            setMultiValues(sel, previo);
+        };
+        aplicar(filtroCompetencia, 'Todas as competências');
+        aplicar(document.getElementById('export-filtro-competencia'), 'Todas as competências');
+    }
 
     // ── WHITELISTS DE CLASSIFICAÇÃO — 5 buckets contábeis (spec definitiva) ──
     // As chaves abaixo são os slugs EXATOS gerados pelo ETL a partir das colunas
@@ -790,6 +1144,11 @@
             '13O', 'AJUDA_DE_CUSTO', 'RESCISAO', 'HORA_EXTRA',
             'PARTICIPACAO', 'LUCRO',
             'BONUS', 'PREMIO', 'PREMIACAO', 'GRATIFICACAO',
+            // Auditoria 2026-05-14: PJs e prestadores recebem por "Serviços
+            // Prestados" (slug SERVICOS_PRESTADOS). Antes caía em "outros
+            // valores importados" e ficava fora do Custo Total — agora soma
+            // a Vencimentos e alimenta também a coluna Salário Bruto.
+            'SERVICOS_PRESTADOS',
         ];
 
         // 3. Se contém qualquer raiz acima, é Vencimento.
@@ -900,8 +1259,58 @@
     // qualquer INSS retido / IRRF / sindicato / contribuição assistencial nova é
     // capturada automaticamente sem precisar atualizar lista manual.
 
+    // Predicate dedicado da coluna "Salário Bruto" (UI/Export).
+    // Auditoria 2026-05-14: o cliente precisa ver o salário-base contábil de
+    // forma uniforme entre CLT, sócios (pró-labore) e PJs (serviços prestados).
+    // Regra:
+    //     Salário Bruto = Salário Base/Salário + Serviços Prestados + Pró-labore
+    // Encargos, benefícios, descontos e adicionais como hora-extra/comissão
+    // permanecem onde já estão (Vencimentos / Encargos / Bnf). Só esses três
+    // entram aqui — é uma VISÃO, não substitui Vencimentos.
+    //
+    // Auditoria 2026-05-14 (correção CLT): equality em SALARIO_BASE_VALOR /
+    // SALARIO_VALOR perdia variações reais do banco — chaves vindas da Bnf
+    // (`salario_base`, sem sufixo `_Valor`), abreviações ("SAL BASE"), e
+    // formatos como "PRO LABORE S FGTS". Normalizamos a chave removendo
+    // acentos, espaços E underscores antes de testar, e usamos containment
+    // em vez de equality. Funciona em dados legados via F5 — sem reimport.
+    function isSalarioBrutoKey(k) {
+        const key = String(k || '')
+            .normalize('NFD').replace(/[̀-ͯ\s_]/g, '')
+            .toUpperCase();
+        if (!key) return false;
+
+        // Blindagem: descontos e bases nunca entram (mesmo que o restante case).
+        if (key.startsWith('DESC') || key.startsWith('DESCTO')) return false;
+        if (key.includes('DESCONTO')) return false;
+        if (key.startsWith('BASE')) return false;
+
+        // (1) Pró-labore (sócios/diretores) — captura "Pro Labore",
+        //     "Pró-Labore", "Pro Labore S FGTS", "Pro Labore C FGTS" etc.
+        if (key.includes('PROLABORE')) return true;
+        // (2) Serviços Prestados (autônomos / PJs).
+        if (key.includes('SERVICOSPRESTADOS')) return true;
+        // (3) Salário Base — qualquer chave que contenha "SALARIOBASE".
+        //     Cobre tanto `SALARIO_BASE_Valor` (Folha) quanto `salario_base`
+        //     (Bnf), pois a normalização remove os underscores.
+        if (key.includes('SALARIOBASE')) return true;
+        // (4) Salário-Família e Salário-Maternidade (auditoria 2026-05-14):
+        //     entram na composição do Salário Bruto a pedido do cliente —
+        //     CLTs com benefício-família estavam zerando a coluna porque a
+        //     regra anterior rejeitava essas chaves explicitamente.
+        if (key.includes('SALARIOFAMILIA')) return true;
+        if (key.includes('SALARIOMATERNIDADE')) return true;
+        // (5) Salário "puro" — exato ou com sufixo VALOR (CLT padrão).
+        //     Mantemos equality (não containment) pra não casar acidentalmente
+        //     com qualquer outra chave que comece com SALARIO e não esteja
+        //     enumerada acima.
+        if (key === 'SALARIO' || key === 'SALARIOVALOR') return true;
+
+        return false;
+    }
+
     function calcularTotais(reg) {
-        let vencimentos = 0, encargos = 0, beneficios = 0, descontosBnf = 0;
+        let vencimentos = 0, encargos = 0, beneficios = 0, descontosBnf = 0, salarioBruto = 0;
         for (const k of Object.keys(reg || {})) {
             const raw = reg[k];
             if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
@@ -917,14 +1326,21 @@
             if (k.startsWith('Bnf_'))  { beneficios += raw; continue; }
             if (SET_BNF_PAGO.has(k))   { beneficios += raw; continue; }
             if (isBnfDesc(k))          { descontosBnf += raw; continue; }
-            if (isVencimento(k))       { vencimentos += raw; continue; }
+            if (isVencimento(k))       {
+                vencimentos += raw;
+                // VISÃO Salário Bruto (auditoria 2026-05-14): captura paralela,
+                // restrita às 3 verbas-base (Salário/Pró-labore/Serv. Prestados).
+                // É um SUBCONJUNTO de Vencimentos — não soma ao Custo Total.
+                if (isSalarioBrutoKey(k)) salarioBruto += raw;
+                continue;
+            }
             // Chaves desconhecidas não entram na soma — aparecem no modal Olho
             // como "outros valores importados" (amber).
         }
         // Custo Total = Vencimentos + Encargos Patronais + (Bnf Pagos − Desc. Bnf).
         // INSS/IRRF retidos do funcionário NÃO entram — já embutidos no Bruto.
         const total = vencimentos + encargos + beneficios - descontosBnf;
-        return { vencimentos, encargos, beneficios, descontosBnf, total };
+        return { vencimentos, encargos, beneficios, descontosBnf, total, salarioBruto };
     }
 
     function escapeHTML(s) {
@@ -944,9 +1360,11 @@
 
     function aplicarBusca(registros) {
         let out = registros;
-        // Filtro client-side por Centro de Custo (dropdown) — match EXATO.
-        if (filtroCcValor) {
-            out = out.filter(r => String(r.centro_custo || '') === filtroCcValor);
+        // Filtro client-side por Centro de Custo (multi-select) — match EXATO.
+        // Cada registro passa se seu CC está no array selecionado; "Todos" libera.
+        if (!isMultiAll(filtroCcValores)) {
+            const ccSet = new Set(filtroCcValores);
+            out = out.filter(r => ccSet.has(String(r.centro_custo || '')));
         }
         if (!termoBusca) return out;
         const t = termoBusca.toLowerCase();
@@ -959,8 +1377,43 @@
         );
     }
 
+    // Soma os 6 buckets dos registros filtrados e injeta no grid de KPIs.
+    // Auditoria 2026-05-14: usa as MESMAS funções de cálculo das colunas da
+    // tabela (`calcularTotais`) — garante paridade absoluta entre o que está
+    // visível e o totalizador. Salário Bruto vem do mesmo bucket `t.salarioBruto`
+    // que aplica `isSalarioBrutoKey` lá no motor.
+    function atualizarKPIs(registrosFiltrados) {
+        let salarioBruto = 0, vencimentos = 0, encargos = 0,
+            beneficios = 0, descontosBnf = 0, total = 0;
+        for (const r of (registrosFiltrados || [])) {
+            const t = calcularTotais(r);
+            salarioBruto += t.salarioBruto;
+            vencimentos  += t.vencimentos;
+            encargos     += t.encargos;
+            beneficios   += t.beneficios;
+            descontosBnf += t.descontosBnf;
+            total        += t.total;
+        }
+        const setKPI = (id, valor, prefixo = '') => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const txt = `${prefixo}${fmtBRL.format(valor)}`;
+            el.textContent = txt;
+            el.setAttribute('title', txt);
+        };
+        setKPI('kpi-custo-total',  total);
+        setKPI('kpi-salario-bruto', salarioBruto);
+        setKPI('kpi-vencimentos',   vencimentos);
+        setKPI('kpi-encargos',      encargos);
+        setKPI('kpi-beneficios',    beneficios);
+        // Desc. Benefício: prefixo "-" quando há valor, espelha o visual da
+        // coluna na tabela (vermelho + sinal negativo).
+        setKPI('kpi-descontos-bnf', descontosBnf, descontosBnf ? '-' : '');
+    }
+
     function renderHistorico() {
         const registros = aplicarBusca(cacheRegistros);
+        atualizarKPIs(registros);
         if (!registros.length) {
             histCorpo.innerHTML = '';
             histVazio.classList.remove('hidden');
@@ -1006,6 +1459,7 @@
                     <td class="px-4 py-3 text-xs text-slate-500 font-mono">${fmtCPF(r.cpf)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(emp)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(cc)}</td>
+                    <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.salarioBruto)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.vencimentos)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.encargos)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.beneficios)}</td>
@@ -1085,12 +1539,42 @@
     }
 
     // ── CARREGAR DADOS DA TABELA ─────────────────────────────────────────────
-    function atualizarChipFiltros(compRef, emp, cc) {
-        if (!compRef && !emp && !cc) { chipFiltrosAtivos.classList.add('hidden'); chipFiltrosAtivos.classList.remove('flex'); chipFiltrosAtivos.innerHTML = ''; return; }
+    // Auditoria 2026-05-14: chip de filtros ativos agora lê multi-select.
+    // Sem args — descobre o estado direto dos selects. Quando uma dimensão
+    // tem >1 seleção, mostra "N <dimensão>" no lugar do valor único.
+    function atualizarChipFiltros() {
+        const compRefs = getMultiValues(filtroCompetencia);
+        const empresas = getMultiValues(filtroEmpresa);
+        const ccs      = getMultiValues(filtroCc);
+        const allComp = isMultiAll(compRefs);
+        const allEmp  = isMultiAll(empresas);
+        const allCc   = isMultiAll(ccs);
+        if (allComp && allEmp && allCc) {
+            chipFiltrosAtivos.classList.add('hidden');
+            chipFiltrosAtivos.classList.remove('flex');
+            chipFiltrosAtivos.innerHTML = '';
+            return;
+        }
+        const mkChip = (icon, label) => `<span class="inline-flex items-center gap-1 bg-secondary/5 text-secondary px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">${icon}</span> ${label}</span>`;
         const partes = [];
-        if (compRef) partes.push(`<span class="inline-flex items-center gap-1 bg-secondary/5 text-secondary px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">event</span> ${competenciaBRfromRef(compRef)}</span>`);
-        if (emp) partes.push(`<span class="inline-flex items-center gap-1 bg-secondary/5 text-secondary px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">apartment</span> ${escapeHTML(emp)}</span>`);
-        if (cc) partes.push(`<span class="inline-flex items-center gap-1 bg-secondary/5 text-secondary px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">account_tree</span> ${escapeHTML(cc)}</span>`);
+        if (!allComp) {
+            const lbl = compRefs.length === 1
+                ? competenciaBRfromRef(compRefs[0])
+                : `${compRefs.length} competências`;
+            partes.push(mkChip('event', escapeHTML(lbl)));
+        }
+        if (!allEmp) {
+            const lbl = empresas.length === 1
+                ? empresas[0]
+                : `${empresas.length} empresas`;
+            partes.push(mkChip('apartment', escapeHTML(lbl)));
+        }
+        if (!allCc) {
+            const lbl = ccs.length === 1
+                ? ccs[0]
+                : `${ccs.length} centros`;
+            partes.push(mkChip('account_tree', escapeHTML(lbl)));
+        }
         chipFiltrosAtivos.innerHTML = `<span class="text-slate-400">Filtros ativos:</span> ${partes.join(' ')}`;
         chipFiltrosAtivos.classList.remove('hidden');
         chipFiltrosAtivos.classList.add('flex');
@@ -1100,29 +1584,46 @@
     // está aplicado) — evita baixar a coleção inteira em cenários de volume.
     const HIST_GLOBAL_LIMIT = 1000;
 
+    // Cap do operador `in` no Firestore (auditoria 2026-05-14): conservador.
+    // Se o usuário selecionar mais valores que isso, caímos no histórico
+    // global e filtramos client-side — degradação suave sem barrar o usuário.
+    const FIRESTORE_IN_MAX = 10;
+
     function carregarDadosTabela() {
-        const compRef = filtroCompetencia.value;
-        const emp = filtroEmpresa.value.trim();
-        const filtroKey = `${compRef}|${emp}`;
-        if (filtroKey === ultimoFiltroKey) return;
+        const compRefs = getMultiValues(filtroCompetencia);
+        const empresas = getMultiValues(filtroEmpresa);
+
+        // Chave estável para detectar mudanças na query Firestore — independe
+        // da ordem de seleção. CC NÃO entra na chave porque é client-side.
+        const compKey = isMultiAll(compRefs) ? 'TODOS' : [...compRefs].sort().join(',');
+        const empKey  = isMultiAll(empresas) ? 'TODOS' : [...empresas].sort().join(',');
+        const filtroKey = `${compKey}|${empKey}`;
+        // Auditoria 2026-05-14: mesma query → re-render direto pra refletir
+        // mudanças client-side (CC, busca textual) sem refazer o listener.
+        if (filtroKey === ultimoFiltroKey) {
+            renderHistorico();
+            return;
+        }
         ultimoFiltroKey = filtroKey;
 
         if (unsubHistorico) { unsubHistorico(); unsubHistorico = null; }
 
-        // Monta a query Firestore conforme o que estiver selecionado. Se nada estiver,
-        // traz o histórico global ordenado por dataImportacao desc.
+        // Monta a query Firestore. Prefere `in` em competencia_ref quando
+        // houver seleção — empresa cai pro filtro client-side. O Firestore
+        // não combina dois `in` em campos diferentes na mesma query.
         let q;
-        if (compRef && emp) {
+        const usaInComp = !isMultiAll(compRefs) && compRefs.length <= FIRESTORE_IN_MAX;
+        const usaInEmp  = isMultiAll(compRefs) && !isMultiAll(empresas) && empresas.length <= FIRESTORE_IN_MAX;
+
+        if (usaInComp) {
             q = query(collection(db, COLECAO),
-                where('competencia_ref', '==', compRef),
-                where('empresa_atribuida', '==', emp));
-        } else if (compRef) {
+                where('competencia_ref', 'in', compRefs));
+        } else if (usaInEmp) {
             q = query(collection(db, COLECAO),
-                where('competencia_ref', '==', compRef));
-        } else if (emp) {
-            q = query(collection(db, COLECAO),
-                where('empresa_atribuida', '==', emp));
+                where('empresa_atribuida', 'in', empresas));
         } else {
+            // Sem filtros OU seleção excede o cap do `in` — histórico global
+            // ordenado por dataImportacao desc, depois refinado client-side.
             q = query(collection(db, COLECAO),
                 orderBy('dataImportacao', 'desc'),
                 limit(HIST_GLOBAL_LIMIT));
@@ -1140,16 +1641,24 @@
                 regs.length = 0;
                 regs.push(...filtrados);
                 if (antes !== filtrados.length) {
-                    console.log(`[CustoFolhaDesktop] Filtro CC: ${filtrados.length} de ${antes} registros visíveis`);
+                    console.log(`[CustoFolhaDesktop] Filtro CC permissão: ${filtrados.length} de ${antes} registros visíveis`);
                 }
             }
+            // Filtro client-side complementar: aplica o campo que NÃO foi para
+            // o `in` do Firestore (ou ambos quando caiu no histórico global).
+            const compSet = !isMultiAll(compRefs) ? new Set(compRefs) : null;
+            const empSet  = !isMultiAll(empresas) ? new Set(empresas) : null;
+            const refinados = regs.filter(r => {
+                if (compSet && !compSet.has(String(r.competencia_ref || ''))) return false;
+                if (empSet  && !empSet.has(String(r.empresa_atribuida || ''))) return false;
+                return true;
+            });
             // Ordem estável: quando houver competência/empresa, ordena por nome;
-            // no histórico global a ordem já vem do Firestore (dataImportacao desc),
-            // mas fazemos um sort secundário por nome dentro de cada importação.
-            if (compRef || emp) {
-                regs.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+            // no histórico global a ordem já vem do Firestore (dataImportacao desc).
+            if (compSet || empSet) {
+                refinados.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
             }
-            cacheRegistros = regs;
+            cacheRegistros = refinados;
             renderHistorico();
         }, (err) => {
             console.error('[Histórico] listener falhou:', err);
@@ -1161,17 +1670,47 @@
     // ── AUTO-LOAD: restaura filtros salvos (opcionais) e dispara o histórico.
     //    A competência NÃO é mais obrigatória: sem filtros, o histórico global
     //    (ordenado por dataImportacao desc) é carregado.
+    //
+    //    Auditoria 2026-05-14: agora os filtros são multi-select. LS guarda
+    //    JSON (array). Retrocompat: se vier string única legacy, vira [string].
+    function lerFiltroSalvo(key) {
+        const raw = localStorage.getItem(key) || '';
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed.filter(Boolean);
+            if (parsed) return [String(parsed)];
+            return [];
+        } catch (_) {
+            // Formato antigo: string crua (ex.: "2026-04" ou "SOULAN").
+            return [raw];
+        }
+    }
+
     (async function bootstrap() {
-        const compSalvo = localStorage.getItem(LS_COMP) || '';
-        const empSalva  = localStorage.getItem(LS_EMP) || '';
-        const ccSalvo   = localStorage.getItem(LS_CC) || '';
-        if (/^\d{4}-\d{2}$/.test(compSalvo)) filtroCompetencia.value = compSalvo;
-        filtroCc.value = ccSalvo;
-        filtroCcValor = ccSalvo;
+        const compSalvos = lerFiltroSalvo(LS_COMP);
+        const empSalvas  = lerFiltroSalvo(LS_EMP);
+        const ccSalvos   = lerFiltroSalvo(LS_CC);
+
+        // Popula o select de competência ANTES de tentar restaurar a seleção —
+        // depende da query async de disponíveis. Se falhar, o select fica vazio
+        // (só com a opção "Todos") e o usuário toca filtros zerados.
+        try { await popularMultiCompetencias(); } catch (_) {}
+        if (compSalvos.length) setMultiValues(filtroCompetencia, compSalvos);
+
+        if (ccSalvos.length) {
+            // O onSnapshot de CC injeta fantasmas se algum nome ainda não veio
+            // da Base_Centros_Custo — `setMultiValues` casa o que existir.
+            setMultiValues(filtroCc, ccSalvos);
+            filtroCcValores = ccSalvos;
+        } else {
+            filtroCcValores = ['Todos'];
+        }
+
         const aplicar = () => {
-            if (empSalva && empresasDisponiveis.includes(empSalva)) filtroEmpresa.value = empSalva;
-            if (compSalvo || empSalva || ccSalvo) {
-                atualizarChipFiltros(filtroCompetencia.value, filtroEmpresa.value.trim(), ccSalvo);
+            if (empSalvas.length) setMultiValues(filtroEmpresa, empSalvas);
+            if (compSalvos.length || empSalvas.length || ccSalvos.length) {
+                atualizarChipFiltros();
             }
             carregarDadosTabela();
             verificarVisibilidadeBotaoLimpar();
@@ -1191,19 +1730,24 @@
     });
 
     // ── Chips de competências disponíveis (estado vazio) ─────────────────────
+    // Auditoria 2026-05-14: filtros são multi-select; clicar num chip aplica
+    // como única seleção (substitui o que estava). Atualiza chip de ativos
+    // pra dar feedback visual da mudança.
     document.getElementById('hist-disponiveis').addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-ref]');
         if (!btn) return;
         const ref = btn.getAttribute('data-ref');
         const emp = btn.getAttribute('data-emp');
         if (ref && /^\d{4}-\d{2}$/.test(ref)) {
-            filtroCompetencia.value = ref;
-            localStorage.setItem(LS_COMP, ref);
+            setMultiValues(filtroCompetencia, [ref]);
+            localStorage.setItem(LS_COMP, JSON.stringify([ref]));
         }
         if (emp && empresasDisponiveis.includes(emp)) {
-            filtroEmpresa.value = emp;
-            localStorage.setItem(LS_EMP, emp);
+            setMultiValues(filtroEmpresa, [emp]);
+            localStorage.setItem(LS_EMP, JSON.stringify([emp]));
         }
+        atualizarChipFiltros();
+        verificarVisibilidadeBotaoLimpar();
         carregarDadosTabela();
     });
 
@@ -1654,6 +2198,331 @@
     document.getElementById('btn-visualizar-ok').onclick = () => fecharModal('modal-visualizar');
     document.getElementById('modal-visualizar-overlay').onclick = () => fecharModal('modal-visualizar');
 
+    // ── EXPORTAR BASE (.xlsx) — fluxo com modal de configuração ──────────────
+    // Auditoria 2026-05-14 (v2): o botão "Exportar Base" abre primeiro o modal
+    // de configuração (#modal-exportar-config) com 3 filtros (empresa,
+    // competência, centro de custo). Os filtros do modal são INDEPENDENTES do
+    // estado da tabela ao fundo — exportar uma fatia diferente não muda o que
+    // o usuário está vendo. SheetJS (window.XLSX) já está carregado via CDN.
+
+    function _slugArquivo(s) {
+        return String(s || '')
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^a-zA-Z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .slice(0, 40);
+    }
+
+    // Geração pura: recebe um array já filtrado e devolve o .xlsx baixado.
+    // O `contexto` (empresa/competencia/cc) só é usado para compor o nome
+    // do arquivo — não altera o conteúdo. Lança erro em vez de mostrar modal
+    // pra o caller decidir o que fazer com a falha.
+    function gerarExcelDeRegistros(registros, contexto = {}) {
+        if (typeof window === 'undefined' || !window.XLSX) {
+            throw new Error('Biblioteca de exportação (SheetJS) não carregada.');
+        }
+        if (!Array.isArray(registros) || registros.length === 0) {
+            throw new Error('Nenhum registro para exportar.');
+        }
+
+        const cabecalho = [
+            'Competência', 'Nome', 'CPF', 'Empresa', 'Centro de Custo',
+            'Salário Bruto', 'Vencimentos', 'Encargos Sociais',
+            'Benef. Pagos', 'Desc. Benef.', 'Custo Total',
+        ];
+
+        const aoa = [cabecalho];
+        for (const r of registros) {
+            const t = calcularTotais(r);
+            const comp = r.competencia_ref
+                ? competenciaBRfromRef(r.competencia_ref)
+                : (r.competencia || '');
+            aoa.push([
+                comp,
+                r.nome || '',
+                fmtCPF(r.cpf),
+                r.empresa_atribuida || '',
+                r.centro_custo || '',
+                Number(t.salarioBruto) || 0,
+                Number(t.vencimentos) || 0,
+                Number(t.encargos) || 0,
+                Number(t.beneficios) || 0,
+                // Desc. Benef. exportado como NEGATIVO — espelha o visual da
+                // tabela (que prefixa "-") e permite SUM direto no Excel.
+                t.descontosBnf ? -Number(t.descontosBnf) : 0,
+                Number(t.total) || 0,
+            ]);
+        }
+
+        const ws = window.XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [
+            { wch: 12 }, // Competência
+            { wch: 36 }, // Nome
+            { wch: 16 }, // CPF
+            { wch: 22 }, // Empresa
+            { wch: 22 }, // Centro de Custo
+            { wch: 16 }, // Salário Bruto
+            { wch: 16 }, // Vencimentos
+            { wch: 16 }, // Encargos
+            { wch: 16 }, // Bnf Pagos
+            { wch: 16 }, // Desc. Bnf
+            { wch: 16 }, // Custo Total
+        ];
+
+        // Formato BRL (pt-BR) nas colunas numéricas (F..K = índices 5..10).
+        const fmtBRL_excel = '"R$ "#,##0.00;[Red]-"R$ "#,##0.00';
+        const colsNumericas = [5, 6, 7, 8, 9, 10];
+        for (let r = 1; r < aoa.length; r++) {
+            for (const c of colsNumericas) {
+                const addr = window.XLSX.utils.encode_cell({ r, c });
+                const cell = ws[addr];
+                if (!cell) continue;
+                cell.t = 'n';
+                cell.z = fmtBRL_excel;
+            }
+        }
+
+        // Congela o cabeçalho.
+        ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+        if (!ws['!views']) ws['!views'] = [{ state: 'frozen', ySplit: 1 }];
+
+        const wb = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(wb, ws, 'Gerenciador Folha');
+
+        // Nome do arquivo: data de hoje + contexto vindo do modal.
+        const hoje = new Date();
+        const yyyy = hoje.getFullYear();
+        const mm = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoje.getDate()).padStart(2, '0');
+        const partes = ['Gerenciador_Folha', `${yyyy}-${mm}-${dd}`];
+        if (contexto.competencia) partes.push(_slugArquivo(contexto.competencia));
+        if (contexto.empresa)     partes.push(_slugArquivo(contexto.empresa));
+        if (contexto.centroCusto) partes.push(_slugArquivo(contexto.centroCusto));
+        const nomeArquivo = partes.join('_').slice(0, 120) + '.xlsx';
+
+        window.XLSX.writeFile(wb, nomeArquivo);
+        return { nomeArquivo, total: registros.length };
+    }
+
+    // Cap defensivo da query — evita "Exportar Tudo" descarregar uma coleção
+    // de 50k+ docs. Mesma ordem de grandeza do HIST_GLOBAL_LIMIT da tela.
+    const EXPORT_MAX_DOCS = 10000;
+
+    // Auditoria 2026-05-14 (BUGFIX paridade KPI↔Excel): o modal abre com os
+    // MESMOS filtros que estão filtrando a tabela ao fundo (empresa,
+    // competência, CC). Isso garante que "o que está na tela = o que sai no
+    // Excel" por padrão. O usuário pode alterar livremente — a independência
+    // do export segue valendo, é só o DEFAULT que mudou.
+    function _herdarFiltrosDaTela() {
+        const compTela = getMultiValues(filtroCompetencia);
+        const empTela  = getMultiValues(filtroEmpresa);
+        const ccTela   = getMultiValues(filtroCc);
+        setMultiValues(document.getElementById('export-filtro-empresa'),    empTela);
+        setMultiValues(document.getElementById('export-filtro-competencia'), compTela);
+        setMultiValues(document.getElementById('export-filtro-cc'),         ccTela);
+    }
+
+    async function abrirModalExportar() {
+        // Garante que a lista de competências está fresca antes de abrir o modal —
+        // se o usuário acabou de importar, a competência nova só aparece se
+        // popularMultiCompetencias rodar de novo. Falhas degradam silenciosamente.
+        try { await popularMultiCompetencias(); } catch (_) {}
+        // Herda o estado da tela como default (era reset p/ "Todos" antes,
+        // o que causava divergência entre os KPIs filtrados e o Excel total).
+        _herdarFiltrosDaTela();
+        // Aviso visual: se há termo de busca textual ativo, ele NÃO será
+        // aplicado no export (não há campo equivalente no modal).
+        const avisoBusca = document.getElementById('export-aviso-busca');
+        if (avisoBusca) {
+            if (termoBusca) {
+                avisoBusca.classList.remove('hidden');
+                const span = document.getElementById('export-aviso-busca-termo');
+                if (span) span.textContent = termoBusca;
+            } else {
+                avisoBusca.classList.add('hidden');
+            }
+        }
+        // Status inicial limpo (esconde spinner residual de execução anterior).
+        document.getElementById('export-status').classList.add('hidden');
+        document.getElementById('btn-gerar-excel').disabled = false;
+        document.getElementById('export-btn-icon').textContent = 'download';
+        document.getElementById('export-btn-label').textContent = 'Gerar Excel';
+        abrirModal('modal-exportar-config');
+    }
+
+    function _setExportLoading(estado, msg) {
+        const status = document.getElementById('export-status');
+        const statusMsg = document.getElementById('export-status-msg');
+        const btnGerar = document.getElementById('btn-gerar-excel');
+        const btnCancelar = document.getElementById('btn-cancelar-exportar-config');
+        const btnFechar = document.getElementById('btn-fechar-exportar-config');
+        const icon = document.getElementById('export-btn-icon');
+        const label = document.getElementById('export-btn-label');
+        const selects = document.querySelectorAll('#modal-exportar-config select, #modal-exportar-config input');
+
+        if (estado) {
+            statusMsg.textContent = msg || 'Processando…';
+            status.classList.remove('hidden');
+            btnGerar.disabled = true;
+            btnCancelar.disabled = true;
+            btnFechar.disabled = true;
+            selects.forEach(s => { s.disabled = true; });
+            icon.textContent = 'progress_activity';
+            icon.classList.add('spin');
+            label.textContent = 'Gerando…';
+        } else {
+            status.classList.add('hidden');
+            btnGerar.disabled = false;
+            btnCancelar.disabled = false;
+            btnFechar.disabled = false;
+            selects.forEach(s => { s.disabled = false; });
+            icon.textContent = 'download';
+            icon.classList.remove('spin');
+            label.textContent = 'Gerar Excel';
+        }
+    }
+
+    // Query Firestore INDEPENDENTE do snapshot da tela.
+    // Auditoria 2026-05-14: aceita ARRAYS de empresas e competências (multi).
+    // - 1 array com 1 valor → `where(..., '==', valor)`
+    // - 1 array com 2..N valores → `where(..., 'in', valores)` (N ≤ 10)
+    // - Combinação inválida (Firestore não permite 2 `in` distintos) → coloca
+    //   competência no `in` e filtra empresa client-side.
+    // - CC fica sempre client-side (mesmo doc, sem ida extra).
+    async function _buscarRegistrosParaExport({ empresas, competencias, centrosCusto }) {
+        const conds = [];
+        const hasEmp = !isMultiAll(empresas);
+        const hasComp = !isMultiAll(competencias);
+
+        // Firestore aceita NO MÁXIMO uma cláusula `in`/`not-in`/`array-contains-any`
+        // por query. Estratégia:
+        //   - competência primeiro: == quando 1, `in` quando ≤cap, senão client-side.
+        //   - empresa depois: == sempre pode entrar; `in` só se competência não usou `in`.
+        let compInUsado = false;
+        if (hasComp) {
+            if (competencias.length === 1) {
+                conds.push(where('competencia_ref', '==', competencias[0]));
+            } else if (competencias.length <= FIRESTORE_IN_MAX) {
+                conds.push(where('competencia_ref', 'in', competencias));
+                compInUsado = true;
+            }
+        }
+        if (hasEmp) {
+            if (empresas.length === 1) {
+                conds.push(where('empresa_atribuida', '==', empresas[0]));
+            } else if (empresas.length <= FIRESTORE_IN_MAX && !compInUsado) {
+                conds.push(where('empresa_atribuida', 'in', empresas));
+            }
+            // se nada bater, empresa cai pro filtro client-side abaixo
+        }
+
+        // Auditoria 2026-05-14: quando NÃO há filtros, usa a MESMA query do
+        // screen (orderBy dataImportacao desc + HIST_GLOBAL_LIMIT) para evitar
+        // que o export traga até 10k docs enquanto o screen mostra só 1k.
+        // Com filtros: respeita o cap defensivo de EXPORT_MAX_DOCS.
+        const qRef = conds.length
+            ? query(collection(db, COLECAO), ...conds, limit(EXPORT_MAX_DOCS))
+            : query(collection(db, COLECAO), orderBy('dataImportacao', 'desc'), limit(HIST_GLOBAL_LIMIT));
+        const snap = await getDocs(qRef);
+
+        const empSet  = hasEmp  ? new Set(empresas)     : null;
+        const compSet = hasComp ? new Set(competencias) : null;
+        const ccSet   = !isMultiAll(centrosCusto) ? new Set(centrosCusto) : null;
+
+        // Auditoria 2026-05-14 (paridade KPI↔Excel): aplica também o termo de
+        // busca textual ativo na tabela. Sem isso, o screen filtra mais que o
+        // export e os totais do KPI ficam abaixo da soma das colunas do Excel.
+        const t = (termoBusca || '').toLowerCase();
+        const tDigitos = t.replace(/\D/g, '');
+
+        const out = [];
+        snap.forEach(d => {
+            const data = d.data() || {};
+            if (compSet && !compSet.has(String(data.competencia_ref || ''))) return;
+            if (empSet  && !empSet.has(String(data.empresa_atribuida || ''))) return;
+            if (ccSet   && !ccSet.has(String(data.centro_custo || ''))) return;
+            // Respeita whitelist de CC do usuário (3º nível de permissão), mesmo
+            // que ele tente exportar fora do seu escopo — proteção em profundidade.
+            if (window._ccPermitidos && !window._ccPermitidos.has(String(data.centro_custo || '').trim())) {
+                return;
+            }
+            // Mesma regra de aplicarBusca: nome OU dígitos do CPF OU CC OU empresa.
+            if (t) {
+                const passa =
+                    String(data.nome || '').toLowerCase().includes(t) ||
+                    (tDigitos && String(data.cpf || '').replace(/\D/g, '').includes(tDigitos)) ||
+                    String(data.centro_custo || '').toLowerCase().includes(t) ||
+                    String(data.empresa_atribuida || '').toLowerCase().includes(t);
+                if (!passa) return;
+            }
+            out.push({ _id: d.id, ...data });
+        });
+        return out;
+    }
+
+    async function gerarExcelDoModal() {
+        const empresas    = getMultiValues(document.getElementById('export-filtro-empresa'));
+        const competencias = getMultiValues(document.getElementById('export-filtro-competencia'));
+        const centrosCusto = getMultiValues(document.getElementById('export-filtro-cc'));
+
+        _setExportLoading(true, 'Buscando registros no Firestore…');
+        let registros;
+        try {
+            registros = await _buscarRegistrosParaExport({ empresas, competencias, centrosCusto });
+        } catch (err) {
+            console.error('[Export] query falhou:', err);
+            _setExportLoading(false);
+            if (err.code === 'permission-denied') {
+                return mostrarErro('Acesso Negado: seu perfil não tem permissão para ler estes registros.');
+            }
+            return mostrarErro('Falha ao buscar registros para exportação: ' + (err.message || 'erro desconhecido'));
+        }
+
+        if (!registros.length) {
+            _setExportLoading(false);
+            return mostrarErro('Nenhum registro encontrado para os filtros selecionados. Ajuste os critérios e tente novamente.');
+        }
+
+        _setExportLoading(true, `Gerando planilha com ${registros.length} registro(s)…`);
+        // Cede o frame pra UI atualizar o spinner antes do trabalho síncrono.
+        await new Promise(r => setTimeout(r, 30));
+
+        // Contexto p/ nome do arquivo: usa o valor único OU "multi" quando há
+        // mais de um selecionado. Mantém o nome legível e curto.
+        const fmtCtx = (arr, fallback) => {
+            if (isMultiAll(arr)) return '';
+            if (arr.length === 1) return arr[0];
+            return `${fallback}${arr.length}`;
+        };
+        const contexto = {
+            empresa:     fmtCtx(empresas,    'empresas'),
+            competencia: fmtCtx(competencias, 'comps'),
+            centroCusto: fmtCtx(centrosCusto, 'ccs'),
+        };
+
+        let info;
+        try {
+            info = gerarExcelDeRegistros(registros, contexto);
+        } catch (err) {
+            console.error('[Export] writeFile falhou:', err);
+            _setExportLoading(false);
+            return mostrarErro('Falha ao gerar o arquivo Excel: ' + (err.message || 'erro desconhecido'));
+        }
+
+        _setExportLoading(false);
+        fecharModal('modal-exportar-config');
+        console.log(`[Export] ${info.total} registro(s) exportado(s) → ${info.nomeArquivo}`, { empresas, competencias, centrosCusto });
+        if (registros.length >= EXPORT_MAX_DOCS) {
+            mostrarErro(`Atingido o limite de ${EXPORT_MAX_DOCS} registros nesta exportação. Refine os filtros para incluir competências/empresas específicas e garantir cobertura total.`);
+        }
+    }
+
+    document.getElementById('btn-exportar-excel').onclick = abrirModalExportar;
+    document.getElementById('btn-gerar-excel').onclick = gerarExcelDoModal;
+    document.getElementById('btn-cancelar-exportar-config').onclick = () => fecharModal('modal-exportar-config');
+    document.getElementById('btn-fechar-exportar-config').onclick   = () => fecharModal('modal-exportar-config');
+    document.getElementById('modal-exportar-config-overlay').onclick = () => fecharModal('modal-exportar-config');
+
     // ── MODAL IMPORTAR: abrir pelo botão da topbar, fechar pelo X/overlay ───
     document.getElementById('btn-abrir-importar').onclick = () => {
         // Default pra mês corrente se vier vazio.
@@ -1673,18 +2542,23 @@
     document.getElementById('modal-filtros-overlay').onclick = () => fecharModal('modal-filtros');
 
     document.getElementById('btn-filtros-aplicar').onclick = () => {
-        if (filtroCompetencia.value) localStorage.setItem(LS_COMP, filtroCompetencia.value);
-        else localStorage.removeItem(LS_COMP);
-        if (filtroEmpresa.value) localStorage.setItem(LS_EMP, filtroEmpresa.value);
-        else localStorage.removeItem(LS_EMP);
-        // Centro de Custo é filtro client-side puro — não dispara nova query Firestore.
-        filtroCcValor = filtroCc.value.trim();
-        if (filtroCcValor) localStorage.setItem(LS_CC, filtroCcValor);
-        else localStorage.removeItem(LS_CC);
-        // Mostra o chip SÓ quando o usuário aplica filtros explicitamente.
-        atualizarChipFiltros(filtroCompetencia.value, filtroEmpresa.value.trim(), filtroCcValor);
-        carregarDadosTabela();
-        renderHistorico(); // re-render para aplicar CC sobre o cache atual
+        const compRefs = getMultiValues(filtroCompetencia);
+        const empresas = getMultiValues(filtroEmpresa);
+        const ccs      = getMultiValues(filtroCc);
+
+        // LS: salva apenas quando há filtro real (não-"Todos"). Formato JSON.
+        if (isMultiAll(compRefs)) localStorage.removeItem(LS_COMP);
+        else localStorage.setItem(LS_COMP, JSON.stringify(compRefs));
+        if (isMultiAll(empresas)) localStorage.removeItem(LS_EMP);
+        else localStorage.setItem(LS_EMP, JSON.stringify(empresas));
+        if (isMultiAll(ccs)) localStorage.removeItem(LS_CC);
+        else localStorage.setItem(LS_CC, JSON.stringify(ccs));
+
+        // CC é client-side: atualiza o array em memória pra `aplicarBusca`.
+        filtroCcValores = isMultiAll(ccs) ? ['Todos'] : ccs;
+
+        atualizarChipFiltros();
+        carregarDadosTabela(); // re-render acontece dentro (mesmo se a query não mudou)
         verificarVisibilidadeBotaoLimpar();
         fecharModal('modal-filtros');
     };
@@ -1693,7 +2567,10 @@
     function verificarVisibilidadeBotaoLimpar() {
         const btn = document.getElementById('btn-limpar-filtros-topbar');
         if (!btn) return;
-        const algumAtivo = !!(filtroCompetencia.value || filtroEmpresa.value.trim() || filtroCcValor);
+        const algumAtivo =
+            !isMultiAll(getMultiValues(filtroCompetencia)) ||
+            !isMultiAll(getMultiValues(filtroEmpresa)) ||
+            !isMultiAll(filtroCcValores);
         if (algumAtivo) {
             btn.classList.remove('hidden');
             btn.classList.add('flex');
@@ -1707,16 +2584,15 @@
     // histórico global. Compartilhado entre o botão "Limpar" do modal e o botão
     // "Limpar Filtros" externo da topbar da tabela.
     function limparTodosFiltros() {
-        filtroCompetencia.value = '';
-        filtroEmpresa.value = '';
-        filtroCc.value = '';
-        filtroCcValor = '';
+        setMultiValues(filtroCompetencia, ['Todos']);
+        setMultiValues(filtroEmpresa, ['Todos']);
+        setMultiValues(filtroCc, ['Todos']);
+        filtroCcValores = ['Todos'];
         localStorage.removeItem(LS_COMP);
         localStorage.removeItem(LS_EMP);
         localStorage.removeItem(LS_CC);
-        atualizarChipFiltros('', '', '');
+        atualizarChipFiltros();
         carregarDadosTabela();
-        renderHistorico();
         verificarVisibilidadeBotaoLimpar();
     }
     document.getElementById('btn-filtros-limpar').onclick = () => {
@@ -2033,6 +2909,250 @@
             ${linha('swap_horiz', 'Apenas em Benefícios', diag.somenteBeneficios, 'text-tertiary')}`;
     }
 
+    // ── MOTOR DE QUARENTENA — CENTRO DE CUSTO ────────────────────────────────
+    // Auditoria 2026-05-14: o RH às vezes exporta a folha com a coluna Centro
+    // de Custo em branco, "." ou "-" para colaboradores recém-cadastrados (ou
+    // por bug do sistema da Conta). Antes esses registros iam para o Firestore
+    // com `centro_custo = ''`, sumiam do dashboard (que filtra por CC) e
+    // quebravam a sincronização da Base_Centros_Custo. Agora o ETL marca esses
+    // pendentes e a UI pausa a importação até o usuário resolver — confirmando
+    // a sugestão tirada do histórico OU digitando manualmente.
+
+    // Calcula os N meses imediatamente anteriores a uma competencia_ref "YYYY-MM".
+    function mesesAnterioresRef(refAtual, n) {
+        const m = /^(\d{4})-(\d{2})$/.exec(String(refAtual || ''));
+        if (!m) return [];
+        const ano = Number(m[1]);
+        const mes = Number(m[2]); // 1..12
+        const base = new Date(Date.UTC(ano, mes - 1, 1));
+        const out = [];
+        for (let i = 1; i <= n; i++) {
+            const d = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() - i, 1));
+            const yy = d.getUTCFullYear();
+            const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+            out.push(`${yy}-${mm}`);
+        }
+        return out;
+    }
+
+    // Procura, para cada CPF pendente, o centro_custo mais recente registrado
+    // no Firestore (mesma empresa). Estratégia em duas etapas:
+    //   1) Uma query única filtrando empresa + competencia_ref IN (últimos 3
+    //      meses anteriores à competência sendo importada). Cobre o caso comum
+    //      (colaborador recorrente) num único round-trip.
+    //   2) Fallback opcional para CPFs ainda não encontrados: batches de 10
+    //      CPFs usando `where('cpf', 'in', lote)` (limite duro do Firestore).
+    // Retorna Map<cpf, { centro_custo, competencia_ref }>.
+    async function buscarHistoricoCentroCusto(cpfsPendentes, empresa, competenciaRef) {
+        const result = new Map();
+        if (!cpfsPendentes.size || !empresa) return result;
+
+        const candidatos = []; // {cpf, centro_custo, competencia_ref}
+        let docsLidos = 0;
+
+        // Etapa 1 — janela de 3 meses anteriores (1 query).
+        const meses = mesesAnterioresRef(competenciaRef, 3);
+        if (meses.length) {
+            try {
+                const q1 = query(
+                    collection(db, COLECAO),
+                    where('empresa_atribuida', '==', empresa),
+                    where('competencia_ref', 'in', meses)
+                );
+                const snap1 = await getDocs(q1);
+                snap1.forEach(ds => {
+                    docsLidos++;
+                    const d = ds.data() || {};
+                    const cpf = String(d.cpf || '').replace(/\D/g, '').padStart(11, '0');
+                    const cc = String(d.centro_custo || '').trim();
+                    if (!cpf || !cc) return;
+                    if (cc === '.' || cc === '-') return;
+                    if (!cpfsPendentes.has(cpf)) return;
+                    candidatos.push({ cpf, centro_custo: cc, competencia_ref: String(d.competencia_ref || '') });
+                });
+            } catch (err) {
+                console.warn('[Quarentena] busca por janela de meses falhou:', err?.code || err?.message);
+            }
+        }
+
+        // Etapa 2 — fallback para CPFs que ainda não tem candidato. Batches de
+        // 10 (limite duro do operador `in` no Firestore).
+        const achados = new Set(candidatos.map(c => c.cpf));
+        const faltantes = [...cpfsPendentes].filter(c => !achados.has(c));
+        for (let i = 0; i < faltantes.length; i += 10) {
+            const lote = faltantes.slice(i, i + 10);
+            try {
+                const q2 = query(
+                    collection(db, COLECAO),
+                    where('empresa_atribuida', '==', empresa),
+                    where('cpf', 'in', lote)
+                );
+                const snap2 = await getDocs(q2);
+                snap2.forEach(ds => {
+                    docsLidos++;
+                    const d = ds.data() || {};
+                    const cpf = String(d.cpf || '').replace(/\D/g, '').padStart(11, '0');
+                    const cc = String(d.centro_custo || '').trim();
+                    if (!cpf || !cc) return;
+                    if (cc === '.' || cc === '-') return;
+                    if (!cpfsPendentes.has(cpf)) return;
+                    candidatos.push({ cpf, centro_custo: cc, competencia_ref: String(d.competencia_ref || '') });
+                });
+            } catch (err) {
+                console.warn('[Quarentena] fallback `in` (lote', i / 10 + 1, ') falhou:', err?.code || err?.message);
+            }
+        }
+
+        // Dedup: por CPF, mantém o registro mais recente (competencia_ref > maior é o mais novo, formato YYYY-MM ordena lexicograficamente).
+        for (const c of candidatos) {
+            const atual = result.get(c.cpf);
+            if (!atual || c.competencia_ref > atual.competencia_ref) {
+                result.set(c.cpf, { centro_custo: c.centro_custo, competencia_ref: c.competencia_ref });
+            }
+        }
+        console.log('[Quarentena] lookback concluído:', {
+            cpfsPendentes: cpfsPendentes.size,
+            comHistorico: result.size,
+            semHistorico: cpfsPendentes.size - result.size,
+            docsLidos,
+        });
+        return result;
+    }
+
+    // Renderiza o modal de quarentena e devolve Promise resolvida com:
+    //   - Map<indiceUnificado, novoCC> quando o usuário aplica;
+    //   - null quando o usuário cancela.
+    // O caller é responsável por aplicar as correções no array `unificado`.
+    let _resolverQuarentena = null;
+    function abrirQuarentena(unificado, sugestoes) {
+        // Linhas pendentes — preserva o índice original pra atualizar in-place.
+        const pendentes = [];
+        for (let i = 0; i < unificado.length; i++) {
+            if (unificado[i].pendente_tratamento) pendentes.push({ idx: i, reg: unificado[i] });
+        }
+
+        // Particiona: com sugestão (Seção A) vs sem (Seção B).
+        const comHist = [];
+        const semHist = [];
+        for (const p of pendentes) {
+            const sug = sugestoes.get(p.reg.cpf);
+            if (sug && sug.centro_custo) comHist.push({ ...p, sugestao: sug });
+            else semHist.push(p);
+        }
+
+        const tbodyA = document.getElementById('quarentena-tbody-historico');
+        const tbodyB = document.getElementById('quarentena-tbody-novos');
+        const vazioA = document.getElementById('quarentena-vazio-historico');
+        const vazioB = document.getElementById('quarentena-vazio-novos');
+        const contA  = document.getElementById('quarentena-cont-historico');
+        const contB  = document.getElementById('quarentena-cont-novos');
+        const resumo = document.getElementById('quarentena-resumo');
+        const status = document.getElementById('quarentena-status');
+        const btnAplicar = document.getElementById('btn-aplicar-quarentena');
+
+        resumo.textContent = `${pendentes.length} registro(s) com Centro de Custo em branco ou inválido — ${comHist.length} com sugestão automática, ${semHist.length} sem histórico.`;
+        contA.textContent = `${comHist.length} ${comHist.length === 1 ? 'registro' : 'registros'}`;
+        contB.textContent = `${semHist.length} ${semHist.length === 1 ? 'registro' : 'registros'}`;
+
+        // Helper de escape mínimo (nome e centro_custo são input do usuário/RH).
+        const esc = (s) => String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        // Seção A — sugeridos.
+        tbodyA.innerHTML = '';
+        if (comHist.length === 0) {
+            vazioA.classList.remove('hidden');
+        } else {
+            vazioA.classList.add('hidden');
+            for (const { idx, reg, sugestao } of comHist) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5 text-slate-700 font-medium">${esc(reg.nome || '—')}</td>
+                    <td class="px-4 py-2.5 text-slate-500 font-mono text-[12px]">${fmtCPF(reg.cpf)}</td>
+                    <td class="px-4 py-2.5">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider border border-emerald-100" title="Competência usada na sugestão">${esc(sugestao.competencia_ref || '—')}</span>
+                    </td>
+                    <td class="px-4 py-2.5">
+                        <input type="text" data-idx="${idx}" data-secao="A" value="${esc(sugestao.centro_custo)}"
+                               class="quarentena-input w-full border border-emerald-200 bg-emerald-50/40 rounded-lg py-1.5 px-3 text-[13px] font-medium text-slate-700 focus:ring-2 focus:ring-primary/30 focus:border-primary focus:bg-white outline-none transition-all" />
+                    </td>`;
+                tbodyA.appendChild(tr);
+            }
+        }
+
+        // Seção B — manuais.
+        tbodyB.innerHTML = '';
+        if (semHist.length === 0) {
+            vazioB.classList.remove('hidden');
+        } else {
+            vazioB.classList.add('hidden');
+            for (const { idx, reg } of semHist) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5 text-slate-700 font-medium">${esc(reg.nome || '—')}</td>
+                    <td class="px-4 py-2.5 text-slate-500 font-mono text-[12px]">${fmtCPF(reg.cpf)}</td>
+                    <td class="px-4 py-2.5">
+                        <input type="text" data-idx="${idx}" data-secao="B" value="" required
+                               placeholder="Digite o Centro de Custo…"
+                               class="quarentena-input w-full border border-red-200 bg-red-50/40 rounded-lg py-1.5 px-3 text-[13px] font-medium text-slate-700 placeholder:text-red-300 focus:ring-2 focus:ring-primary/30 focus:border-primary focus:bg-white outline-none transition-all" />
+                    </td>`;
+                tbodyB.appendChild(tr);
+            }
+        }
+
+        // Validação: botão Aplicar só ativa quando TODO input tem valor não-vazio.
+        const inputs = () => Array.from(document.querySelectorAll('#modal-quarentena input.quarentena-input'));
+        function revalidar() {
+            const lista = inputs();
+            const faltando = lista.filter(i => !i.value.trim()).length;
+            const ok = lista.length > 0 && faltando === 0;
+            btnAplicar.disabled = !ok;
+            if (ok) {
+                status.innerHTML = `<span class="text-emerald-600 font-bold">✓ Tudo preenchido — pronto para aplicar.</span>`;
+            } else {
+                status.innerHTML = `Faltam <strong class="text-red-600">${faltando}</strong> de <strong>${lista.length}</strong> preenchimentos.`;
+            }
+        }
+        inputs().forEach(inp => {
+            inp.addEventListener('input', revalidar);
+            inp.addEventListener('blur', () => { inp.value = inp.value.trim(); revalidar(); });
+        });
+        revalidar();
+
+        abrirModal('modal-quarentena');
+
+        return new Promise((resolve) => {
+            _resolverQuarentena = resolve;
+        });
+    }
+
+    function _fecharQuarentena(resposta) {
+        fecharModal('modal-quarentena');
+        const r = _resolverQuarentena;
+        _resolverQuarentena = null;
+        if (typeof r === 'function') r(resposta);
+    }
+
+    // Coleta as correções dos inputs e devolve Map<idx, novoCC>.
+    function _coletarCorrecoesQuarentena() {
+        const out = new Map();
+        document.querySelectorAll('#modal-quarentena input.quarentena-input').forEach(inp => {
+            const idx = Number(inp.getAttribute('data-idx'));
+            const v = String(inp.value || '').trim();
+            if (Number.isFinite(idx) && v) out.set(idx, v);
+        });
+        return out;
+    }
+
+    document.getElementById('btn-aplicar-quarentena').onclick = () => {
+        if (document.getElementById('btn-aplicar-quarentena').disabled) return;
+        _fecharQuarentena(_coletarCorrecoesQuarentena());
+    };
+    document.getElementById('btn-cancelar-quarentena').onclick = () => _fecharQuarentena(null);
+    document.getElementById('btn-fechar-quarentena').onclick   = () => _fecharQuarentena(null);
+    document.getElementById('modal-quarentena-overlay').onclick = () => _fecharQuarentena(null);
+
     // ── SUBMIT ───────────────────────────────────────────────────────────────
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -2085,6 +3205,45 @@
             return mostrarErro(err.message || 'Não foi possível processar as planilhas. Verifique o formato.');
         }
 
+        // 1.5) MOTOR DE QUARENTENA — sanitização de centro_custo.
+        // Auditoria 2026-05-14: se o ETL marcou registros com `pendente_tratamento`
+        // (centro_custo vazio/"."/"-"), pausamos aqui ANTES da gravação. Busca o
+        // histórico do CPF na empresa atual e abre o modal pra o usuário confirmar
+        // a sugestão ou digitar manualmente. Cancelar = aborta sem gravar nada.
+        if (diagnostico.pendentesTratamento > 0) {
+            setLoading(true, `Buscando histórico de ${diagnostico.pendentesTratamento} pendente(s)...`);
+            const cpfsPendentes = new Set();
+            for (const reg of unificado) {
+                if (reg.pendente_tratamento && reg.cpf) cpfsPendentes.add(reg.cpf);
+            }
+            let sugestoes = new Map();
+            try {
+                sugestoes = await buscarHistoricoCentroCusto(cpfsPendentes, empresa, competenciaMes);
+            } catch (err) {
+                console.warn('[Quarentena] lookback falhou totalmente — segue com 0 sugestões:', err?.code || err?.message);
+            }
+            setLoading(false);
+
+            const correcoes = await abrirQuarentena(unificado, sugestoes);
+            if (!correcoes) {
+                // Usuário cancelou — nada foi gravado, deixa o form pronto pra
+                // novo Process. Não fecha o modal de importação, pra ele poder
+                // reescolher arquivos ou corrigir a planilha.
+                return mostrarErro('Importação cancelada. Nenhum registro foi gravado — corrija a planilha de origem ou tente novamente.');
+            }
+
+            // Aplica as correções no array em memória (mesmo doc, agora limpo).
+            for (const [idx, novoCC] of correcoes) {
+                if (unificado[idx]) {
+                    unificado[idx].centro_custo = novoCC;
+                    unificado[idx].pendente_tratamento = false;
+                }
+            }
+            console.log(`[Quarentena] ${correcoes.size} centro(s) de custo sanitizado(s) antes da gravação.`);
+            // Atualiza diagnóstico — fica em 0 após aplicar.
+            diagnostico.pendentesTratamento = 0;
+        }
+
         // 2) UPSERT — grava o lote em batches de 450 com setDoc + merge:true.
         // Auditoria 2026-04-28: o passo de "DROP em massa" (deletar todos os
         // docs de competencia_ref+empresa antes de gravar) foi removido. Agora
@@ -2121,12 +3280,16 @@
         document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('has-file'));
 
         // Sincroniza os filtros da tabela com a competência/empresa que acabou de ser gravada.
-        filtroCompetencia.value = competenciaMes;
-        filtroEmpresa.value = empresa;
-        localStorage.setItem(LS_COMP, competenciaMes);
-        localStorage.setItem(LS_EMP, empresa);
+        // Auditoria 2026-05-14: filtros são multi-select; aplicamos como seleção única
+        // dentro do mesmo array. Re-popula competência primeiro (cache invalidado mais abaixo).
+        disponiveisCache = null; disponiveisPromise = null;
+        await popularMultiCompetencias();
+        setMultiValues(filtroCompetencia, [competenciaMes]);
+        setMultiValues(filtroEmpresa, [empresa]);
+        localStorage.setItem(LS_COMP, JSON.stringify([competenciaMes]));
+        localStorage.setItem(LS_EMP, JSON.stringify([empresa]));
         // Import não é "Aplicar" — mantém o chip escondido para tela limpa.
-        atualizarChipFiltros('', '');
+        atualizarChipFiltros();
 
         // Invalida o cache de disponíveis (há novos dados).
         disponiveisCache = null;

@@ -528,16 +528,23 @@
             { key: 'metasFinanceiras', label: 'Gestão das Metas', desc: 'Cadastro de metas anuais por produto', icon: 'track_changes', legacy: 'metas' },
             { key: 'faturamento', label: 'Faturamento - Contas a receber', desc: 'Lançamentos, recebíveis e baixas', icon: 'payments', legacy: 'contas_receber' },
             { key: 'contasPagar', label: 'Contas a Pagar', desc: 'Obrigações e conciliação contínua', icon: 'account_balance_wallet', legacy: 'contas_pagar' },
-            { key: 'custoFolha', label: 'Custo de Folha', desc: 'Importação e dashboard de folha', icon: 'receipt_long', legacy: 'custo_folha' },
+            { key: 'custoFolha', label: 'Gerenciador Folha', desc: 'Importação operacional e gestão de folha', icon: 'receipt_long', legacy: 'custo_folha' },
             { key: 'configuracoesPrivacidade', label: 'Configurações e Privacidade', desc: 'Apenas Super Adm — usuários e logs', icon: 'admin_panel_settings', legacy: 'usuarios', superAdminOnly: true },
         ];
+        // Auditoria 2026-05-13 (Key Collision / Privilege Escalation):
+        // Chaves `legacy` dos módulos do Nível 2 ganharam prefixo `dash_` para
+        // NUNCA colidirem com as chaves dos menus laterais (Nível 1). Antes
+        // marcar apenas o card "Custo de Folha" derivava `custo_folha` no
+        // array `menus_permitidos`, o que reabria a página operacional e a
+        // coleção `CustosFolha` no Firestore via `hasMenu('custo_folha')`.
+        // Idem para `aging`. Agora cada nível tem chave exclusiva.
         const MODULOS_DEF = [
             { key: 'moduloFaturamento', label: 'Módulo Faturamento', desc: 'Bruto vs Realizado, performance comercial', icon: 'payments' },
             { key: 'fluxoCaixa', label: 'Fluxo de Caixa', desc: 'Entradas, saídas e projeções', icon: 'account_balance' },
             { key: 'forecast', label: 'FORECAST', desc: 'Headcount projetado e provisões', icon: 'groups' },
-            { key: 'aging', label: 'AGING Financeiro', desc: 'Inadimplência e idade de recebíveis', icon: 'query_stats', legacy: 'aging' },
+            { key: 'aging', label: 'AGING Financeiro', desc: 'Inadimplência e idade de recebíveis', icon: 'query_stats', legacy: 'dash_aging' },
             { key: 'metas', label: 'Acompanhamento de Metas', desc: 'Atingimento de metas no Dashboard Geral', icon: 'track_changes' },
-            { key: 'custoFolha', label: 'Custo de Folha', desc: 'Card de custo de folha no Dashboard', icon: 'receipt_long', legacy: 'custo_folha' },
+            { key: 'custoFolha', label: 'Custo de Folha', desc: 'Card de custo de folha no Dashboard', icon: 'receipt_long', legacy: 'dash_custo_folha' },
         ];
 
         function gerarMatrizPermissoes(prefixo) {
@@ -797,8 +804,11 @@
             for (const def of MENUS_DEF) menus[def.key] = arr.includes(def.legacy);
             const modulosDashboard = {};
             for (const def of MODULOS_DEF) modulosDashboard[def.key] = false;
-            // Caso especial: se tinha 'aging' antes, ativa o módulo aging.
-            if (arr.includes('aging')) modulosDashboard.aging = true;
+            // Migração de chaves antigas dos módulos do Nível 2. Aceita tanto
+            // a chave nova (dash_*) quanto a antiga, para preservar o card de
+            // usuários que já estavam configurados antes da separação.
+            if (arr.includes('dash_aging')        || arr.includes('aging'))        modulosDashboard.aging = true;
+            if (arr.includes('dash_custo_folha')  || arr.includes('custo_folha'))  modulosDashboard.custoFolha = true;
             return {
                 menus,
                 modulosDashboard,

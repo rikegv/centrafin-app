@@ -1,13 +1,15 @@
 /* ─────────────────────────────────────────────────────────────────────────
    Centra Fin — Theme Manager (global)
    - Lê/escreve `localStorage('centrafin-theme')` (valores: 'light' | 'dark').
-   - Se o HTML já declarar um <button id="theme-toggle"> (ex.: CRF, Master),
-     apenas o conecta. Caso contrário, auto-monta um toggle flutuante.
+   - Auditoria 2026-05-14: o toggle vive APENAS dentro do menu lateral
+     (renderSidebar). Removemos o auto-mount flutuante. Wire passa a usar
+     event delegation no `document` — sobrevive a re-renders da sidebar e
+     funciona mesmo que o elemento ainda não exista quando este script roda.
    - Atualiza ApexCharts (mode + tooltip) quando os charts existem.
 
    IMPORTANTE: o boot que aplica a classe em <html> precisa rodar ANTES do
    paint, então fica inline no <head> de cada página. Este arquivo é o
-   wire-up + auto-mount, carregado com `defer`.
+   wire-up, carregado com `defer`.
    ───────────────────────────────────────────────────────────────────────── */
 
 (function () {
@@ -21,16 +23,30 @@
   }
 
   function applyTheme(modo) {
+    var alvo = modo === 'dark' ? 'dark' : 'light';
     var html = document.documentElement;
     html.classList.remove('light', 'dark');
-    html.classList.add(modo === 'dark' ? 'dark' : 'light');
-    try { localStorage.setItem(STORAGE_KEY, modo === 'dark' ? 'dark' : 'light'); } catch (e) {}
-    aplicarThemeCharts(modo === 'dark' ? 'dark' : 'light');
+    html.classList.add(alvo);
+    try { localStorage.setItem(STORAGE_KEY, alvo); } catch (e) {}
+    aplicarThemeCharts(alvo);
+    sincronizarIconeSidebar();
   }
 
   function toggleTheme() {
     var atual = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
     applyTheme(atual === 'dark' ? 'light' : 'dark');
+  }
+
+  // Atualiza o ícone "preview" dentro do item de menu da sidebar.
+  // Convenção: mostramos o tema que será ATIVADO se o usuário clicar.
+  //   - tema atual dark  → ícone light_mode (sol)
+  //   - tema atual light → ícone dark_mode  (lua)
+  // Idempotente. Se a sidebar ainda não renderizou, simplesmente não faz nada.
+  function sincronizarIconeSidebar() {
+    var icon = document.getElementById('sidebar-theme-icon');
+    if (!icon) return;
+    var isDark = document.documentElement.classList.contains('dark');
+    icon.textContent = isDark ? 'light_mode' : 'dark_mode';
   }
 
   // Sincroniza ApexCharts globais (Master) — opcional; se a página não usar Apex, é no-op.
@@ -60,64 +76,29 @@
     }
   }
 
-  // Cria o markup do toggle (button + ícones de sol/lua).
-  // O <button id="theme-toggle"> sozinho já é estilizado pelo theme.css.
-  // O wrapper agrupa os ícones decorativos ao redor.
-  function buildToggleNode(useFloatingWrapper) {
-    var wrapper = document.createElement('div');
-    if (useFloatingWrapper) wrapper.id = 'theme-toggle-floating';
-    else { wrapper.style.display = 'flex'; wrapper.style.alignItems = 'center'; wrapper.style.gap = '10px'; }
-    wrapper.title = 'Alternar tema claro/escuro';
-
-    var sun = document.createElement('span');
-    sun.className = 'material-symbols-outlined';
-    sun.textContent = 'light_mode';
-
-    var moon = document.createElement('span');
-    moon.className = 'material-symbols-outlined';
-    moon.textContent = 'dark_mode';
-
-    var btn = document.createElement('button');
-    btn.id = 'theme-toggle';
-    btn.type = 'button';
-    btn.setAttribute('aria-label', 'Alternar tema claro/escuro');
-
-    wrapper.appendChild(sun);
-    wrapper.appendChild(btn);
-    wrapper.appendChild(moon);
-    return wrapper;
-  }
-
-  // Auto-mount: se a página NÃO definiu um #theme-toggle, monta um.
-  // Estratégia: tenta inserir no primeiro <header>; senão, usa flutuante fixo.
-  function autoMount() {
-    if (document.getElementById('theme-toggle')) return; // já existe (CRF/Master)
-    var header = document.querySelector('header');
-    if (header) {
-      var node = buildToggleNode(false);
-      // Se o header for flex, garante alinhamento à direita.
-      var style = window.getComputedStyle(header);
-      if (style.display === 'flex') {
-        node.style.marginLeft = 'auto';
-      }
-      header.appendChild(node);
-    } else {
-      // Fallback: pill flutuante fixo no canto superior direito.
-      document.body.appendChild(buildToggleNode(true));
-    }
-  }
-
-  function wireToggle() {
-    var btn = document.getElementById('theme-toggle');
-    if (!btn) return;
-    if (btn._centraThemeWired) return; // idempotente
-    btn._centraThemeWired = true;
-    btn.addEventListener('click', toggleTheme);
+  // Wire via event delegation no documento. O alvo pode ser:
+  //   - qualquer descendente do wrapper marcado com [data-theme-toggle]
+  //     (linha inteira do menu — funciona com a sidebar retraída clicando
+  //     no ícone);
+  //   - o próprio botão #theme-toggle (acessibilidade por teclado/Tab).
+  // Como o button vive dentro do wrapper [data-theme-toggle], um único
+  // closest('[data-theme-toggle]') já cobre os dois caminhos.
+  function wireDelegacao() {
+    if (document._centraThemeWired) return; // idempotente
+    document._centraThemeWired = true;
+    document.addEventListener('click', function (ev) {
+      var alvo = ev.target;
+      if (!alvo || !alvo.closest) return;
+      var linha = alvo.closest('[data-theme-toggle]');
+      if (!linha) return;
+      ev.preventDefault();
+      toggleTheme();
+    });
   }
 
   function init() {
-    autoMount();
-    wireToggle();
+    wireDelegacao();
+    sincronizarIconeSidebar(); // sidebar pode já ter renderizado antes do init
 
     // Reaplica o tema atual nos ApexCharts a cada 500ms por ~6s, porque os
     // charts costumam ser instanciados dentro de listeners assíncronos do Firebase.
@@ -134,7 +115,10 @@
   window.CentraTheme = {
     apply: applyTheme,
     toggle: toggleTheme,
-    get: function () { return document.documentElement.classList.contains('dark') ? 'dark' : 'light'; }
+    get: function () { return document.documentElement.classList.contains('dark') ? 'dark' : 'light'; },
+    // Chamado pelo renderSidebar logo após o innerHTML — garante que o ícone
+    // do menu reflita o tema atual mesmo antes do primeiro toggle.
+    syncIcon: sincronizarIconeSidebar
   };
 
   if (document.readyState === 'loading') {

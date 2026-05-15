@@ -162,12 +162,24 @@
           </div>
           <div class="flex justify-between items-start relative z-10">
             <span class="material-symbols-outlined text-brandAqua/40 text-[24px]">groups</span>
-            <!-- Botão discreto: abre o modal de detalhes de movimentações. -->
-            <button id="btn-abrir-movimentacoes" type="button"
-              title="Ver detalhes das movimentações"
-              class="text-slate-500/70 hover:text-brandAqua hover:scale-110 cursor-pointer transition-all duration-200 active:scale-95">
-              <span class="material-symbols-outlined text-[18px]">open_in_new</span>
-            </button>
+            <!-- Stack vertical de ações secundárias (auditoria 2026-05-14):
+                 a seta de movimentações no topo, divider sutil, e a lâmpada
+                 que abre o modal informativo. cursor-pointer (não help) porque
+                 o clique agora abre um modal premium em vez de tooltip nativo. -->
+            <div class="flex flex-col items-center gap-1.5">
+              <!-- Botão discreto: abre o modal de detalhes de movimentações. -->
+              <button id="btn-abrir-movimentacoes" type="button"
+                title="Ver detalhes das movimentações"
+                class="text-slate-500/70 hover:text-brandAqua hover:scale-110 cursor-pointer transition-all duration-200 active:scale-95">
+                <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+              </button>
+              <div class="w-4 h-px bg-slate-500/30"></div>
+              <button type="button" aria-label="O que conta como movimentação?"
+                onclick="window.toggleModal('modal-info-colaboradores', true)"
+                class="text-slate-400 hover:text-brandAqua hover:scale-110 cursor-pointer transition-all duration-200 active:scale-95">
+                <span class="material-symbols-outlined text-[16px]">lightbulb</span>
+              </button>
+            </div>
           </div>
           <div class="relative z-10 mt-1.5">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Colaboradores</p>
@@ -532,6 +544,29 @@
     </div>
   </div>
 
+  <!-- MODAL DE INFORMAÇÃO — Lógica do KPI Colaboradores (auditoria 2026-05-14).
+       Substitui o tooltip nativo `title="..."` da lâmpada por um diálogo
+       premium coerente com o design system do dashboard. Usa a paleta do
+       próprio módulo (brandAqua/brandDarkBlue), já que `tertiary`/`secondary`
+       não estão definidos no tailwind.config deste arquivo. Abertura via
+       `window.toggleModal('modal-info-colaboradores', true)`. -->
+  <div id="modal-info-colaboradores" class="fixed inset-0 z-[82] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
+    <div class="absolute inset-0 bg-brandDarkBlue/50 backdrop-blur-sm" onclick="window.toggleModal('modal-info-colaboradores', false)"></div>
+    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl relative z-10 p-8 transform scale-95 transition-all duration-300 text-center">
+      <div class="w-16 h-16 bg-brandAqua/10 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+        <span class="material-symbols-outlined text-4xl text-brandAqua">lightbulb</span>
+      </div>
+      <h3 class="text-xl font-extrabold text-brandDarkBlue mb-2 tracking-tight">Lógica do Indicador</h3>
+      <p class="text-slate-500 text-[13px] mb-6 font-medium leading-relaxed">
+        Total de CPFs únicos processados no período. Movimentações indicam mudança de cargo ou salário em relação ao mês anterior.
+      </p>
+      <button onclick="window.toggleModal('modal-info-colaboradores', false)"
+              class="w-full py-3 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">
+        ENTENDIDO
+      </button>
+    </div>
+  </div>
+
   <script>
     window.toggleModal = (id, show) => {
         const modal = document.getElementById(id);
@@ -586,7 +621,11 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    const CHAVE_PAGINA = 'custo_folha';
+    // Auditoria 2026-05-13 (Privilege Escalation fix): dashboard de folha é
+    // módulo do Nível 2; chave canônica passou a ser `dash_custo_folha` para
+    // separar do menu lateral operacional (Nível 1, `custo_folha`). Mantemos
+    // a chave antiga como sinônimo retrocompatível p/ docs não re-salvos.
+    const CHAVES_PAGINA = ['dash_custo_folha', 'custo_folha'];
     const COLECAO = 'CustosFolha';
 
     // ==========================================
@@ -1337,20 +1376,44 @@
 
     // Handlers de drill-down usados pelos chart events — declarados hoisted
     // via `function` para estarem disponíveis antes do chart ser criado.
+    //
+    // Auditoria 2026-05-14 (cross-filter toggle): clicar duas vezes no mesmo
+    // ponto agora LIMPA o filtro em vez de re-aplicar (UX padrão de toggle).
+    // A re-renderização disparada por processarCustoFolha() recria o chart,
+    // o que naturalmente "deseleciona" o data point visualmente — sem
+    // precisar chamar toggleDataPointSelection do ApexCharts.
     function aplicarDrillDownMes(ref) {
       if (!ref) return;
-      document.getElementById('filtro-mes-inicial').value = ref;
-      document.getElementById('filtro-mes-final').value   = ref;
+      const inicial = document.getElementById('filtro-mes-inicial');
+      const final   = document.getElementById('filtro-mes-final');
+      if (inicial.value === ref && final.value === ref) {
+        // Já estamos filtrando exatamente este mês → toggle off.
+        inicial.value = '';
+        final.value   = '';
+      } else {
+        inicial.value = ref;
+        final.value   = ref;
+      }
       processarCustoFolha();
     }
     function aplicarDrillDownEmpresa(nome) {
       if (!nome || !msEmpresa) return;
-      msEmpresa.setValores([nome]);
+      const atual = msEmpresa.getValores();
+      if (atual.length === 1 && atual[0] === nome) {
+        msEmpresa.setValores([]); // toggle off — volta a todas as empresas
+      } else {
+        msEmpresa.setValores([nome]);
+      }
       processarCustoFolha();
     }
     function aplicarDrillDownCc(nome) {
       if (!nome || !msCentroCusto) return;
-      msCentroCusto.setValores([nome]);
+      const atual = msCentroCusto.getValores();
+      if (atual.length === 1 && atual[0] === nome) {
+        msCentroCusto.setValores([]); // toggle off — volta a todos os CCs
+      } else {
+        msCentroCusto.setValores([nome]);
+      }
       processarCustoFolha();
     }
 
@@ -1380,7 +1443,8 @@
           return;
         }
 
-        if (userProfile !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
+        const permArr = Array.isArray(dadosUser.menus_permitidos) ? dadosUser.menus_permitidos : [];
+        if (userProfile !== 'super_admin' && !CHAVES_PAGINA.some(k => permArr.includes(k))) {
           // Auditoria 2026-04-28: redirect amigável (sem signOut). login.html
           // roteia automaticamente para o 1º módulo permitido.
           window.location.href = "../login.html";
@@ -1647,11 +1711,35 @@
             if (r.nome) entry.nome = r.nome;
             let cargoData = entry.cargos.get(cargoMov);
             if (!cargoData) {
-              cargoData = { salario: 0, cc: '', demissao: null, admissao: null };
+              // ultimaComp/ultimoSalario: snapshot do mês mais recente em que
+              // o cargo apareceu (auditoria 2026-05-14). `salario` continua
+              // sendo o acumulado pra o tie-breaker da regra de ordenação
+              // antigo→novo — a UI usa ultimoSalario pra mostrar o delta.
+              cargoData = {
+                salario: 0,
+                cc: '',
+                demissao: null,
+                admissao: null,
+                ultimaComp: '',
+                ultimoSalario: 0,
+              };
               entry.cargos.set(cargoMov, cargoData);
             }
-            // Salário bruto: fallback quando não há datas para inferir ordem.
-            cargoData.salario += (t.salarioBruto || t.vencimentos || 0);
+            // Salário do mês = Salário Bruto da linha (fallback Vencimentos
+            // quando ETL legado não traz o bucket dedicado).
+            const salarioMes = (t.salarioBruto || t.vencimentos || 0);
+            cargoData.salario += salarioMes; // acumulado p/ ordenação retrocompat
+            const refMes = String(r.competencia_ref || '');
+            if (refMes) {
+              if (refMes > cargoData.ultimaComp) {
+                cargoData.ultimaComp = refMes;
+                cargoData.ultimoSalario = salarioMes;
+              } else if (refMes === cargoData.ultimaComp) {
+                // Duas linhas no mesmo mês p/ mesma pessoa+cargo (raro mas
+                // possível em planilhas com 13º + folha separadas) — soma.
+                cargoData.ultimoSalario += salarioMes;
+              }
+            }
             if (r.centro_custo) cargoData.cc = r.centro_custo;
             // Cronologia: a regra primária é cargo COM demissão = antigo. A
             // admissão entra como tie-breaker quando ambos saem ou nenhum sai.
@@ -1685,11 +1773,26 @@
           if (dA.salario !== dB.salario) return dA.salario - dB.salario;    // (3)
           return cA.localeCompare(cB);                              // (4)
         });
+        const dataAntigo = ordenados[0][1];
+        const dataNovo   = ordenados[ordenados.length - 1][1];
         const cargoAntigo = ordenados[0][0];
         const cargoNovo   = ordenados[ordenados.length - 1][0];
         // CC: prefere o do cargo "novo" se houver, senão o do antigo.
-        const cc = ordenados[ordenados.length - 1][1].cc || ordenados[0][1].cc || '';
-        movimentacoes.push({ nome: entry.nome, cargoAntigo, cargoNovo, cc });
+        const cc = dataNovo.cc || dataAntigo.cc || '';
+        // Competência da movimentação = mês mais recente do cargo NOVO
+        // (quando o sistema "viu" pela primeira vez a transição). Fallback
+        // para o último mês do cargo antigo caso o novo ainda não tenha ref
+        // (planilhas sem competencia_ref preenchida).
+        const competencia = dataNovo.ultimaComp || dataAntigo.ultimaComp || '';
+        movimentacoes.push({
+          nome: entry.nome,
+          cargoAntigo,
+          cargoNovo,
+          cc,
+          competencia,
+          salarioAntigo: dataAntigo.ultimoSalario || 0,
+          salarioNovo:   dataNovo.ultimoSalario   || 0,
+        });
       }
       // Ordem alfabética estável p/ o ticker — UX coerente entre renders.
       movimentacoes.sort((a, b) => a.nome.localeCompare(b.nome));
@@ -2000,26 +2103,57 @@
         return;
       }
 
-      lista.innerHTML = movimentacoes.map((m, idx) => `
-        <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-brandAqua/40 hover:bg-white transition-all">
-          <div class="shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-brandAqua to-brandLightBlue flex items-center justify-center text-white font-extrabold text-xs shadow-md">
+      lista.innerHTML = movimentacoes.map((m, idx) => {
+        // Delta salarial — só renderiza a linha quando há diferença detectada.
+        // Verde se subiu, vermelho-suave se caiu, cinza se manteve.
+        const sa = Number(m.salarioAntigo) || 0;
+        const sn = Number(m.salarioNovo)   || 0;
+        const teveDiferenca = sa !== sn;
+        let corDelta = 'text-slate-500';
+        let iconeDelta = 'remove';
+        if (teveDiferenca) {
+          if (sn > sa) { corDelta = 'text-brandGreen'; iconeDelta = 'trending_up'; }
+          else         { corDelta = 'text-rose-400';  iconeDelta = 'trending_down'; }
+        }
+        const linhaSalario = teveDiferenca
+          ? `<div class="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold ${corDelta}">
+               <span class="material-symbols-outlined text-[14px]">${iconeDelta}</span>
+               <span>Salário: <span class="tabular-nums font-extrabold text-slate-500">${formatarMoeda(sa)}</span></span>
+               <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+               <span class="tabular-nums font-extrabold">${formatarMoeda(sn)}</span>
+             </div>`
+          : '';
+        const refBadge = m.competencia
+          ? `<span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-500 tabular-nums uppercase tracking-wider" title="Competência da movimentação">
+               <span class="material-symbols-outlined text-[12px]">event</span>
+               Ref ${escapeHTML(competenciaBRfromRef(m.competencia))}
+             </span>`
+          : '';
+        return `
+        <div class="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-brandAqua/40 hover:bg-white transition-all">
+          <div class="shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-brandAqua to-brandLightBlue flex items-center justify-center text-white font-extrabold text-xs shadow-md mt-0.5">
             ${escapeHTML(iniciaisDe(m.nome))}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-extrabold text-brandDarkBlue truncate" title="${escapeHTML(m.nome)}">${escapeHTML(m.nome)}</p>
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-sm font-extrabold text-brandDarkBlue truncate" title="${escapeHTML(m.nome)}">${escapeHTML(m.nome)}</p>
+              ${refBadge}
+            </div>
             <div class="mt-1 flex items-center gap-1.5 text-[11px] font-semibold flex-wrap">
               <span class="px-2 py-0.5 rounded-md bg-slate-200 text-slate-600">${escapeHTML(m.cargoAntigo)}</span>
               <span class="material-symbols-outlined text-brandGreen text-[16px]">arrow_forward</span>
               <span class="px-2 py-0.5 rounded-md bg-brandGreen/15 text-brandGreen">${escapeHTML(m.cargoNovo)}</span>
             </div>
+            ${linhaSalario}
           </div>
           ${m.cc ? `
-          <div class="shrink-0 hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-brandLightBlue/10 border border-brandLightBlue/20 text-[10px] font-bold text-brandLightBlue uppercase tracking-wider" title="Centro de Custo">
+          <div class="shrink-0 hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-brandLightBlue/10 border border-brandLightBlue/20 text-[10px] font-bold text-brandLightBlue uppercase tracking-wider mt-0.5" title="Centro de Custo">
             <span class="material-symbols-outlined text-[14px]">corporate_fare</span>
             <span class="truncate max-w-[120px]">${escapeHTML(m.cc)}</span>
           </div>` : ''}
-          <span class="shrink-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 tabular-nums">${idx + 1}</span>
-        </div>`).join('');
+          <span class="shrink-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 tabular-nums mt-0.5">${idx + 1}</span>
+        </div>`;
+      }).join('');
     }
 
     function renderGraficoCentroCusto(porCc) {

@@ -43,6 +43,20 @@ export function normalizarCPF(valor) {
 export const sanitizarCPF = normalizarCPF;
 
 /**
+ * Centro de Custo "sujo": null, undefined, vazio, "." ou "-" (após trim).
+ * Esses valores chegam com frequência da exportação do sistema de RH e não
+ * podem ir para o Firestore — viram pendência tratada no Modal de Quarentena
+ * (motor de sanitização ETL, auditoria 2026-05-14).
+ */
+export function centroCustoEhSujo(valor) {
+    if (valor === null || valor === undefined) return true;
+    const s = String(valor).trim();
+    if (!s) return true;
+    if (s === '.' || s === '-') return true;
+    return false;
+}
+
+/**
  * CPF minimamente válido: 11 dígitos. Sequência repetida (000.000.000-00,
  * 111.111.111-11 etc.) ainda costuma aparecer em planilhas reais como
  * "placeholder" de funcionário sem CPF cadastrado — DEIXAMOS PASSAR para
@@ -623,6 +637,17 @@ export function unificarBases(arrayFolha, arrayBeneficios, cfg = {}) {
                 reg[campo] = 0;
             }
         }
+        // Motor de Quarentena (auditoria 2026-05-14): sinaliza registros com
+        // centro_custo "sujo" (null/""/"./"-") para o passo de lookback + modal
+        // de tratamento. Não bloqueia o ETL — apenas marca; a UI decide o que
+        // fazer antes de gravar no Firestore.
+        if (centroCustoEhSujo(reg.centro_custo)) {
+            reg.pendente_tratamento = true;
+            reg.centro_custo = '';
+        } else {
+            reg.pendente_tratamento = false;
+            reg.centro_custo = String(reg.centro_custo).trim();
+        }
         reg.competencia = competencia;
         if (empresa) reg.empresa_atribuida = empresa;
         reg.tipo = 'custo_folha';
@@ -682,6 +707,7 @@ export async function importarCustoFolha({ fileFolha, fileBeneficios, competenci
         ambas: comBeneficiosVinculados,
         comBeneficiosVinculados,
         beneficiosImportado: temBeneficios,
+        pendentesTratamento: unificado.filter(u => u.pendente_tratamento).length,
     };
 
     return { unificado, diagnostico };

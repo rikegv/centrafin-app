@@ -134,11 +134,6 @@
         </button>
       </div>
       <div class="flex items-center gap-3">
-        <div class="flex items-center gap-3" title="Alternar tema">
-          <span class="material-symbols-outlined text-slate-500 text-[18px]">light_mode</span>
-          <button id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro"></button>
-          <span class="material-symbols-outlined text-slate-500 text-[18px]">dark_mode</span>
-        </div>
         <button onclick="window.exportarPDF()"
           class="hidden bg-brandGreen text-brandDarkBlue px-4 py-2 rounded-lg font-bold text-xs shadow-sm items-center gap-2 hover:bg-opacity-90">
           <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span> Baixar PDF
@@ -3950,19 +3945,23 @@
 
         const ehSuper = userProfile === 'super_admin';
         // Resolve permissoes.modulosDashboard com fallback ao formato antigo.
+        // Auditoria 2026-05-13: chaves de Nível 2 agora são `dash_aging` /
+        // `dash_custo_folha` (separadas das de Nível 1 p/ evitar privilege
+        // escalation). Aceitamos as antigas como sinônimos no fallback p/
+        // não derrubar usuários ainda no formato legado.
         const permModulos = (() => {
           const novo = dadosUser.permissoes?.modulosDashboard;
           if (novo && Object.keys(novo).length > 0) return novo;
-          // Migração implícita: se tem dashboard_master no array antigo, libera
-          // tudo (preserva comportamento anterior). Senão, libera nada.
           const tinhaDashboard = menusPermitidos.includes('dashboard_master');
+          const incAging      = menusPermitidos.includes('dash_aging')       || menusPermitidos.includes('aging');
+          const incCustoFolha = menusPermitidos.includes('dash_custo_folha') || menusPermitidos.includes('custo_folha');
           return {
             moduloFaturamento: tinhaDashboard,
             fluxoCaixa: tinhaDashboard,
             forecast: tinhaDashboard,
-            aging: tinhaDashboard && menusPermitidos.includes('aging'),
+            aging: tinhaDashboard && incAging,
             metas: tinhaDashboard,
-            custoFolha: tinhaDashboard && menusPermitidos.includes('custo_folha'),
+            custoFolha: tinhaDashboard && incCustoFolha,
           };
         })();
 

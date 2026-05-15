@@ -470,9 +470,12 @@
             const dadosUser = docSnap.data();
             const userProfile = dadosUser.perfil;
 
-            // GUARDIAO DE ROTA — Auditoria 2026-04-28: redirect amigável.
-            const CHAVE_PAGINA = 'aging';
-            if (userProfile !== 'super_admin' && (!dadosUser.menus_permitidos || !dadosUser.menus_permitidos.includes(CHAVE_PAGINA))) {
+            // GUARDIAO DE ROTA — Auditoria 2026-04-28; revisão 2026-05-13.
+            // Aging é módulo do Nível 2; chave canônica = `dash_aging`. Mantemos
+            // `aging` como sinônimo retrocompatível p/ docs ainda não re-salvos.
+            const CHAVES_PAGINA = ['dash_aging', 'aging'];
+            const permArr = Array.isArray(dadosUser.menus_permitidos) ? dadosUser.menus_permitidos : [];
+            if (userProfile !== 'super_admin' && !CHAVES_PAGINA.some(k => permArr.includes(k))) {
               window.location.href = "../login.html";
               return;
             }
