@@ -11,6 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <!-- SheetJS — leitura nativa de .xlsx/.xls/.csv pra Base de Fornecedores
+         (governança migrada do Gerenciador CP em 2026-05-18). UMD global `XLSX`. -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -18,6 +21,11 @@
                     colors: {
                         primary: "#aad12f",
                         secondary: "#002443",
+                        // Tertiary adicionado em 2026-05-18: botão "Aplicar
+                        // a Selecionados" do modal CC em Massa usava `bg-tertiary`
+                        // sem ter a cor declarada → ficava sem fundo + texto
+                        // branco no branco (invisível). Mesma cor do sidebar.
+                        tertiary: "#59a4d8",
                         "surface-low": "#f8f9fb",
                         "surface-variant": "#e1e2e4"
                     },
@@ -115,6 +123,10 @@
             <button id="tab-regras-btn"
                 class="pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">rule</span> Regras de Classificação
+            </button>
+            <button id="tab-monitor-btn"
+                class="pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">visibility</span> Monitor de Acessos
             </button>
         </div>
 
@@ -244,11 +256,36 @@
             </div>
         </section>
 
-        <!-- ABA: REGRAS DE CLASSIFICAÇÃO — Fase 2.1 (auditoria 2026-04-29).
-             Duas sub-seções visuais: 1) Gestão de Áreas, 2) Regras de Entidades.
+        <!-- ABA: REGRAS DE CLASSIFICAÇÃO — Fase 2.1 (auditoria 2026-04-29) +
+             Frente 5 (auditoria 2026-05-20): unificação em abas horizontais.
              A coleção AreasContasPagar é independente de Base_Centros_Custo
              (esse é exclusivo do Custo de Folha). -->
-        <section id="section-regras" class="hidden space-y-8">
+        <section id="section-regras" class="hidden space-y-6">
+
+            <!-- Barra de abas horizontais (Frente 5 — 2026-05-20).
+                 Espelha o estilo do switcher principal (linha amarela na
+                 base + ícone). Troca via `hidden`/`block` para não destruir
+                 os listeners de Firestore ativos em cada sub-painel. -->
+            <div class="flex gap-5 border-b border-slate-200 flex-wrap" id="aba-regras-barra" role="tablist">
+                <button type="button" data-aba-regras-btn="areas" role="tab"
+                        class="pb-2.5 text-xs font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">workspaces</span>
+                    Áreas &amp; Gestores
+                </button>
+                <button type="button" data-aba-regras-btn="fornecedores" role="tab"
+                        class="pb-2.5 text-xs font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">business</span>
+                    Fornecedores &amp; Autônomos
+                </button>
+                <button type="button" data-aba-regras-btn="despesas" role="tab"
+                        class="pb-2.5 text-xs font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                    Banco de Despesas
+                </button>
+            </div>
+
+            <!-- ════════ ABA 1: ÁREAS & GESTORES ════════ -->
+            <div id="aba-regras-areas" data-aba-regras="areas" class="space-y-8">
 
             <!-- ▣ 1. GESTÃO DE ÁREAS (Contas a Pagar) ▣ -->
             <div>
@@ -269,12 +306,23 @@
                     <div class="xl:col-span-1">
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                             <form id="form-area" class="space-y-3">
-                                <label
-                                    class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome
-                                    da Área</label>
-                                <input id="area-nome" type="text" required maxlength="80"
-                                    placeholder="Ex: Operacional, Diretoria, Atração e Seleção"
-                                    class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome da Área</label>
+                                    <input id="area-nome" type="text" required maxlength="80"
+                                        placeholder="Ex: Operacional, Diretoria, Atração e Seleção"
+                                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                                </div>
+                                <!-- Vínculo de Gestor Responsável (Frente 3 — 2026-05-20).
+                                     Alimentado dinamicamente via CP_Gestores listener.
+                                     Opcional na criação — pode ser definido mais tarde. -->
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Gestor Responsável</label>
+                                    <select id="area-gestor"
+                                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                        <option value="">— sem gestor —</option>
+                                    </select>
+                                    <p class="text-[10px] text-slate-400 mt-1 italic">Cadastre gestores no painel abaixo para vinculá-los à área.</p>
+                                </div>
                                 <div id="msg-area"
                                     class="hidden text-xs font-bold p-2.5 rounded-lg flex items-start gap-2"></div>
                                 <button type="submit" id="btn-salvar-area"
@@ -305,6 +353,72 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ▣ 1B. CADASTRO DE GESTORES DE ÁREA (Frente 3 — 2026-05-20) ▣
+                 Vinculável às áreas no form acima. Cada gestor é uma pessoa
+                 da Controladoria/Diretoria responsável por um Centro de Custo —
+                 base para futuras auditorias de estouro de orçamento.
+                 Coleção: CP_Gestores. Campos: { nome, email }. -->
+            <div>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-9 h-9 rounded-lg bg-tertiary/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-tertiary text-[20px]">supervisor_account</span>
+                    </div>
+                    <div>
+                        <h2 class="font-headline text-base font-extrabold text-secondary">1.b. Cadastro de Gestores</h2>
+                        <p class="text-[11px] text-slate-400 font-medium">Diretores e gerentes que respondem por cada
+                            Centro de Custo. Selecionáveis no formulário acima ao criar/editar uma área.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <!-- Form criar Gestor -->
+                    <div class="xl:col-span-1">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                            <form id="form-gestor" class="space-y-3">
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome Completo</label>
+                                    <input id="gestor-nome" type="text" required maxlength="120"
+                                        placeholder="Ex: Carlos Eduardo Magalhães"
+                                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary outline-none transition-all placeholder:text-slate-300" />
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">E-mail Corporativo</label>
+                                    <input id="gestor-email" type="email" required maxlength="160"
+                                        placeholder="gestor@empresa.com.br"
+                                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary outline-none transition-all placeholder:text-slate-300" />
+                                </div>
+                                <div id="msg-gestor" class="hidden text-xs font-bold p-2.5 rounded-lg flex items-start gap-2"></div>
+                                <button type="submit" id="btn-salvar-gestor"
+                                    class="w-full py-2.5 bg-tertiary text-white font-extrabold rounded-xl shadow-md hover:brightness-105 transition-all flex items-center justify-center gap-2 text-xs"
+                                    style="background-color:#59a4d8;color:#ffffff;">
+                                    <span class="material-symbols-outlined text-base">person_add</span> Adicionar Gestor
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <!-- Listagem de Gestores -->
+                    <div class="xl:col-span-2">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3 class="text-xs font-extrabold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-slate-400 text-[16px]">badge</span>
+                                    Gestores cadastrados
+                                </h3>
+                                <span id="contador-gestores" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">0 gestores</span>
+                            </div>
+                            <div class="max-h-[320px] overflow-y-auto">
+                                <ul id="lista-gestores" class="divide-y divide-slate-100"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            </div><!-- /aba-regras-areas -->
+
+            <!-- ════════ ABA 2: FORNECEDORES & AUTÔNOMOS ════════ -->
+            <div id="aba-regras-fornecedores" data-aba-regras="fornecedores" class="hidden space-y-8">
 
             <!-- ▣ 2. REGRAS DE ENTIDADES (De-Para usado pelo ETL) ▣ -->
             <div>
@@ -428,9 +542,648 @@
                 </div>
             </div>
 
+            <!-- ▣ 3. BANCO DE FORNECEDORES (auditoria 2026-05-18 — governança migrada do CP) ▣
+                 PK = Cód. do Fornecedor (docId = String(codigo)). Importa Excel,
+                 edita inline e exclui em massa. Antes vivia em
+                 gerenciador_contas_pagar_desktop/code.html dentro de modais —
+                 hoje fica aqui pra separar governança × operacional. -->
+            <div>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-9 h-9 rounded-lg bg-secondary/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-secondary text-[20px]">business</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="font-headline text-base font-extrabold text-secondary">3. Banco de Fornecedores</h2>
+                        <p class="text-[11px] text-slate-400 font-medium">Cadastro de parceiros (clientes, fornecedores externos, internos, PJs). Importação .xlsx · edição inline · exclusão em massa.</p>
+                    </div>
+                    <!-- Toolbar premium (auditoria 2026-05-18 — produtividade da
+                         Controladoria). Bot 5 grupos visuais: Cadastro manual,
+                         Importação + Modelo, Exportação, Bulk-actions, Excluir.
+                         Bulk-actions e Excluir só aparecem quando há seleção. -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button id="forn-master-btn-novo" type="button"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-secondary/20 text-secondary hover:bg-secondary/5 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-base text-secondary">person_add</span>
+                            Cadastrar Manual
+                        </button>
+                        <button id="forn-master-btn-importar" type="button"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-primary text-[#341100] rounded-lg text-xs font-bold shadow-sm hover:brightness-105 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-base">cloud_upload</span>
+                            Importar Excel
+                        </button>
+                        <button id="forn-master-btn-modelo" type="button"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-secondary rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all"
+                                title="Baixar planilha modelo (.xlsx) com o cabeçalho esperado">
+                            <span class="material-symbols-outlined text-base">download_for_offline</span>
+                            Baixar Modelo
+                        </button>
+                        <button id="forn-master-btn-exportar" type="button"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all"
+                                title="Exportar a base atual para Excel">
+                            <span class="material-symbols-outlined text-base">download</span>
+                            Exportar Base
+                        </button>
+                        <button id="forn-master-btn-cc-massa" type="button"
+                                class="hidden items-center gap-1.5 px-3 py-2 bg-tertiary/10 border border-tertiary/30 hover:bg-tertiary/15 text-tertiary rounded-lg text-xs font-bold transition-all active:scale-95"
+                                title="Aplicar um Centro de Custo a todos os selecionados">
+                            <span class="material-symbols-outlined text-base">hub</span>
+                            Alterar CC em Massa (<span id="forn-master-cc-massa-count" class="tabular-nums">0</span>)
+                        </button>
+                        <button id="forn-master-btn-deletar" type="button"
+                                class="hidden items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold transition-all active:scale-95">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                            Excluir Selecionados (<span id="forn-master-sel-count" class="tabular-nums">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <input id="forn-master-file" type="file" accept=".xlsx,.xls" class="hidden" />
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap bg-slate-50/50">
+                        <div class="relative flex-1 max-w-md min-w-[200px]">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">search</span>
+                            <input id="forn-master-busca" type="text" placeholder="Buscar código, empresa ou nome…"
+                                   class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-secondary/30 focus:border-secondary outline-none transition-all" />
+                        </div>
+                        <select id="forn-master-filtro-tipo"
+                                class="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white focus:ring-2 focus:ring-secondary/30 focus:border-secondary outline-none transition-all">
+                            <option value="Todos">Todos os tipos</option>
+                            <option value="Fornecedor Externo">Fornecedor Externo</option>
+                            <option value="Cliente">Cliente</option>
+                            <option value="Fornecedor Interno">Fornecedor Interno</option>
+                            <option value="Fornecedor Interno - PJ">Fornecedor Interno - PJ</option>
+                        </select>
+                        <!-- Filtro de Centro de Custo / Área — alimentado por
+                             AreasContasPagar via _ccDisponiveis. A entrada
+                             sentinela "__SEM_CC__" recorta os registros sem CC
+                             (saneamento da base). Auditoria 2026-05-18. -->
+                        <select id="forn-master-filtro-cc"
+                                class="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white focus:ring-2 focus:ring-secondary/30 focus:border-secondary outline-none transition-all">
+                            <option value="Todos">Todos os CCs</option>
+                            <option value="__SEM_CC__" class="text-amber-700 font-bold">[ SEM CENTRO DE CUSTO / NÃO ALOCADO ]</option>
+                        </select>
+                        <span id="forn-master-hint" class="text-[11px] text-slate-400 font-medium">—</span>
+                        <div class="flex-1"></div>
+                        <span id="forn-master-contador" class="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full tabular-nums">0 fornecedores</span>
+                    </div>
+                    <div class="max-h-[600px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-widest sticky top-0 z-10 shadow-sm">
+                                <tr>
+                                    <th class="px-4 py-3 text-center w-10">
+                                        <input type="checkbox" id="forn-master-selecionar-todos" class="rounded border-slate-300 text-secondary focus:ring-secondary">
+                                    </th>
+                                    <th class="px-4 py-3 text-left w-24">Código</th>
+                                    <th class="px-4 py-3 text-left w-44">Empresa</th>
+                                    <th class="px-4 py-3 text-left">Nome do Fornecedor</th>
+                                    <th class="px-4 py-3 text-left w-40">Tipo</th>
+                                    <th class="px-4 py-3 text-left w-36">CC / Área</th>
+                                    <th class="px-4 py-3 text-center w-20">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="forn-master-corpo" class="divide-y divide-slate-100 bg-white text-xs"></tbody>
+                        </table>
+                        <div id="forn-master-vazio" class="px-8 py-12 text-center hidden">
+                            <span class="material-symbols-outlined text-3xl text-slate-300">business</span>
+                            <p class="text-sm text-slate-400 font-medium mt-2">Nenhum fornecedor cadastrado ainda.</p>
+                            <p class="text-[11px] text-slate-400 italic mt-1">Clique em "Importar Excel" no topo direito pra fazer a primeira carga.</p>
+                        </div>
+                    </div>
+                    <!-- Paginação simples — limita o DOM em bases 800+ fornecedores. -->
+                    <div id="forn-master-paginacao" class="hidden items-center justify-between gap-3 px-6 py-3 border-t border-slate-100 bg-slate-50/40">
+                        <span id="forn-master-pag-info" class="text-[11px] font-medium text-slate-500 tabular-nums">—</span>
+                        <div class="flex items-center gap-2">
+                            <button id="forn-master-pag-prev" type="button" class="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                                <span class="material-symbols-outlined text-[14px]">chevron_left</span>
+                                Anterior
+                            </button>
+                            <span id="forn-master-pag-pagina" class="text-[11px] font-bold text-slate-600 tabular-nums px-2">1 / 1</span>
+                            <button id="forn-master-pag-next" type="button" class="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                                Próximo
+                                <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            </div><!-- /aba-regras-fornecedores -->
+
+            <!-- ════════ ABA 3: BANCO DE DESPESAS ════════ -->
+            <div id="aba-regras-despesas" data-aba-regras="despesas" class="hidden space-y-8">
+
+            <!-- ▣ 4. BANCO DE DESPESAS (auditoria 2026-05-18 — centralização da retaguarda) ▣
+                 Dicionário "Despesa → Per. Evento + Per. Valor" que alimenta o
+                 motor ETL preditivo do Gerenciador CP (fuzzy match Levenshtein
+                 + prefix ≥ 0.80). A IMPORTAÇÃO em lote continua na Central de
+                 Importações do CP; aqui fica o CRUD individual + manutenção
+                 da base. PK = slug normalizado (UPPER, sem acento, sem
+                 pontuação), gerado por _cpSlugDocId(despesa_norm). -->
+            <div>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-amber-600 text-[20px]">receipt_long</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="font-headline text-base font-extrabold text-secondary">4. Banco de Despesas</h2>
+                        <p class="text-[11px] text-slate-400 font-medium">Dicionário "Despesa → Periodicidade Evento + Valor" usado pelo motor ETL do Contas a Pagar. Cadastro manual, edição inline e exclusão.</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button id="desp-master-btn-novo" type="button"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-secondary/20 text-secondary hover:bg-secondary/5 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-base text-secondary">add_circle</span>
+                            Cadastrar Despesa
+                        </button>
+                        <button id="desp-master-btn-exportar" type="button"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all"
+                                title="Exportar a base atual para Excel">
+                            <span class="material-symbols-outlined text-base">download</span>
+                            Exportar Base
+                        </button>
+                        <button id="desp-master-btn-deletar" type="button"
+                                class="hidden items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold transition-all active:scale-95">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                            Excluir Selecionadas (<span id="desp-master-sel-count" class="tabular-nums">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap bg-slate-50/50">
+                        <div class="relative flex-1 max-w-md min-w-[200px]">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">search</span>
+                            <input id="desp-master-busca" type="text" placeholder="Buscar pelo nome da despesa…"
+                                   class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-300/40 focus:border-amber-500 outline-none transition-all" />
+                        </div>
+                        <select id="desp-master-filtro-evento"
+                                class="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white focus:ring-2 focus:ring-amber-300/40 focus:border-amber-500 outline-none transition-all">
+                            <option value="Todos">Todos os eventos</option>
+                            <option value="Fixo">Evento Fixo</option>
+                            <option value="Variável">Evento Variável</option>
+                        </select>
+                        <select id="desp-master-filtro-valor"
+                                class="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white focus:ring-2 focus:ring-amber-300/40 focus:border-amber-500 outline-none transition-all">
+                            <option value="Todos">Todos os valores</option>
+                            <option value="Fixo">Valor Fixo</option>
+                            <option value="Variável">Valor Variável</option>
+                        </select>
+                        <span id="desp-master-hint" class="text-[11px] text-slate-400 font-medium">—</span>
+                        <div class="flex-1"></div>
+                        <span id="desp-master-contador" class="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full tabular-nums">0 despesas</span>
+                    </div>
+                    <div class="max-h-[600px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-widest sticky top-0 z-10 shadow-sm">
+                                <tr>
+                                    <th class="px-4 py-3 text-center w-10">
+                                        <input type="checkbox" id="desp-master-selecionar-todos" class="rounded border-slate-300 text-amber-600 focus:ring-amber-500">
+                                    </th>
+                                    <th class="px-4 py-3 text-left">Despesa</th>
+                                    <th class="px-4 py-3 text-left w-36">Per. Evento</th>
+                                    <th class="px-4 py-3 text-left w-36">Per. Valor</th>
+                                    <th class="px-4 py-3 text-left w-32">Fim Contrato</th>
+                                    <th class="px-4 py-3 text-center w-20">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desp-master-corpo" class="divide-y divide-slate-100 bg-white text-xs"></tbody>
+                        </table>
+                        <div id="desp-master-vazio" class="px-8 py-12 text-center hidden">
+                            <span class="material-symbols-outlined text-3xl text-slate-300">receipt_long</span>
+                            <p class="text-sm text-slate-400 font-medium mt-2">Nenhuma despesa cadastrada ainda.</p>
+                            <p class="text-[11px] text-slate-400 italic mt-1">Use "Cadastrar Despesa" no topo ou faça uma importação via Gerenciador Contas a Pagar.</p>
+                        </div>
+                    </div>
+                    <!-- Paginação 50 itens — limita o DOM em bases grandes. -->
+                    <div id="desp-master-paginacao" class="hidden items-center justify-between gap-3 px-6 py-3 border-t border-slate-100 bg-slate-50/40">
+                        <span id="desp-master-pag-info" class="text-[11px] font-medium text-slate-500 tabular-nums">—</span>
+                        <div class="flex items-center gap-2">
+                            <button id="desp-master-pag-prev" type="button" class="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                                <span class="material-symbols-outlined text-[14px]">chevron_left</span>
+                                Anterior
+                            </button>
+                            <span id="desp-master-pag-pagina" class="text-[11px] font-bold text-slate-600 tabular-nums px-2">1 / 1</span>
+                            <button id="desp-master-pag-next" type="button" class="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                                Próximo
+                                <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            </div><!-- /aba-regras-despesas -->
+
+        </section>
+
+        <!-- ============================================================
+             MODAIS de Fornecedores (Master) — auditoria 2026-05-18.
+             ============================================================ -->
+
+        <!-- Modal: Editar Fornecedor -->
+        <div id="modal-forn-master-editar" class="fixed inset-0 z-[72] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-forn-master-editar"></div>
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
+                <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl bg-tertiary/10 flex items-center justify-center shrink-0 shadow-inner">
+                            <span class="material-symbols-outlined text-tertiary text-2xl">edit</span>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="font-headline text-xl font-extrabold text-secondary tracking-tight">Editar Fornecedor</h3>
+                            <p class="text-[12px] text-slate-500 font-medium mt-0.5">O Código é a chave primária e não pode ser alterado.</p>
+                        </div>
+                    </div>
+                    <button id="btn-fechar-forn-master-editar" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="px-7 py-5 space-y-4 overflow-y-auto">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Código do Fornecedor</label>
+                        <input id="forn-master-edit-codigo" type="text" readonly
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono font-bold text-tertiary bg-slate-50 cursor-not-allowed outline-none tabular-nums" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Empresa</label>
+                        <input id="forn-master-edit-empresa" type="text" placeholder="Ex.: SOULAN"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm uppercase focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nome do Fornecedor</label>
+                        <input id="forn-master-edit-nome" type="text" placeholder="Ex.: TELEFONICA"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm uppercase focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tipo de Fornecedor</label>
+                        <select id="forn-master-edit-tipo"
+                                class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                            <option value="">Selecione…</option>
+                            <option value="Fornecedor Externo">Fornecedor Externo</option>
+                            <option value="Cliente">Cliente</option>
+                            <option value="Fornecedor Interno">Fornecedor Interno</option>
+                            <option value="Fornecedor Interno - PJ">Fornecedor Interno - PJ</option>
+                        </select>
+                    </div>
+                    <!-- Centro de Custo / Área (auditoria 2026-05-18 re-integração):
+                         alimentado pela coleção AreasContasPagar (mesma fonte usada
+                         pelas Regras de Conciliação). Vital pra integração PJ →
+                         Custo de Folha — sem CC no Fornecedor, o lançamento PJ
+                         não consegue casar com o Centro de Custo correto. -->
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Centro de Custo / Área</label>
+                        <select id="forn-master-edit-cc"
+                                class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                            <option value="">— sem CC —</option>
+                        </select>
+                        <p class="text-[10px] text-slate-400 mt-1 italic">Alimenta a integração com Custo de Folha quando o tipo é "Fornecedor Interno - PJ".</p>
+                    </div>
+                </div>
+                <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+                    <button id="btn-cancelar-forn-master-editar" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                    <button id="btn-salvar-forn-master-editar" type="button"
+                            class="flex items-center gap-2 px-6 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-extrabold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-base" id="forn-master-save-icon">save</span>
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Confirmar Exclusão em Massa -->
+        <div id="modal-forn-master-delete" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-forn-master-delete"></div>
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100">
+                <div class="px-7 pt-7 pb-3 flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center shrink-0 shadow-inner">
+                        <span class="material-symbols-outlined text-red-600 text-2xl">warning</span>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="font-headline text-lg font-extrabold text-secondary tracking-tight">Confirmar exclusão</h3>
+                        <p class="text-[12px] text-slate-500 font-medium mt-0.5">Esta ação é irreversível.</p>
+                    </div>
+                </div>
+                <div class="px-7 pb-5">
+                    <p class="text-sm text-slate-700">
+                        Tem certeza que deseja excluir <strong id="forn-master-confirm-count" class="text-red-600 tabular-nums">0</strong> fornecedor(es) selecionado(s)?
+                    </p>
+                </div>
+                <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
+                    <button id="btn-cancelar-forn-master-delete" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                    <button id="btn-confirmar-forn-master-delete" type="button"
+                            class="flex items-center gap-2 px-6 py-2.5 bg-red-600 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-red-600/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-base" id="forn-master-del-icon">delete_forever</span>
+                        Confirmar Exclusão
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Alterar CC em Massa — auditoria 2026-05-18.
+             Aplica o mesmo Centro de Custo a todos os fornecedores selecionados.
+             O select é alimentado por AreasContasPagar via _ccDisponiveis (única
+             fonte da verdade pra áreas no módulo Contas a Pagar). -->
+        <div id="modal-alterar-cc-massa" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-alterar-cc-massa"></div>
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100">
+                <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl bg-tertiary/10 flex items-center justify-center shrink-0 shadow-inner">
+                            <span class="material-symbols-outlined text-tertiary text-2xl">hub</span>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="font-headline text-xl font-extrabold text-secondary tracking-tight">Alterar Centro de Custo em Massa</h3>
+                            <p class="text-[12px] text-slate-500 font-medium mt-0.5">
+                                Aplicar a <strong id="forn-cc-massa-alvo" class="text-tertiary tabular-nums">0</strong> fornecedor(es) selecionado(s).
+                            </p>
+                        </div>
+                    </div>
+                    <button id="btn-fechar-cc-massa" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="px-7 py-5 space-y-3">
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo Centro de Custo</label>
+                    <select id="forn-cc-massa-select"
+                            class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary outline-none transition-all">
+                        <option value="">Selecione uma área…</option>
+                    </select>
+                    <p class="text-[11px] text-slate-400 italic flex items-start gap-1.5 leading-relaxed">
+                        <span class="material-symbols-outlined text-[14px] mt-0.5">info</span>
+                        Esta operação sobrescreve o CC atual dos fornecedores selecionados. Ideal para alocar todos os PJs de uma mesma área de uma vez só.
+                    </p>
+                </div>
+                <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
+                    <button id="btn-cancelar-cc-massa" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                    <!-- Estilo do botão fixado em hex (auditoria 2026-05-18 V5):
+                         secondary #002443 (azul escuro corporativo) garante
+                         contraste WCAG AA com texto branco. style inline blinda
+                         contra atraso do Tailwind CDN. -->
+                    <button id="btn-confirmar-cc-massa" type="button"
+                            style="background-color:#002443;color:#ffffff;"
+                            class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-lg hover:brightness-125 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-base" id="forn-cc-massa-icon" style="color:#aad12f;">check_circle</span>
+                        <span style="color:#ffffff;">Aplicar a Selecionados</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Cadastro Manual de Fornecedor — auditoria 2026-05-18.
+             Pra cadastrar um único fornecedor sem precisar gerar planilha.
+             Valida unicidade do código contra o cache em memória (_fornMRegistros)
+             E re-checa no Firestore antes do setDoc (race-condition defense). -->
+        <div id="modal-cadastro-fornecedor-manual" class="fixed inset-0 z-[78] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-cadastro-fornecedor-manual"></div>
+            <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
+                <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center shrink-0 shadow-inner">
+                            <span class="material-symbols-outlined text-secondary text-2xl">person_add</span>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="font-headline text-xl font-extrabold text-secondary tracking-tight">Cadastrar Fornecedor</h3>
+                            <p class="text-[12px] text-slate-500 font-medium mt-0.5">O Código é a chave primária — único e numérico.</p>
+                        </div>
+                    </div>
+                    <button id="btn-fechar-cadastro-manual" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="px-7 py-5 space-y-4 overflow-y-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Cód. Fornecedor *</label>
+                            <input id="forn-novo-codigo" type="number" min="1" step="1" inputmode="numeric"
+                                   placeholder="Ex.: 56685"
+                                   class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono tabular-nums focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                            <p id="forn-novo-codigo-hint" class="text-[10px] text-slate-400 mt-1">Único — não pode existir na base.</p>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Empresa</label>
+                            <input id="forn-novo-empresa" type="text" placeholder="Ex.: SOULAN"
+                                   class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm uppercase focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nome do Fornecedor *</label>
+                        <input id="forn-novo-nome" type="text" placeholder="Ex.: TELEFONICA"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm uppercase focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tipo de Fornecedor *</label>
+                            <select id="forn-novo-tipo"
+                                    class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                <option value="">Selecione…</option>
+                                <option value="Fornecedor Externo">Fornecedor Externo</option>
+                                <option value="Cliente">Cliente</option>
+                                <option value="Fornecedor Interno">Fornecedor Interno</option>
+                                <option value="Fornecedor Interno - PJ">Fornecedor Interno - PJ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Centro de Custo / Área</label>
+                            <select id="forn-novo-cc"
+                                    class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                                <option value="">— sem CC —</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+                    <button id="btn-cancelar-cadastro-manual" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                    <button id="btn-salvar-cadastro-manual" type="button"
+                            class="flex items-center gap-2 px-6 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-extrabold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-base" id="forn-novo-save-icon">save</span>
+                        Cadastrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             MODAIS de Despesas (auditoria 2026-05-18) — Banco de Despesas
+             Modal único pra Cadastro + Edição (despMNovo = true/false flag).
+             ============================================================ -->
+        <div id="modal-desp-master-form" class="fixed inset-0 z-[79] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-desp-master-form"></div>
+            <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
+                <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+                            <span class="material-symbols-outlined text-amber-600 text-2xl" id="desp-form-icon">receipt_long</span>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 id="desp-form-titulo" class="font-headline text-xl font-extrabold text-secondary tracking-tight">Cadastrar Despesa</h3>
+                            <p id="desp-form-subtitulo" class="text-[12px] text-slate-500 font-medium mt-0.5">A chave primária é a despesa normalizada (sem acento, sem pontuação, maiúscula).</p>
+                        </div>
+                    </div>
+                    <button id="btn-fechar-desp-form" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="px-7 py-5 space-y-4 overflow-y-auto">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nome da Despesa *</label>
+                        <input id="desp-form-nome" type="text" placeholder="Ex.: ALUGUEL IMOVEL · ENERGIA ELETRICA · MANUTENCAO PREDIAL"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm uppercase focus:ring-2 focus:ring-amber-300/40 focus:border-amber-500 outline-none transition-all" />
+                        <p id="desp-form-hint" class="text-[10px] text-slate-400 mt-1">Será normalizado para comparação com o nome truncado pelo ERP (fuzzy ≥ 0.80).</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Periodicidade do Evento *</label>
+                            <select id="desp-form-evento"
+                                    class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-amber-300/40 focus:border-amber-500 outline-none transition-all">
+                                <option value="">Selecione…</option>
+                                <option value="Fixo">Fixo (todo mês)</option>
+                                <option value="Variável">Variável (esporádico)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Periodicidade do Valor *</label>
+                            <select id="desp-form-valor"
+                                    class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-amber-300/40 focus:border-amber-500 outline-none transition-all">
+                                <option value="">Selecione…</option>
+                                <option value="Fixo">Fixo (mesmo número)</option>
+                                <option value="Variável">Variável (oscila)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Fim do Contrato <span class="text-slate-400 normal-case">(opcional · "YYYY-MM")</span></label>
+                        <input id="desp-form-fim" type="month"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-300/40 focus:border-amber-500 outline-none transition-all" />
+                        <p class="text-[10px] text-slate-400 italic mt-1">Quando informado, a projeção 60m do Gerenciador CP é truncada nesse mês.</p>
+                    </div>
+                </div>
+                <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+                    <button id="btn-cancelar-desp-form" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                    <button id="btn-salvar-desp-form" type="button"
+                            style="background-color:#aad12f;color:#341100;"
+                            class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-lg hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-base" id="desp-form-save-icon">save</span>
+                        <span id="desp-form-save-label">Salvar Despesa</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Confirmar Exclusão em Massa de Despesas -->
+        <div id="modal-desp-master-delete" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-desp-master-delete"></div>
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100">
+                <div class="px-7 pt-7 pb-3 flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center shrink-0 shadow-inner">
+                        <span class="material-symbols-outlined text-red-600 text-2xl">warning</span>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="font-headline text-lg font-extrabold text-secondary tracking-tight">Confirmar exclusão</h3>
+                        <p class="text-[12px] text-slate-500 font-medium mt-0.5">Esta ação é irreversível.</p>
+                    </div>
+                </div>
+                <div class="px-7 pb-5">
+                    <p class="text-sm text-slate-700">
+                        Tem certeza que deseja excluir <strong id="desp-confirm-count" class="text-red-600 tabular-nums">0</strong> despesa(s) selecionada(s)?
+                    </p>
+                    <p class="text-[11px] text-slate-400 italic mt-2">As despesas removidas deixam de alimentar o fuzzy match do motor ETL — importações futuras podem cair em quarentena se a chave sumir.</p>
+                </div>
+                <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
+                    <button id="btn-cancelar-desp-delete" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                    <button id="btn-confirmar-desp-delete" type="button"
+                            class="flex items-center gap-2 px-6 py-2.5 bg-red-600 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-red-600/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-base" id="desp-del-icon">delete_forever</span>
+                        Confirmar Exclusão
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast + Loader (Fornecedores) -->
+        <div id="toast-forn-master" class="hidden fixed bottom-6 right-6 z-[85] flex items-center gap-3 bg-secondary text-white px-5 py-3 rounded-xl shadow-2xl text-xs font-bold opacity-0 translate-y-2 transition-all duration-300">
+            <span id="toast-forn-master-icon" class="material-symbols-outlined text-primary">check_circle</span>
+            <span id="toast-forn-master-text">—</span>
+        </div>
+        <div id="forn-master-loader" class="hidden fixed inset-0 z-[90] items-center justify-center bg-slate-900/55 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 px-8 py-6 flex flex-col items-center gap-3 max-w-sm">
+                <span class="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+                <p id="forn-master-loader-titulo" class="font-headline text-sm font-extrabold text-secondary text-center">Processando…</p>
+                <p id="forn-master-loader-msg" class="text-[12px] text-slate-500 font-medium text-center">Aguarde a confirmação.</p>
+            </div>
+        </div>
+
+        <!-- ABA: MONITOR DE ACESSOS — auditoria 2026-05-14.
+             Lista todos os usuários com status online/offline (presence) e
+             último acesso. Modal por linha mostra o histórico de logins. -->
+        <section id="section-monitor" class="hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-emerald-500 text-2xl">visibility</span>
+                        <div>
+                            <h2 class="font-headline font-bold text-lg text-secondary">Monitor de Acessos</h2>
+                            <p class="text-[11px] text-slate-400 font-medium">Status em tempo real + histórico individual.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 text-[11px] text-slate-500 font-medium">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200"></span> Online
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span> Offline
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto h-[600px] overflow-y-auto relative">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="px-6 py-4 font-bold">Nome</th>
+                                <th class="px-6 py-4 font-bold">E-mail</th>
+                                <th class="px-6 py-4 font-bold w-32">Status</th>
+                                <th class="px-6 py-4 font-bold w-44">Último Acesso</th>
+                                <th class="px-6 py-4 font-bold text-right w-32">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-monitor" class="divide-y divide-slate-100 text-xs">
+                            <tr>
+                                <td colspan="5" class="text-center py-8 text-sm text-slate-400">Carregando usuários…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
     </main>
+
+    <!-- Modal de Histórico Individual de Acessos (auditoria 2026-05-14) -->
+    <div id="modal-historico-acessos"
+        class="fixed inset-0 z-[65] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
+        <div class="absolute inset-0 bg-secondary/40 backdrop-blur-sm" onclick="window.fecharHistoricoAcessos()"></div>
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl relative z-10 p-7 transform scale-95 transition-all duration-300 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-start gap-3 mb-5 border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-emerald-600">history</span>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="font-headline text-base font-extrabold text-secondary">Histórico de Acessos</h3>
+                        <p id="hist-acessos-subtitulo" class="text-[11px] text-slate-400 font-medium truncate">—</p>
+                    </div>
+                </div>
+                <button onclick="window.fecharHistoricoAcessos()" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div id="hist-acessos-lista" class="flex-1 overflow-y-auto custom-scroll space-y-2.5 min-h-[180px]">
+                <p class="text-xs text-slate-400 italic text-center py-8">Carregando…</p>
+            </div>
+            <div class="border-t border-slate-100 pt-3 mt-3 text-[10px] text-slate-400 italic text-center">
+                Exibindo os últimos 10 acessos registrados em <code>HistoricoAcessos</code>.
+            </div>
+        </div>
+    </div>
 
     <!-- Modal de Edição Premium RBAC -->
     <div id="modal-edicao-usuario"
@@ -503,7 +1256,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where, orderBy, limit, getDocs, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { renderSidebar } from "./sidebar.js";
 
@@ -527,8 +1280,17 @@
             { key: 'dashboardGeral', label: 'Dashboard Geral', desc: 'Visão consolidada e cards executivos', icon: 'dashboard', legacy: 'dashboard_master' },
             { key: 'metasFinanceiras', label: 'Gestão das Metas', desc: 'Cadastro de metas anuais por produto', icon: 'track_changes', legacy: 'metas' },
             { key: 'faturamento', label: 'Faturamento - Contas a receber', desc: 'Lançamentos, recebíveis e baixas', icon: 'payments', legacy: 'contas_receber' },
-            { key: 'contasPagar', label: 'Contas a Pagar', desc: 'Obrigações e conciliação contínua', icon: 'account_balance_wallet', legacy: 'contas_pagar' },
+            // Auditoria 2026-05-14: módulo legado `contas_pagar` foi exterminado.
+            // O ÚNICO ponto de entrada de Contas a Pagar agora é o motor novo
+            // (rota gerenciador_contas_pagar_desktop, chave gerenciador_contas_pagar).
+            // Mantemos a label "Contas a Pagar" pra o usuário final — o "Gerenciador"
+            // é detalhe técnico que só aparece nas chaves internas.
+            { key: 'gerenciadorContasPagar', label: 'Gerenciador Contas a Pagar', desc: 'ETL preditivo + KPIs reativos + quarentena', icon: 'request_quote', legacy: 'gerenciador_contas_pagar' },
             { key: 'custoFolha', label: 'Gerenciador Folha', desc: 'Importação operacional e gestão de folha', icon: 'receipt_long', legacy: 'custo_folha' },
+            // Auditoria 2026-05-18: separação governança × operacional. Aprovações
+            // centraliza pendências de cadastros/edições/exclusões em coleções
+            // que passam por esteira (Fornecedores via /CP_SolicitacoesAprovacao).
+            { key: 'aprovacoes', label: 'Aprovações', desc: 'Esteira de pendências de cadastros e edições', icon: 'fact_check', legacy: 'aprovacoes' },
             { key: 'configuracoesPrivacidade', label: 'Configurações e Privacidade', desc: 'Apenas Super Adm — usuários e logs', icon: 'admin_panel_settings', legacy: 'usuarios', superAdminOnly: true },
         ];
         // Auditoria 2026-05-13 (Key Collision / Privilege Escalation):
@@ -830,7 +1592,21 @@
                 if (docSnap.exists()) {
                     const dadosUser = docSnap.data();
                     usuarioLogadoNome = dadosUser.nome || user.email;
-                    usuarioLogadoPerfil = dadosUser.perfil || "";
+                    // Fail-safe (auditoria 2026-05-18 V5): normaliza o perfil
+                    // (lowercase + trim) para evitar bypass por dados legados
+                    // ("MASTER", " master ", "Super_Admin" etc.). Compara só
+                    // contra os 2 valores oficiais aceitos pelo Firestore Rules.
+                    const perfilBruto = dadosUser.perfil;
+                    usuarioLogadoPerfil = String(perfilBruto || '').trim().toLowerCase();
+
+                    // Log de auditoria de sessão (auditoria 2026-05-18 V5):
+                    // imprime no Console o perfil identificado pra o desenvolvedor
+                    // depurar bypass-attempts ou dados legados durante QA.
+                    console.log(
+                        '[AUDITORIA PERMISSÃO] Usuário ativo:', user.email,
+                        '| Perfil identificado:',
+                        usuarioLogadoPerfil || (perfilBruto == null ? 'NÃO ENCONTRADO - Tratando como COMUM' : `"${String(perfilBruto)}" → tratando como COMUM`)
+                    );
 
                     // GUARDIÃO DE ROTA — Auditoria 2026-04-28: Configurações
                     // e Privacidade é exclusiva de Super Adm. Para qualquer
@@ -871,6 +1647,7 @@
             { btn: 'tab-users-btn', sec: 'section-users', slug: 'users' },
             { btn: 'tab-logs-btn', sec: 'section-logs', slug: 'logs' },
             { btn: 'tab-regras-btn', sec: 'section-regras', slug: 'regras' },
+            { btn: 'tab-monitor-btn', sec: 'section-monitor', slug: 'monitor' },
         ];
         const _classeAtiva = "pb-3 text-sm font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2";
         const _classeInativa = "pb-3 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2";
@@ -896,6 +1673,37 @@
         const tabParam = urlParams.get('tab');
         if (tabParam && ABAS.some(a => a.slug === tabParam)) {
             ativarAba(tabParam);
+        }
+
+        // ── Switcher horizontal interno de "Regras de Classificação" ────────
+        // (Frente 5 — auditoria 2026-05-20.) Troca via classes hidden/block
+        // pra preservar os listeners de Firestore ativos em cada sub-painel
+        // (areasContasPagar, RegrasConciliacao, Fornecedores, CP_Base_Despesas).
+        // Aba inicial: Áreas & Gestores.
+        const _CLASSE_REGRAS_ATIVA   = 'pb-2.5 text-xs font-extrabold text-secondary border-b-2 border-primary transition-all flex items-center gap-2';
+        const _CLASSE_REGRAS_INATIVA = 'pb-2.5 text-xs font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2';
+        function ativarAbaRegras(slug) {
+            const barras = document.querySelectorAll('[data-aba-regras-btn]');
+            barras.forEach(btn => {
+                const ativo = btn.getAttribute('data-aba-regras-btn') === slug;
+                const icone = btn.querySelector('.material-symbols-outlined');
+                btn.className = ativo ? _CLASSE_REGRAS_ATIVA : _CLASSE_REGRAS_INATIVA;
+                if (icone && !btn.contains(icone)) btn.prepend(icone);
+            });
+            document.querySelectorAll('[data-aba-regras]').forEach(p => {
+                p.classList.toggle('hidden', p.getAttribute('data-aba-regras') !== slug);
+            });
+        }
+        document.querySelectorAll('[data-aba-regras-btn]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                ativarAbaRegras(btn.getAttribute('data-aba-regras-btn'));
+            });
+        });
+        // Deep-link adicional: ?tab=regras&subaba=fornecedores|despesas|areas
+        const subAbaParam = urlParams.get('subaba');
+        if (subAbaParam && ['areas', 'fornecedores', 'despesas'].includes(subAbaParam)) {
+            ativarAbaRegras(subAbaParam);
         }
 
         const formUser = document.getElementById('form-criar-usuario');
@@ -1115,6 +1923,17 @@
                     : ' Sem restrição lateral.';
                 registrarLogAutomático(usuarioLogadoNome, "ALTERAÇÃO", "Gestão de Usuários", `Editou permissões do usuário ${id}. Novo Perfil: ${perfil}.${detalheCC}`);
                 window.fecharModalEdicao();
+
+                // Auditoria 2026-05-14: se o admin estava editando suas PRÓPRIAS
+                // permissões, re-renderiza a sidebar dele agora mesmo. Para outros
+                // usuários, basta um F5 — o auth listener relê do Firestore.
+                try {
+                    const auth = getAuth();
+                    const emailAtual = (auth.currentUser?.email || '').toLowerCase();
+                    if (emailAtual && emailAtual === String(id).toLowerCase()) {
+                        renderSidebar(perfil, menusLegados);
+                    }
+                } catch (_) {}
             } catch (err) {
                 console.error("Erro ao salvar edição:", err);
                 if (err.code === 'permission-denied') {
@@ -1192,6 +2011,228 @@
         }
 
         // ────────────────────────────────────────────────────────────────────
+        // MONITOR DE ACESSOS — auditoria 2026-05-14.
+        // Reaproveita o onSnapshot já vivo em Usuarios (acima), mas mantém um
+        // listener dedicado para ser ROBUSTO a re-renders e ordenação própria.
+        // Status "Online" exige is_online === true E ultimo_acesso < 5 min —
+        // a heurística de tempo cobre o caso comum do beforeunload não chegar.
+        // ────────────────────────────────────────────────────────────────────
+        const tabelaMonitor = document.getElementById('tabela-monitor');
+        const PRESENCE_TIMEOUT_MS = 5 * 60 * 1000; // 5 min — heartbeat do sidebar.js roda a cada 4 min
+        let _monitorTick = null;
+
+        // Snapshot vivo: reflete is_online/ultimo_acesso em tempo real conforme
+        // outros usuários se conectam/desconectam.
+        onSnapshot(collection(db, 'Usuarios'), (snap) => {
+            const users = [];
+            snap.forEach(d => {
+                const data = d.data() || {};
+                users.push({ _id: d.id, ...data });
+            });
+            // Ordenação: online primeiro, depois por último acesso desc.
+            users.sort((a, b) => {
+                const aOnline = _isOnlineNow(a);
+                const bOnline = _isOnlineNow(b);
+                if (aOnline !== bOnline) return aOnline ? -1 : 1;
+                const aTs = _msFromTimestamp(a.ultimo_acesso) || 0;
+                const bTs = _msFromTimestamp(b.ultimo_acesso) || 0;
+                return bTs - aTs;
+            });
+            renderMonitor(users);
+        }, (err) => {
+            console.warn('[Monitor] snapshot Usuarios falhou:', err?.code || err?.message);
+            tabelaMonitor.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-sm text-red-500">Falha ao carregar usuários: ${err?.message || 'erro'}.</td></tr>`;
+        });
+
+        // Re-render leve a cada 30s para que entradas "online" expirem visualmente
+        // quando ultimo_acesso fica antigo (sem precisar de novo snapshot).
+        if (_monitorTick) clearInterval(_monitorTick);
+        _monitorTick = setInterval(() => {
+            // Só re-renderiza se a aba estiver visível — economiza render.
+            const sec = document.getElementById('section-monitor');
+            if (sec && !sec.classList.contains('hidden')) {
+                // Re-render dispara via onSnapshot? Não, snapshot só dispara
+                // em mudança real. Forçamos chamando renderMonitor com cache.
+                if (Array.isArray(_monitorCache)) renderMonitor(_monitorCache);
+            }
+        }, 30 * 1000);
+
+        let _monitorCache = null;
+
+        function _msFromTimestamp(ts) {
+            if (!ts) return null;
+            if (typeof ts.seconds === 'number') return ts.seconds * 1000;
+            if (ts instanceof Date) return ts.getTime();
+            return null;
+        }
+
+        function _isOnlineNow(userData) {
+            if (!userData || userData.is_online !== true) return false;
+            const ms = _msFromTimestamp(userData.ultimo_acesso);
+            if (!ms) return false;
+            return (Date.now() - ms) < PRESENCE_TIMEOUT_MS;
+        }
+
+        function _formatarUltimoAcesso(ts) {
+            const ms = _msFromTimestamp(ts);
+            if (!ms) return '—';
+            const d = new Date(ms);
+            const diffMin = Math.floor((Date.now() - ms) / 60000);
+            const data = d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            if (diffMin < 1) return `agora · ${data}`;
+            if (diffMin < 60) return `há ${diffMin} min · ${data}`;
+            const diffH = Math.floor(diffMin / 60);
+            if (diffH < 24) return `há ${diffH} h · ${data}`;
+            return data;
+        }
+
+        function _escMonitor(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function renderMonitor(users) {
+            _monitorCache = users;
+            if (!users || !users.length) {
+                tabelaMonitor.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-sm text-slate-400">Nenhum usuário cadastrado.</td></tr>`;
+                return;
+            }
+            tabelaMonitor.innerHTML = users.map(u => {
+                const online = _isOnlineNow(u);
+                const dotCor = online ? 'bg-emerald-500 ring-emerald-200' : 'bg-slate-300 ring-slate-100';
+                const labelStatus = online ? 'Online' : 'Offline';
+                const corStatus = online ? 'text-emerald-700' : 'text-slate-500';
+                const nome = _escMonitor(u.nome || '—');
+                const email = _escMonitor(u.email || u._id || '');
+                const ultimo = _escMonitor(_formatarUltimoAcesso(u.ultimo_acesso));
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-bold text-slate-800">${nome}</td>
+                        <td class="px-6 py-4 text-slate-500 font-mono text-[11px]">${email}</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center gap-2 ${corStatus} font-bold text-[11px] uppercase tracking-wider">
+                                <span class="w-2.5 h-2.5 rounded-full ring-2 ${dotCor}"></span>
+                                ${labelStatus}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-600 text-[11px] font-medium">${ultimo}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button type="button" data-acao="historico" data-email="${email}"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg text-[11px] font-bold transition-colors">
+                                <span class="material-symbols-outlined text-[14px]">history</span>
+                                Ver Histórico
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Delegação de cliques nos botões "Ver Histórico".
+        tabelaMonitor.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-acao="historico"]');
+            if (!btn) return;
+            const email = btn.getAttribute('data-email');
+            if (email) abrirHistoricoAcessos(email);
+        });
+
+        // ── Modal de Histórico Individual ────────────────────────────────────
+        const modalHistAcessos = document.getElementById('modal-historico-acessos');
+        const histAcessosLista = document.getElementById('hist-acessos-lista');
+        const histAcessosSubtitulo = document.getElementById('hist-acessos-subtitulo');
+
+        async function abrirHistoricoAcessos(email) {
+            // Auditoria 2026-05-18: o login grava `email` em lowercase em
+            // /HistoricoAcessos (cf. login.html:300). O monitor passa o email
+            // do doc Usuarios — pode vir com casing original. Normalizamos
+            // sempre antes de consultar para garantir o match.
+            const emailNorm = String(email || '').trim().toLowerCase();
+            histAcessosSubtitulo.textContent = emailNorm;
+            histAcessosLista.innerHTML = `
+                <div class="flex items-center justify-center gap-2 py-10 text-xs text-slate-400 font-medium">
+                    <span class="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                    <span>Carregando histórico…</span>
+                </div>`;
+            // Abre o modal imediatamente — feedback visual durante a query.
+            modalHistAcessos.classList.remove('opacity-0', 'pointer-events-none');
+            modalHistAcessos.querySelector('div:last-of-type').classList.remove('scale-95');
+
+            if (!emailNorm) {
+                histAcessosLista.innerHTML = `
+                    <div class="px-3 py-4 bg-amber-50 border border-amber-100 rounded-xl text-[11px] text-amber-700 font-medium">
+                        Não foi possível identificar o e-mail do usuário selecionado.
+                    </div>`;
+                return;
+            }
+
+            try {
+                // Ordenação local (auditoria 2026-05-18). A query usa apenas
+                // o WHERE de igualdade — sem orderBy server-side — pra evitar
+                // dependência de índice composto (email asc + timestamp desc).
+                // Pegamos um limite seguro (até 200) e ordenamos client-side.
+                const qHist = query(
+                    collection(db, 'HistoricoAcessos'),
+                    where('email', '==', emailNorm),
+                    limit(200)
+                );
+                const snap = await getDocs(qHist);
+                if (snap.empty) {
+                    histAcessosLista.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-10 text-center">
+                            <span class="material-symbols-outlined text-slate-300 text-3xl mb-2">inbox</span>
+                            <p class="text-xs text-slate-400 font-medium">Nenhum acesso registrado ainda.</p>
+                            <p class="text-[10px] text-slate-300 mt-1 italic">Os logins passam a ser registrados a partir da v2.5 do CentraFin.</p>
+                        </div>`;
+                    return;
+                }
+                const itemsTodos = [];
+                snap.forEach(d => itemsTodos.push({ id: d.id, ...d.data() }));
+                // Ordena desc por timestamp (ms). Itens sem timestamp ficam no fim.
+                itemsTodos.sort((a, b) => {
+                    const ta = _msFromTimestamp(a.timestamp) || 0;
+                    const tb = _msFromTimestamp(b.timestamp) || 0;
+                    return tb - ta;
+                });
+                const items = itemsTodos.slice(0, 10);
+                histAcessosLista.innerHTML = items.map((it, idx) => {
+                    const ms = _msFromTimestamp(it.timestamp);
+                    const data = ms
+                        ? new Date(ms).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' })
+                        : '—';
+                    const rel = ms ? _formatarUltimoAcesso(it.timestamp) : '';
+                    const acao = _escMonitor(it.acao || 'LOGIN');
+                    return `
+                        <div class="flex items-start gap-3 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all">
+                            <div class="shrink-0 w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-extrabold text-[10px] mt-0.5">
+                                ${idx + 1}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">${acao}</span>
+                                    <span class="text-[10px] text-slate-400 italic shrink-0">${_escMonitor(rel)}</span>
+                                </div>
+                                <p class="text-[11px] font-mono font-bold text-slate-700 mt-1">${_escMonitor(data)}</p>
+                            </div>
+                        </div>`;
+                }).join('');
+            } catch (err) {
+                console.warn('[Monitor] falha ao carregar histórico:', err);
+                const msg = err?.code === 'permission-denied'
+                    ? 'Acesso negado. Apenas Super Adm pode ler /HistoricoAcessos.'
+                    : (err?.message || 'erro desconhecido');
+                histAcessosLista.innerHTML = `
+                    <div class="px-3 py-4 bg-red-50 border border-red-100 rounded-xl text-[11px] text-red-700 font-medium">
+                        <strong class="block mb-1">Falha ao buscar histórico</strong>
+                        ${_escMonitor(msg)}
+                    </div>`;
+            }
+        }
+
+        window.fecharHistoricoAcessos = function () {
+            modalHistAcessos.classList.add('opacity-0', 'pointer-events-none');
+            modalHistAcessos.querySelector('div:last-of-type').classList.add('scale-95');
+        };
+
+        // ────────────────────────────────────────────────────────────────────
         // REGRAS DE CONCILIAÇÃO — CRUD (Fase 1 do Contas a Pagar)
         // Banco "De-Para" usado pelo ETL futuro para classificar entidades
         // automaticamente (ex.: "TELEFONICA BRASIL S.A." → CC "TI").
@@ -1212,7 +2253,10 @@
         let editandoRegraId = null;
         // Fase 2.1 (auditoria 2026-04-29): cache local das Áreas — alimenta
         // o dropdown do form de regras E a lista da sub-seção 1.
-        let areasCache = []; // Array<{ _id, nome }>
+        let areasCache = []; // Array<{ _id, nome, gestor_id, gestor_nome }>
+        // Frente 3 (auditoria 2026-05-20): cache de gestores cadastrados —
+        // alimenta o dropdown do form de Áreas e a lista da nova sub-seção 1.b.
+        let gestoresCache = []; // Array<{ _id, nome, email }>
 
         // Força UPPERCASE em tempo real na chave de busca para casar com o
         // padrão do ETL (que faz toUpperCase do nome da entidade antes de
@@ -1255,13 +2299,25 @@
                         Nenhuma área cadastrada. Adicione a primeira no formulário ao lado.
                     </li>`;
             } else {
-                listaAreas.innerHTML = areasCache.map(a => `
+                listaAreas.innerHTML = areasCache.map(a => {
+                    // Badge de Gestor (Frente 3 — 2026-05-20). Quando vinculado,
+                    // mostra o nome em chip pequeno; quando não, badge cinza
+                    // "sem gestor" — destaque visual pra controladoria saber
+                    // que ainda falta atrelar responsável.
+                    const gestorChip = a.gestor_nome
+                        ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-tertiary/10 text-tertiary border border-tertiary/30" title="Gestor responsável"><span class="material-symbols-outlined text-[12px]">supervisor_account</span>${escapeHTMLm(a.gestor_nome)}</span>`
+                        : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200" title="Nenhum gestor vinculado">sem gestor</span>`;
+                    return `
                     <li class="px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
-                        <span class="text-sm font-bold text-secondary truncate">${escapeHTMLm(a.nome)}</span>
-                        <button data-acao-area="excluir" data-id="${escapeHTMLm(a._id)}" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir área">
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                            <span class="text-sm font-bold text-secondary truncate">${escapeHTMLm(a.nome)}</span>
+                            ${gestorChip}
+                        </div>
+                        <button data-acao-area="excluir" data-id="${escapeHTMLm(a._id)}" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors shrink-0" title="Excluir área">
                             <span class="material-symbols-outlined text-[18px]">delete</span>
                         </button>
-                    </li>`).join('');
+                    </li>`;
+                }).join('');
             }
             contadorAreas.textContent = `${areasCache.length} ${areasCache.length === 1 ? 'área' : 'áreas'}`;
 
@@ -1277,14 +2333,37 @@
         }
 
         // Listener da coleção AreasContasPagar — único ponto de verdade.
+        // Auditoria 2026-05-18: além de alimentar a tabela de Áreas e o
+        // dropdown de Regras de Conciliação, também atualiza
+        // `_areasContasPagarNomes` (consumido pelo select de CC do modal de
+        // Fornecedores) e re-sincroniza o select se o modal já estiver aberto.
         onSnapshot(collection(db, 'AreasContasPagar'), (snap) => {
             areasCache = [];
             snap.forEach(d => {
                 const data = d.data() || {};
-                if (data.nome) areasCache.push({ _id: d.id, nome: String(data.nome).trim() });
+                if (data.nome) {
+                    areasCache.push({
+                        _id: d.id,
+                        nome: String(data.nome).trim(),
+                        // Vínculo Gestor (Frente 3 — 2026-05-20). Persistido
+                        // como par (id, nome) — duplicação intencional pra que
+                        // a lista renderize sem precisar fazer lookup adicional
+                        // quando o gestor é referenciado.
+                        gestor_id: data.gestor_id || null,
+                        gestor_nome: data.gestor_nome || null,
+                    });
+                }
             });
             areasCache.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
             renderAreas();
+            // Sincroniza espelho global usado pelo Banco de Fornecedores.
+            _areasContasPagarNomes = areasCache.map(a => a.nome);
+            // Se o modal de edição estiver aberto, repopula o select preservando
+            // o valor atualmente selecionado (sem perder a escolha do usuário).
+            if (typeof _fornMRepopularSelectCC === 'function') _fornMRepopularSelectCC();
+            // Atualiza também o filtro de CC + selects dos modais Cadastro Manual
+            // e Alterar CC em Massa. Auditoria 2026-05-18.
+            if (typeof _fornMRepopularSelectsCCsAuxiliares === 'function') _fornMRepopularSelectsCCsAuxiliares();
         }, (err) => {
             console.error('[AreasContasPagar] listener falhou:', err);
             listaAreas.innerHTML = `<li class="px-5 py-8 text-center text-xs text-red-500 font-bold">Falha ao carregar áreas: ${err.code || err.message}</li>`;
@@ -1300,15 +2379,24 @@
             if (usuarioLogadoPerfil !== 'master' && usuarioLogadoPerfil !== 'super_admin') {
                 _showMsgArea('Apenas administradores podem cadastrar áreas.'); return;
             }
+            // Resolve o gestor selecionado (Frente 3 — 2026-05-20). Vazio = sem
+            // vínculo. O ID é o docId em CP_Gestores; o nome vai junto pra
+            // dispensar lookup na hora de renderizar a lista.
+            const gestorSelect = document.getElementById('area-gestor');
+            const gestorId = gestorSelect ? String(gestorSelect.value || '').trim() : '';
+            const gestorObj = gestorId ? gestoresCache.find(g => g._id === gestorId) : null;
+
             btnSalvarArea.disabled = true;
             btnSalvarArea.classList.add('opacity-60');
             try {
                 await addDoc(collection(db, 'AreasContasPagar'), {
                     nome,
+                    gestor_id: gestorObj ? gestorObj._id : null,
+                    gestor_nome: gestorObj ? gestorObj.nome : null,
                     criado_em: serverTimestamp(),
                     criado_por: usuarioLogadoNome,
                 });
-                registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Áreas Contas a Pagar", `Cadastrou a área "${nome}".`);
+                registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Áreas Contas a Pagar", `Cadastrou a área "${nome}"${gestorObj ? ` (gestor: ${gestorObj.nome})` : ''}.`);
                 formArea.reset();
                 _showMsgArea(`Área "${nome}" adicionada.`, 'sucesso');
                 setTimeout(() => msgArea.classList.add('hidden'), 1800);
@@ -1346,6 +2434,159 @@
                     : `Falha ao excluir: ${err.message || 'erro desconhecido'}`);
             }
         });
+
+        // ────────────────────────────────────────────────────────────────────
+        // SUB-SEÇÃO 1.b — CADASTRO DE GESTORES (CRUD CP_Gestores)
+        // Frente 3 (auditoria 2026-05-20). Painel leve, escopo controladoria:
+        // CRUD simples sobre /CP_Gestores, alimentado por listener live. O
+        // dropdown #area-gestor (no form de Áreas) é re-populado a cada
+        // mutação preservando o valor selecionado.
+        // ────────────────────────────────────────────────────────────────────
+        const formGestor      = document.getElementById('form-gestor');
+        const inputGestorNome = document.getElementById('gestor-nome');
+        const inputGestorEmail= document.getElementById('gestor-email');
+        const btnSalvarGestor = document.getElementById('btn-salvar-gestor');
+        const msgGestor       = document.getElementById('msg-gestor');
+        const listaGestores   = document.getElementById('lista-gestores');
+        const contadorGestores= document.getElementById('contador-gestores');
+        const selectAreaGestor= document.getElementById('area-gestor');
+
+        function _showMsgGestor(texto, tipo = 'erro') {
+            if (!msgGestor) return;
+            msgGestor.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'border-red-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+            if (tipo === 'sucesso') {
+                msgGestor.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-200');
+                msgGestor.innerHTML = `<span class="material-symbols-outlined text-base">check_circle</span> ${texto}`;
+            } else {
+                msgGestor.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
+                msgGestor.innerHTML = `<span class="material-symbols-outlined text-base">error</span> ${texto}`;
+            }
+        }
+
+        function _renderGestores() {
+            if (!listaGestores) return;
+            if (!gestoresCache.length) {
+                listaGestores.innerHTML = `
+                    <li class="px-5 py-8 text-center text-sm text-slate-400 font-medium">
+                        Nenhum gestor cadastrado. Adicione o primeiro no formulário ao lado.
+                    </li>`;
+            } else {
+                listaGestores.innerHTML = gestoresCache.map(g => `
+                    <li class="px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-bold text-secondary truncate">${escapeHTMLm(g.nome)}</p>
+                            <p class="text-[11px] text-slate-500 font-mono truncate">${escapeHTMLm(g.email || '')}</p>
+                        </div>
+                        <button data-acao-gestor="excluir" data-id="${escapeHTMLm(g._id)}" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors shrink-0" title="Excluir gestor">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </li>`).join('');
+            }
+            if (contadorGestores) {
+                contadorGestores.textContent = `${gestoresCache.length} ${gestoresCache.length === 1 ? 'gestor' : 'gestores'}`;
+            }
+            // Repopula dropdown do form de Áreas preservando seleção atual.
+            if (selectAreaGestor) {
+                const valAtual = selectAreaGestor.value;
+                selectAreaGestor.innerHTML = '<option value="">— sem gestor —</option>' +
+                    gestoresCache.map(g => `<option value="${escapeHTMLm(g._id)}">${escapeHTMLm(g.nome)}</option>`).join('');
+                if (valAtual && gestoresCache.some(g => g._id === valAtual)) {
+                    selectAreaGestor.value = valAtual;
+                }
+            }
+        }
+
+        // Listener live de /CP_Gestores. Mantém o cache + render automático
+        // do dropdown e da lista. Caso o usuário não tenha permissão de
+        // leitura por algum motivo (rules) o listener falha graciosamente
+        // exibindo aviso sem quebrar a aba inteira.
+        onSnapshot(collection(db, 'CP_Gestores'), (snap) => {
+            gestoresCache = [];
+            snap.forEach(d => {
+                const data = d.data() || {};
+                if (data.nome) {
+                    gestoresCache.push({
+                        _id: d.id,
+                        nome: String(data.nome).trim(),
+                        email: String(data.email || '').trim().toLowerCase(),
+                    });
+                }
+            });
+            gestoresCache.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+            _renderGestores();
+            // Re-render das áreas pra atualizar chips "sem gestor" caso a
+            // referência do gestor tenha sido editada/excluída externamente.
+            renderAreas();
+        }, (err) => {
+            console.error('[CP_Gestores] listener falhou:', err);
+            if (listaGestores) {
+                listaGestores.innerHTML = `<li class="px-5 py-8 text-center text-xs text-red-500 font-bold">Falha ao carregar gestores: ${err.code || err.message}</li>`;
+            }
+        });
+
+        if (formGestor) {
+            formGestor.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const nome  = inputGestorNome.value.trim();
+                const email = inputGestorEmail.value.trim().toLowerCase();
+                if (!nome)  { _showMsgGestor('Informe o nome do gestor.');    return; }
+                if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+                    _showMsgGestor('E-mail inválido — use o formato user@dominio.com.'); return;
+                }
+                if (gestoresCache.some(g => g.email === email)) {
+                    _showMsgGestor(`Já existe um gestor com o e-mail ${email}.`); return;
+                }
+                if (usuarioLogadoPerfil !== 'master' && usuarioLogadoPerfil !== 'super_admin') {
+                    _showMsgGestor('Apenas administradores podem cadastrar gestores.'); return;
+                }
+                btnSalvarGestor.disabled = true;
+                btnSalvarGestor.classList.add('opacity-60');
+                try {
+                    await addDoc(collection(db, 'CP_Gestores'), {
+                        nome, email,
+                        criado_em: serverTimestamp(),
+                        criado_por: usuarioLogadoNome,
+                    });
+                    registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "CP_Gestores", `Cadastrou o gestor "${nome}" (${email}).`);
+                    formGestor.reset();
+                    _showMsgGestor(`Gestor "${nome}" adicionado.`, 'sucesso');
+                    setTimeout(() => msgGestor.classList.add('hidden'), 1800);
+                } catch (err) {
+                    console.error('[CP_Gestores] addDoc falhou:', err);
+                    _showMsgGestor(err.code === 'permission-denied'
+                        ? 'Acesso negado: apenas administradores.'
+                        : `Falha ao salvar: ${err.message || 'erro desconhecido'}`);
+                } finally {
+                    btnSalvarGestor.disabled = false;
+                    btnSalvarGestor.classList.remove('opacity-60');
+                }
+            });
+        }
+
+        if (listaGestores) {
+            listaGestores.addEventListener('click', async (e) => {
+                const btn = e.target.closest('button[data-acao-gestor="excluir"]');
+                if (!btn) return;
+                const id = btn.getAttribute('data-id');
+                const g = gestoresCache.find(x => x._id === id);
+                if (!g) return;
+                // Heurística pré-delete: avisa quantas áreas estão vinculadas.
+                const areasVinculadas = areasCache.filter(a => a.gestor_id === g._id);
+                const aviso = areasVinculadas.length > 0
+                    ? `\n\nATENÇÃO: ${areasVinculadas.length} área(s) ainda referencia(m) esse gestor.`
+                    : '';
+                if (!confirm(`Excluir o gestor "${g.nome}"?${aviso}`)) return;
+                try {
+                    await deleteDoc(doc(db, 'CP_Gestores', id));
+                    registrarLogAutomático(usuarioLogadoNome, "EXCLUSÃO", "CP_Gestores", `Excluiu o gestor "${g.nome}".`);
+                } catch (err) {
+                    console.error('[CP_Gestores] delete falhou:', err);
+                    alert(err.code === 'permission-denied'
+                        ? 'Acesso negado: apenas administradores.'
+                        : `Falha ao excluir: ${err.message || 'erro desconhecido'}`);
+                }
+            });
+        }
 
         function _showMsgRegra(texto, tipo = 'erro') {
             msgRegra.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'border-red-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
@@ -1518,6 +2759,1479 @@
                         ? 'Acesso negado: apenas administradores podem excluir regras.'
                         : `Falha ao excluir: ${err.message || 'erro desconhecido'}`);
                 }
+            }
+        });
+
+        // ====================================================================
+        // BANCO DE FORNECEDORES (auditoria 2026-05-18 — migrado do Gerenciador CP)
+        // ====================================================================
+        // Bloco isolado: prefixo "fornM*" pra evitar colisão com qualquer outro
+        // identificador da página. Tudo é gated por isAdmin nas Rules (master
+        // só fica acessível para super_admin), então não há ESTEIRA aqui —
+        // edits/deletes/imports são DIRETOS.
+
+        const FORNM_COLECAO = 'Fornecedores';
+        const FORNM_CHUNK = 450;
+        const FORNM_PAGE_SIZE = 50;
+
+        // Auditoria 2026-05-18 (correção crítica): o select de Centro de Custo
+        // do modal de Fornecedores deve beber de AreasContasPagar — NÃO de
+        // Base_Centros_Custo (que é da Folha de Pagamento). Os dois universos
+        // são independentes na arquitetura. Esta variável é populada pelo
+        // listener de AreasContasPagar (mais abaixo, em SUB-SEÇÃO 1).
+        let _areasContasPagarNomes = []; // Array<string> ordenado pt-BR
+
+        // ── Helpers genéricos ─────────────────────────────────────────────
+        function fornMEscHTML(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function fornMParseCodigo(cod) {
+            if (cod == null) return null;
+            const s = String(cod).replace(/\D/g, '');
+            return s ? Number(s) : null;
+        }
+        function fornMNormHdr(s) {
+            return String(s || '')
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .replace(/[._\-]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toUpperCase();
+        }
+
+        // Toast + Loader scoped (não usa nativo).
+        let _fornMToastTimer = null;
+        function fornMToast(texto, icone = 'check_circle', erro = false) {
+            const t = document.getElementById('toast-forn-master');
+            document.getElementById('toast-forn-master-text').textContent = texto;
+            const icoEl = document.getElementById('toast-forn-master-icon');
+            const map = { info: 'info', warning: 'warning' };
+            icoEl.textContent = map[icone] || icone;
+            icoEl.className = erro
+                ? 'material-symbols-outlined text-red-400'
+                : (icone === 'info' || icone === 'warning')
+                    ? 'material-symbols-outlined text-tertiary'
+                    : 'material-symbols-outlined text-primary';
+            t.classList.remove('hidden');
+            requestAnimationFrame(() => t.classList.remove('opacity-0', 'translate-y-2'));
+            if (_fornMToastTimer) clearTimeout(_fornMToastTimer);
+            _fornMToastTimer = setTimeout(() => {
+                t.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => t.classList.add('hidden'), 320);
+            }, 3500);
+        }
+        function fornMMostrarLoader(titulo, msg) {
+            const ov = document.getElementById('forn-master-loader');
+            if (titulo) document.getElementById('forn-master-loader-titulo').textContent = titulo;
+            if (msg)    document.getElementById('forn-master-loader-msg').textContent = msg;
+            ov.classList.remove('hidden');
+            ov.classList.add('flex');
+        }
+        function fornMEsconderLoader() {
+            const ov = document.getElementById('forn-master-loader');
+            ov.classList.add('hidden');
+            ov.classList.remove('flex');
+        }
+        function fornMAbrirModal(id) {
+            const m = document.getElementById(id);
+            if (!m) return;
+            m.classList.remove('opacity-0', 'pointer-events-none');
+            const card = m.querySelector('div.bg-white');
+            if (card) card.classList.remove('scale-95');
+        }
+        function fornMFecharModal(id) {
+            const m = document.getElementById(id);
+            if (!m) return;
+            m.classList.add('opacity-0', 'pointer-events-none');
+            const card = m.querySelector('div.bg-white');
+            if (card) card.classList.add('scale-95');
+        }
+        document.querySelectorAll('[data-modal-overlay]').forEach(o => {
+            o.addEventListener('click', () => fornMFecharModal(o.getAttribute('data-modal-overlay')));
+        });
+
+        // ── Snapshot live de /Fornecedores ────────────────────────────────
+        let _fornMRegistros = [];
+        let _fornMUltimosFiltrados = [];
+        let _fornMPage = 1;
+        const _fornMSelecao = new Set();
+        let _fornMEditId = null;
+
+        function inscreverFornecedoresMaster() {
+            onSnapshot(collection(db, FORNM_COLECAO), (snap) => {
+                const regs = [];
+                snap.forEach(d => regs.push({ _id: d.id, ...d.data() }));
+                regs.sort((a, b) => {
+                    const ca = fornMParseCodigo(a.codigo) ?? 9999999;
+                    const cb = fornMParseCodigo(b.codigo) ?? 9999999;
+                    if (ca !== cb) return ca - cb;
+                    return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
+                });
+                _fornMRegistros = regs;
+                document.getElementById('forn-master-contador').textContent =
+                    `${regs.length.toLocaleString('pt-BR')} fornecedor${regs.length === 1 ? '' : 'es'}`;
+                // Limpa IDs órfãos
+                const ids = new Set(regs.map(r => r._id));
+                for (const id of [..._fornMSelecao]) if (!ids.has(id)) _fornMSelecao.delete(id);
+                fornMRender();
+            }, (err) => console.warn('[FornM] listener falhou:', err?.code || err?.message));
+        }
+
+        function fornMRender() {
+            const tbody = document.getElementById('forn-master-corpo');
+            const vazio = document.getElementById('forn-master-vazio');
+            const pag   = document.getElementById('forn-master-paginacao');
+            const hint  = document.getElementById('forn-master-hint');
+            const termo  = String(document.getElementById('forn-master-busca').value || '').toLowerCase().trim();
+            const termoDig = termo.replace(/\D/g, '');
+            const filtroTipo = String(document.getElementById('forn-master-filtro-tipo').value || 'Todos');
+            // Auditoria 2026-05-18: filtro de CC com sentinela "__SEM_CC__".
+            // Permite o usuário sanear a base mostrando só fornecedores sem CC
+            // alocado (PJ que ainda não foi conectado pra Folha).
+            const filtroCC = String(document.getElementById('forn-master-filtro-cc').value || 'Todos');
+
+            const filtrados = _fornMRegistros.filter(r => {
+                if (filtroTipo !== 'Todos' && String(r.tipo || '') !== filtroTipo) return false;
+                if (filtroCC === '__SEM_CC__') {
+                    const cc = String(r.centro_custo || '').trim();
+                    if (cc) return false; // tem CC → fora do recorte
+                } else if (filtroCC !== 'Todos') {
+                    if (String(r.centro_custo || '').trim() !== filtroCC) return false;
+                }
+                if (!termo) return true;
+                const cod = String(r.codigo || '');
+                const emp = String(r.empresa || '').toLowerCase();
+                const nm  = String(r.nome || '').toLowerCase();
+                return emp.includes(termo) || nm.includes(termo) || (termoDig && cod.includes(termoDig));
+            });
+
+            // Reset de página quando o recorte muda tamanho.
+            if (filtrados.length !== _fornMUltimosFiltrados.length) _fornMPage = 1;
+            _fornMUltimosFiltrados = filtrados;
+
+            const recorteAtivo = termo || filtroTipo !== 'Todos' || filtroCC !== 'Todos';
+            if (hint) hint.textContent = recorteAtivo ? `${filtrados.length} resultado(s)` : '';
+
+            if (!filtrados.length) {
+                tbody.innerHTML = '';
+                vazio.classList.remove('hidden');
+                if (pag) { pag.classList.add('hidden'); pag.classList.remove('flex'); }
+                fornMAtualizarUIBulk();
+                return;
+            }
+            vazio.classList.add('hidden');
+
+            const totalPaginas = Math.max(1, Math.ceil(filtrados.length / FORNM_PAGE_SIZE));
+            if (_fornMPage > totalPaginas) _fornMPage = totalPaginas;
+            const inicio = (_fornMPage - 1) * FORNM_PAGE_SIZE;
+            const fim    = Math.min(inicio + FORNM_PAGE_SIZE, filtrados.length);
+            const pagina = filtrados.slice(inicio, fim);
+
+            if (pag) {
+                if (totalPaginas <= 1) { pag.classList.add('hidden'); pag.classList.remove('flex'); }
+                else {
+                    pag.classList.remove('hidden'); pag.classList.add('flex');
+                    document.getElementById('forn-master-pag-info').textContent =
+                        `${(inicio + 1).toLocaleString('pt-BR')}–${fim.toLocaleString('pt-BR')} de ${filtrados.length.toLocaleString('pt-BR')}`;
+                    document.getElementById('forn-master-pag-pagina').textContent = `Página ${_fornMPage} / ${totalPaginas}`;
+                    document.getElementById('forn-master-pag-prev').disabled = _fornMPage <= 1;
+                    document.getElementById('forn-master-pag-next').disabled = _fornMPage >= totalPaginas;
+                }
+            }
+
+            const linhas = new Array(pagina.length);
+            for (let i = 0; i < pagina.length; i++) {
+                const r = pagina[i];
+                const corTipo = (
+                    r.tipo === 'Cliente'                  ? 'bg-tertiary/10 text-tertiary border-tertiary/20'
+                  : r.tipo === 'Fornecedor Interno'       ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                  : r.tipo === 'Fornecedor Interno - PJ'  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : r.tipo === 'Fornecedor Externo'       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  :                                         'bg-slate-100 text-slate-500 border-slate-200'
+                );
+                const idAttr = fornMEscHTML(r._id);
+                // CC ausente em fornecedor PJ é red flag — destacamos como
+                // texto âmbar pra o admin localizar e completar a base.
+                const ccTxt = String(r.centro_custo || '').trim();
+                const ccHtml = ccTxt
+                    ? `<span class="text-slate-700 font-semibold uppercase">${fornMEscHTML(ccTxt)}</span>`
+                    : (r.tipo === 'Fornecedor Interno - PJ'
+                        ? `<span class="text-amber-600 italic">— pendente —</span>`
+                        : `<span class="text-slate-300 italic">—</span>`);
+                linhas[i] = `
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        <td class="px-4 py-2.5 text-center">
+                            <input type="checkbox" class="forn-master-checkbox rounded border-slate-300 text-secondary focus:ring-secondary" data-id="${idAttr}">
+                        </td>
+                        <td class="px-4 py-2.5 text-xs font-mono font-bold text-tertiary tabular-nums">${r.codigo != null ? r.codigo : '—'}</td>
+                        <td class="px-4 py-2.5 text-xs text-slate-600 uppercase">${fornMEscHTML(r.empresa || '—')}</td>
+                        <td class="px-4 py-2.5 text-xs font-bold text-slate-800">${fornMEscHTML(r.nome || '—')}</td>
+                        <td class="px-4 py-2.5"><span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${corTipo}">${fornMEscHTML(r.tipo || '—')}</span></td>
+                        <td class="px-4 py-2.5 text-xs">${ccHtml}</td>
+                        <td class="px-4 py-2.5 text-center">
+                            <button class="text-slate-400 hover:text-tertiary transition-colors" data-forn-acao="editar" data-id="${idAttr}" title="Editar">
+                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                            </button>
+                        </td>
+                    </tr>`;
+            }
+            tbody.innerHTML = linhas.join('');
+            // Re-aplica marcação dos checkboxes ao Set persistente.
+            tbody.querySelectorAll('.forn-master-checkbox').forEach(cb => {
+                cb.checked = _fornMSelecao.has(cb.getAttribute('data-id'));
+            });
+            fornMAtualizarUIBulk();
+        }
+
+        function fornMAtualizarUIBulk() {
+            const visiveis = document.querySelectorAll('#forn-master-corpo .forn-master-checkbox');
+            const marcadosVisiveis = [...visiveis].filter(cb => cb.checked).length;
+            const totalVisivel = visiveis.length;
+            const master = document.getElementById('forn-master-selecionar-todos');
+            if (master) {
+                master.checked = totalVisivel > 0 && marcadosVisiveis === totalVisivel;
+                master.indeterminate = marcadosVisiveis > 0 && marcadosVisiveis < totalVisivel;
+            }
+            const totalSel = _fornMSelecao.size;
+            // Contadores (delete + cc-massa).
+            const contadorDel = document.getElementById('forn-master-sel-count');
+            const contadorCC  = document.getElementById('forn-master-cc-massa-count');
+            if (contadorDel) contadorDel.textContent = totalSel;
+            if (contadorCC)  contadorCC.textContent  = totalSel;
+            // Visibilidade dos botões bulk (delete + cc-massa). Cross-pages:
+            // a seleção persiste em _fornMSelecao (Set), então os botões refletem
+            // a soma total — mesmo registros em páginas/filtros não-visíveis.
+            const toggleBulk = (id, show) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (show) { el.classList.remove('hidden'); el.classList.add('inline-flex'); }
+                else      { el.classList.add('hidden');     el.classList.remove('inline-flex'); }
+            };
+            toggleBulk('forn-master-btn-deletar', totalSel > 0);
+            toggleBulk('forn-master-btn-cc-massa', totalSel > 0);
+        }
+
+        // ── Wiring de UI ──────────────────────────────────────────────────
+        document.getElementById('forn-master-busca').addEventListener('input', () => { _fornMPage = 1; fornMRender(); });
+        document.getElementById('forn-master-filtro-tipo').addEventListener('change', () => { _fornMPage = 1; fornMRender(); });
+        // Reset de página obrigatório ao filtrar por CC (auditoria 2026-05-18).
+        document.getElementById('forn-master-filtro-cc').addEventListener('change', () => { _fornMPage = 1; fornMRender(); });
+        document.getElementById('forn-master-pag-prev').addEventListener('click', () => {
+            if (_fornMPage <= 1) return; _fornMPage -= 1; fornMRender();
+        });
+        document.getElementById('forn-master-pag-next').addEventListener('click', () => {
+            const totalPaginas = Math.max(1, Math.ceil(_fornMUltimosFiltrados.length / FORNM_PAGE_SIZE));
+            if (_fornMPage >= totalPaginas) return; _fornMPage += 1; fornMRender();
+        });
+        document.getElementById('forn-master-selecionar-todos').addEventListener('change', (e) => {
+            const checked = e.target.checked;
+            document.querySelectorAll('#forn-master-corpo .forn-master-checkbox').forEach(cb => {
+                cb.checked = checked;
+                const id = cb.getAttribute('data-id');
+                if (checked) _fornMSelecao.add(id); else _fornMSelecao.delete(id);
+            });
+            fornMAtualizarUIBulk();
+        });
+        document.getElementById('forn-master-corpo').addEventListener('change', (e) => {
+            const cb = e.target.closest('.forn-master-checkbox');
+            if (!cb) return;
+            const id = cb.getAttribute('data-id');
+            if (cb.checked) _fornMSelecao.add(id); else _fornMSelecao.delete(id);
+            fornMAtualizarUIBulk();
+        });
+        document.getElementById('forn-master-corpo').addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-forn-acao]');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            const acao = btn.getAttribute('data-forn-acao');
+            if (acao === 'editar') fornMAbrirEditar(id);
+        });
+
+        // ── Editar Fornecedor (inline) ────────────────────────────────────
+        async function fornMAbrirEditar(id) {
+            const docId = String(id);
+            let reg = _fornMRegistros.find(r => r._id === docId);
+            if (!reg) {
+                try {
+                    const snap = await getDoc(doc(db, FORNM_COLECAO, docId));
+                    if (!snap.exists()) { fornMToast('Fornecedor não encontrado.', 'error', true); return; }
+                    reg = { _id: snap.id, ...snap.data() };
+                } catch (err) {
+                    fornMToast('Falha ao carregar: ' + (err.message || 'erro'), 'error', true);
+                    return;
+                }
+            }
+            document.getElementById('forn-master-edit-codigo').value  = reg.codigo != null ? reg.codigo : reg._id;
+            document.getElementById('forn-master-edit-empresa').value = reg.empresa || '';
+            document.getElementById('forn-master-edit-nome').value    = reg.nome || '';
+            document.getElementById('forn-master-edit-tipo').value    = reg.tipo || '';
+            // Centro de Custo / Área — fonte CORRETA: AreasContasPagar.
+            // Correção 2026-05-18: antes lia de _ccDisponiveis (Base_Centros_Custo,
+            // que é da Folha). Agora bebe de _areasContasPagarNomes, alimentado
+            // pelo listener live de /AreasContasPagar — mudanças naquela coleção
+            // refletem aqui em tempo real via _fornMRepopularSelectCC().
+            _fornMRepopularSelectCC(reg.centro_custo);
+            _fornMEditId = docId;
+            fornMAbrirModal('modal-forn-master-editar');
+        }
+
+        // Re-popula o <select> de Centro de Custo preservando o valor selecionado.
+        // Chamado em 2 momentos:
+        //   1) Ao abrir o modal de edição (pré-seleção com o CC gravado no doc).
+        //   2) A cada disparo do listener de AreasContasPagar (atualização live).
+        function _fornMRepopularSelectCC(ccPreferido) {
+            const selCC = document.getElementById('forn-master-edit-cc');
+            if (!selCC) return;
+            // Quando chamado pelo listener (sem arg), preserva o que já está
+            // selecionado pra não perder a escolha do usuário em digitação.
+            const ccAtual = ccPreferido !== undefined
+                ? String(ccPreferido || '').trim()
+                : String(selCC.value || '').trim();
+            selCC.innerHTML = '<option value="">— sem CC —</option>';
+            for (const nome of (_areasContasPagarNomes || [])) {
+                const opt = document.createElement('option');
+                opt.value = nome; opt.textContent = nome;
+                selCC.appendChild(opt);
+            }
+            // Fantasma — se o CC gravado no fornecedor não existe mais na base
+            // (renomeado/deletado depois), preserva o valor + flagueia visualmente
+            // pra o admin notar e corrigir conscientemente.
+            if (ccAtual && !_areasContasPagarNomes.includes(ccAtual)) {
+                const opt = document.createElement('option');
+                opt.value = ccAtual;
+                opt.textContent = `${ccAtual} (fora da base)`;
+                selCC.appendChild(opt);
+            }
+            selCC.value = ccAtual;
+        }
+
+        // Mensagem oficial (auditoria 2026-05-18): copy padronizada para todos
+        // os fluxos de governança não-admin (delete, edit, CC em massa, cadastro).
+        // V5 (2026-05-18 — fail-safe): adicionada variante "operação retida"
+        // pra reforçar que a ação NÃO foi executada — só enviada pra esteira.
+        const MSG_ESTEIRA_AVISO = 'Operação Retida! Suas alterações foram enviadas para a Esteira de Aprovações do Usuário Master.';
+
+        async function fornMSalvarEdicao() {
+            if (!_fornMEditId) return;
+            const empresa = String(document.getElementById('forn-master-edit-empresa').value || '').trim().toUpperCase();
+            const nome    = String(document.getElementById('forn-master-edit-nome').value || '').trim().toUpperCase();
+            const tipo    = String(document.getElementById('forn-master-edit-tipo').value || '').trim();
+            const cc      = String(document.getElementById('forn-master-edit-cc').value || '').trim();
+            if (!nome) { fornMToast('Nome do fornecedor é obrigatório.', 'warning', true); return; }
+            if (!tipo) { fornMToast('Selecione o tipo de fornecedor.', 'warning', true); return; }
+            const btn = document.getElementById('btn-salvar-forn-master-editar');
+            const ico = document.getElementById('forn-master-save-icon');
+            btn.disabled = true;
+            ico.textContent = 'progress_activity';
+            ico.classList.add('animate-spin');
+            try {
+                // Governança (auditoria 2026-05-18): não-admin NUNCA escreve
+                // direto em /Fornecedores — vai pra esteira. O guardião da
+                // tela já redireciona não-super_admin pro login, mas este
+                // branch é defesa em profundidade pra cenários onde a tela
+                // for liberada a perfis intermediários no futuro.
+                if (fornMIsAdmin()) {
+                    const regAntes = _fornMRegistros.find(r => r._id === _fornMEditId) || null;
+                    const ccAntigo = regAntes?.centro_custo || null;
+                    const ccNovo = cc || null;
+                    await updateDoc(doc(db, FORNM_COLECAO, _fornMEditId), {
+                        empresa, nome, tipo,
+                        // centro_custo gravado como null quando vazio — assim o
+                        // PJ → Custo de Folha sabe que precisa cair no fallback de
+                        // lookup. String vazia poderia confundir o filtro do CC.
+                        centro_custo: ccNovo,
+                        updated_at: serverTimestamp(),
+                        updated_by: usuarioLogadoNome,
+                    });
+                    // Cascata de CC (V6 Item 4): só dispara quando o CC mudou.
+                    // Loga e mostra no toast a quantidade real de faturas atualizadas.
+                    let cascataMsg = '';
+                    if (ccAntigo !== ccNovo) {
+                        const codFornEdit = regAntes?.codigo ?? _fornMEditId;
+                        const aplicados = await cpCascataCentroCusto(codFornEdit, ccNovo);
+                        if (aplicados > 0) cascataMsg = ` ${aplicados} fatura(s) atualizada(s) em cascata.`;
+                    }
+                    fornMToast('Fornecedor atualizado.' + cascataMsg, 'check_circle');
+                } else {
+                    // Esteira: snapshot antes/depois pra o aprovador comparar.
+                    const regAtual = _fornMRegistros.find(r => r._id === _fornMEditId) || null;
+                    const antes = regAtual ? {
+                        empresa: regAtual.empresa || '',
+                        nome:    regAtual.nome || '',
+                        tipo:    regAtual.tipo || '',
+                        centro_custo: regAtual.centro_custo || null,
+                    } : null;
+                    await fornMCriarSolicitacao({
+                        tipo_operacao: 'UPDATE',
+                        colecao_alvo: FORNM_COLECAO,
+                        doc_id_alvo: _fornMEditId,
+                        dados_antigos: antes,
+                        dados_novos: { empresa, nome, tipo, centro_custo: cc || null },
+                        resumo: regAtual
+                            ? `Editar ${regAtual.nome} (#${regAtual.codigo})`
+                            : `Editar fornecedor #${_fornMEditId}`,
+                    });
+                    fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
+                }
+                fornMFecharModal('modal-forn-master-editar');
+                _fornMEditId = null;
+            } catch (err) {
+                console.error('[FornM editar] updateDoc falhou:', err);
+                const motivo = err?.code === 'permission-denied'
+                    ? 'Acesso negado: apenas master/super_admin pode editar Fornecedores.'
+                    : (err?.message || 'erro desconhecido');
+                fornMToast('Falha ao salvar: ' + motivo, 'error', true);
+            } finally {
+                btn.disabled = false;
+                ico.classList.remove('animate-spin');
+                ico.textContent = 'save';
+            }
+        }
+        document.getElementById('btn-fechar-forn-master-editar').addEventListener('click', () => fornMFecharModal('modal-forn-master-editar'));
+        document.getElementById('btn-cancelar-forn-master-editar').addEventListener('click', () => fornMFecharModal('modal-forn-master-editar'));
+        document.getElementById('btn-salvar-forn-master-editar').addEventListener('click', () => fornMSalvarEdicao());
+
+        // ── Governança: helper que decide entre escrita direta × esteira ─────
+        // Auditoria 2026-05-18 (correção de bug do delete + recursos novos).
+        // master.html é gated pra super_admin (cf. guardião no auth bootstrap),
+        // mas mantemos o branch da esteira como defesa em profundidade —
+        // permite reaproveitar a UI se um dia abrirmos pra perfis intermediários.
+        // Fail-safe (auditoria 2026-05-18 V5 — Padrão Ouro de Segurança).
+        // Verifica EXPLICITAMENTE se o perfil é admin para liberar; qualquer
+        // outra coisa (null, undefined, string vazia, "MASTER" maiúsculo,
+        // " master " com espaços, "comum", string desconhecida) → false.
+        // Antes a comparação era estrita ao formato exato → vulnerável a
+        // dados legados (perfil em caixa alta, com espaço sobrando etc).
+        function fornMIsAdmin() {
+            const p = String(usuarioLogadoPerfil || '').trim().toLowerCase();
+            return p === 'super_admin' || p === 'master';
+        }
+        // ── Cascata de CC: Fornecedor → ContasAPagar (auditoria 2026-05-18 V6 Item 4) ──
+        // Quando o admin altera o Centro de Custo de um Fornecedor, replicamos
+        // pra TODAS as faturas existentes daquele fornecedor em /ContasAPagar.
+        // Sem isso, relatórios passados continuariam com o CC antigo —
+        // distorção que o cliente sinalizou como crítica.
+        // Implementação: query where('codigo_fornecedor','==',cod) → writeBatch
+        // em chunks. Best-effort (loga erro mas não barra o save principal).
+        async function cpCascataCentroCusto(codigoFornecedor, novoCC) {
+            if (codigoFornecedor == null || codigoFornecedor === '') return 0;
+            try {
+                // Normalização do código pra match com a coleção ContasAPagar.
+                // O ETL grava `codigo_fornecedor` como Number quando possível;
+                // tentamos AMBAS formas pra cobrir bases legadas.
+                const codNum = Number(codigoFornecedor);
+                const codStr = String(codigoFornecedor);
+                const ccFinal = novoCC == null ? null : (String(novoCC).trim() || null);
+
+                const queries = [
+                    query(collection(db, 'ContasAPagar'), where('codigo_fornecedor', '==', codNum)),
+                ];
+                // Se o código não foi conversível ou tem zeros à esquerda, busca
+                // também por string. Branches independentes — Firestore não tem OR.
+                if (codStr !== String(codNum)) {
+                    queries.push(query(collection(db, 'ContasAPagar'), where('codigo_fornecedor', '==', codStr)));
+                }
+
+                const idsAtingidos = new Set();
+                for (const q of queries) {
+                    const snap = await getDocs(q);
+                    snap.forEach(d => idsAtingidos.add(d.id));
+                }
+
+                const ids = [...idsAtingidos];
+                if (!ids.length) return 0;
+
+                const CHUNK = 400;
+                let aplicados = 0;
+                for (let i = 0; i < ids.length; i += CHUNK) {
+                    const fatia = ids.slice(i, i + CHUNK);
+                    const b = writeBatch(db);
+                    for (const id of fatia) {
+                        b.update(doc(db, 'ContasAPagar', id), {
+                            centro_custo: ccFinal,
+                            updated_at: serverTimestamp(),
+                            updated_by: usuarioLogadoNome,
+                            cascata_origem: `fornecedor#${codStr}`,
+                        });
+                    }
+                    await b.commit();
+                    aplicados += fatia.length;
+                    // Yield pro browser — main thread fluida em bases grandes.
+                    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+                }
+                return aplicados;
+            } catch (err) {
+                console.warn('[Cascata CC] falhou (best-effort):', err?.code || err?.message);
+                return 0;
+            }
+        }
+
+        async function fornMCriarSolicitacao(payload) {
+            // `auth` é o getAuth(app) já criado no bootstrap (linha ~798).
+            const emailKey = String(auth.currentUser?.email || '').toLowerCase();
+            await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
+                ...payload,
+                status: 'Pendente',
+                solicitado_por: usuarioLogadoNome,
+                solicitado_por_email: emailKey,
+                criado_em: serverTimestamp(),
+            });
+        }
+
+        // ── Excluir em massa ──────────────────────────────────────────────
+        document.getElementById('forn-master-btn-deletar').addEventListener('click', () => {
+            const n = _fornMSelecao.size;
+            if (!n) return;
+            document.getElementById('forn-master-confirm-count').textContent = n;
+            fornMAbrirModal('modal-forn-master-delete');
+        });
+        document.getElementById('btn-cancelar-forn-master-delete').addEventListener('click', () => fornMFecharModal('modal-forn-master-delete'));
+        document.getElementById('btn-confirmar-forn-master-delete').addEventListener('click', async () => {
+            const ids = [..._fornMSelecao];
+            if (!ids.length) return;
+            const btn = document.getElementById('btn-confirmar-forn-master-delete');
+            const ico = document.getElementById('forn-master-del-icon');
+            btn.disabled = true;
+            ico.textContent = 'progress_activity';
+            ico.classList.add('animate-spin');
+            try {
+                if (fornMIsAdmin()) {
+                    // Master/super_admin: writeBatch direto na coleção.
+                    let apagados = 0;
+                    for (let i = 0; i < ids.length; i += FORNM_CHUNK) {
+                        const fatia = ids.slice(i, i + FORNM_CHUNK);
+                        const batch = writeBatch(db);
+                        for (const id of fatia) batch.delete(doc(db, FORNM_COLECAO, id));
+                        await batch.commit();
+                        apagados += fatia.length;
+                    }
+                    fornMToast(`${apagados} fornecedor(es) excluído(s).`, 'check_circle');
+                } else {
+                    // Usuário comum: 1 solicitação DELETE por fornecedor na esteira.
+                    let pendentes = 0;
+                    for (const id of ids) {
+                        const reg = _fornMRegistros.find(r => r._id === id);
+                        await fornMCriarSolicitacao({
+                            tipo_operacao: 'DELETE',
+                            colecao_alvo: FORNM_COLECAO,
+                            doc_id_alvo: id,
+                            dados_antigos: reg ? { ...reg, _id: undefined } : null,
+                            dados_novos: null,
+                            resumo: reg ? `Excluir fornecedor ${reg.nome} (#${reg.codigo})` : `Excluir doc ${id}`,
+                        });
+                        pendentes++;
+                    }
+                    fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
+                }
+                _fornMSelecao.clear();
+                fornMFecharModal('modal-forn-master-delete');
+            } catch (err) {
+                console.error('[FornM delete] falhou:', err);
+                const motivo = err?.code === 'permission-denied'
+                    ? 'Acesso negado pelo Firestore.'
+                    : (err?.message || 'erro desconhecido');
+                fornMToast('Falha ao excluir: ' + motivo, 'error', true);
+            } finally {
+                btn.disabled = false;
+                ico.classList.remove('animate-spin');
+                ico.textContent = 'delete_forever';
+            }
+        });
+
+        // ============================================================
+        // ALTERAR CC EM MASSA — auditoria 2026-05-18 (produtividade)
+        // ============================================================
+        function fornMPopularSelectCCMassa() {
+            const sel = document.getElementById('forn-cc-massa-select');
+            if (!sel) return;
+            const valor = sel.value;
+            sel.innerHTML = '<option value="">Selecione uma área…</option>';
+            for (const nome of (_areasContasPagarNomes || [])) {
+                const opt = document.createElement('option');
+                opt.value = nome; opt.textContent = nome;
+                sel.appendChild(opt);
+            }
+            if (valor) sel.value = valor;
+        }
+        document.getElementById('forn-master-btn-cc-massa').addEventListener('click', () => {
+            const n = _fornMSelecao.size;
+            if (!n) return;
+            document.getElementById('forn-cc-massa-alvo').textContent = n;
+            fornMPopularSelectCCMassa();
+            document.getElementById('forn-cc-massa-select').value = '';
+            fornMAbrirModal('modal-alterar-cc-massa');
+        });
+        document.getElementById('btn-fechar-cc-massa').addEventListener('click', () => fornMFecharModal('modal-alterar-cc-massa'));
+        document.getElementById('btn-cancelar-cc-massa').addEventListener('click', () => fornMFecharModal('modal-alterar-cc-massa'));
+
+        async function fornMSalvarCentroCustoEmMassa() {
+            const ids = [..._fornMSelecao];
+            if (!ids.length) return;
+            const novoCC = String(document.getElementById('forn-cc-massa-select').value || '').trim();
+            if (!novoCC) { fornMToast('Selecione um Centro de Custo.', 'warning', true); return; }
+            const btn = document.getElementById('btn-confirmar-cc-massa');
+            const ico = document.getElementById('forn-cc-massa-icon');
+            btn.disabled = true;
+            ico.textContent = 'progress_activity';
+            ico.classList.add('animate-spin');
+            try {
+                if (fornMIsAdmin()) {
+                    // Master/super_admin: writeBatch direto, em chunks pra
+                    // não estourar o limite de 500 ops/batch do Firestore.
+                    let aplicados = 0;
+                    // Captura códigos antes do save pra disparar cascata em ContasAPagar.
+                    const codsParaCascata = ids
+                        .map(id => _fornMRegistros.find(r => r._id === id))
+                        .filter(Boolean)
+                        .map(r => r.codigo);
+                    for (let i = 0; i < ids.length; i += FORNM_CHUNK) {
+                        const fatia = ids.slice(i, i + FORNM_CHUNK);
+                        const batch = writeBatch(db);
+                        for (const id of fatia) {
+                            batch.update(doc(db, FORNM_COLECAO, id), {
+                                centro_custo: novoCC,
+                                updated_at: serverTimestamp(),
+                                updated_by: usuarioLogadoNome,
+                            });
+                        }
+                        await batch.commit();
+                        aplicados += fatia.length;
+                        // Yield pro browser entre chunks — main thread fluida.
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+                    // Cascata para ContasAPagar (V6 Item 4) — em paralelo, mas
+                    // sequencializado pra não estourar memória se forem 1000+
+                    // fornecedores. Best-effort: erros são logados sem barrar.
+                    let cascataTotal = 0;
+                    for (const cod of codsParaCascata) {
+                        const aplic = await cpCascataCentroCusto(cod, novoCC);
+                        cascataTotal += aplic;
+                    }
+                    const cascataMsg = cascataTotal > 0
+                        ? ` ${cascataTotal} fatura(s) sincronizada(s) em ContasAPagar.`
+                        : '';
+                    fornMToast(`Centro de Custo atualizado com sucesso para ${aplicados} fornecedores.${cascataMsg}`, 'check_circle');
+                } else {
+                    // Usuário comum: 1 solicitação UPDATE por fornecedor na esteira.
+                    let pendentes = 0;
+                    for (const id of ids) {
+                        const reg = _fornMRegistros.find(r => r._id === id);
+                        await fornMCriarSolicitacao({
+                            tipo_operacao: 'UPDATE',
+                            colecao_alvo: FORNM_COLECAO,
+                            doc_id_alvo: id,
+                            dados_antigos: reg ? { centro_custo: reg.centro_custo || null } : null,
+                            dados_novos: { centro_custo: novoCC },
+                            resumo: reg ? `Alterar CC de ${reg.nome} (#${reg.codigo}) → ${novoCC}` : `Alterar CC #${id} → ${novoCC}`,
+                        });
+                        pendentes++;
+                    }
+                    fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
+                }
+                // Reset: desmarca tudo, fecha modal, re-render esconde os
+                // botões bulk automaticamente via fornMAtualizarUIBulk.
+                _fornMSelecao.clear();
+                fornMFecharModal('modal-alterar-cc-massa');
+                fornMRender();
+            } catch (err) {
+                console.error('[FornM CC-massa] falhou:', err);
+                const motivo = err?.code === 'permission-denied'
+                    ? 'Acesso negado pelo Firestore.'
+                    : (err?.message || 'erro desconhecido');
+                fornMToast('Falha ao atualizar CC: ' + motivo, 'error', true);
+            } finally {
+                btn.disabled = false;
+                ico.classList.remove('animate-spin');
+                ico.textContent = 'check_circle';
+            }
+        }
+        document.getElementById('btn-confirmar-cc-massa').addEventListener('click', () => fornMSalvarCentroCustoEmMassa());
+
+        // ============================================================
+        // CADASTRO MANUAL DE FORNECEDOR
+        // ============================================================
+        function fornMPopularSelectCCNovo() {
+            const sel = document.getElementById('forn-novo-cc');
+            if (!sel) return;
+            const valor = sel.value;
+            sel.innerHTML = '<option value="">— sem CC —</option>';
+            for (const nome of (_areasContasPagarNomes || [])) {
+                const opt = document.createElement('option');
+                opt.value = nome; opt.textContent = nome;
+                sel.appendChild(opt);
+            }
+            if (valor) sel.value = valor;
+        }
+
+        // Helper único chamado pelo listener de AreasContasPagar — mantém os
+        // 2 selects (filtro-cc + cadastro-manual + cc-massa) sincronizados.
+        function _fornMRepopularSelectsCCsAuxiliares() {
+            // Filtro de CC na toolbar — preserva o valor selecionado.
+            const selFiltro = document.getElementById('forn-master-filtro-cc');
+            if (selFiltro) {
+                const atual = selFiltro.value;
+                selFiltro.innerHTML =
+                    '<option value="Todos">Todos os CCs</option>' +
+                    '<option value="__SEM_CC__" class="text-amber-700 font-bold">[ SEM CENTRO DE CUSTO / NÃO ALOCADO ]</option>';
+                for (const nome of (_areasContasPagarNomes || [])) {
+                    const opt = document.createElement('option');
+                    opt.value = nome; opt.textContent = nome;
+                    selFiltro.appendChild(opt);
+                }
+                // Restaura se ainda existir; senão volta pra "Todos".
+                const opcoes = [...selFiltro.options].map(o => o.value);
+                selFiltro.value = opcoes.includes(atual) ? atual : 'Todos';
+            }
+            fornMPopularSelectCCMassa();
+            fornMPopularSelectCCNovo();
+        }
+
+        document.getElementById('forn-master-btn-novo').addEventListener('click', () => {
+            // Reseta o formulário e popula CC select.
+            document.getElementById('forn-novo-codigo').value  = '';
+            document.getElementById('forn-novo-empresa').value = '';
+            document.getElementById('forn-novo-nome').value    = '';
+            document.getElementById('forn-novo-tipo').value    = '';
+            document.getElementById('forn-novo-cc').value      = '';
+            document.getElementById('forn-novo-codigo-hint').textContent = 'Único — não pode existir na base.';
+            document.getElementById('forn-novo-codigo-hint').className = 'text-[10px] text-slate-400 mt-1';
+            fornMPopularSelectCCNovo();
+            fornMAbrirModal('modal-cadastro-fornecedor-manual');
+        });
+        document.getElementById('btn-fechar-cadastro-manual').addEventListener('click', () => fornMFecharModal('modal-cadastro-fornecedor-manual'));
+        document.getElementById('btn-cancelar-cadastro-manual').addEventListener('click', () => fornMFecharModal('modal-cadastro-fornecedor-manual'));
+
+        // Validação live do código (informativa — duplicidade real é re-checada
+        // antes do setDoc pra cobrir race-condition).
+        document.getElementById('forn-novo-codigo').addEventListener('input', (e) => {
+            const codigo = fornMParseCodigo(e.target.value);
+            const hint = document.getElementById('forn-novo-codigo-hint');
+            if (!codigo) {
+                hint.textContent = 'Único — não pode existir na base.';
+                hint.className = 'text-[10px] text-slate-400 mt-1';
+                return;
+            }
+            const existe = _fornMRegistros.some(r => fornMParseCodigo(r.codigo) === codigo);
+            if (existe) {
+                hint.textContent = '⚠ Este código já existe na base. Use a edição inline na linha existente.';
+                hint.className = 'text-[10px] text-red-600 font-bold mt-1';
+            } else {
+                hint.textContent = '✓ Código disponível.';
+                hint.className = 'text-[10px] text-emerald-600 font-bold mt-1';
+            }
+        });
+
+        async function fornMSalvarCadastroManual() {
+            const codigo  = fornMParseCodigo(document.getElementById('forn-novo-codigo').value);
+            const empresa = String(document.getElementById('forn-novo-empresa').value || '').trim().toUpperCase();
+            const nome    = String(document.getElementById('forn-novo-nome').value || '').trim().toUpperCase();
+            const tipo    = String(document.getElementById('forn-novo-tipo').value || '').trim();
+            const cc      = String(document.getElementById('forn-novo-cc').value || '').trim();
+            if (!codigo) { fornMToast('Código numérico é obrigatório.', 'warning', true); return; }
+            if (!nome)   { fornMToast('Nome do fornecedor é obrigatório.', 'warning', true); return; }
+            if (!tipo)   { fornMToast('Selecione o tipo de fornecedor.', 'warning', true); return; }
+            const docId = String(codigo);
+            const btn = document.getElementById('btn-salvar-cadastro-manual');
+            const ico = document.getElementById('forn-novo-save-icon');
+            btn.disabled = true;
+            ico.textContent = 'progress_activity';
+            ico.classList.add('animate-spin');
+            try {
+                // Re-checa unicidade no Firestore (race-condition defense — outro
+                // admin pode ter cadastrado nos últimos ms).
+                const dup = await getDoc(doc(db, FORNM_COLECAO, docId));
+                if (dup.exists()) {
+                    fornMToast(`Código ${codigo} já está em uso. Edite a linha existente.`, 'warning', true);
+                    return;
+                }
+                if (fornMIsAdmin()) {
+                    await setDoc(doc(db, FORNM_COLECAO, docId), {
+                        codigo, nome, empresa, tipo,
+                        centro_custo: cc || null,
+                        updated_at: serverTimestamp(),
+                        created_at: serverTimestamp(),
+                        criado_por: usuarioLogadoNome,
+                    });
+                    fornMToast(`Fornecedor ${nome} (#${codigo}) cadastrado.`, 'check_circle');
+                } else {
+                    await fornMCriarSolicitacao({
+                        tipo_operacao: 'CREATE',
+                        colecao_alvo: FORNM_COLECAO,
+                        doc_id_alvo: docId,
+                        dados_antigos: null,
+                        dados_novos: { codigo, nome, empresa, tipo, centro_custo: cc || null },
+                        resumo: `Cadastrar ${nome} (#${codigo})`,
+                    });
+                    fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
+                }
+                fornMFecharModal('modal-cadastro-fornecedor-manual');
+            } catch (err) {
+                console.error('[FornM cadastro manual] falhou:', err);
+                const motivo = err?.code === 'permission-denied'
+                    ? 'Acesso negado pelo Firestore.'
+                    : (err?.message || 'erro desconhecido');
+                fornMToast('Falha ao cadastrar: ' + motivo, 'error', true);
+            } finally {
+                btn.disabled = false;
+                ico.classList.remove('animate-spin');
+                ico.textContent = 'save';
+            }
+        }
+        document.getElementById('btn-salvar-cadastro-manual').addEventListener('click', () => fornMSalvarCadastroManual());
+
+        // ============================================================
+        // BAIXAR PLANILHA MODELO (SheetJS json_to_sheet)
+        // ============================================================
+        // Header EXATO esperado pelo importador (ALIAS_EMP/COD/NOM/TIP/CC casa).
+        // O typo intencional "FORNCEDOR" segue o padrão do cliente — vide
+        // ALIAS_TIP que cobre ambas as grafias.
+        document.getElementById('forn-master-btn-modelo').addEventListener('click', () => {
+            if (typeof XLSX === 'undefined') {
+                fornMToast('Biblioteca SheetJS não carregou — recarregue a página.', 'error', true);
+                return;
+            }
+            try {
+                const linhaExemplo = {
+                    'Empresa': 'SOULAN',
+                    'Cód. Fornecedor': 56685,
+                    'NOME DO FORNECEDOR': 'TELEFONICA BRASIL S.A.',
+                    'TIPO DE FORNCEDOR': 'EXTERNO',
+                    'CENTRO DE CUSTO': 'TI',
+                };
+                const ws = XLSX.utils.json_to_sheet([linhaExemplo], {
+                    header: ['Empresa', 'Cód. Fornecedor', 'NOME DO FORNECEDOR', 'TIPO DE FORNCEDOR', 'CENTRO DE CUSTO'],
+                });
+                // Largura confortável (em "char widths" do SheetJS).
+                ws['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 38 }, { wch: 22 }, { wch: 22 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Modelo Fornecedores');
+                const hoje = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(wb, `modelo_fornecedores_${hoje}.xlsx`);
+                fornMToast('Planilha modelo baixada.', 'check_circle');
+            } catch (err) {
+                console.error('[FornM modelo] falhou:', err);
+                fornMToast('Falha ao gerar modelo: ' + (err.message || 'erro'), 'error', true);
+            }
+        });
+
+        // ============================================================
+        // EXPORTAR BASE (.xlsx) — auditoria 2026-05-18
+        // ============================================================
+        // Exporta o RECORTE ATUAL da tabela (respeita busca + filtros).
+        // Se quiser a base inteira, o admin desfaz os filtros antes de clicar.
+        document.getElementById('forn-master-btn-exportar').addEventListener('click', () => {
+            if (typeof XLSX === 'undefined') {
+                fornMToast('Biblioteca SheetJS não carregou — recarregue a página.', 'error', true);
+                return;
+            }
+            const fonte = _fornMUltimosFiltrados.length ? _fornMUltimosFiltrados : _fornMRegistros;
+            if (!fonte.length) { fornMToast('Sem fornecedores para exportar.', 'warning', true); return; }
+            try {
+                const linhas = fonte.map(r => ({
+                    'Código': r.codigo != null ? r.codigo : '',
+                    'Empresa': r.empresa || '',
+                    'Nome do Fornecedor': r.nome || '',
+                    'Tipo': r.tipo || '',
+                    'Centro de Custo': r.centro_custo || '',
+                }));
+                const ws = XLSX.utils.json_to_sheet(linhas, {
+                    header: ['Código', 'Empresa', 'Nome do Fornecedor', 'Tipo', 'Centro de Custo'],
+                });
+                ws['!cols'] = [{ wch: 12 }, { wch: 18 }, { wch: 38 }, { wch: 22 }, { wch: 22 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Fornecedores');
+                const hoje = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(wb, `base_fornecedores_${hoje}.xlsx`);
+                fornMToast(`Exportado: ${linhas.length} fornecedor(es).`, 'check_circle');
+            } catch (err) {
+                console.error('[FornM export] falhou:', err);
+                fornMToast('Falha ao exportar: ' + (err.message || 'erro'), 'error', true);
+            }
+        });
+
+        // ── Importação XLSX ───────────────────────────────────────────────
+        const ALIAS_EMP = ['EMPRESA', 'EMPRESA DO FORNECEDOR', 'GRUPO', 'GRUPO EMPRESA'];
+        const ALIAS_COD = ['CODIGO', 'COD', 'COD FORNECEDOR', 'CODIGO FORNECEDOR'];
+        const ALIAS_NOM = ['NOME', 'NOME FORNECEDOR', 'FORNECEDOR', 'RAZAO SOCIAL', 'NOME DO FORNECEDOR'];
+        const ALIAS_TIP = ['TIPO', 'TIPO FORNECEDOR', 'CLASSIFICACAO', 'CATEGORIA'];
+        // Auditoria 2026-05-18: importação ganhou coluna opcional de CC/Área.
+        // O ETL TXT do CP usa o `centro_custo` do Fornecedor como fonte da
+        // verdade (cf. [[project-fase3-conector-cc]]).
+        const ALIAS_CC  = ['CENTRO DE CUSTO', 'CENTRO CUSTO', 'CC', 'AREA', 'ÁREA', 'AREA RESPONSAVEL'];
+
+        function fornMResolverColunas(linha) {
+            const keys = Object.keys(linha || {});
+            const map = {};
+            for (const k of keys) {
+                const norm = fornMNormHdr(k);
+                if (!map.empresa && ALIAS_EMP.includes(norm)) map.empresa = k;
+                if (!map.codigo  && ALIAS_COD.includes(norm)) map.codigo  = k;
+                if (!map.nome    && ALIAS_NOM.includes(norm)) map.nome    = k;
+                if (!map.tipo    && ALIAS_TIP.includes(norm)) map.tipo    = k;
+                if (!map.cc      && ALIAS_CC.includes(norm))  map.cc      = k;
+            }
+            return map;
+        }
+        function fornMNormalizarTipo(raw) {
+            const t = String(raw == null ? '' : raw).trim().toUpperCase();
+            if (!t) return '';
+            if (t.startsWith('EXTERNO')) return 'Fornecedor Externo';
+            if (t.startsWith('CLIENTE')) return 'Cliente';
+            if (t.startsWith('INTERNO')) {
+                return /\bPJ\b/.test(t) ? 'Fornecedor Interno - PJ' : 'Fornecedor Interno';
+            }
+            return t;
+        }
+        async function fornMLerExcel(file) {
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: 'array' });
+            const sheetName = wb.SheetNames[0];
+            if (!sheetName) throw new Error('Planilha vazia — sem abas no arquivo.');
+            const ws = wb.Sheets[sheetName];
+            return XLSX.utils.sheet_to_json(ws, { defval: '' });
+        }
+        function fornMProcessarLinhas(rows) {
+            const stats = { linhas: rows.length, validas: 0, ignoradas: 0, semCodigo: 0, semNome: 0 };
+            if (!rows.length) return { registros: [], stats, erro: 'Excel sem linhas.' };
+            const colMap = fornMResolverColunas(rows[0]);
+            if (!colMap.codigo) return { registros: [], stats, erro: 'Coluna de Código do Fornecedor não encontrada. Esperado "Cód. Fornecedor".' };
+            if (!colMap.nome)   return { registros: [], stats, erro: 'Coluna de Nome do Fornecedor não encontrada.' };
+            const registros = [];
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const codigoRaw = row[colMap.codigo];
+                const codigo = fornMParseCodigo(codigoRaw);
+                if (codigo == null) { stats.semCodigo++; stats.ignoradas++; continue; }
+                const nome = String(row[colMap.nome] || '').trim().toUpperCase();
+                if (!nome) { stats.semNome++; stats.ignoradas++; continue; }
+                const empresa = colMap.empresa ? String(row[colMap.empresa] || '').trim().toUpperCase() : '';
+                const tipo    = colMap.tipo    ? fornMNormalizarTipo(row[colMap.tipo]) : '';
+                const cc      = colMap.cc      ? String(row[colMap.cc] || '').trim() : '';
+                registros.push({ codigo, nome, empresa, tipo, centro_custo: cc || null });
+                stats.validas++;
+            }
+            return { registros, stats, erro: null, colMap };
+        }
+        async function fornMGravar(registros) {
+            let gravados = 0;
+            for (let i = 0; i < registros.length; i += FORNM_CHUNK) {
+                const fatia = registros.slice(i, i + FORNM_CHUNK);
+                const batch = writeBatch(db);
+                for (const r of fatia) {
+                    const docId = String(r.codigo);
+                    const ref = doc(db, FORNM_COLECAO, docId);
+                    // Payload sempre traz centro_custo, mesmo quando ausente no
+                    // Excel: gravamos null pra explicitar "não informado" e
+                    // permitir o ETL PJ → Folha cair no fallback de lookup.
+                    batch.set(ref, {
+                        codigo: r.codigo, nome: r.nome, empresa: r.empresa, tipo: r.tipo,
+                        centro_custo: r.centro_custo || null,
+                        updated_at: serverTimestamp(),
+                        created_at: serverTimestamp(),
+                        criado_por: usuarioLogadoNome,
+                    }, { merge: true });
+                }
+                await batch.commit();
+                gravados += fatia.length;
+            }
+            return gravados;
+        }
+
+        const inputFornMFile = document.getElementById('forn-master-file');
+        document.getElementById('forn-master-btn-importar').addEventListener('click', () => {
+            inputFornMFile.value = '';
+            inputFornMFile.click();
+        });
+        inputFornMFile.addEventListener('change', async (e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            if (typeof XLSX === 'undefined') {
+                fornMToast('Biblioteca SheetJS não carregou — recarregue a página.', 'error', true);
+                inputFornMFile.value = '';
+                return;
+            }
+            fornMMostrarLoader('Importando Fornecedores…', `Lendo ${f.name} · aguarde.`);
+            await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+            try {
+                const rows = await fornMLerExcel(f);
+                const { registros, stats, erro, colMap } = fornMProcessarLinhas(rows);
+                console.log('[FornM XLSX]', { ...stats, colMap });
+                if (erro) { fornMToast(erro, 'warning', true); return; }
+                if (!registros.length) {
+                    fornMToast(`Nenhuma linha válida (${stats.ignoradas} ignoradas).`, 'warning', true);
+                    return;
+                }
+                const gravados = await fornMGravar(registros);
+                const partes = [`${gravados} fornecedor(es) gravado(s)`];
+                if (stats.semCodigo) partes.push(`${stats.semCodigo} sem código`);
+                if (stats.semNome)   partes.push(`${stats.semNome} sem nome`);
+                fornMToast(partes.join(' · '), 'check_circle');
+            } catch (err) {
+                console.error('[FornM XLSX] falha:', err);
+                const motivo = err?.code === 'permission-denied'
+                    ? 'Acesso negado: apenas master/super_admin pode gravar Fornecedores.'
+                    : (err?.message || 'erro desconhecido');
+                fornMToast('Falha ao importar: ' + motivo, 'error', true);
+            } finally {
+                inputFornMFile.value = '';
+                fornMEsconderLoader();
+            }
+        });
+
+        // ====================================================================
+        // BANCO DE DESPESAS (auditoria 2026-05-18 — retaguarda centralizada)
+        // ====================================================================
+        // CRUD individual da coleção /CP_Base_Despesas. A IMPORTAÇÃO em lote
+        // continua vivendo na Central de Importações do Gerenciador CP — aqui
+        // gerimos cada despesa unitariamente: cadastro manual, edição inline,
+        // exclusão. Mesma esteira de governança dos Fornecedores: admin escreve
+        // direto, não-admin envia pra CP_SolicitacoesAprovacao.
+
+        const DESPM_COLECAO = 'CP_Base_Despesas';
+        const DESPM_CHUNK = 450;
+        const DESPM_PAGE_SIZE = 50;
+
+        function despMNormalizar(s) {
+            // Espelha cpNormalizarTexto do gerenciador CP — chave canônica de
+            // comparação (UPPER, sem acento, alfanumérico + espaço).
+            return String(s == null ? '' : s)
+                .replace(/_x[0-9A-F]{4}_/gi, ' ')
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .replace(/[^A-Za-z0-9 ]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toUpperCase();
+        }
+        function despMSlugDocId(s) {
+            // Espelha _cpSlugDocId — id do doc Firestore (underscore-separated,
+            // máx 220 chars, fallback "sem_chave").
+            return String(s || '')
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .replace(/[^A-Za-z0-9]+/g, '_')
+                .replace(/^_+|_+$/g, '')
+                .slice(0, 220) || 'sem_chave';
+        }
+        function despMEscHTML(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        let _despMRegistros = [];
+        let _despMUltimosFiltrados = [];
+        let _despMPage = 1;
+        const _despMSelecao = new Set();
+        let _despMEditId = null;       // null = modo cadastro; preenchido = modo edição
+
+        // ── Snapshot live de /CP_Base_Despesas ─────────────────────────────
+        function inscreverDespesasMaster() {
+            onSnapshot(collection(db, DESPM_COLECAO), (snap) => {
+                const regs = [];
+                snap.forEach(d => regs.push({ _id: d.id, ...d.data() }));
+                // Ordenação A-Z pelo nome humano (pt-BR) — coerente com o
+                // dropdown de despesas no CP.
+                regs.sort((a, b) => String(a.despesa || '').localeCompare(String(b.despesa || ''), 'pt-BR'));
+                _despMRegistros = regs;
+                document.getElementById('desp-master-contador').textContent =
+                    `${regs.length.toLocaleString('pt-BR')} despesa${regs.length === 1 ? '' : 's'}`;
+                // Limpa IDs órfãos do Set de seleção.
+                const ids = new Set(regs.map(r => r._id));
+                for (const id of [..._despMSelecao]) if (!ids.has(id)) _despMSelecao.delete(id);
+                despMRender();
+            }, (err) => console.warn('[DespM] listener falhou:', err?.code || err?.message));
+        }
+
+        function despMRender() {
+            const tbody = document.getElementById('desp-master-corpo');
+            const vazio = document.getElementById('desp-master-vazio');
+            const pag   = document.getElementById('desp-master-paginacao');
+            const hint  = document.getElementById('desp-master-hint');
+            const termo = String(document.getElementById('desp-master-busca').value || '').toLowerCase().trim();
+            const filtroEv = String(document.getElementById('desp-master-filtro-evento').value || 'Todos');
+            const filtroVl = String(document.getElementById('desp-master-filtro-valor').value || 'Todos');
+
+            const filtrados = _despMRegistros.filter(r => {
+                if (filtroEv !== 'Todos' && String(r.per_evento || '') !== filtroEv) return false;
+                if (filtroVl !== 'Todos' && String(r.per_valor || '') !== filtroVl) return false;
+                if (!termo) return true;
+                return String(r.despesa || '').toLowerCase().includes(termo);
+            });
+
+            // Reset de página quando o recorte muda tamanho.
+            if (filtrados.length !== _despMUltimosFiltrados.length) _despMPage = 1;
+            _despMUltimosFiltrados = filtrados;
+
+            const recorteAtivo = termo || filtroEv !== 'Todos' || filtroVl !== 'Todos';
+            if (hint) hint.textContent = recorteAtivo ? `${filtrados.length} resultado(s)` : '';
+
+            if (!filtrados.length) {
+                tbody.innerHTML = '';
+                vazio.classList.remove('hidden');
+                if (pag) { pag.classList.add('hidden'); pag.classList.remove('flex'); }
+                despMAtualizarUIBulk();
+                return;
+            }
+            vazio.classList.add('hidden');
+
+            const totalPaginas = Math.max(1, Math.ceil(filtrados.length / DESPM_PAGE_SIZE));
+            if (_despMPage > totalPaginas) _despMPage = totalPaginas;
+            const inicio = (_despMPage - 1) * DESPM_PAGE_SIZE;
+            const fim    = Math.min(inicio + DESPM_PAGE_SIZE, filtrados.length);
+            const pagina = filtrados.slice(inicio, fim);
+
+            if (pag) {
+                if (totalPaginas <= 1) { pag.classList.add('hidden'); pag.classList.remove('flex'); }
+                else {
+                    pag.classList.remove('hidden'); pag.classList.add('flex');
+                    document.getElementById('desp-master-pag-info').textContent =
+                        `${(inicio + 1).toLocaleString('pt-BR')}–${fim.toLocaleString('pt-BR')} de ${filtrados.length.toLocaleString('pt-BR')}`;
+                    document.getElementById('desp-master-pag-pagina').textContent = `Página ${_despMPage} / ${totalPaginas}`;
+                    document.getElementById('desp-master-pag-prev').disabled = _despMPage <= 1;
+                    document.getElementById('desp-master-pag-next').disabled = _despMPage >= totalPaginas;
+                }
+            }
+
+            const linhas = new Array(pagina.length);
+            for (let i = 0; i < pagina.length; i++) {
+                const r = pagina[i];
+                const idAttr = despMEscHTML(r._id);
+                const corEv = r.per_evento === 'Fixo'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : r.per_evento === 'Variável'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-slate-100 text-slate-500 border-slate-200';
+                const corVl = r.per_valor === 'Fixo'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : r.per_valor === 'Variável'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-slate-100 text-slate-500 border-slate-200';
+                const fim = String(r.data_fim_contrato || '').trim();
+                const fimTxt = fim
+                    ? `<span class="text-slate-600 font-mono tabular-nums">${despMEscHTML(fim)}</span>`
+                    : `<span class="text-slate-300 italic">—</span>`;
+                linhas[i] = `
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        <td class="px-4 py-2.5 text-center">
+                            <input type="checkbox" class="desp-master-checkbox rounded border-slate-300 text-amber-600 focus:ring-amber-500" data-id="${idAttr}">
+                        </td>
+                        <td class="px-4 py-2.5 text-xs font-bold text-slate-800 uppercase">${despMEscHTML(r.despesa || '—')}</td>
+                        <td class="px-4 py-2.5"><span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${corEv}">${despMEscHTML(r.per_evento || '—')}</span></td>
+                        <td class="px-4 py-2.5"><span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${corVl}">${despMEscHTML(r.per_valor || '—')}</span></td>
+                        <td class="px-4 py-2.5 text-xs">${fimTxt}</td>
+                        <td class="px-4 py-2.5 text-center">
+                            <button class="text-slate-400 hover:text-amber-600 transition-colors" data-desp-acao="editar" data-id="${idAttr}" title="Editar">
+                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                            </button>
+                        </td>
+                    </tr>`;
+            }
+            tbody.innerHTML = linhas.join('');
+            tbody.querySelectorAll('.desp-master-checkbox').forEach(cb => {
+                cb.checked = _despMSelecao.has(cb.getAttribute('data-id'));
+            });
+            despMAtualizarUIBulk();
+        }
+
+        function despMAtualizarUIBulk() {
+            const visiveis = document.querySelectorAll('#desp-master-corpo .desp-master-checkbox');
+            const marcadosVisiveis = [...visiveis].filter(cb => cb.checked).length;
+            const master = document.getElementById('desp-master-selecionar-todos');
+            if (master) {
+                master.checked = visiveis.length > 0 && marcadosVisiveis === visiveis.length;
+                master.indeterminate = marcadosVisiveis > 0 && marcadosVisiveis < visiveis.length;
+            }
+            const totalSel = _despMSelecao.size;
+            const contador = document.getElementById('desp-master-sel-count');
+            if (contador) contador.textContent = totalSel;
+            const btnDel = document.getElementById('desp-master-btn-deletar');
+            if (btnDel) {
+                if (totalSel > 0) { btnDel.classList.remove('hidden'); btnDel.classList.add('inline-flex'); }
+                else              { btnDel.classList.add('hidden');     btnDel.classList.remove('inline-flex'); }
+            }
+        }
+
+        // ── Wiring UI: busca, filtros, paginação, seleção ─────────────────
+        document.getElementById('desp-master-busca').addEventListener('input', () => { _despMPage = 1; despMRender(); });
+        document.getElementById('desp-master-filtro-evento').addEventListener('change', () => { _despMPage = 1; despMRender(); });
+        document.getElementById('desp-master-filtro-valor').addEventListener('change', () => { _despMPage = 1; despMRender(); });
+        document.getElementById('desp-master-pag-prev').addEventListener('click', () => {
+            if (_despMPage <= 1) return; _despMPage -= 1; despMRender();
+        });
+        document.getElementById('desp-master-pag-next').addEventListener('click', () => {
+            const totalPaginas = Math.max(1, Math.ceil(_despMUltimosFiltrados.length / DESPM_PAGE_SIZE));
+            if (_despMPage >= totalPaginas) return; _despMPage += 1; despMRender();
+        });
+        document.getElementById('desp-master-selecionar-todos').addEventListener('change', (e) => {
+            const checked = e.target.checked;
+            document.querySelectorAll('#desp-master-corpo .desp-master-checkbox').forEach(cb => {
+                cb.checked = checked;
+                const id = cb.getAttribute('data-id');
+                if (checked) _despMSelecao.add(id); else _despMSelecao.delete(id);
+            });
+            despMAtualizarUIBulk();
+        });
+        document.getElementById('desp-master-corpo').addEventListener('change', (e) => {
+            const cb = e.target.closest('.desp-master-checkbox');
+            if (!cb) return;
+            const id = cb.getAttribute('data-id');
+            if (cb.checked) _despMSelecao.add(id); else _despMSelecao.delete(id);
+            despMAtualizarUIBulk();
+        });
+        document.getElementById('desp-master-corpo').addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-desp-acao]');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            const acao = btn.getAttribute('data-desp-acao');
+            if (acao === 'editar') despMAbrirForm(id);
+        });
+
+        // ── Modal Cadastro/Edição ─────────────────────────────────────────
+        function despMAbrirForm(id) {
+            const docId = id ? String(id) : null;
+            const reg = docId ? _despMRegistros.find(r => r._id === docId) : null;
+            _despMEditId = docId;
+            const titulo = document.getElementById('desp-form-titulo');
+            const subt   = document.getElementById('desp-form-subtitulo');
+            const lbl    = document.getElementById('desp-form-save-label');
+            const inputNome = document.getElementById('desp-form-nome');
+            if (reg) {
+                titulo.textContent = 'Editar Despesa';
+                subt.textContent = 'A chave primária não muda — só os campos abaixo.';
+                lbl.textContent = 'Salvar Alterações';
+                inputNome.value = reg.despesa || '';
+                inputNome.readOnly = true;
+                inputNome.classList.add('bg-slate-50', 'cursor-not-allowed');
+                document.getElementById('desp-form-hint').textContent = 'Para renomear, exclua e cadastre novamente (o slug é a PK no Firestore).';
+                document.getElementById('desp-form-evento').value = reg.per_evento || '';
+                document.getElementById('desp-form-valor').value  = reg.per_valor  || '';
+                document.getElementById('desp-form-fim').value    = reg.data_fim_contrato || '';
+            } else {
+                titulo.textContent = 'Cadastrar Despesa';
+                subt.textContent = 'A chave primária é a despesa normalizada (sem acento, sem pontuação, maiúscula).';
+                lbl.textContent = 'Salvar Despesa';
+                inputNome.value = '';
+                inputNome.readOnly = false;
+                inputNome.classList.remove('bg-slate-50', 'cursor-not-allowed');
+                document.getElementById('desp-form-hint').textContent = 'Será normalizado para comparação com o nome truncado pelo ERP (fuzzy ≥ 0.80).';
+                document.getElementById('desp-form-evento').value = '';
+                document.getElementById('desp-form-valor').value  = '';
+                document.getElementById('desp-form-fim').value    = '';
+            }
+            fornMAbrirModal('modal-desp-master-form');
+        }
+        document.getElementById('desp-master-btn-novo').addEventListener('click', () => despMAbrirForm(null));
+        document.getElementById('btn-fechar-desp-form').addEventListener('click', () => fornMFecharModal('modal-desp-master-form'));
+        document.getElementById('btn-cancelar-desp-form').addEventListener('click', () => fornMFecharModal('modal-desp-master-form'));
+
+        async function despMSalvarForm() {
+            const nome    = String(document.getElementById('desp-form-nome').value || '').trim();
+            const evento  = String(document.getElementById('desp-form-evento').value || '').trim();
+            const valor   = String(document.getElementById('desp-form-valor').value || '').trim();
+            const fim     = String(document.getElementById('desp-form-fim').value || '').trim();
+            if (!nome) { fornMToast('Informe o nome da despesa.', 'warning', true); return; }
+            if (!evento) { fornMToast('Selecione a periodicidade do evento.', 'warning', true); return; }
+            if (!valor)  { fornMToast('Selecione a periodicidade do valor.', 'warning', true); return; }
+            const norm = despMNormalizar(nome);
+            if (!norm) { fornMToast('Nome inválido após normalização.', 'warning', true); return; }
+
+            const btn = document.getElementById('btn-salvar-desp-form');
+            const ico = document.getElementById('desp-form-save-icon');
+            btn.disabled = true;
+            ico.textContent = 'progress_activity';
+            ico.classList.add('animate-spin');
+
+            try {
+                // Payload canônico (espelha o que o importador grava).
+                const payload = {
+                    despesa: nome.toUpperCase(),
+                    despesa_norm: norm,
+                    per_evento: evento,
+                    per_valor: valor,
+                    data_fim_contrato: fim || null,
+                    updated_at: serverTimestamp(),
+                    origem: _despMEditId ? 'edit_manual_master' : 'create_manual_master',
+                    atualizado_por: usuarioLogadoNome,
+                };
+
+                if (_despMEditId) {
+                    // EDIÇÃO — preserva o nome original do doc; só atualiza
+                    // periodicidades e fim_contrato (nome é PK e bloqueado na UI).
+                    if (fornMIsAdmin()) {
+                        await updateDoc(doc(db, DESPM_COLECAO, _despMEditId), {
+                            per_evento: evento,
+                            per_valor: valor,
+                            data_fim_contrato: fim || null,
+                            updated_at: serverTimestamp(),
+                            atualizado_por: usuarioLogadoNome,
+                        });
+                        fornMToast('Despesa atualizada.', 'check_circle');
+                    } else {
+                        const regAtual = _despMRegistros.find(r => r._id === _despMEditId) || null;
+                        const antes = regAtual ? {
+                            per_evento: regAtual.per_evento || '',
+                            per_valor:  regAtual.per_valor  || '',
+                            data_fim_contrato: regAtual.data_fim_contrato || null,
+                        } : null;
+                        await fornMCriarSolicitacao({
+                            tipo_operacao: 'UPDATE',
+                            colecao_alvo: DESPM_COLECAO,
+                            doc_id_alvo: _despMEditId,
+                            dados_antigos: antes,
+                            dados_novos: {
+                                per_evento: evento,
+                                per_valor: valor,
+                                data_fim_contrato: fim || null,
+                            },
+                            resumo: regAtual
+                                ? `Editar despesa ${regAtual.despesa}`
+                                : `Editar despesa ${_despMEditId}`,
+                        });
+                        fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
+                    }
+                } else {
+                    // CADASTRO — PK é despMSlugDocId(norm). Defesa contra duplicata.
+                    const docId = despMSlugDocId(norm);
+                    const dup = await getDoc(doc(db, DESPM_COLECAO, docId));
+                    if (dup.exists()) {
+                        fornMToast(`A despesa "${dup.data()?.despesa || nome}" já está cadastrada.`, 'warning', true);
+                        return;
+                    }
+                    if (fornMIsAdmin()) {
+                        await setDoc(doc(db, DESPM_COLECAO, docId), {
+                            ...payload,
+                            created_at: serverTimestamp(),
+                            criado_por: usuarioLogadoNome,
+                        });
+                        fornMToast(`Despesa "${nome.toUpperCase()}" cadastrada.`, 'check_circle');
+                    } else {
+                        await fornMCriarSolicitacao({
+                            tipo_operacao: 'CREATE',
+                            colecao_alvo: DESPM_COLECAO,
+                            doc_id_alvo: docId,
+                            dados_antigos: null,
+                            dados_novos: {
+                                despesa: nome.toUpperCase(),
+                                despesa_norm: norm,
+                                per_evento: evento,
+                                per_valor: valor,
+                                data_fim_contrato: fim || null,
+                            },
+                            resumo: `Cadastrar despesa ${nome.toUpperCase()}`,
+                        });
+                        fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
+                    }
+                }
+                fornMFecharModal('modal-desp-master-form');
+                _despMEditId = null;
+            } catch (err) {
+                console.error('[DespM salvar] falhou:', err);
+                const motivo = err?.code === 'permission-denied'
+                    ? 'Acesso negado pelo Firestore.'
+                    : (err?.message || 'erro desconhecido');
+                fornMToast('Falha ao salvar: ' + motivo, 'error', true);
+            } finally {
+                btn.disabled = false;
+                ico.classList.remove('animate-spin');
+                ico.textContent = 'save';
+            }
+        }
+        document.getElementById('btn-salvar-desp-form').addEventListener('click', () => despMSalvarForm());
+
+        // ── Excluir em massa ──────────────────────────────────────────────
+        document.getElementById('desp-master-btn-deletar').addEventListener('click', () => {
+            const n = _despMSelecao.size;
+            if (!n) return;
+            document.getElementById('desp-confirm-count').textContent = n;
+            fornMAbrirModal('modal-desp-master-delete');
+        });
+        document.getElementById('btn-cancelar-desp-delete').addEventListener('click', () => fornMFecharModal('modal-desp-master-delete'));
+        document.getElementById('btn-confirmar-desp-delete').addEventListener('click', async () => {
+            const ids = [..._despMSelecao];
+            if (!ids.length) return;
+            const btn = document.getElementById('btn-confirmar-desp-delete');
+            const ico = document.getElementById('desp-del-icon');
+            btn.disabled = true;
+            ico.textContent = 'progress_activity';
+            ico.classList.add('animate-spin');
+            try {
+                if (fornMIsAdmin()) {
+                    let apagados = 0;
+                    for (let i = 0; i < ids.length; i += DESPM_CHUNK) {
+                        const fatia = ids.slice(i, i + DESPM_CHUNK);
+                        const batch = writeBatch(db);
+                        for (const id of fatia) batch.delete(doc(db, DESPM_COLECAO, id));
+                        await batch.commit();
+                        apagados += fatia.length;
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+                    fornMToast(`${apagados} despesa(s) excluída(s).`, 'check_circle');
+                } else {
+                    for (const id of ids) {
+                        const reg = _despMRegistros.find(r => r._id === id);
+                        await fornMCriarSolicitacao({
+                            tipo_operacao: 'DELETE',
+                            colecao_alvo: DESPM_COLECAO,
+                            doc_id_alvo: id,
+                            dados_antigos: reg ? { ...reg, _id: undefined } : null,
+                            dados_novos: null,
+                            resumo: reg ? `Excluir despesa ${reg.despesa}` : `Excluir despesa #${id}`,
+                        });
+                    }
+                    fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
+                }
+                _despMSelecao.clear();
+                fornMFecharModal('modal-desp-master-delete');
+            } catch (err) {
+                console.error('[DespM delete] falhou:', err);
+                const motivo = err?.code === 'permission-denied'
+                    ? 'Acesso negado pelo Firestore.'
+                    : (err?.message || 'erro desconhecido');
+                fornMToast('Falha ao excluir: ' + motivo, 'error', true);
+            } finally {
+                btn.disabled = false;
+                ico.classList.remove('animate-spin');
+                ico.textContent = 'delete_forever';
+            }
+        });
+
+        // ── Exportar Base (.xlsx) ─────────────────────────────────────────
+        document.getElementById('desp-master-btn-exportar').addEventListener('click', () => {
+            if (typeof XLSX === 'undefined') {
+                fornMToast('Biblioteca SheetJS não carregou — recarregue a página.', 'error', true);
+                return;
+            }
+            const fonte = _despMUltimosFiltrados.length ? _despMUltimosFiltrados : _despMRegistros;
+            if (!fonte.length) { fornMToast('Sem despesas para exportar.', 'warning', true); return; }
+            try {
+                const linhas = fonte.map(r => ({
+                    'Despesa': r.despesa || '',
+                    'Periodicidade Evento': r.per_evento || '',
+                    'Periodicidade Valor': r.per_valor || '',
+                    'Fim Contrato': r.data_fim_contrato || '',
+                }));
+                const ws = XLSX.utils.json_to_sheet(linhas, {
+                    header: ['Despesa', 'Periodicidade Evento', 'Periodicidade Valor', 'Fim Contrato'],
+                });
+                ws['!cols'] = [{ wch: 38 }, { wch: 22 }, { wch: 22 }, { wch: 14 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Despesas');
+                const hoje = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(wb, `base_despesas_${hoje}.xlsx`);
+                fornMToast(`Exportado: ${linhas.length} despesa(s).`, 'check_circle');
+            } catch (err) {
+                console.error('[DespM export] falhou:', err);
+                fornMToast('Falha ao exportar: ' + (err.message || 'erro'), 'error', true);
+            }
+        });
+
+        // Inscrição live — só dispara quando a sessão está autenticada.
+        // A sidebar é renderizada dentro do flow de auth (linha ~925); aqui
+        // disparamos o snapshot direto, pois o módulo carrega ANTES do user
+        // estar resolvido — o onSnapshot só vai emitir após o handshake.
+        // Para evitar permission-denied antes do login resolver, registramos
+        // o listener em DOMContentLoaded já com o auth resolvido pela página.
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                inscreverFornecedoresMaster();
+                inscreverDespesasMaster();
             }
         });
     </script>

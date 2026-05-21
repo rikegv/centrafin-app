@@ -8,7 +8,13 @@
       "Bash(node --check c:/Users/Henrique/AppData/Local/Temp/dash_check.mjs)",
       "Bash(node --input-type=module -e ' *)",
       "Bash(node --check c:/Users/Henrique/AppData/Local/Temp/cp_check.mjs)",
-      "Bash(grep -E \"\\\\.html$\")"
+      "Bash(grep -E \"\\\\.html$\")",
+      "Bash(awk 'NR>=1418 && NR<=2069' \"c:/Users/Henrique/Desktop/centrafin-app/contas_a_pagar_desktop/code.html\")",
+      "Bash(awk 'NR<226 || NR>304' \"c:\\\\Users\\\\Henrique\\\\Desktop\\\\centrafin-app\\\\gerenciador_contas_pagar_desktop\\\\code.html\")",
+      "Bash(awk 'NR<2010 || NR>2177' \"c:\\\\Users\\\\Henrique\\\\Desktop\\\\centrafin-app\\\\gerenciador_contas_pagar_desktop\\\\code.html\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('c:/Users/Henrique/Desktop/centrafin-app/gerenciador_contas_pagar_desktop/code.html','utf8'\\);const m=html.match\\(/<script type=\\\\\"module\\\\\">\\([\\\\s\\\\S]*?\\)<\\\\/script>/\\);if\\(!m\\){console.log\\('no module script'\\);process.exit\\(1\\);}const code=m[1];try{new Function\\(code\\);console.log\\('SYNTAX OK',code.length,'chars'\\);}catch\\(e\\){console.log\\('SYNTAX ERROR',e.message\\);}\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('c:/Users/Henrique/Desktop/centrafin-app/gerenciador_contas_pagar_desktop/code.html','utf8'\\);const m=html.match\\(/<script type=\\\\\"module\\\\\">\\([\\\\s\\\\S]*?\\)<\\\\/script>/\\);const code=m[1].replace\\(/import[\\\\s\\\\S]*?from\\\\s*['\\\\\"][^'\\\\\"]+['\\\\\"];?/g,''\\);try{new Function\\(code\\);console.log\\('SYNTAX OK',code.length,'chars'\\);}catch\\(e\\){console.log\\('SYNTAX ERROR',e.message\\);}\")",
+      "Bash(node \"c:\\\\Users\\\\Henrique\\\\Desktop\\\\centrafin-app\\\\_check.js\")"
     ]
   }
 }

@@ -488,6 +488,27 @@
                 <div data-panel class="hidden absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto custom-scroll p-2"></div>
             </div>
 
+            <!-- Filtro por Funcionário (auditoria 2026-05-18 V6 — Item 2).
+                 Dropdown pesquisável que isola um único colaborador (CLT ou
+                 PJ via Conector). Datalist pra busca livre; "Todos" libera tudo. -->
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Filtrar por Funcionário</label>
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">person_search</span>
+                    <input id="filtro-funcionario-dash" type="text" list="datalist-funcionarios-dash"
+                           autocomplete="off"
+                           placeholder="Digite o nome ou selecione…"
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-9 text-sm font-bold text-brandDarkBlue outline-none focus:ring-2 focus:ring-brandGreen/20 transition-all" />
+                    <datalist id="datalist-funcionarios-dash"></datalist>
+                    <button id="filtro-funcionario-dash-limpar" type="button"
+                            class="hidden absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                            title="Limpar filtro">
+                        <span class="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                </div>
+                <p class="text-[10px] text-slate-400 italic mt-1.5">CLT + PJ unificados. Esvazie para ver todos.</p>
+            </div>
+
             <div class="flex items-center gap-4">
                 <button onclick="window.aplicarFiltrosCustoFolha()" class="flex-1 py-4 bg-brandDarkBlue text-white rounded-2xl font-black text-xs shadow-lg shadow-brandDarkBlue/20 hover:brightness-110 active:scale-[0.98] transition-all tracking-widest uppercase">
                     Aplicar Filtros
@@ -627,6 +648,11 @@
     // a chave antiga como sinônimo retrocompatível p/ docs não re-salvos.
     const CHAVES_PAGINA = ['dash_custo_folha', 'custo_folha'];
     const COLECAO = 'CustosFolha';
+    // ── Conector PJ ➔ Custo de Folha (auditoria 2026-05-18) ───────────────
+    // Constantes espelhadas do custo_folha_desktop pra coerência cross-módulo.
+    const COLECAO_CP = 'ContasAPagar';
+    const TIPO_PJ = 'Fornecedor Interno - PJ';
+    const EMPRESA_PJ_SENTINELA = 'PJ';
 
     // ==========================================
     // WHITELISTS — espelha o importador (custo_folha_desktop/code.html L660-758)
@@ -656,6 +682,10 @@
         '13O', 'AJUDA_DE_CUSTO', 'RESCISAO', 'HORA_EXTRA',
         'PARTICIPACAO', 'LUCRO',
         'BONUS', 'PREMIO', 'PREMIACAO', 'GRATIFICACAO',
+        // Auditoria 2026-05-18 (Conector PJ ➔ Ranking de Colaboradores):
+        // PJ presta serviço e o slug canônico é SERVICOS_PRESTADOS_Valor.
+        // Reconhecer aqui é o que faz o valor PJ somar em Vencimentos no dash.
+        'SERVICOS_PRESTADOS',
       ];
       return keywords.some(word => key.includes(word));
     }
@@ -731,8 +761,10 @@
     // e descontos. Mantém o KPI "Salário Bruto" coerente: salário-base × cabeça.
     function isSalarioBase(k) {
       const key = String(k || '').toUpperCase();
-      // Precisa conter SALARIO ou PRO_LABORE — caso contrário, descarta cedo.
-      if (!key.includes('SALARIO') && !key.includes('PRO_LABORE')) return false;
+      // Precisa conter SALARIO, PRO_LABORE ou SERVICOS_PRESTADOS — caso contrário,
+      // descarta cedo. Auditoria 2026-05-18 (Conector PJ): PJ entra via
+      // SERVICOS_PRESTADOS — sem esta cláusula o KPI Salário Bruto ignora os PJs.
+      if (!key.includes('SALARIO') && !key.includes('PRO_LABORE') && !key.includes('SERVICOS_PRESTADOS')) return false;
       // Blindagens: rejeita variantes que não são salário base mensal.
       if (key.endsWith('_QTDE'))           return false;
       // Auditoria 2026-04-28: ANTES era `key.includes('BASE_')` o que rejeitava
@@ -1483,6 +1515,12 @@
         popularEmpresas();
         popularCentrosCusto();
 
+        // Conector PJ ➔ Custo de Folha (auditoria 2026-05-18). Os 2 listeners
+        // são persistentes — atualizações em ContasAPagar/Fornecedores
+        // refletem em tempo real no ranking e KPIs.
+        inscreverFornecedoresCCDash();
+        inscreverPJContasAPagar();
+
         // Carrega base e processa
         await carregarCustoFolha();
 
@@ -1523,6 +1561,121 @@
           : nomes;
         if (msCentroCusto) msCentroCusto.setOpcoes(visiveis);
       }, (err) => console.warn('[Base_Centros_Custo] listener falhou:', err?.code || err?.message));
+    }
+
+    // ==========================================
+    // CONECTOR PJ ➔ CUSTO DE FOLHA (Ranking + KPIs)
+    // ==========================================
+    // Auditoria 2026-05-18 (caça-bug do Ranking): a versão "dash" não tinha o
+    // conector implementado — os PJs apareciam nos KPIs do desktop mas sumiam
+    // aqui no ranking. Replicamos o mesmo padrão de listener + mapper, com 2
+    // ajustes-chave pra o `chaveColaborador` (cpf+cargo) deduplicar PJs:
+    //   • cpf  → "pj-<codigo_fornecedor>" (sentinela determinística)
+    //   • funcao → "Prestador PJ" (rótulo amigável no ranking + composição
+    //               por cargo).
+    let _cachePJDash = [];    // PJs mapeados, prontos pra mesclar no base.
+    let _cacheFornCC = new Map(); // codigo_fornecedor → centro_custo (lookup).
+    let _unsubPJDash = null;
+    let _unsubFornCC = null;
+
+    function _normalizarCompetenciaPJ(raw, fallbackVencimento) {
+        const s = String(raw || '').trim();
+        // Formato Folha já — passthrough.
+        let m = s.match(/^(\d{4})-(\d{2})$/);
+        if (m) return s;
+        // Formato CP "MM/YYYY" → "YYYY-MM".
+        m = s.match(/^(\d{2})\/(\d{4})$/);
+        if (m) return `${m[2]}-${m[1]}`;
+        // Fallback: deriva da data_vencimento "YYYY-MM-DD".
+        const mv = String(fallbackVencimento || '').match(/^(\d{4})-(\d{2})/);
+        if (mv) return `${mv[1]}-${mv[2]}`;
+        return '';
+    }
+
+    function pjParaFolha(docId, r) {
+        const valor = Number(r?.valor_original) || 0;
+        const codForn = r?.codigo_fornecedor != null ? String(r.codigo_fornecedor) : docId;
+        // Centro de Custo: precedência (lançamento → Fornecedor → vazio).
+        const ccLanc  = String(r?.centro_custo || '').trim();
+        const ccForn  = (codForn && _cacheFornCC.get(codForn)) || '';
+        const cc      = ccLanc || ccForn || '';
+        const compRef = _normalizarCompetenciaPJ(r?.competencia_ref, r?.data_vencimento);
+        return {
+            _id: 'pj_' + docId,
+            is_pj: true,
+            // ── Chaves redundantes pra todos os agregadores do dash ──
+            //   chaveColaborador() lê `cpf` + `funcao` → usamos sentinela única.
+            //   renderRankingColaboradores() lê `nome` + `cargo` + `cc` + `total`.
+            nome: r.entidade || r.favorecido || '—',
+            funcionario: r.entidade || r.favorecido || '—',  // espelho defensivo
+            cpf: `pj-${codForn}`,
+            funcao: 'Prestador PJ',
+            cargo: 'Prestador PJ',
+            centro_custo: cc,
+            empresa_atribuida: EMPRESA_PJ_SENTINELA,
+            competencia_ref: compRef,
+            // Chave canônica que dispara isVencimento + isSalarioBase no dash
+            // (com o ajuste em SERVICOS_PRESTADOS feito hoje).
+            SERVICOS_PRESTADOS_Valor: valor,
+            // Metadados de auditoria — não somam (só dão pista no console).
+            _origem_cp_id: docId,
+            _origem_doc: 'ContasAPagar',
+            _cc_origem: ccLanc ? 'lancamento' : (ccForn ? 'fornecedor' : 'sem_cc'),
+            _competencia_raw: r?.competencia_ref || null,
+        };
+    }
+
+    function inscreverFornecedoresCCDash() {
+        if (_unsubFornCC) { _unsubFornCC(); _unsubFornCC = null; }
+        try {
+            _unsubFornCC = onSnapshot(collection(db, 'Fornecedores'), (snap) => {
+                const map = new Map();
+                snap.forEach(d => {
+                    const data = d.data() || {};
+                    const cc = String(data.centro_custo || '').trim();
+                    if (cc) map.set(String(data.codigo != null ? data.codigo : d.id), cc);
+                });
+                _cacheFornCC = map;
+                // Se já temos PJs em cache, re-mapeia pra refletir CCs novos.
+                if (_cachePJDashRaw.length) {
+                    _cachePJDash = _cachePJDashRaw.map(({ id, data }) => pjParaFolha(id, data));
+                    try { processarCustoFolha(); } catch (_) { /* no-op */ }
+                }
+            }, (err) => console.warn('[CustoFolhaDash][Forn] listener falhou:', err?.code || err?.message));
+        } catch (err) {
+            console.warn('[CustoFolhaDash][Forn] inscrição falhou:', err?.message);
+        }
+    }
+
+    let _cachePJDashRaw = []; // docs brutos pra remapear quando _cacheFornCC mudar
+    function inscreverPJContasAPagar() {
+        if (_unsubPJDash) { _unsubPJDash(); _unsubPJDash = null; }
+        try {
+            const qPJ = query(
+                collection(db, COLECAO_CP),
+                where('tipo_entidade', '==', TIPO_PJ)
+            );
+            _unsubPJDash = onSnapshot(qPJ, (snap) => {
+                console.log('[CustoFolhaDash][Conector PJ] Documentos brutos retornados do Firestore:', snap.size);
+                const lista = [];
+                const raws = [];
+                snap.forEach(d => {
+                    const data = d.data() || {};
+                    raws.push({ id: d.id, data });
+                    lista.push(pjParaFolha(d.id, data));
+                });
+                _cachePJDash = lista;
+                _cachePJDashRaw = raws;
+                // Dispara o reprocessamento global (combinará Folha + PJ no
+                // `processarCustoFolha` via `window._custoFolhaBase`).
+                try { processarCustoFolha(); } catch (_) { /* no-op */ }
+            }, (err) => {
+                console.warn('[CustoFolhaDash][Conector PJ] listener falhou:', err?.code || err?.message);
+                _cachePJDash = [];
+            });
+        } catch (err) {
+            console.warn('[CustoFolhaDash][Conector PJ] inscrição falhou:', err?.message);
+        }
     }
 
     // ==========================================
@@ -1580,14 +1733,31 @@
       _audDescFolhaPorChave.clear();
       _audInssEmOutrosBuckets.clear();
 
-      const base = window._custoFolhaBase || [];
+      // ── Mesclagem PJ em memória (auditoria 2026-05-18) ────────────────────
+      // CLT da CustosFolha + PJ derivado do ContasAPagar. O filtro do 3º nível
+      // (window._ccPermitidos) já filtrou os CLTs em `carregarCustoFolha`;
+      // aplicamos a mesma regra aos PJs aqui pra não vazar.
+      const pjFiltrados = window._ccPermitidos
+        ? _cachePJDash.filter(p => window._ccPermitidos.has(String(p.centro_custo || '').trim()))
+        : _cachePJDash;
+      const base = [...(window._custoFolhaBase || []), ...pjFiltrados];
+
+      // Atualiza datalist do filtro de funcionário (V6 Item 2) com os nomes
+      // unificados — feito sempre, antes do filtro de recorte ser aplicado.
+      try { popularDatalistFuncionariosDash(); } catch (_) {}
 
       const mesInicial  = document.getElementById('filtro-mes-inicial').value; // "YYYY-MM"
       const mesFinal    = document.getElementById('filtro-mes-final').value;
       const empresasSel = msEmpresa     ? msEmpresa.getValores()     : [];
       const ccsSel      = msCentroCusto ? msCentroCusto.getValores() : [];
+      // Filtro por Funcionário (auditoria 2026-05-18 V6 — Item 2). Match
+      // EXATO por nome (case-insensitive) — isolamento de um indivíduo. Texto
+      // vazio = "todos". Input é populado dinamicamente após cada agregação
+      // via popularDatalistFuncionariosDash() abaixo.
+      const inputFunc = document.getElementById('filtro-funcionario-dash');
+      const funcionarioFiltro = inputFunc ? String(inputFunc.value || '').trim().toLowerCase() : '';
 
-      const temFiltro = mesInicial || mesFinal || empresasSel.length > 0 || ccsSel.length > 0;
+      const temFiltro = mesInicial || mesFinal || empresasSel.length > 0 || ccsSel.length > 0 || funcionarioFiltro;
       const btnLimpar = document.getElementById('btn-limpar-filtros');
       if (btnLimpar) {
         // Tailwind: `hidden` controla display. Mantemos `flex` explícito para
@@ -1595,6 +1765,9 @@
         if (temFiltro) { btnLimpar.classList.remove('hidden'); btnLimpar.classList.add('flex'); }
         else           { btnLimpar.classList.add('hidden');    btnLimpar.classList.remove('flex'); }
       }
+      // Botão "limpar busca" do dropdown funcionário (visibilidade local).
+      const btnLimparFunc = document.getElementById('filtro-funcionario-dash-limpar');
+      if (btnLimparFunc) btnLimparFunc.classList.toggle('hidden', !funcionarioFiltro);
 
       // Filtro: intervalo de competência + inclusão (multi) por empresa/CC.
       const empresasSet = new Set(empresasSel);
@@ -1605,6 +1778,10 @@
         if (mesFinal   && ref > mesFinal)   return false;
         if (empresasSet.size && !empresasSet.has(String(r.empresa_atribuida || ''))) return false;
         if (ccsSet.size      && !ccsSet.has(String(r.centro_custo || '')))           return false;
+        // Funcionário: match exato por nome (case-insensitive). Permite o
+        // usuário digitar parcial — se não bater exato, o filtro não corta
+        // (o datalist só sugere; aceitamos só o nome completo).
+        if (funcionarioFiltro && String(r.nome || '').toLowerCase() !== funcionarioFiltro) return false;
         return true;
       });
 
@@ -1676,13 +1853,14 @@
         if (chave) {
           let pessoa = porColab.get(chave);
           if (!pessoa) {
-            pessoa = { nome: r.nome || '—', cc: r.centro_custo || '—', cargo: r.funcao || '', total: 0 };
+            pessoa = { nome: r.nome || '—', cc: r.centro_custo || '—', cargo: r.funcao || '', total: 0, is_pj: false };
             porColab.set(chave, pessoa);
           }
           pessoa.total += t.total;
           if (r.nome)         pessoa.nome = r.nome;
           if (r.centro_custo) pessoa.cc = r.centro_custo;
           if (r.funcao)       pessoa.cargo = r.funcao;
+          if (r.is_pj === true) pessoa.is_pj = true;  // marca o agregado
         }
 
         // Composição por Cargo (donut): contagem de contratos únicos por cargo.
@@ -1846,6 +2024,17 @@
       const refsOrdenadasDbg = [...porComp.keys()].sort();
       console.log('[CustoFolhaDash] Total de linhas processadas:', registros.length);
       console.log('[CustoFolhaDash] Chaves classificadas como Salário Base:', [..._chavesSalarioDetectadas].sort());
+
+      // ── Telemetria Conector PJ (auditoria 2026-05-18) ────────────────────
+      // Confirma quantos PJs entraram no recorte final e listam quais estão
+      // no Ranking de Colaboradores.
+      const pjNoRecorte = registros.filter(r => r.is_pj === true);
+      console.log(`[CustoFolhaDash][Conector PJ] PJs no recorte final: ${pjNoRecorte.length} (de ${_cachePJDash.length} em cache).`);
+      if (pjNoRecorte.length) {
+        for (const p of pjNoRecorte) {
+          console.log('[CustoFolhaDash][Conector PJ] BINGO! PJ integrado ao ranking:', p.nome, '· competência:', p.competencia_ref, '· área:', p.centro_custo || '(sem CC)', '· Valor:', p.SERVICOS_PRESTADOS_Valor);
+        }
+      }
 
       // ===================================================================
       // AUDITORIA INSS — rodada 2 (2026-04-27)
@@ -2198,6 +2387,10 @@
         // em contratos distintos no mesmo período (ex: promoção no mês).
         const cargoTxt = String(c.cargo || '').trim();
         const nomeExib = cargoTxt ? `${c.nome} (${cargoTxt})` : c.nome;
+        // Badge "PJ" — auditoria 2026-05-18 (Conector PJ ➔ Ranking).
+        const badgePJ = c.is_pj
+          ? `<span class="ml-1.5 inline-flex items-center px-1.5 py-[1px] rounded text-[8.5px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-300 border border-rose-400/30 align-middle">PJ</span>`
+          : '';
         return `
           <div class="flex items-center gap-4 py-3 group">
             <div class="relative shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-brandMidBlue to-brandDarkBlue flex items-center justify-center text-white font-extrabold text-xs shadow-inner border border-white/10">
@@ -2205,7 +2398,7 @@
               <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full ${medalha} text-[9px] font-black flex items-center justify-center shadow-lg">${idx + 1}</span>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-xs font-bold text-white truncate" title="${escapeHTML(nomeExib)}">${escapeHTML(nomeExib)}</p>
+              <p class="text-xs font-bold text-white truncate" title="${escapeHTML(nomeExib)}">${escapeHTML(nomeExib)}${badgePJ}</p>
               <p class="text-[10px] text-slate-400 truncate font-medium" title="${escapeHTML(c.cc)}">${escapeHTML(c.cc)}</p>
               <div class="mt-1.5 w-full bg-white/5 h-1 rounded-full overflow-hidden">
                 <div class="h-full bg-gradient-to-r from-brandOrange via-brandGreen to-brandLightBlue rounded-full transition-all duration-700" style="width:${pct.toFixed(1)}%"></div>
@@ -2238,8 +2431,28 @@
       document.getElementById('filtro-mes-final').value   = '';
       if (msEmpresa)     msEmpresa.limpar();
       if (msCentroCusto) msCentroCusto.limpar();
+      const inputFunc = document.getElementById('filtro-funcionario-dash');
+      if (inputFunc) inputFunc.value = '';
       processarCustoFolha();
     };
+
+    // ── Filtro por Funcionário (auditoria 2026-05-18 V6 — Item 2) ──────────
+    // Datalist alimentado dinamicamente com nomes únicos do cache unificado
+    // (CLT + PJ). Atualiza a cada rodada de processarCustoFolha pra incluir
+    // novos nomes que tenham entrado após o último recálculo.
+    function popularDatalistFuncionariosDash() {
+      const dl = document.getElementById('datalist-funcionarios-dash');
+      if (!dl) return;
+      const base = [...(window._custoFolhaBase || []), ...(_cachePJDash || [])];
+      const nomes = new Set();
+      for (const r of base) {
+        const n = String(r?.nome || '').trim();
+        if (n) nomes.add(n);
+      }
+      const ordenados = [...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      const novoHtml = ordenados.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
+      if (dl.innerHTML !== novoHtml) dl.innerHTML = novoHtml;
+    }
 
     // Recálculo em tempo real nos inputs de mês (multi-selects usam onChange
     // configurado no construtor do MultiSelectCF).
@@ -2247,6 +2460,31 @@
       const el = document.getElementById(id);
       if (el) el.addEventListener('change', () => processarCustoFolha());
     });
+
+    // Filtro por Funcionário: debounce 180ms pra não re-renderizar cada keystroke.
+    const _inputFuncDash = document.getElementById('filtro-funcionario-dash');
+    let _funcTimer = null;
+    if (_inputFuncDash) {
+      _inputFuncDash.addEventListener('input', () => {
+        clearTimeout(_funcTimer);
+        _funcTimer = setTimeout(() => processarCustoFolha(), 180);
+      });
+      // Esc limpa.
+      _inputFuncDash.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && _inputFuncDash.value) {
+          _inputFuncDash.value = '';
+          processarCustoFolha();
+        }
+      });
+    }
+    const _btnLimparFuncDash = document.getElementById('filtro-funcionario-dash-limpar');
+    if (_btnLimparFuncDash && _inputFuncDash) {
+      _btnLimparFuncDash.addEventListener('click', () => {
+        _inputFuncDash.value = '';
+        processarCustoFolha();
+        _inputFuncDash.focus();
+      });
+    }
 
     // Modal de Movimentações: o botão `+` no card Colaboradores abre o modal.
     // A lista interna é mantida atualizada por renderTickerMovimentacoes a cada

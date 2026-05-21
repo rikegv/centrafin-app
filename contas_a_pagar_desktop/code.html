@@ -358,152 +358,72 @@
     </div>
 </div>
 
-<!-- MODAL: Wizard de Importação TXT — Fase 2 (auditoria 2026-04-29) -->
-<div id="modal-importar" class="fixed inset-0 z-[65] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-importar"></div>
-    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
+<!-- Input file oculto — o botão "Importar Arquivo TXT" só dispara o picker. -->
+<input id="file-cp-txt" type="file" accept=".txt" class="hidden" />
 
-        <!-- HEADER do wizard com indicador de passo -->
-        <div class="px-7 pt-7 pb-5 border-b border-slate-100">
-            <div class="flex items-center justify-between gap-4">
-                <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-tertiary">upload_file</span>
-                    </div>
-                    <div class="min-w-0">
-                        <h3 class="font-headline text-lg font-extrabold text-secondary">Importar Arquivo TXT</h3>
-                        <p id="wizard-subtitulo" class="text-[11px] text-slate-400 font-medium truncate">Selecione o spool bancário para iniciar a leitura.</p>
-                    </div>
+<!-- MODAL: Quarentena de Combinações (auditoria 2026-05-14 — Fase 1 ETL Preditivo).
+     Aberto sempre que o parser encontra (fornecedor + despesa) que NÃO existe em
+     CP_BaseMestra. O usuário classifica cada exceção; o sistema aprende e grava. -->
+<div id="modal-cp-quarentena" class="fixed inset-0 z-[68] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-cp-quarentena"></div>
+    <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
+
+        <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+                    <span class="material-symbols-outlined text-amber-500 text-2xl">rule</span>
                 </div>
-                <button data-fechar-modal="modal-importar" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
-                    <span class="material-symbols-outlined">close</span>
+                <div class="min-w-0">
+                    <h3 class="font-headline text-xl font-extrabold text-secondary tracking-tight">Quarentena de Combinações</h3>
+                    <p class="text-[12px] text-slate-500 font-medium mt-0.5"><span id="cp-quar-resumo">Detectamos combinações não cadastradas na Base Mestra.</span></p>
+                </div>
+            </div>
+            <button id="btn-fechar-cp-quarentena" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="px-7 py-5 overflow-y-auto flex-1 space-y-4">
+            <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3">
+                <span class="material-symbols-outlined text-amber-500 mt-0.5">info</span>
+                <p class="text-[12px] leading-relaxed font-medium">
+                    A importação foi <strong>pausada</strong>. Classifique cada combinação <code>Fornecedor + Despesa</code> abaixo — o sistema vai memorizar essas regras em <code>CP_BaseMestra</code> e aplicá-las automaticamente nas próximas importações. Marcar como <strong>Fixo</strong> também projeta o lançamento nos meses restantes do ano.
+                </p>
+            </div>
+
+            <div class="border border-slate-100 rounded-xl overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Fornecedor</th>
+                            <th class="px-4 py-3 text-left">Despesa</th>
+                            <th class="px-4 py-3 text-center w-12">Qtd.</th>
+                            <th class="px-4 py-3 text-left w-44">Classificação</th>
+                            <th class="px-4 py-3 text-left w-48">Centro de Custo</th>
+                            <th class="px-4 py-3 text-left w-32">Periodicidade</th>
+                            <th class="px-4 py-3 text-left w-40">Fim Contrato <span class="font-normal normal-case text-slate-400">(opcional)</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cp-quar-corpo" class="divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+            </div>
+            <p id="cp-quar-vazio" class="hidden text-[11px] text-slate-400 italic text-center py-6">Nenhuma combinação pendente — pronto para importar.</p>
+        </div>
+
+        <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-slate-50/50">
+            <div class="text-[11px] text-slate-500 font-medium" id="cp-quar-status">
+                Preencha todas as classificações para liberar a importação.
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="btn-cancelar-cp-quarentena" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                    Cancelar Importação
+                </button>
+                <button id="btn-aplicar-cp-quarentena" type="button" disabled
+                    class="flex items-center gap-2 px-6 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-extrabold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined text-base" id="ico-cp-quar-aplicar">task_alt</span>
+                    <span id="lbl-cp-quar-aplicar">Aplicar e Importar</span>
                 </button>
             </div>
-            <!-- Indicador de passos -->
-            <div class="flex items-center gap-2 mt-5">
-                <div data-passo-indicador="upload" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-tertiary text-white text-[10px] font-extrabold uppercase tracking-wider">
-                    <span class="material-symbols-outlined text-[14px]">file_open</span> 1. Leitura
-                </div>
-                <div class="h-px flex-1 bg-slate-200"></div>
-                <div data-passo-indicador="conciliacao" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">
-                    <span class="material-symbols-outlined text-[14px]">rule</span> 2. Conciliação
-                </div>
-                <div class="h-px flex-1 bg-slate-200"></div>
-                <div data-passo-indicador="finalizando" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">
-                    <span class="material-symbols-outlined text-[14px]">save</span> 3. Gravação
-                </div>
-            </div>
-        </div>
-
-        <!-- CORPO do wizard -->
-        <div class="flex-1 overflow-y-auto px-7 py-6">
-
-            <!-- PASSO 1: Upload do arquivo TXT -->
-            <div data-passo="upload" class="space-y-4">
-                <label class="block border-2 border-dashed border-slate-200 rounded-xl p-8 cursor-pointer hover:border-tertiary hover:bg-tertiary/5 transition-all" id="dropzone-txt">
-                    <div class="flex flex-col items-center text-center gap-3">
-                        <span class="material-symbols-outlined text-5xl text-slate-300">description</span>
-                        <div>
-                            <p class="text-sm font-bold text-secondary">Clique para selecionar o arquivo TXT</p>
-                            <p id="lbl-arquivo-txt" class="text-[11px] text-slate-400 mt-1">Spool bancário .txt — leitura linha a linha via regex.</p>
-                        </div>
-                    </div>
-                    <input id="file-txt" type="file" accept=".txt" class="hidden" />
-                </label>
-                <div id="dryrun-stats" class="hidden bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-3">
-                    <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Pré-leitura do arquivo</p>
-                    <!-- Empresa-mãe detectada (Fase 2.1): banner destacado -->
-                    <div id="empresa-origem-banner" class="hidden flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-tertiary/10 border border-tertiary/30">
-                        <span class="material-symbols-outlined text-tertiary text-[20px]">domain</span>
-                        <div class="min-w-0">
-                            <p class="text-[9px] font-bold text-tertiary uppercase tracking-wider">Empresa-mãe (1ª linha)</p>
-                            <p class="text-sm font-extrabold text-secondary truncate" id="stat-empresa-origem">—</p>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="bg-white border border-slate-100 rounded-lg p-3">
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Clientes</p>
-                            <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-clientes">0</p>
-                        </div>
-                        <div class="bg-white border border-slate-100 rounded-lg p-3">
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pagamentos</p>
-                            <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-pagamentos">0</p>
-                        </div>
-                        <div class="bg-white border border-slate-100 rounded-lg p-3">
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Entidades únicas</p>
-                            <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-entidades">0</p>
-                        </div>
-                    </div>
-                    <div id="dryrun-pendencias-resumo" class="hidden flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-800">
-                        <span class="material-symbols-outlined text-amber-600 text-[16px] mt-0.5">info</span>
-                        <span data-pendencias-text></span>
-                    </div>
-                </div>
-                <div id="msg-passo-upload" class="hidden text-xs font-bold p-3 rounded-lg flex items-start gap-2"></div>
-            </div>
-
-            <!-- PASSO 2: Conciliação de entidades pendentes -->
-            <div data-passo="conciliacao" class="hidden space-y-4">
-                <div class="flex items-start gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-[12px] font-medium text-amber-800">
-                    <span class="material-symbols-outlined text-amber-600 text-[18px] mt-0.5">auto_awesome</span>
-                    <div>
-                        <p class="font-extrabold mb-0.5">Conciliação Inteligente</p>
-                        <p>Os nomes abaixo apareceram no arquivo mas <strong>não estão no Banco de Regras</strong>. Classifique cada um — o sistema vai aprender e aplicar essas regras agora e nas próximas importações.</p>
-                    </div>
-                </div>
-                <div class="overflow-y-auto max-h-[50vh]">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-slate-50 sticky top-0 z-10">
-                            <tr class="text-[10px] uppercase tracking-widest font-bold text-slate-500">
-                                <th class="px-4 py-3 text-left">Entidade</th>
-                                <th class="px-4 py-3 text-left">Tipo</th>
-                                <th class="px-4 py-3 text-left">Área</th>
-                            </tr>
-                        </thead>
-                        <tbody id="conciliacao-corpo" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
-                <p class="text-[10px] text-slate-400 italic">Dica: o Tipo padrão sugerido é "Fornecedor Externo" para nomes vindos da coluna de fornecedor e "Cliente" para os cabeçalhos do spool.</p>
-            </div>
-
-            <!-- PASSO 3: Confirmação final / progresso de gravação -->
-            <div data-passo="finalizando" class="hidden flex flex-col items-center text-center py-8 gap-3">
-                <div class="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-emerald-600 text-3xl" id="ico-finalizando">check_circle</span>
-                </div>
-                <h3 class="font-headline text-lg font-extrabold text-secondary" id="titulo-finalizando">Importação concluída</h3>
-                <p class="text-[12px] text-slate-500 max-w-md" id="msg-finalizando">—</p>
-                <div class="grid grid-cols-3 gap-3 w-full max-w-md mt-2">
-                    <div class="bg-slate-50 rounded-lg p-3">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Regras criadas</p>
-                        <p class="text-xl font-extrabold text-tertiary tabular-nums" id="stat-regras-criadas">0</p>
-                    </div>
-                    <div class="bg-slate-50 rounded-lg p-3">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Lançamentos</p>
-                        <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-lancamentos-gravados">0</p>
-                    </div>
-                    <div class="bg-slate-50 rounded-lg p-3">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Atualizados (merge)</p>
-                        <p class="text-xl font-extrabold text-secondary tabular-nums" id="stat-lancamentos-merge">0</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- FOOTER do wizard com botões contextuais -->
-        <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-slate-50/50">
-            <button id="btn-wizard-voltar" type="button" class="hidden items-center gap-1 px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
-                <span class="material-symbols-outlined text-base">arrow_back</span> Voltar
-            </button>
-            <div class="flex-1"></div>
-            <button data-fechar-modal="modal-importar" id="btn-wizard-cancelar" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
-                Cancelar
-            </button>
-            <button id="btn-wizard-avancar" type="button" disabled
-                class="flex items-center gap-2 px-6 py-2.5 bg-tertiary text-white rounded-xl text-xs font-extrabold shadow-lg shadow-tertiary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                <span class="material-symbols-outlined text-base" id="ico-wizard-avancar">arrow_forward</span>
-                <span id="lbl-wizard-avancar">Processar Arquivo</span>
-            </button>
         </div>
     </div>
 </div>
@@ -907,11 +827,10 @@
             sel.innerHTML = '<option value="">Todas</option>' + visiveis.map(n => `<option value="${escapeHTML(n)}">${escapeHTML(n)}</option>`).join('');
             if (valAtual && visiveis.includes(valAtual)) sel.value = valAtual;
 
-            // Datalist do form manual + datalist do wizard de conciliação.
+            // Datalist do form manual (o modal-cp-quarentena cria seus próprios
+            // selects de Centro de Custo a cada abertura, a partir deste mesmo sel).
             const dl = document.getElementById('datalist-cc-manual');
             dl.innerHTML = visiveis.map(n => `<option value="${escapeHTML(n)}">`).join('');
-            const dlConc = document.getElementById('datalist-conc-cc');
-            if (dlConc) dlConc.innerHTML = visiveis.map(n => `<option value="${escapeHTML(n)}">`).join('');
         }, (err) => console.warn('[AreasContasPagar] listener falhou:', err?.code || err?.message));
     }
 
@@ -1496,658 +1415,612 @@
     _btnConfirmarCancelar.addEventListener('click', () => _fecharConfirmacao(false));
     _overlayConfirmar.addEventListener('click', () => _fecharConfirmacao(false));
 
-    document.getElementById('btn-importar-txt').addEventListener('click', () => {
-        resetarWizard();
-        abrirModal('modal-importar');
-    });
-
     // ========================================================================
-    // FASE 2 — MOTOR DE ETL TXT + WIZARD DE CONCILIAÇÃO
+    // FASE 1 — MOTOR ETL PREDITIVO + QUARENTENA (clean slate 2026-05-14)
+    // ------------------------------------------------------------------------
+    // Fluxo:
+    //   1. Usuário escolhe um TXT.
+    //   2. Parser (state machine) varre linha a linha, mantendo `clienteAtual`.
+    //   3. Agrupa combinações únicas (fornecedor + despesa) e cruza com
+    //      CP_BaseMestra. Pendências caem no modal-cp-quarentena.
+    //   4. Usuário classifica cada pendência → grava em CP_BaseMestra (o
+    //      sistema "aprende" para a próxima importação).
+    //   5. Projeta lançamentos `Fixo` para os meses restantes do ano vigente.
+    //   6. Grava tudo em ContasAPagar via writeBatch.
     // ========================================================================
-    // Estado do wizard mantido entre passos. Resetado a cada abertura do
-    // modal para evitar contaminação de imports anteriores.
-    const wizardState = {
-        passo: 'upload',        // 'upload' | 'conciliacao' | 'finalizando'
-        arquivoNome: '',
-        empresaOrigem: '',      // Fase 2.1: 1ª linha do spool (SOULAN / NEAT / …)
-        pagamentos: [],         // Array<{ codigo, fornecedor, data, valor, status, categoria, clienteAtual, _linha }>
-        clientes: [],           // Array<{ codigo, nome }> — só os cabeçalhos achados
-        entidadesUnicas: [],    // Array<string> com todos os nomes (cliente + fornecedor)
-        entidadesPendentes: [], // Subset de entidadesUnicas SEM regra (após heurística pass-through)
-        sugestoesTipo: {},      // entidade -> tipo sugerido (Cliente para headers, Fornecedor Externo p/ resto)
-    };
 
-    function resetarWizard() {
-        wizardState.passo = 'upload';
-        wizardState.arquivoNome = '';
-        wizardState.empresaOrigem = '';
-        wizardState.pagamentos = [];
-        wizardState.clientes = [];
-        wizardState.entidadesUnicas = [];
-        wizardState.entidadesPendentes = [];
-        wizardState.sugestoesTipo = {};
-        document.getElementById('file-txt').value = '';
-        document.getElementById('lbl-arquivo-txt').textContent = 'Spool bancário .txt — leitura linha a linha via regex.';
-        document.getElementById('dryrun-stats').classList.add('hidden');
-        document.getElementById('dryrun-pendencias-resumo').classList.add('hidden');
-        document.getElementById('msg-passo-upload').classList.add('hidden');
-        atualizarPassoUI();
-    }
+    const COLECAO_MESTRA = 'CP_BaseMestra';
+    const CP_CLASSIFICACOES = ['Cliente', 'Fornecedor Interno', 'Fornecedor Externo'];
+    const CP_PERIODICIDADES = ['Fixo', 'Variável'];
 
-    // ── PARSER (REGEX) ─────────────────────────────────────────────────────
-    // Empresa-mãe (Fase 2.1, auditoria 2026-04-29): a primeira linha do
-    // spool contém "Codigo / Nome da Empresa: 0001 SOULAN CONSULTORIA…".
-    // Capturamos o nome da empresa-mãe e gravamos em TODO payload subsequente
-    // — necessário para distinguir spools de SOULAN vs NEAT vs outras
-    // operações no mesmo banco.
-    const RE_EMPRESA = /Codigo\s*\/\s*Nome\s+da\s+Empresa\s*:\s*\d+\s+(.+?)\s*$/i;
-    // Cabeçalho de cliente: "Codigo / NoXXXXXX-Ciente: NOME"
-    const RE_CLIENTE = /Codigo\s*\/\s*No\s*(\d+)\s*-\s*Ciente\s*:\s*(.+?)\s*$/i;
-    // Linha de pagamento: começa com 6 dígitos, hífen, 3 dígitos.
-    const RE_PAG_LINHA_INICIO = /^\s*(\d{6})-(\d{3})\b/;
-    // Data BR DD/MM/YY OU DD/MM/AAAA — single capture group com a data INTEIRA.
-    // Bug fix 2026-04-30 rev2: a versão anterior usava \b ... \b com três grupos
-    // e ainda falhava em produção (coluna Competência permanecia vazia). Esta
-    // regex permissiva (sem word boundaries) é a referência ditada pelo cliente.
-    // Atenção: a alternação é (?:\d{4}|\d{2}) — \d{4} PRIMEIRO porque a engine
-    // do JS tenta as alternativas da esquerda para a direita e para na primeira
-    // que casa. Se invertêssemos, "15/12/2025" capturaria o ano como "20".
-    const RE_DATA_BR = /(\d{2}\/\d{2}\/(?:\d{4}|\d{2}))/;
-    // Valor monetário BR ou anglicano — o ÚLTIMO match na linha tende a ser
-    // o valor (após cabeçalho, código, nome, datas).
-    const RE_VALOR = /(\-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\-?\d+[.,]\d{2})/g;
-    // Status conhecidos no spool — adapte conforme variação aparecer.
-    const RE_STATUS = /\b(Baixado|Baixada|Pago|Aberto|Aberta|Pendente|Cancelad[oa]|Liquidad[oa]|Vencid[oa])\b/i;
+    // ── Regexes do parser TXT ───────────────────────────────────────────────
+    // Cabeçalho de cliente: linhas tipo "Codigo / NoXXX-iente: NOME DO CLIENTE"
+    // Match permissivo: queremos pegar variantes ("Cliente", "iente:") sem
+    // depender da quebra exata do cabeçalho. O texto após o ":" é o nome.
+    const RE_CP_CLIENTE = /Codigo\s*\/.*?iente\s*:\s*(.+?)\s*$/i;
+    // Data BR DD/MM/YY ou DD/MM/AAAA — captura inteira como single group.
+    const RE_CP_DATA   = /(\d{2}\/\d{2}\/(?:\d{4}|\d{2}))/;
+    // Valor monetário BR/EN — global para iterar todos os matches da linha.
+    const RE_CP_VALOR  = /(\-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\-?\d+[.,]\d{2})/g;
+    // Situação conhecida no TXT do ERP. Aceita variações por gênero/grafia.
+    const RE_CP_SITUACAO = /\b(Baixad[oa]|Pago|Aberto|Aberta|Pendente|Cancelad[oa]|Liquidad[oa]|Vencid[oa]|Provisionad[oa])\b/i;
+    // Linhas a ignorar: paginação, separadores, totalizadores, cabeçalhos
+    // repetidos. Aplicado APÓS o teste de cliente — o cabeçalho-de-cliente
+    // tem prioridade sobre essas heurísticas.
+    const RE_CP_IGNORAR = /^\s*(Pag\s*:|P[áa]g\s*\.|=+|-{3,}|TOTAL|Total\s+(geral|do)|SUB\s*-?\s*TOTAL|Subtotal)/i;
 
-    function extrairEmpresa(linha) {
-        const m = linha.match(RE_EMPRESA);
-        return m ? m[1].trim() : null;
-    }
-
-    function extrairCliente(linha) {
-        const m = linha.match(RE_CLIENTE);
-        if (!m) return null;
-        return { codigo: m[1].trim(), nome: m[2].trim() };
-    }
-
-    function parseValorBR(s) {
+    // ── Helpers ─────────────────────────────────────────────────────────────
+    function cpParseValorBR(s) {
         if (s == null) return 0;
         let str = String(s).trim();
         if (!str) return 0;
-        // Detecta separador decimal pela ÚLTIMA ocorrência de . ou , na string.
         const ultPonto = str.lastIndexOf('.');
         const ultVirg  = str.lastIndexOf(',');
         if (ultPonto !== -1 && ultVirg !== -1) {
-            if (ultVirg > ultPonto) {
-                // Decimal é vírgula (BR): remove pontos (milhar), troca vírgula.
-                str = str.replace(/\./g, '').replace(',', '.');
-            } else {
-                // Decimal é ponto (EN): remove vírgulas (milhar).
-                str = str.replace(/,/g, '');
-            }
+            if (ultVirg > ultPonto) str = str.replace(/\./g, '').replace(',', '.');
+            else str = str.replace(/,/g, '');
         } else if (ultVirg !== -1) {
             str = str.replace(',', '.');
         }
         const n = parseFloat(str);
         return isFinite(n) ? n : 0;
     }
-
-    function parseDataBRtoISO(d, mo, y) {
-        // Constrói YYYY-MM-DD com zero-pad. Validação básica de range.
-        const di = parseInt(d, 10), mi = parseInt(mo, 10);
-        let yi = parseInt(y, 10);
-        // Janela retroativa para anos de 2 dígitos: 00–29 → 20YY; 30–99 → 19YY.
-        if (String(y).length === 2) {
-            yi = yi <= 29 ? 2000 + yi : 1900 + yi;
+    // Converte "DD/MM/AA" ou "DD/MM/AAAA" → ISO "YYYY-MM-DD" (formato BD).
+    function cpDataBRtoISO(dataBR) {
+        const partes = String(dataBR || '').split('/');
+        if (partes.length !== 3) return null;
+        let dia = String(partes[0]).padStart(2, '0');
+        let mes = String(partes[1]).padStart(2, '0');
+        let ano = partes[2];
+        if (ano.length === 2) {
+            const n = parseInt(ano, 10);
+            ano = (n <= 29 ? 2000 + n : 1900 + n).toString();
         }
+        const di = parseInt(dia, 10), mi = parseInt(mes, 10), yi = parseInt(ano, 10);
         if (di < 1 || di > 31 || mi < 1 || mi > 12 || yi < 1900 || yi > 3000) return null;
-        return `${String(yi).padStart(4, '0')}-${String(mi).padStart(2, '0')}-${String(di).padStart(2, '0')}`;
+        return `${ano}-${mes}-${dia}`;
     }
-
-    // Helper: converte YYYY-MM-DD (ou YYYY-MM) em "MM/AAAA" para o campo
-    // competencia_ref. Spec 2026-04-30: armazenamento em "MM/AAAA" estrito.
-    function refMMYYYY(yyyymmdd) {
-        if (!yyyymmdd) return null;
-        const m = String(yyyymmdd).match(/^(\d{4})-(\d{2})/);
+    function cpRefMMYYYY(yyyymmdd) {
+        const m = String(yyyymmdd || '').match(/^(\d{4})-(\d{2})/);
         return m ? `${m[2]}/${m[1]}` : null;
     }
-
-    // Extrai um pagamento de uma linha do spool. Estratégia:
-    //  1. Codigo de 6 dígitos no início (regex obrigatória).
-    //  2. Data BR em qualquer posição (primeiro match).
-    //  3. Valor monetário — pega o último número com decimal antes da palavra
-    //     de status (heurística: spool típico tem ordem CODIGO NOME DATA VALOR STATUS CATEGORIA).
-    //  4. Status: substring match contra lista conhecida.
-    //  5. Fornecedor: substring entre o código e a data.
-    //  6. Categoria: substring após o status.
-    function extrairPagamento(linha) {
-        const mIni = linha.match(RE_PAG_LINHA_INICIO);
-        if (!mIni) return null;
-        const codigo = mIni[1];
-        // Tudo após o código-sufixo (ex. "057538-096 ").
-        const restoBruto = linha.slice(mIni[0].length).trim();
-
-        // Bug fix 2026-04-30 rev2 — regex permissiva + checagem de null ANTES
-        // do split (estourava TypeError quando a linha não tinha data legível).
-        // Constrói competencia_ref ("MM/AAAA") e dataISO ("YYYY-MM-DD") direto
-        // das partes do split — sem depender de parseDataBRtoISO.
-        const mData = restoBruto.match(RE_DATA_BR);
-        let dataISO = null;
-        let competencia_ref = null;
-        if (mData) {
-            const dataStr = mData[1];
-            const partes = dataStr.split('/');
-            // Sanidade: só prossegue se o split rendeu 3 partes não-vazias.
-            if (partes.length === 3 && partes[0] && partes[1] && partes[2]) {
-                const dia = String(partes[0]).padStart(2, '0');
-                const mes = String(partes[1]).padStart(2, '0');
-                // Conversão segura do ano: 2 dígitos vira 20YY (regra do cliente,
-                // 2026-04-30); 4 dígitos passa direto.
-                const ano = partes[2].length === 2 ? '20' + partes[2] : partes[2];
-                competencia_ref = `${mes}/${ano}`;       // MM/AAAA — formato estrito
-                dataISO = `${ano}-${mes}-${dia}`;         // ordenação cronológica
-            }
-        }
-
-        // Valores: pega TODOS os matches numéricos com decimal e usa o último
-        // (geralmente o valor depois aparece após nome+data).
-        const valoresMatch = [...restoBruto.matchAll(RE_VALOR)];
-        const valorStr = valoresMatch.length ? valoresMatch[valoresMatch.length - 1][1] : '';
-        const valor = parseValorBR(valorStr);
-
-        const mStatus = restoBruto.match(RE_STATUS);
-        const status = mStatus ? normalizarStatus(mStatus[1]) : 'pendente';
-
-        // Fornecedor = trecho entre o início e a data (ou status, ou valor — o
-        // que vier primeiro). Limpa espaços excedentes.
-        let fornecedorBruto = restoBruto;
-        const corteIdx = [
-            mData ? mData.index : -1,
-            mStatus ? mStatus.index : -1,
-            valoresMatch.length ? valoresMatch[valoresMatch.length - 1].index : -1,
-        ].filter(i => i >= 0).sort((a, b) => a - b);
-        if (corteIdx.length) fornecedorBruto = restoBruto.slice(0, corteIdx[0]);
-        const fornecedor = fornecedorBruto.replace(/\s{2,}/g, ' ').trim();
-
-        // Categoria = trecho após o status (ou após o valor se status não casou).
-        let categoria = '';
-        if (mStatus) {
-            categoria = restoBruto.slice(mStatus.index + mStatus[0].length).replace(/\s{2,}/g, ' ').trim();
-        } else if (valoresMatch.length) {
-            const ultVal = valoresMatch[valoresMatch.length - 1];
-            categoria = restoBruto.slice(ultVal.index + ultVal[0].length).replace(/\s{2,}/g, ' ').trim();
-        }
-
-        // Filtros de sanidade: precisa pelo menos do código e do fornecedor.
-        if (!fornecedor) return null;
-        return { codigo, fornecedor, data: dataISO, competencia_ref, valor, status, categoria };
-    }
-
-    function normalizarStatus(raw) {
+    function cpNormalizarSituacao(raw) {
         const s = String(raw || '').toLowerCase();
         if (s.startsWith('baix') || s.startsWith('pag') || s.startsWith('liquid')) return 'pago';
         if (s.startsWith('cancel')) return 'cancelado';
+        if (s.startsWith('provis')) return 'provisionado';
         return 'pendente';
     }
+    function cpChaveMestra(fornecedor, despesa) {
+        return `${String(fornecedor || '').trim()}|${String(despesa || '').trim()}`.toUpperCase();
+    }
+    function cpEscape(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 
-    // Parser principal. Retorna { empresaOrigem, pagamentos, clientes, entidadesUnicas, descartadas }.
-    function parsearTXT(texto) {
+    // ── Parser principal (state machine) ────────────────────────────────────
+    // Devolve { lancamentos: [...], stats: {...} }. Cada lançamento tem:
+    //   { cliente, fornecedor, vencimentoISO, valor, situacao, despesa, _linha }
+    function cpParsearTXT(texto) {
         const linhas = String(texto || '').split(/\r?\n/);
-        let empresaOrigem = null;
-        let clienteAtual = null;
-        const pagamentos = [];
-        const clientes = [];
-        let descartadas = 0;
+        let clienteAtual = '';
+        const lancamentos = [];
+        const stats = { linhas: linhas.length, clientes: 0, lancamentos: 0, ignoradas: 0, semCliente: 0 };
+        const clientesUnicos = new Set();
+
         for (let i = 0; i < linhas.length; i++) {
-            const linha = linhas[i];
-            // 1) Empresa-mãe: pega o PRIMEIRO match na varredura. Tipicamente
-            // aparece nas primeiras linhas do spool. Ignorada nos próximos
-            // matches (algumas rolagens repetem o cabeçalho página a página).
-            if (!empresaOrigem) {
-                const emp = extrairEmpresa(linha);
-                if (emp) { empresaOrigem = emp; continue; }
-            }
-            // 2) Cabeçalho de cliente — atualiza a variável de estado.
-            const cli = extrairCliente(linha);
-            if (cli) {
-                clienteAtual = cli;
-                clientes.push(cli);
+            const linhaOrig = linhas[i];
+            const linha = linhaOrig.trim();
+            if (!linha) continue;
+
+            // 1) Cabeçalho de cliente — atualiza estado e segue.
+            const mCli = linha.match(RE_CP_CLIENTE);
+            if (mCli) {
+                clienteAtual = mCli[1].trim();
+                if (clienteAtual) {
+                    clientesUnicos.add(clienteAtual);
+                    stats.clientes = clientesUnicos.size;
+                }
                 continue;
             }
-            // 3) Linha de pagamento — anexa o cliente vigente.
-            const pag = extrairPagamento(linha);
-            if (pag) {
-                pag.clienteAtual = clienteAtual ? clienteAtual.nome : null;
-                pag._linha = i + 1;
-                pagamentos.push(pag);
-            } else if (RE_PAG_LINHA_INICIO.test(linha)) {
-                // Padrão de código bateu mas faltou nome — log para debug.
-                descartadas++;
+
+            // 2) Filtros de ruído (paginação/separadores/totalizadores).
+            if (RE_CP_IGNORAR.test(linha)) { stats.ignoradas++; continue; }
+
+            // 3) Linha precisa ter pelo menos uma DATA e um VALOR pra ser
+            //    considerada um lançamento. Caso contrário é cabeçalho/ruído.
+            const mData = linha.match(RE_CP_DATA);
+            if (!mData) { stats.ignoradas++; continue; }
+            const valoresMatch = [...linha.matchAll(RE_CP_VALOR)];
+            if (!valoresMatch.length) { stats.ignoradas++; continue; }
+
+            // 4) Vencimento.
+            const vencimentoISO = cpDataBRtoISO(mData[1]);
+            if (!vencimentoISO) { stats.ignoradas++; continue; }
+
+            // 5) Valor — heurística: o ÚLTIMO número decimal da linha tende a
+            //    ser "VL do Título" (após cabeçalho/código/nome/data).
+            const ultimoValor = valoresMatch[valoresMatch.length - 1];
+            const valor = cpParseValorBR(ultimoValor[1]);
+
+            // 6) Situação — match contra lista conhecida. Default pendente.
+            const mSit = linha.match(RE_CP_SITUACAO);
+            const situacaoBruta = mSit ? mSit[1] : '';
+            const situacao = cpNormalizarSituacao(situacaoBruta);
+
+            // 7) Fornecedor — fica entre o início da linha e o primeiro
+            //    "marcador" (data/situação/valor). Limpa códigos numéricos
+            //    iniciais (ex. "057538-096 ") e espaços excedentes.
+            const cortes = [
+                mData.index,
+                mSit ? mSit.index : -1,
+                ultimoValor.index,
+            ].filter(i => i >= 0).sort((a, b) => a - b);
+            let fornecedorBruto = cortes.length ? linha.slice(0, cortes[0]) : linha;
+            // Remove códigos no início: "057538-096" ou "057538" ou "1234"
+            fornecedorBruto = fornecedorBruto.replace(/^\s*\d{2,8}(?:-\d{1,5})?\s+/, '');
+            const fornecedor = fornecedorBruto.replace(/\s{2,}/g, ' ').trim();
+
+            // 8) Despesa — trecho APÓS a situação (ou após o valor se a
+            //    situação não casou). É o que o ERP classifica como "Despesa".
+            let despesa = '';
+            if (mSit) {
+                despesa = linha.slice(mSit.index + mSit[0].length).replace(/\s{2,}/g, ' ').trim();
+            } else {
+                despesa = linha.slice(ultimoValor.index + ultimoValor[0].length).replace(/\s{2,}/g, ' ').trim();
             }
+            // Remove números soltos no início do trecho de despesa (limpeza).
+            despesa = despesa.replace(/^\d{2,8}\s+/, '').trim();
+
+            // Sanidade mínima: precisa de fornecedor + valor.
+            if (!fornecedor || !(valor > 0)) { stats.ignoradas++; continue; }
+            if (!clienteAtual) stats.semCliente++;
+
+            lancamentos.push({
+                cliente: clienteAtual,
+                fornecedor,
+                vencimentoISO,
+                valor,
+                situacao,
+                situacaoBruta,
+                despesa,
+                _linha: i + 1,
+            });
+            stats.lancamentos++;
         }
-        // Universo de entidades únicas (cliente + fornecedor) UPPERCASE.
-        const setEntidades = new Set();
-        for (const c of clientes) {
-            const n = String(c.nome || '').trim();
-            if (n) setEntidades.add(n.toUpperCase());
+        return { lancamentos, stats };
+    }
+
+    // ── Inteligência de Match (CP_BaseMestra) ───────────────────────────────
+    // Carrega TODA a CP_BaseMestra em memória — collection é pequena (uma
+    // entrada por combinação única forn+despesa) e a consulta é única.
+    async function cpCarregarBaseMestra() {
+        const mestra = new Map(); // chave canonical → { classificacao, centro_custo, periodicidade }
+        try {
+            const snap = await getDocs(collection(db, COLECAO_MESTRA));
+            snap.forEach(d => {
+                const data = d.data() || {};
+                const chave = cpChaveMestra(data.fornecedor, data.despesa);
+                if (chave) mestra.set(chave, {
+                    _id: d.id,
+                    classificacao: data.classificacao || '',
+                    centro_custo: data.centro_custo || '',
+                    periodicidade: data.periodicidade || '',
+                    data_fim_contrato: data.data_fim_contrato || null,
+                    fornecedor: data.fornecedor || '',
+                    despesa: data.despesa || '',
+                });
+            });
+        } catch (err) {
+            console.warn('[CP_BaseMestra] falha ao carregar:', err?.code || err?.message);
         }
-        for (const p of pagamentos) {
-            if (p.clienteAtual) setEntidades.add(String(p.clienteAtual).trim().toUpperCase());
-            if (p.fornecedor) setEntidades.add(String(p.fornecedor).trim().toUpperCase());
-        }
-        return {
-            empresaOrigem,
-            pagamentos,
-            clientes,
-            entidadesUnicas: [...setEntidades].sort((a, b) => a.localeCompare(b, 'pt-BR')),
-            descartadas,
+        return mestra;
+    }
+
+    // ── Estado do fluxo de importação ───────────────────────────────────────
+    // Mantemos em closure para não pluir o escopo global. Resetado a cada
+    // novo import.
+    let _cpEtlState = null;
+
+    function _cpResetEstado() {
+        _cpEtlState = {
+            arquivoNome: '',
+            lancamentos: [],
+            mestra: null,          // Map<chave, {...}> com aprendizado anterior
+            pendentes: [],         // [{ chave, fornecedor, despesa, qtde }]
+            mapeamentos: new Map(), // chave → { classificacao, centro_custo, periodicidade }
         };
     }
 
-    // ── BOTÕES DO WIZARD ────────────────────────────────────────────────────
-    const inputFileTxt = document.getElementById('file-txt');
-    const btnAvancar = document.getElementById('btn-wizard-avancar');
-    const btnVoltar = document.getElementById('btn-wizard-voltar');
+    // ── Handler do botão "Importar Arquivo TXT" ─────────────────────────────
+    const inputFileCP = document.getElementById('file-cp-txt');
+    document.getElementById('btn-importar-txt').addEventListener('click', () => {
+        inputFileCP.value = '';
+        inputFileCP.click();
+    });
 
-    inputFileTxt.addEventListener('change', async () => {
-        const f = inputFileTxt.files?.[0];
+    inputFileCP.addEventListener('change', async (e) => {
+        const f = e.target.files?.[0];
         if (!f) return;
-        document.getElementById('lbl-arquivo-txt').textContent = `${f.name} (${Math.ceil(f.size / 1024)} KB)`;
-        wizardState.arquivoNome = f.name;
-        // Pre-leitura imediata: já roda o parser pra mostrar estatísticas e
-        // habilitar o botão Processar com os números à vista.
+        _cpResetEstado();
+        _cpEtlState.arquivoNome = f.name;
         try {
             const texto = await f.text();
-            const parsed = parsearTXT(texto);
-            wizardState.empresaOrigem = parsed.empresaOrigem || '';
-            wizardState.pagamentos = parsed.pagamentos;
-            wizardState.clientes = parsed.clientes;
-            wizardState.entidadesUnicas = parsed.entidadesUnicas;
-            // Sugestão de tipo: clientes do cabeçalho viram "Cliente"; demais
-            // entidades, "Fornecedor Externo".
-            const setHeaders = new Set(parsed.clientes.map(c => String(c.nome || '').trim().toUpperCase()));
-            const sug = {};
-            for (const e of parsed.entidadesUnicas) {
-                sug[e] = setHeaders.has(e) ? 'Cliente' : 'Fornecedor Externo';
+            const { lancamentos, stats } = cpParsearTXT(texto);
+            console.log('[ETL CP] parser:', { ...stats });
+            if (!lancamentos.length) {
+                mostrarToast('Nenhum lançamento detectado no arquivo. Verifique o formato.', 'warning', true);
+                return;
             }
-            wizardState.sugestoesTipo = sug;
+            _cpEtlState.lancamentos = lancamentos;
 
-            document.getElementById('stat-clientes').textContent = parsed.clientes.length.toLocaleString('pt-BR');
-            document.getElementById('stat-pagamentos').textContent = parsed.pagamentos.length.toLocaleString('pt-BR');
-            document.getElementById('stat-entidades').textContent = parsed.entidadesUnicas.length.toLocaleString('pt-BR');
-            const empresaBanner = document.getElementById('empresa-origem-banner');
-            if (parsed.empresaOrigem) {
-                document.getElementById('stat-empresa-origem').textContent = parsed.empresaOrigem;
-                empresaBanner.classList.remove('hidden');
-            } else {
-                empresaBanner.classList.add('hidden');
+            // Cruza com CP_BaseMestra → marca combinações pendentes.
+            _cpEtlState.mestra = await cpCarregarBaseMestra();
+            const pendentesMap = new Map(); // chave → { chave, fornecedor, despesa, qtde }
+            for (const lanc of lancamentos) {
+                const chave = cpChaveMestra(lanc.fornecedor, lanc.despesa);
+                lanc._chaveMestra = chave;
+                const conhecido = _cpEtlState.mestra.get(chave);
+                if (conhecido) {
+                    lanc._classificacao = conhecido.classificacao;
+                    lanc._centro_custo  = conhecido.centro_custo;
+                    lanc._periodicidade = conhecido.periodicidade;
+                    lanc._data_fim_contrato = conhecido.data_fim_contrato || null;
+                } else {
+                    let prev = pendentesMap.get(chave);
+                    if (!prev) {
+                        prev = { chave, fornecedor: lanc.fornecedor, despesa: lanc.despesa, qtde: 0 };
+                        pendentesMap.set(chave, prev);
+                    }
+                    prev.qtde++;
+                }
             }
-            document.getElementById('dryrun-stats').classList.remove('hidden');
+            _cpEtlState.pendentes = [...pendentesMap.values()].sort((a, b) =>
+                a.fornecedor.localeCompare(b.fornecedor, 'pt-BR')
+            );
 
-            // Calcula pendências aqui (cruzamento contra regrasCache já em memória).
-            recalcularPendencias();
-            const pend = wizardState.entidadesPendentes.length;
-            const resumo = document.getElementById('dryrun-pendencias-resumo');
-            const txt = resumo.querySelector('[data-pendencias-text]');
-            if (pend > 0) {
-                txt.textContent = `${pend} ${pend === 1 ? 'entidade não está' : 'entidades não estão'} no Banco de Regras — você vai classificá-${pend === 1 ? 'la' : 'las'} no próximo passo.`;
-                resumo.classList.remove('hidden');
+            if (_cpEtlState.pendentes.length > 0) {
+                // Abre a quarentena. O fluxo de gravação continua dentro do
+                // handler "Aplicar e Importar" do modal.
+                _cpAbrirQuarentena();
             } else {
-                txt.textContent = 'Todas as entidades já têm regra cadastrada — pode gravar diretamente.';
-                resumo.classList.remove('hidden');
-            }
-
-            if (parsed.pagamentos.length > 0) {
-                btnAvancar.disabled = false;
-            } else {
-                mostrarMsgPasso('upload', 'Nenhuma linha de pagamento detectada (padrão `\\d{6}-\\d{3}`). Verifique se o arquivo está correto.', 'erro');
-                btnAvancar.disabled = true;
+                // Nada pendente — segue direto para gravação.
+                await _cpFinalizarImportacao();
             }
         } catch (err) {
-            console.error('[ETL TXT] falha ao ler arquivo:', err);
-            mostrarMsgPasso('upload', `Falha ao ler o arquivo: ${err.message || 'erro desconhecido'}.`, 'erro');
-            btnAvancar.disabled = true;
+            console.error('[ETL CP] falha no parser:', err);
+            mostrarToast('Falha ao ler o arquivo TXT: ' + (err.message || 'erro'), 'error', true);
+        } finally {
+            inputFileCP.value = '';
         }
     });
 
-    function mostrarMsgPasso(passo, texto, tipo = 'erro') {
-        const el = document.getElementById('msg-passo-' + passo);
-        if (!el) return;
-        el.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'border-red-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
-        if (tipo === 'sucesso') {
-            el.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-200');
-            el.innerHTML = `<span class="material-symbols-outlined text-base">check_circle</span> ${texto}`;
+    // ── Modal de Quarentena ─────────────────────────────────────────────────
+    const _cpQuarModal = document.getElementById('modal-cp-quarentena');
+    const _cpQuarCorpo = document.getElementById('cp-quar-corpo');
+    const _cpQuarVazio = document.getElementById('cp-quar-vazio');
+    const _cpQuarResumo = document.getElementById('cp-quar-resumo');
+    const _cpQuarStatus = document.getElementById('cp-quar-status');
+    const _cpQuarBtnAplicar = document.getElementById('btn-aplicar-cp-quarentena');
+
+    function _cpAbrirQuarentena() {
+        // Renderiza as linhas — uma por combinação fornecedor+despesa pendente.
+        // Cada linha tem três selects (classificação, CC, periodicidade) ligados
+        // por data-chave. O CC reusa a coleção AreasContasPagar (mesma fonte
+        // do filtro principal — alimentada pelo onSnapshot global).
+        const areas = Array.from(document.getElementById('filtro-centro-custo').options)
+            .map(o => o.value).filter(v => v); // remove o "Todas" vazio
+        const pend = _cpEtlState.pendentes;
+        _cpEtlState.mapeamentos.clear();
+
+        _cpQuarResumo.textContent = `${pend.length} combinação(ões) Fornecedor+Despesa não cadastradas na Base Mestra — ${_cpEtlState.lancamentos.length} lançamentos no arquivo.`;
+        if (pend.length === 0) {
+            _cpQuarCorpo.innerHTML = '';
+            _cpQuarVazio.classList.remove('hidden');
         } else {
-            el.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
-            el.innerHTML = `<span class="material-symbols-outlined text-base">error</span> ${texto}`;
-        }
-    }
-
-    function recalcularPendencias() {
-        // Heurística pass-through (Fase 2.1, auditoria 2026-04-29):
-        //   1. Cabeçalhos sem regra → SEMPRE pendentes (precisam ser
-        //      classificados pelo admin como Cliente/Fornecedor/etc).
-        //   2. Fornecedores sob cabeçalho COM regra `Cliente` → herdam a Área
-        //      do cliente automaticamente (tipo=Custo de Cliente). NÃO pendentes.
-        //   3. Fornecedores cujo cabeçalho está pendente → assumimos que será
-        //      classificado como Cliente. NÃO pendentes (otimismo operacional).
-        //   4. Fornecedores órfãos (sem cabeçalho) ou sob cabeçalho com regra
-        //      diferente de `Cliente` → pendentes se não tiverem regra própria.
-        const pendentes = new Set();
-
-        // Cabeçalhos pendentes (sem regra própria).
-        const headers = new Set();
-        for (const c of wizardState.clientes) {
-            const n = String(c.nome || '').trim().toUpperCase();
-            if (n) headers.add(n);
-        }
-        const headersPendentes = new Set();
-        for (const h of headers) {
-            if (!classificarPorRegra(h)) {
-                pendentes.add(h);
-                headersPendentes.add(h);
-            }
-        }
-
-        // Fornecedores: avaliação caso a caso.
-        for (const pag of wizardState.pagamentos) {
-            const forn = String(pag.fornecedor || '').trim().toUpperCase();
-            if (!forn) continue;
-            if (classificarPorRegra(forn)) continue; // já tem regra própria
-
-            const cli = String(pag.clienteAtual || '').trim().toUpperCase();
-            const regraCli = cli ? classificarPorRegra(cli) : null;
-            if (regraCli && regraCli.tipo_entidade === 'Cliente') continue;       // pass-through
-            if (cli && headersPendentes.has(cli)) continue;                        // cabeçalho será classificado como Cliente
-            // Órfão ou sob cabeçalho com regra ≠ Cliente → entra na fila.
-            pendentes.add(forn);
-        }
-
-        wizardState.entidadesPendentes = [...pendentes].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    }
-
-    // ── NAVEGAÇÃO ENTRE PASSOS ──────────────────────────────────────────────
-    function atualizarPassoUI() {
-        const passos = ['upload', 'conciliacao', 'finalizando'];
-        for (const p of passos) {
-            document.querySelector(`[data-passo="${p}"]`).classList.toggle('hidden', p !== wizardState.passo);
-            const ind = document.querySelector(`[data-passo-indicador="${p}"]`);
-            if (!ind) continue;
-            const idxAtual = passos.indexOf(wizardState.passo);
-            const idxInd = passos.indexOf(p);
-            ind.classList.remove('bg-tertiary', 'text-white', 'bg-emerald-500', 'bg-slate-100', 'text-slate-400');
-            if (idxInd < idxAtual) ind.classList.add('bg-emerald-500', 'text-white');
-            else if (idxInd === idxAtual) ind.classList.add('bg-tertiary', 'text-white');
-            else ind.classList.add('bg-slate-100', 'text-slate-400');
-        }
-        // Botões contextuais
-        const lbl = document.getElementById('lbl-wizard-avancar');
-        const ico = document.getElementById('ico-wizard-avancar');
-        const subt = document.getElementById('wizard-subtitulo');
-        if (wizardState.passo === 'upload') {
-            lbl.textContent = wizardState.entidadesPendentes.length > 0 ? 'Próximo: Conciliação' : 'Gravar Lançamentos';
-            ico.textContent = 'arrow_forward';
-            btnVoltar.classList.add('hidden');
-            btnAvancar.classList.remove('hidden');
-            subt.textContent = 'Selecione o spool bancário para iniciar a leitura.';
-        } else if (wizardState.passo === 'conciliacao') {
-            lbl.textContent = 'Salvar Regras e Continuar';
-            ico.textContent = 'auto_awesome';
-            btnVoltar.classList.remove('hidden');
-            btnVoltar.classList.add('flex');
-            btnAvancar.classList.remove('hidden');
-            subt.textContent = `${wizardState.entidadesPendentes.length} ${wizardState.entidadesPendentes.length === 1 ? 'entidade' : 'entidades'} para classificar.`;
-        } else if (wizardState.passo === 'finalizando') {
-            btnVoltar.classList.add('hidden');
-            btnAvancar.classList.add('hidden');
-            document.getElementById('btn-wizard-cancelar').textContent = 'Fechar';
-            subt.textContent = 'Importação concluída.';
-        }
-    }
-
-    btnVoltar.addEventListener('click', () => {
-        if (wizardState.passo === 'conciliacao') {
-            wizardState.passo = 'upload';
-            atualizarPassoUI();
-        }
-    });
-
-    btnAvancar.addEventListener('click', async () => {
-        if (wizardState.passo === 'upload') {
-            // Recalcula pendências (caso regras tenham chegado por snapshot
-            // depois do dryrun) e decide pra qual passo ir.
-            recalcularPendencias();
-            if (wizardState.entidadesPendentes.length > 0) {
-                renderConciliacaoTabela();
-                wizardState.passo = 'conciliacao';
-                atualizarPassoUI();
-            } else {
-                await persistirImportacao([]);
-            }
-        } else if (wizardState.passo === 'conciliacao') {
-            const novasRegras = lerFormConciliacao();
-            if (!novasRegras) return; // erro já mostrado inline
-            await persistirImportacao(novasRegras);
-        }
-    });
-
-    // ── PASSO 2: TABELA DE CONCILIAÇÃO ──────────────────────────────────────
-    function renderConciliacaoTabela() {
-        const corpo = document.getElementById('conciliacao-corpo');
-        // Ordena os CCs disponíveis para datalist em runtime (alimentado por
-        // popularDropdownsCC mas vamos extrair os valores aqui).
-        const ccsDisponiveis = [...document.querySelectorAll('#datalist-cc-manual option')]
-            .map(o => o.value).filter(Boolean);
-        corpo.innerHTML = wizardState.entidadesPendentes.map((ent, idx) => {
-            const tipoSug = wizardState.sugestoesTipo[ent] || 'Fornecedor Externo';
-            return `
-                <tr class="hover:bg-slate-50">
-                    <td class="px-4 py-3 align-top">
-                        <p class="text-xs font-extrabold text-secondary">${ent.replace(/</g, '&lt;')}</p>
-                        <p class="text-[10px] text-slate-400 font-medium mt-0.5">Sugerido: ${tipoSug}</p>
-                    </td>
-                    <td class="px-4 py-3 align-top">
-                        <select data-conc-tipo="${idx}" class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs font-bold text-secondary bg-white focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary outline-none">
-                            <option value="Cliente" ${tipoSug === 'Cliente' ? 'selected' : ''}>Cliente</option>
-                            <option value="Fornecedor Externo" ${tipoSug === 'Fornecedor Externo' ? 'selected' : ''}>Fornecedor Externo</option>
-                            <option value="Fornecedor Interno (PJ)" ${tipoSug === 'Fornecedor Interno (PJ)' ? 'selected' : ''}>Fornecedor Interno (PJ)</option>
+            _cpQuarVazio.classList.add('hidden');
+            _cpQuarCorpo.innerHTML = pend.map((p, idx) => `
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                    <td class="px-4 py-2.5 text-[12px] font-bold text-slate-800 align-top">${cpEscape(p.fornecedor)}</td>
+                    <td class="px-4 py-2.5 text-[12px] text-slate-600 align-top">${cpEscape(p.despesa || '—')}</td>
+                    <td class="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 align-top tabular-nums">${p.qtde}</td>
+                    <td class="px-4 py-2.5 align-top">
+                        <select data-quar-campo="classificacao" data-quar-chave="${cpEscape(p.chave)}"
+                                class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                            <option value="">Selecione…</option>
+                            ${CP_CLASSIFICACOES.map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </td>
-                    <td class="px-4 py-3 align-top">
-                        <input data-conc-cc="${idx}" type="text" placeholder="Ex: TI"
-                            list="datalist-conc-cc"
-                            class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs font-medium focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary outline-none placeholder:text-slate-300" />
+                    <td class="px-4 py-2.5 align-top">
+                        <select data-quar-campo="centro_custo" data-quar-chave="${cpEscape(p.chave)}"
+                                class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                            <option value="">Selecione…</option>
+                            ${areas.map(a => `<option value="${cpEscape(a)}">${cpEscape(a)}</option>`).join('')}
+                        </select>
                     </td>
-                </tr>`;
-        }).join('');
-        // Datalist compartilhado entre todas as linhas
-        let dl = document.getElementById('datalist-conc-cc');
-        if (!dl) {
-            dl = document.createElement('datalist');
-            dl.id = 'datalist-conc-cc';
-            document.body.appendChild(dl);
-        }
-        dl.innerHTML = ccsDisponiveis.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
-    }
-
-    function lerFormConciliacao() {
-        const novasRegras = [];
-        for (let i = 0; i < wizardState.entidadesPendentes.length; i++) {
-            const ent = wizardState.entidadesPendentes[i];
-            const tipo = document.querySelector(`[data-conc-tipo="${i}"]`)?.value;
-            const cc = document.querySelector(`[data-conc-cc="${i}"]`)?.value.trim();
-            if (!tipo || !cc) {
-                mostrarToast(`Preencha tipo e área para "${ent.slice(0, 40)}".`, 'warning', true);
-                return null;
-            }
-            // Chave de busca: usa a entidade INTEIRA em maiúsculas — o ETL
-            // posterior faz substring-match, então isso vira a primeira regra
-            // específica daquele nome. Admin pode encurtar depois em
-            // Configurações → Regras de Classificação.
-            novasRegras.push({
-                chave_busca: ent,
-                tipo_entidade: tipo,
-                centro_custo: cc,
+                    <td class="px-4 py-2.5 align-top">
+                        <select data-quar-campo="periodicidade" data-quar-chave="${cpEscape(p.chave)}"
+                                class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                            <option value="">Selecione…</option>
+                            ${CP_PERIODICIDADES.map(p => `<option value="${p}">${p}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="px-4 py-2.5 align-top">
+                        <input type="month" data-quar-campo="data_fim_contrato" data-quar-chave="${cpEscape(p.chave)}"
+                               placeholder="—" disabled
+                               class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-slate-50 text-slate-400 cursor-not-allowed focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                    </td>
+                </tr>
+            `).join('');
+            // Wire dos selects → recalcula status do botão Aplicar.
+            _cpQuarCorpo.querySelectorAll('select[data-quar-campo]').forEach(sel => {
+                sel.addEventListener('change', (e) => {
+                    // Quando Periodicidade muda, habilita/desabilita o input de
+                    // "Fim Contrato" na MESMA linha. Visível apenas em "Fixo".
+                    if (sel.getAttribute('data-quar-campo') === 'periodicidade') {
+                        _cpAtualizarFimContratoInput(sel.closest('tr'), sel.value);
+                    }
+                    _cpRevalidarQuarentena();
+                });
             });
         }
-        return novasRegras;
+
+        _cpQuarBtnAplicar.disabled = true;
+        _cpQuarStatus.textContent = 'Preencha todas as classificações para liberar a importação.';
+        abrirModal('modal-cp-quarentena');
+        _cpRevalidarQuarentena();
     }
 
-    // ── PERSISTÊNCIA ────────────────────────────────────────────────────────
-    // gerarDocId compõe a chave única dos pagamentos (especificação Fase 2):
-    //   ${codigo}_${dataYYYYMMDD}_${valorEmCentavos}
-    // Reimportar o mesmo arquivo NÃO duplica linhas — merge:true atualiza
-    // o doc existente e mantém campos como categoria/regra_aplicada.
-    function gerarDocIdPagamento(pag) {
-        const codigo = String(pag.codigo || 'sem_cod').replace(/\D/g, '').slice(0, 6) || 'sem_cod';
-        const dataCompacta = (pag.data || '').replace(/\D/g, '') || 'sem_data';
-        const centavos = Math.round((Number(pag.valor) || 0) * 100);
-        return `${codigo}_${dataCompacta}_${centavos}`;
-    }
-
-    async function persistirImportacao(novasRegras) {
-        wizardState.passo = 'finalizando';
-        atualizarPassoUI();
-        document.getElementById('ico-finalizando').textContent = 'progress_activity';
-        document.getElementById('ico-finalizando').classList.add('spin');
-        document.getElementById('titulo-finalizando').textContent = 'Gravando…';
-        document.getElementById('msg-finalizando').textContent = 'Aplicando regras e persistindo lançamentos.';
-
-        let regrasCriadas = 0;
-        let lancNovos = 0;
-        let lancMerge = 0;
-        const idsVistos = new Set();
-
-        try {
-            // 1) Persistir novas regras PRIMEIRO — pra que classificarPorRegra
-            // consiga encontrá-las quando processarmos os pagamentos abaixo.
-            for (const r of (novasRegras || [])) {
-                await addDoc(collection(db, 'RegrasConciliacao'), {
-                    chave_busca: r.chave_busca,
-                    tipo_entidade: r.tipo_entidade,
-                    centro_custo: r.centro_custo,
-                    criado_em: serverTimestamp(),
-                    criado_por: usuarioLogadoNome,
-                    atualizado_em: serverTimestamp(),
-                    atualizado_por: usuarioLogadoNome,
-                    origem: 'wizard_importacao_txt',
-                });
-                regrasCriadas++;
-            }
-            // Aguarda o snapshot do RegrasConciliacao chegar com as regras novas
-            // (o listener já está ativo em inscreverRegras). Como writes locais
-            // são ecoados imediatamente, regrasCache deve ter as adições em ms.
-            // Defensivamente, aplicamos as regras NOVAS direto na lookup local
-            // sem esperar o snapshot — garantia de classificação consistente.
-            const regrasEfetivas = [...regrasCache];
-            for (const r of (novasRegras || [])) regrasEfetivas.push(r);
-            regrasEfetivas.sort((a, b) => String(b.chave_busca || '').length - String(a.chave_busca || '').length);
-
-            const classificarLocal = (entidade) => {
-                const alvo = String(entidade || '').toUpperCase();
-                if (!alvo) return null;
-                for (const r of regrasEfetivas) {
-                    const ch = String(r.chave_busca || '').toUpperCase().trim();
-                    if (ch && alvo.includes(ch)) return r;
-                }
-                return null;
-            };
-
-            // 2) Persistir pagamentos com merge:true em batches de 450.
-            const CHUNK = 450;
-            const total = wizardState.pagamentos.length;
-            for (let i = 0; i < total; i += CHUNK) {
-                const fatia = wizardState.pagamentos.slice(i, i + CHUNK);
-                const batch = writeBatch(db);
-                for (const pag of fatia) {
-                    const id = gerarDocIdPagamento(pag);
-                    if (idsVistos.has(id)) {
-                        // 2 linhas no MESMO arquivo com mesma chave → merge
-                        // resolve, mas contamos para diagnóstico.
-                        lancMerge++;
-                    } else {
-                        idsVistos.add(id);
-                        lancNovos++;
-                    }
-                    // Aplica regra com PASS-THROUGH para Cliente (Fase 2.1):
-                    //   1. Se o cabeçalho do pagamento tem regra `Cliente`, o
-                    //      pagamento herda a Área do Cliente e o tipo é
-                    //      sobrescrito para "Custo de Cliente" (mesmo que o
-                    //      fornecedor tenha regra própria — operação manda).
-                    //   2. Caso contrário, prefere regra do fornecedor; se
-                    //      ausente, cai no cabeçalho como fallback contábil.
-                    const regraCli  = classificarLocal(pag.clienteAtual);
-                    const regraForn = classificarLocal(pag.fornecedor);
-                    let cc = null, tipoEnt = null, regraAplicada = null;
-                    if (regraCli && regraCli.tipo_entidade === 'Cliente') {
-                        cc = regraCli.centro_custo;
-                        tipoEnt = 'Custo de Cliente';
-                        regraAplicada = `cliente:${regraCli.chave_busca}`;
-                    } else if (regraForn) {
-                        cc = regraForn.centro_custo;
-                        tipoEnt = regraForn.tipo_entidade;
-                        regraAplicada = regraForn.chave_busca;
-                    } else if (regraCli) {
-                        cc = regraCli.centro_custo;
-                        tipoEnt = regraCli.tipo_entidade;
-                        regraAplicada = `cliente:${regraCli.chave_busca}`;
-                    }
-
-                    const payload = {
-                        codigo: pag.codigo,
-                        empresa_origem: wizardState.empresaOrigem || null,
-                        entidade: pag.fornecedor || pag.clienteAtual || '—',
-                        cliente_origem: pag.clienteAtual || null,
-                        fornecedor: pag.fornecedor || null,
-                        data_vencimento: pag.data,
-                        // Prefere o competencia_ref já construído pelo parser
-                        // (MM/AAAA direto das partes do split) e cai no derivador
-                        // só se vier ausente — defesa contra linhas sem data.
-                        competencia_ref: pag.competencia_ref || refMMYYYY(pag.data),
-                        valor_original: Number(pag.valor) || 0,
-                        status: pag.status || 'pendente',
-                        categoria: pag.categoria || null,
-                        centro_custo: cc,
-                        tipo_entidade: tipoEnt,
-                        regra_aplicada: regraAplicada,
-                        origem: 'etl_txt',
-                        arquivo: wizardState.arquivoNome,
-                        linha: pag._linha,
-                        criado_por: usuarioLogadoNome,
-                        updated_at: serverTimestamp(),
-                    };
-                    // Set com merge:true: idempotência total. Se já existir,
-                    // atualiza apenas os campos enviados (não apaga categoria
-                    // editada manualmente em outro fluxo).
-                    batch.set(doc(db, COLECAO, id), payload, { merge: true });
-                }
-                await batch.commit();
-                document.getElementById('msg-finalizando').textContent =
-                    `Gravando ${Math.min(i + CHUNK, total)}/${total} lançamentos…`;
-            }
-
-            // 3) Sucesso — atualiza UI com stats finais.
-            document.getElementById('ico-finalizando').textContent = 'check_circle';
-            document.getElementById('ico-finalizando').classList.remove('spin');
-            document.getElementById('titulo-finalizando').textContent = 'Importação concluída';
-            document.getElementById('msg-finalizando').textContent =
-                `${total} ${total === 1 ? 'lançamento processado' : 'lançamentos processados'} a partir de ${wizardState.arquivoNome}.`;
-            document.getElementById('stat-regras-criadas').textContent = regrasCriadas.toLocaleString('pt-BR');
-            document.getElementById('stat-lancamentos-gravados').textContent = lancNovos.toLocaleString('pt-BR');
-            document.getElementById('stat-lancamentos-merge').textContent = lancMerge.toLocaleString('pt-BR');
-            mostrarToast(`Importação concluída: ${lancNovos} novos · ${regrasCriadas} regras aprendidas.`, 'check_circle');
-        } catch (err) {
-            console.error('[ETL TXT] persistência falhou:', err);
-            document.getElementById('ico-finalizando').textContent = 'error';
-            document.getElementById('ico-finalizando').classList.remove('spin');
-            document.getElementById('titulo-finalizando').textContent = 'Falha na importação';
-            const detalhe = err.code === 'permission-denied'
-                ? 'Acesso negado: seu perfil não tem permissão para gravar em Contas a Pagar ou Regras.'
-                : (err.message || 'erro desconhecido');
-            document.getElementById('msg-finalizando').textContent = detalhe;
-            mostrarToast('Falha ao gravar a importação.', 'error', true);
+    // Toggle visual + de habilitação do input "Fim Contrato" na linha. Só
+    // entra em jogo quando Periodicidade === "Fixo" — em "Variável" o campo
+    // é zerado e desabilitado (prevenção contra dado parasita).
+    function _cpAtualizarFimContratoInput(tr, periodicidade) {
+        if (!tr) return;
+        const inp = tr.querySelector('input[data-quar-campo="data_fim_contrato"]');
+        if (!inp) return;
+        if (String(periodicidade) === 'Fixo') {
+            inp.disabled = false;
+            inp.placeholder = 'aaaa-mm';
+            inp.classList.remove('bg-slate-50', 'text-slate-400', 'cursor-not-allowed');
+            inp.classList.add('bg-white', 'text-slate-700');
+        } else {
+            inp.value = '';
+            inp.disabled = true;
+            inp.placeholder = '—';
+            inp.classList.add('bg-slate-50', 'text-slate-400', 'cursor-not-allowed');
+            inp.classList.remove('bg-white', 'text-slate-700');
         }
     }
+
+    function _cpRevalidarQuarentena() {
+        const linhas = [..._cpQuarCorpo.querySelectorAll('tr')];
+        let preenchidas = 0;
+        const total = linhas.length;
+        for (const tr of linhas) {
+            const c1 = tr.querySelector('select[data-quar-campo="classificacao"]')?.value;
+            const c2 = tr.querySelector('select[data-quar-campo="centro_custo"]')?.value;
+            const c3 = tr.querySelector('select[data-quar-campo="periodicidade"]')?.value;
+            if (c1 && c2 && c3) preenchidas++;
+        }
+        const tudoOk = total > 0 && preenchidas === total;
+        _cpQuarBtnAplicar.disabled = !tudoOk;
+        if (tudoOk) {
+            _cpQuarStatus.innerHTML = `<span class="text-emerald-600 font-bold">✓ Todas as combinações classificadas — pronto para importar.</span>`;
+        } else {
+            const faltam = total - preenchidas;
+            _cpQuarStatus.innerHTML = `Faltam <strong class="text-red-600">${faltam}</strong> de <strong>${total}</strong> classificações.`;
+        }
+    }
+
+    function _cpColetarMapeamentos() {
+        const out = new Map();
+        const linhas = [..._cpQuarCorpo.querySelectorAll('tr')];
+        for (const tr of linhas) {
+            const selCls = tr.querySelector('select[data-quar-campo="classificacao"]');
+            if (!selCls) continue;
+            const chave = selCls.getAttribute('data-quar-chave');
+            const periodicidade = tr.querySelector('select[data-quar-campo="periodicidade"]').value;
+            // data_fim_contrato só é capturado se Periodicidade === Fixo. Em
+            // "Variável" o input fica desabilitado/zerado (UX previne parasita).
+            const inpFim = tr.querySelector('input[data-quar-campo="data_fim_contrato"]');
+            const dataFim = (periodicidade === 'Fixo' && inpFim && inpFim.value)
+                ? inpFim.value  // já em formato YYYY-MM (input type="month")
+                : null;
+            out.set(chave, {
+                classificacao: selCls.value,
+                centro_custo: tr.querySelector('select[data-quar-campo="centro_custo"]').value,
+                periodicidade,
+                data_fim_contrato: dataFim,
+            });
+        }
+        return out;
+    }
+
+    // Botões do modal (overlay e X já são fechados pelos handlers globais
+    // de [data-modal-overlay] / [data-fechar-modal] em abrirModal/fecharModal).
+    document.getElementById('btn-cancelar-cp-quarentena').addEventListener('click', () => {
+        fecharModal('modal-cp-quarentena');
+        mostrarToast('Importação cancelada. Nada foi gravado.', 'warning', true);
+    });
+    document.getElementById('btn-fechar-cp-quarentena').addEventListener('click', () => fecharModal('modal-cp-quarentena'));
+
+    _cpQuarBtnAplicar.addEventListener('click', async () => {
+        if (_cpQuarBtnAplicar.disabled) return;
+        _cpEtlState.mapeamentos = _cpColetarMapeamentos();
+        // Aplica os mapeamentos novos nos lançamentos parseados.
+        for (const lanc of _cpEtlState.lancamentos) {
+            if (lanc._classificacao) continue; // já tinha vindo da Base Mestra
+            const m = _cpEtlState.mapeamentos.get(lanc._chaveMestra);
+            if (m) {
+                lanc._classificacao = m.classificacao;
+                lanc._centro_custo  = m.centro_custo;
+                lanc._periodicidade = m.periodicidade;
+                lanc._data_fim_contrato = m.data_fim_contrato || null;
+            }
+        }
+        // Salva novos mapeamentos em CP_BaseMestra (o robô aprende).
+        await _cpSalvarBaseMestra(_cpEtlState.mapeamentos);
+        fecharModal('modal-cp-quarentena');
+        await _cpFinalizarImportacao();
+    });
+
+    // ── Persistência: aprendizado em CP_BaseMestra ──────────────────────────
+    // Grava UM doc por combinação. ID determinístico pra evitar duplicação
+    // se a mesma chave aparecer em duas importações simultâneas. setDoc com
+    // merge true ainda dá efeito de "upsert" caso a regra mude.
+    async function _cpSalvarBaseMestra(mapeamentos) {
+        if (!mapeamentos || !mapeamentos.size) return;
+        const batch = writeBatch(db);
+        for (const [chave, m] of mapeamentos) {
+            // chave já está em uppercase canonical — extrai forn+despesa originais
+            const pend = _cpEtlState.pendentes.find(p => p.chave === chave);
+            if (!pend) continue;
+            const docId = _cpSlugDocId(chave);
+            const ref = doc(db, COLECAO_MESTRA, docId);
+            batch.set(ref, {
+                fornecedor: pend.fornecedor,
+                despesa: pend.despesa,
+                classificacao: m.classificacao,
+                centro_custo: m.centro_custo,
+                periodicidade: m.periodicidade,
+                // data_fim_contrato (YYYY-MM): teto da projeção quando Fixo.
+                // null em Variável OU Fixo sem prazo → projeção vai até Dez do ano.
+                data_fim_contrato: m.data_fim_contrato || null,
+                created_at: serverTimestamp(),
+                updated_at: serverTimestamp(),
+                criado_por: usuarioLogadoNome,
+            }, { merge: true });
+        }
+        try {
+            await batch.commit();
+            console.log(`[CP_BaseMestra] ${mapeamentos.size} aprendizado(s) gravados.`);
+        } catch (err) {
+            console.error('[CP_BaseMestra] falha ao gravar aprendizado:', err);
+            mostrarToast('Os aprendizados não foram salvos — verifique sua permissão. A importação continuará.', 'warning', true);
+        }
+    }
+
+    // Slug determinístico p/ docId (sem caracteres proibidos pelo Firestore).
+    function _cpSlugDocId(s) {
+        return String(s || '')
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^A-Za-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .slice(0, 220) || 'sem_chave';
+    }
+
+    // ── Projeção Fixo: clona até o teto contratual OU até dezembro do ano ──
+    // Auditoria 2026-05-14 (FIX): a versão anterior projetava cegamente até
+    // dezembro do ano do vencimento original, gerando custos fantasmas em
+    // contratos com data fim antes disso (ex.: locação com término em maio).
+    // Agora consultamos `_data_fim_contrato` (formato YYYY-MM, lido da
+    // CP_BaseMestra ou capturado no modal de quarentena):
+    //   - SE existir: projeta até o mês/ano informado, INCLUSIVE.
+    //   - SE NÃO existir: comportamento anterior — projeta até dezembro do
+    //     mesmo ano do vencimento original.
+    function _cpAdicionarMeses(yyyymmdd, n) {
+        const m = String(yyyymmdd).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return yyyymmdd;
+        let ano = parseInt(m[1], 10);
+        let mes = parseInt(m[2], 10) + n;
+        let dia = parseInt(m[3], 10);
+        while (mes > 12) { mes -= 12; ano += 1; }
+        const ultDia = new Date(ano, mes, 0).getDate();
+        if (dia > ultDia) dia = ultDia;
+        return `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    }
+
+    // Calcula até qual mês (em ano-mes "YYYY-MM") a projeção deve ir, dado o
+    // vencimento original e a data_fim_contrato (opcional).
+    function _cpTetoProjecao(vencimentoISO, dataFimContrato) {
+        const mV = String(vencimentoISO || '').match(/^(\d{4})-(\d{2})-/);
+        if (!mV) return null;
+        const anoVenc = mV[1];
+        const tetoPadrao = `${anoVenc}-12`; // dezembro do ano do vencimento
+
+        const fim = String(dataFimContrato || '').match(/^(\d{4})-(\d{2})$/);
+        if (!fim) return tetoPadrao;
+        // Se a data fim for ANTERIOR ao vencimento original, projeção é zero
+        // (devolve o próprio mês do vencimento — laço não roda).
+        const mesVenc = `${anoVenc}-${mV[2]}`;
+        return fim[0] < mesVenc ? mesVenc : fim[0];
+    }
+
+    function _cpExpandirProjecaoFixo(lancamentos) {
+        const expandido = [];
+        for (const l of lancamentos) {
+            expandido.push({ ...l, _projetado: false });
+            if (String(l._periodicidade).toLowerCase() !== 'fixo') continue;
+            const m = String(l.vencimentoISO || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!m) continue;
+            const tetoAnoMes = _cpTetoProjecao(l.vencimentoISO, l._data_fim_contrato);
+            if (!tetoAnoMes) continue;
+            // Avança +1 mês até atingir (inclusive) o teto. Suporta projeções
+            // multi-ano quando a data_fim_contrato cruzar o virar do ano.
+            for (let offset = 1; offset <= 60; offset++) { // hard cap 5 anos defensivo
+                const novoVenc = _cpAdicionarMeses(l.vencimentoISO, offset);
+                const novoAnoMes = novoVenc.slice(0, 7); // YYYY-MM
+                if (novoAnoMes > tetoAnoMes) break;
+                expandido.push({
+                    ...l,
+                    vencimentoISO: novoVenc,
+                    situacao: 'pendente', // projeções nascem como pendentes
+                    _projetado: true,
+                });
+            }
+        }
+        return expandido;
+    }
+
+    // ── Gravação final em ContasAPagar ──────────────────────────────────────
+    async function _cpFinalizarImportacao() {
+        const expandido = _cpExpandirProjecaoFixo(_cpEtlState.lancamentos);
+        if (!expandido.length) {
+            mostrarToast('Nada para gravar.', 'warning', true);
+            return;
+        }
+        const projetados = expandido.filter(l => l._projetado).length;
+        try {
+            for (let i = 0; i < expandido.length; i += CHUNK_SIZE) {
+                const fatia = expandido.slice(i, i + CHUNK_SIZE);
+                const batch = writeBatch(db);
+                for (const l of fatia) {
+                    const ref = doc(collection(db, COLECAO));
+                    batch.set(ref, {
+                        data_vencimento: l.vencimentoISO,
+                        competencia_ref: cpRefMMYYYY(l.vencimentoISO),
+                        entidade: l.fornecedor,
+                        categoria: l.despesa || null,
+                        valor_original: Number(l.valor) || 0,
+                        status: l._projetado ? 'pendente' : (l.situacao || 'pendente'),
+                        situacao_origem: l.situacaoBruta || null,
+                        centro_custo: l._centro_custo || null,
+                        tipo_entidade: l._classificacao || null,
+                        periodicidade: l._periodicidade || null,
+                        data_fim_contrato: l._data_fim_contrato || null,
+                        cliente_origem: l.cliente || null,
+                        origem: l._projetado ? 'etl_projetado_fixo' : 'etl_txt',
+                        arquivo: _cpEtlState.arquivoNome,
+                        criado_por: usuarioLogadoNome,
+                        created_at: serverTimestamp(),
+                        updated_at: serverTimestamp(),
+                    });
+                }
+                await batch.commit();
+            }
+            const partes = [`${expandido.length} lançamento(s) gravado(s)`];
+            if (projetados) partes.push(`${projetados} projetado(s) (Fixo)`);
+            if (_cpEtlState.mapeamentos.size) partes.push(`${_cpEtlState.mapeamentos.size} regra(s) aprendida(s)`);
+            mostrarToast(partes.join(' · '), 'check_circle');
+        } catch (err) {
+            console.error('[ContasAPagar] gravação falhou:', err);
+            const motivo = err?.code === 'permission-denied'
+                ? 'Acesso negado: seu perfil não tem permissão para gravar em Contas a Pagar.'
+                : (err?.message || 'erro desconhecido');
+            mostrarToast('Falha ao gravar: ' + motivo, 'error', true);
+        }
+    }
+
     document.getElementById('btn-adicionar-manual').addEventListener('click', () => {
         document.getElementById('form-manual').reset();
         document.getElementById('msg-form-manual').classList.add('hidden');

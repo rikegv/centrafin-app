@@ -13,12 +13,17 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     // Definição de estados ativos
     const isMasterActive = currentPath.includes('dashboard_master_desktop') ? activeClass : inactiveClass;
     const isFatActive = currentPath.includes('contas_a_receber_desktop') ? activeClass : inactiveClass;
-    const isPagarActive = currentPath.includes('contas_a_pagar_desktop') ? activeClass : inactiveClass;
+    // Auditoria 2026-05-14: módulo legado contas_a_pagar_desktop foi exterminado
+    // — só o novo Gerenciador Contas a Pagar tem entrada no menu agora.
+    const isPagarActive = currentPath.includes('gerenciador_contas_pagar_desktop') ? activeClass : inactiveClass;
     const isParceirosActive = (currentPath.includes('gest_o_de_cadastros')) ? activeClass : inactiveClass;
     const isMetasActive = currentPath.includes('metas_desktop') ? activeClass : inactiveClass;
     const isCustoFolhaActive = currentPath.includes('custo_folha_desktop') ? activeClass : inactiveClass;
     // master.html agora abriga Configurações e Privacidade (abas Usuários + Auditoria).
     const isConfiguracoesActive = currentPath.includes('master.html') ? activeClass : inactiveClass;
+    // Aprovações — esteira de pendências (CP_SolicitacoesAprovacao).
+    // Auditoria 2026-05-18: separa governança do operacional.
+    const isAprovacoesActive = currentPath.includes('aprovacoes_desktop') ? activeClass : inactiveClass;
 
     // Classe comum aplicada a cada link do menu — inclui borda sutil para dar aspecto premium.
     // `last:border-0` zera a borda do último item de cada seção (relativo ao seu pai direto).
@@ -29,16 +34,28 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     // master.html via tabs. Agora há um único ponto de entrada — "Configurações
     // e Privacidade" — exclusivo para Super Adm. As abas continuam dentro da
     // página, mas o usuário não precisa mais escolher pela sidebar.
+    // Auditoria 2026-05-18 (separação governança × operacional): "Aprovações"
+    // é renderizado para super_admin OU para qualquer perfil com a permissão
+    // `aprovacoes` no menus_permitidos. Posicionado entre "Configurações e
+    // Privacidade" (super_admin-only) e "Alterar tema" — bloco de governança.
     let adminMenuHtml = '';
-    if (userProfile === 'super_admin') {
-        adminMenuHtml = `
-            <div class="mt-2 pt-4 px-2">
-                <p class="text-[9px] font-bold text-blue-200/40 uppercase tracking-widest px-2 mb-2 hidden group-hover:block transition-all duration-300">Segurança e Privacidade</p>
-
+    const podeVerAprovacoes = userProfile === 'super_admin' || menusPermitidos.includes('aprovacoes');
+    if (userProfile === 'super_admin' || podeVerAprovacoes) {
+        const itemConfiguracoes = userProfile === 'super_admin' ? `
                 <a data-menu="configuracoes_privacidade" class="${isConfiguracoesActive} ${menuLinkClass}" href="${prefix}master.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px]">admin_panel_settings</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Configurações e Privacidade</span>
-                </a>
+                </a>` : '';
+        const itemAprovacoes = podeVerAprovacoes ? `
+                <a data-menu="aprovacoes" class="${isAprovacoesActive} ${menuLinkClass}" href="${prefix}aprovacoes_desktop/code.html">
+                    <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('aprovacoes_desktop') ? 'text-amber-400' : ''}">fact_check</span>
+                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Aprovações</span>
+                </a>` : '';
+        adminMenuHtml = `
+            <div class="mt-2 pt-4 px-2">
+                <p class="text-[9px] font-bold text-blue-200/40 uppercase tracking-widest px-2 mb-2 hidden group-hover:block transition-all duration-300">Segurança e Privacidade</p>
+                ${itemConfiguracoes}
+                ${itemAprovacoes}
             </div>
         `;
     }
@@ -77,10 +94,12 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Gerenciador Folha</span>
                 </a>
 
-                <!-- Contas a Pagar — Fase 1 ativada (auditoria 2026-04-28). -->
-                <a data-menu="contas_pagar" class="${isPagarActive} ${menuLinkClass} cursor-pointer" href="${prefix}contas_a_pagar_desktop/code.html">
-                    <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('contas_a_pagar_desktop') ? 'text-primary' : ''}">account_balance_wallet</span>
-                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Contas a Pagar</span>
+                <!-- Gerenciador Contas a Pagar — auditoria 2026-05-18:
+                     label renomeada pra deixar claro que é o ETL operacional;
+                     governança (Fornecedores) migrou pra master.html. -->
+                <a data-menu="gerenciador_contas_pagar" class="${isPagarActive} ${menuLinkClass} cursor-pointer" href="${prefix}gerenciador_contas_pagar_desktop/code.html">
+                    <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('gerenciador_contas_pagar_desktop') ? 'text-primary' : ''}">request_quote</span>
+                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Gerenciador Contas a Pagar</span>
                 </a>
 
                 ${showProductionMenus ? `
@@ -166,6 +185,9 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
         document.getElementById('btn-logout').addEventListener('click', async (e) => {
             e.preventDefault();
             console.log("Logout acionado pelo componente");
+            // Marca offline ANTES do signOut — depois do signOut as rules
+            // exigem auth e a escrita falha.
+            try { await marcarOffline(); } catch (_) {}
             try {
                 const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js");
                 const auth = getAuth();
@@ -178,7 +200,207 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
         // (renderSidebar é o choke point de toda página autenticada).
         // Spec 2026-04-30: 60 minutos sem interação → signOut + redirect login.
         installInactivityGuard(prefix);
+
+        // Presença (Monitor de Acessos — auditoria 2026-05-14): garante is_online=true
+        // ao montar a sidebar e tenta marcar offline no beforeunload. Idempotente.
+        installPresenceGuard();
+
+        // Banner de Esteira de Aprovações (Frente 4 — 2026-05-20). Só
+        // dispara pra master/super_admin. Lembra a Diretoria das pendências
+        // operacionais a cada login/refresh — usuários comuns nem disparam o
+        // snapshot (rules bloqueiam fora dos perfis listados em
+        // /CP_SolicitacoesAprovacao). Dismiss persistente por sessão.
+        instalarBannerEsteiraMaster(userProfile, prefix);
     }
+}
+
+// ── BANNER DE ESTEIRA MASTER (Frente 4 — auditoria 2026-05-20) ────────────
+// Único pra todas as páginas autenticadas: mostra ao master/super_admin
+// quantas solicitações estão paradas em CP_SolicitacoesAprovacao. Reativo
+// (onSnapshot) — o número atualiza em tempo real conforme operadores
+// submetem pedidos ou outros admins liberam. Idempotente — chamadas
+// repetidas em re-renders do sidebar não duplicam listeners.
+let _bannerEsteiraInstalado = false;
+const _BANNER_SS_KEY = 'centrafin.session.banner_esteira_dismissed';
+
+async function instalarBannerEsteiraMaster(userProfile, prefix) {
+    if (_bannerEsteiraInstalado) return;
+    const perfilN = String(userProfile || '').trim().toLowerCase();
+    if (perfilN !== 'master' && perfilN !== 'super_admin') return;
+    // Já estamos na própria tela de Aprovações — alerta seria redundante.
+    if (window.location.pathname.includes('aprovacoes_desktop')) return;
+    // Dismiss persistente nesta sessão — respeita escolha do usuário.
+    try {
+        if (sessionStorage.getItem(_BANNER_SS_KEY) === '1') return;
+    } catch (_) {}
+    _bannerEsteiraInstalado = true;
+    try {
+        const [{ getAuth }, { getFirestore, collection, onSnapshot, query, where }] = await Promise.all([
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"),
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"),
+        ]);
+        // Aguarda auth estabilizar antes de subscrever (rules dependem do token).
+        const auth = getAuth();
+        const startListener = () => {
+            const db = getFirestore();
+            const q = query(collection(db, 'CP_SolicitacoesAprovacao'), where('status', '==', 'Pendente'));
+            onSnapshot(q, (snap) => {
+                _renderBannerEsteira(snap.size || 0, prefix);
+            }, (err) => {
+                console.warn('[Banner Esteira] listener falhou:', err?.code || err?.message);
+            });
+        };
+        if (auth.currentUser) {
+            startListener();
+        } else {
+            const { onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js");
+            const unsub = onAuthStateChanged(auth, (user) => {
+                if (user) { startListener(); unsub(); }
+            });
+        }
+    } catch (e) {
+        console.warn('[Banner Esteira] init falhou:', e?.message);
+    }
+}
+
+function _renderBannerEsteira(total, prefix) {
+    let banner = document.getElementById('cfin-banner-esteira-master');
+    if (total <= 0) {
+        if (banner) banner.remove();
+        return;
+    }
+    // Verifica dismiss novamente antes de re-renderizar (defensivo: o user
+    // pode fechar entre snapshots e ainda chegar um novo evento).
+    try {
+        if (sessionStorage.getItem(_BANNER_SS_KEY) === '1') {
+            if (banner) banner.remove();
+            return;
+        }
+    } catch (_) {}
+    const plural = total === 1 ? 'solicitação aguardando' : 'solicitações aguardando';
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'cfin-banner-esteira-master';
+        // Glass design — fica sobre o conteúdo sem alterar o layout existente.
+        // Posicionado centralizado no top com offset à direita do sidebar
+        // colapsado (left calc 80px + 50%). Não interfere em scroll do main.
+        banner.className = 'fixed top-4 z-[120] flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/15 backdrop-blur-xl border border-amber-400/40 shadow-2xl shadow-amber-500/10 text-secondary';
+        banner.style.left = 'calc(50% + 40px)';
+        banner.style.transform = 'translateX(-50%)';
+        banner.style.maxWidth = 'min(720px, calc(100vw - 120px))';
+        banner.style.width = '100%';
+        banner.innerHTML =
+            '<span class="material-symbols-outlined text-amber-500 text-2xl shrink-0">fact_check</span>' +
+            '<div class="min-w-0 flex-1">' +
+                '<p class="font-headline text-sm font-extrabold leading-tight text-secondary dark:text-white">Atenção Master</p>' +
+                '<p class="text-[12px] font-medium leading-snug mt-0.5 text-slate-700 dark:text-slate-200">' +
+                    'Você possui <strong id="cfin-banner-count" class="tabular-nums text-amber-700 dark:text-amber-400"></strong> ' +
+                    '<span id="cfin-banner-plural"></span> sua validação na Esteira de Aprovações.' +
+                '</p>' +
+            '</div>' +
+            '<a id="cfin-banner-link" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-extrabold shadow-sm hover:brightness-110 active:scale-95 transition-all shrink-0" ' +
+               'style="background-color:#aad12f;color:#341100;">' +
+                'Ir para Aprovações' +
+                '<span class="material-symbols-outlined text-[14px]">arrow_forward</span>' +
+            '</a>' +
+            '<button type="button" id="cfin-banner-dismiss" class="p-1 rounded-md text-slate-500 hover:bg-amber-500/20 hover:text-secondary transition-colors shrink-0" title="Fechar até o próximo login">' +
+                '<span class="material-symbols-outlined text-base">close</span>' +
+            '</button>';
+        document.body.appendChild(banner);
+        const link = banner.querySelector('#cfin-banner-link');
+        if (link) link.href = prefix + 'aprovacoes_desktop/code.html';
+        const btnDismiss = banner.querySelector('#cfin-banner-dismiss');
+        if (btnDismiss) {
+            btnDismiss.addEventListener('click', () => {
+                try { sessionStorage.setItem(_BANNER_SS_KEY, '1'); } catch (_) {}
+                banner.remove();
+            });
+        }
+    }
+    const elCount  = banner.querySelector('#cfin-banner-count');
+    const elPlural = banner.querySelector('#cfin-banner-plural');
+    if (elCount)  elCount.textContent  = String(total);
+    if (elPlural) elPlural.textContent = plural;
+}
+
+// ── MONITOR DE ACESSOS (spec 2026-05-14) ───────────────────────────────────
+// Mantém Usuarios/{emailKey}.is_online + ultimo_acesso atualizados. Best-effort:
+// `beforeunload` raramente conclui escrita assíncrona ao Firestore, então a UI
+// do Monitor também usa heurística de tempo (last_seen < 5 min = online).
+// Idempotente — uma instalação por sessão de página.
+let _presenceInstalado = false;
+
+async function marcarOffline() {
+    try {
+        const [{ getAuth }, { getFirestore, doc, updateDoc }] = await Promise.all([
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"),
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"),
+        ]);
+        const user = getAuth().currentUser;
+        if (!user || !user.email) return;
+        const db = getFirestore();
+        const emailKey = user.email.toLowerCase();
+        await updateDoc(doc(db, 'Usuarios', emailKey), { is_online: false });
+    } catch (e) {
+        // Esperado em alguns cenários (sessão expirada, network) — silenciar.
+        console.warn('[Presence] Falha ao marcar offline:', e?.code || e?.message);
+    }
+}
+
+async function marcarOnline() {
+    try {
+        const [{ getAuth }, { getFirestore, doc, updateDoc, serverTimestamp }] = await Promise.all([
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"),
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"),
+        ]);
+        const user = getAuth().currentUser;
+        if (!user || !user.email) return;
+        const db = getFirestore();
+        const emailKey = user.email.toLowerCase();
+        await updateDoc(doc(db, 'Usuarios', emailKey), {
+            is_online: true,
+            ultimo_acesso: serverTimestamp(),
+        });
+    } catch (e) {
+        console.warn('[Presence] Falha ao marcar online:', e?.code || e?.message);
+    }
+}
+
+function installPresenceGuard() {
+    if (_presenceInstalado) return;
+    _presenceInstalado = true;
+
+    // 1) Garante online ao montar a sidebar — cobre o caso F5 em uma tela
+    //    interna sem passar por login.html (que normalmente seta is_online=true).
+    //    Aguarda o auth resolver via onAuthStateChanged.
+    import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js")
+        .then(({ getAuth, onAuthStateChanged }) => {
+            const auth = getAuth();
+            const unsub = onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    marcarOnline();
+                    unsub(); // só precisa da primeira leitura — heartbeat segue abaixo
+                }
+            });
+        }).catch(e => console.warn('[Presence] Falha ao iniciar auth listener:', e?.message));
+
+    // 2) Heartbeat suave a cada 4 minutos: re-afirma is_online + atualiza
+    //    ultimo_acesso enquanto a aba está aberta. Cobre o caso do beforeunload
+    //    falhar em marcar offline — a UI do Monitor descarta entradas com
+    //    ultimo_acesso > 5 min como "stale".
+    setInterval(() => marcarOnline(), 4 * 60 * 1000);
+
+    // 3) Tenta marcar offline ao fechar a aba. Browsers limitam writes async no
+    //    beforeunload — usamos `keepalive`/sendBeacon quando possível, mas o
+    //    Firestore SDK não expõe isso. Fica best-effort; a heurística de tempo
+    //    da UI compensa.
+    window.addEventListener('beforeunload', () => {
+        try { marcarOffline(); } catch (_) {}
+    });
+    // pagehide é mais confiável que beforeunload em alguns browsers (mobile).
+    window.addEventListener('pagehide', () => {
+        try { marcarOffline(); } catch (_) {}
+    });
 }
 
 // ── INACTIVITY GUARD (spec 2026-04-30) ──────────────────────────────────────

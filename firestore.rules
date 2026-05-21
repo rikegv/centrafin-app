@@ -37,9 +37,35 @@ service cloud.firestore {
     }
 
     // USUARIOS
+    // Auditoria 2026-05-14 (Monitor de Acessos): além do admin (que mantém
+    // CRUD completo), o próprio usuário pode atualizar APENAS os campos de
+    // presença (is_online + ultimo_acesso) no SEU próprio doc — necessário
+    // para o motor de presence em login.html + sidebar.js. Auto-elevação de
+    // perfil/permissões fica bloqueada pelo `affectedKeys().hasOnly(...)`.
     match /Usuarios/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow create, delete: if request.auth != null && isAdmin();
+      allow update: if request.auth != null && (
+        isAdmin()
+        || (
+          request.auth.token.email == docId
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['is_online', 'ultimo_acesso'])
+        )
+      );
+    }
+
+    // HISTÓRICO DE ACESSOS — auditoria 2026-05-14 (Monitor de Acessos).
+    // Qualquer autenticado pode REGISTRAR um login, MAS apenas para o próprio
+    // e-mail (defesa em profundidade — impede um user criar fake LOGIN pra
+    // outro). Leitura é restrita aos perfis admin (master / super_admin) —
+    // a UI vive em master.html. Updates e deletes são bloqueados — logs
+    // não podem ser apagados/falsificados pós-criação.
+    match /HistoricoAcessos/{docId} {
+      allow create: if request.auth != null
+                     && request.resource.data.email == request.auth.token.email;
+      allow read: if request.auth != null && isAdmin();
+      allow update, delete: if false;
     }
 
     // LOGS
@@ -100,8 +126,22 @@ service cloud.firestore {
     // Coleção foi renomeada para ContasAPagar (com "A" separado) seguindo a
     // especificação da Fase 2 do ETL. Quem tem o menu contas_pagar pode ler
     // e gravar; o parser TXT também grava nesta coleção.
+    // Auditoria 2026-05-14: o módulo novo "Gerenciador Contas a Pagar" também
+    // grava aqui (mesma collection física), então aceitamos ambas as chaves.
     match /ContasAPagar/{docId} {
-      allow read, write: if request.auth != null && hasMenu('contas_pagar');
+      // Auditoria 2026-05-18: leitura também liberada para o módulo Custo de
+      // Folha (Gerenciador + Dashboard) — integração PJ → Folha lê os
+      // lançamentos com tipo_entidade == "Fornecedor Interno - PJ" para
+      // compor o Custo Total. Escrita continua exclusiva do Contas a Pagar.
+      allow read: if request.auth != null && (
+        hasMenu('contas_pagar')
+        || hasMenu('gerenciador_contas_pagar')
+        || hasMenu('custo_folha')
+        || hasMenu('dash_custo_folha')
+      );
+      allow write: if request.auth != null && (
+        hasMenu('contas_pagar') || hasMenu('gerenciador_contas_pagar')
+      );
     }
 
     // REGRAS DE CONCILIAÇÃO — dicionário "De-Para" para o ETL automático.
@@ -122,6 +162,88 @@ service cloud.firestore {
     match /AreasContasPagar/{docId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && isAdmin();
+    }
+
+    // CP_GESTORES — Frente 3 (auditoria 2026-05-20).
+    // Cadastro de gestores responsáveis pelos Centros de Custo. Base para
+    // futuras auditorias de estouro de orçamento e fluxos de notificação.
+    // Leitura aberta para autenticados (preenche dropdowns na área de
+    // Cadastro de Áreas). Escrita restrita ao admin (CRUD em master.html →
+    // Regras de Classificação → Áreas & Gestores).
+    match /CP_Gestores/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // CP_BASE_MESTRA — auditoria 2026-05-14 (Fase 1 ETL Preditivo do Contas a Pagar).
+    // Banco "aprendizado" do motor de quarentena: cada doc mapeia uma
+    // combinação (fornecedor + despesa) → classificação + centro_custo +
+    // periodicidade. O ETL lê para autoclassificar e escreve quando o usuário
+    // confirma uma nova regra no modal-cp-quarentena. Mesma permissão da
+    // ContasAPagar: tanto a tela legada (contas_pagar) quanto o novo
+    // "Gerenciador Contas a Pagar" leem e gravam aqui.
+    match /CP_BaseMestra/{docId} {
+      allow read, write: if request.auth != null && (
+        hasMenu('contas_pagar') || hasMenu('gerenciador_contas_pagar')
+      );
+    }
+
+    // FORNECEDORES — auditoria 2026-05-15 (pivot Excel nativo) +
+    // 2026-05-18 Fase 3 (Esteira de Aprovação). Banco relacional do Contas a
+    // Pagar. PK = Cód. do Fornecedor (docId = String(codigo)). Leitura:
+    // qualquer autenticado (precisa servir lookups em outras telas, incl.
+    // o cross-reference de CC do Custo de Folha).
+    // Escrita: APENAS isAdmin() (master/super_admin). Demais perfis com o
+    // menu gerenciador_contas_pagar passam pela esteira em
+    // /CP_SolicitacoesAprovacao — defesa em profundidade (UI + DB).
+    match /Fornecedores/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // CP_SOLICITACOESAPROVACAO — auditoria 2026-05-18 (Fase 3 — Governança).
+    // Refatoração 2026-05-18 (B): separação operacional × governança. Leitura
+    // liberada para quem tem o menu novo `aprovacoes` (tela centralizada de
+    // pendências). Criação continua disponível pra quem tem `gerenciador_contas_pagar`
+    // (compat com fluxos legados que ainda postavam daqui) — campo
+    // solicitado_por_email travado ao próprio e-mail. Aprovar/Rejeitar
+    // (update do status) é exclusivo de admin. Delete é restrito (audit trail
+    // imutável; rejeitados ficam no histórico).
+    match /CP_SolicitacoesAprovacao/{docId} {
+      allow read: if request.auth != null && (
+        isAdmin() || hasMenu('aprovacoes') || hasMenu('gerenciador_contas_pagar')
+      );
+      allow create: if request.auth != null
+        && (hasMenu('aprovacoes') || hasMenu('gerenciador_contas_pagar'))
+        && request.resource.data.solicitado_por_email == request.auth.token.email
+        && request.resource.data.status == 'Pendente';
+      allow update: if request.auth != null && isAdmin();
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    // CP_BASE_DESPESAS — auditoria 2026-05-15 (refatoração ETL).
+    // Dicionário "Despesa → Per.Evento + Per.Valor". PK = slug da despesa
+    // normalizada (NFD, sem pontuação, UPPERCASE). Alimentado pela importação
+    // .xlsx/.csv da Central de Importações + pelo modal de Quarentena do TXT.
+    // O motor ETL roda fuzzy match (Levenshtein >= 0.80 + prefix) contra a
+    // memória dessa coleção pra reconciliar despesas truncadas pelo ERP.
+    // Mesma permissão da ContasAPagar.
+    match /CP_Base_Despesas/{docId} {
+      allow read, write: if request.auth != null && (
+        isAdmin() || hasMenu('gerenciador_contas_pagar')
+      );
+    }
+
+    // METADADOS — telemetria leve de eventos do sistema (auditoria 2026-05-18).
+    // Doc fixo "UltimaImportacao_CP" registra timestamp + tipo + quantidade
+    // da última importação ETL do Gerenciador Contas a Pagar. Leitura aberta
+    // (header mostra "Última base importada em..."); escrita restrita aos
+    // perfis que de fato disparam o ETL (admin + gerenciador_contas_pagar).
+    match /Metadados/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        isAdmin() || hasMenu('gerenciador_contas_pagar')
+      );
     }
   }
 }

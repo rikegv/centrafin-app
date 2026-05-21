@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>CentraFin | Aprovações</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#aad12f",
+                        secondary: "#002443",
+                        tertiary: "#59a4d8",
+                        "on-surface": "#1e293b",
+                        "on-surface-variant": "#64748b",
+                    },
+                    fontFamily: { headline: ['Manrope', 'sans-serif'], body: ['Inter', 'sans-serif'] }
+                }
+            }
+        };
+    </script>
+    <style>
+        body > #sidebar-container,
+        body > main {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        body.auth-ok > #sidebar-container,
+        body.auth-ok > main {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        @keyframes apv-spin { to { transform: rotate(360deg); } }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .font-headline { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .editorial-shadow { box-shadow: 0px 20px 40px rgba(25, 28, 30, 0.06); }
+        .spin { animation: apv-spin 0.9s linear infinite; }
+    </style>
+    <link rel="stylesheet" href="../theme.css?v=20260508a">
+    <script>
+        /* Boot inline ANTES do paint — evita flash branco. */
+        (function () {
+            try {
+                var saved = localStorage.getItem('centrafin-theme');
+                var html = document.documentElement;
+                html.classList.remove('light', 'dark');
+                html.classList.add(saved === 'dark' ? 'dark' : 'light');
+            } catch (e) {}
+        })();
+    </script>
+    <script src="../theme_manager.js?v=20260508a" defer></script>
+</head>
+<body class="bg-slate-50 antialiased">
+
+<div id="sidebar-container"></div>
+
+<main class="ml-20 min-h-screen">
+
+    <!-- HEADER -->
+    <section class="px-8 pt-8 pb-6 border-b border-slate-100 bg-white">
+        <div class="flex items-start justify-between gap-6 flex-wrap">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-amber-500 text-3xl">fact_check</span>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="font-headline text-2xl font-extrabold text-secondary tracking-tight">Aprovações</h1>
+                    <p class="text-[12px] text-slate-500 font-medium mt-0.5">
+                        Esteira central de pendências: cadastros, edições e exclusões aguardando análise dos administradores.
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2.5">
+                <span id="apv-ultima-sync" class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                    <span class="material-symbols-outlined text-[14px]">sync</span>
+                    <span>Aguardando sincronização…</span>
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <div class="p-8 space-y-6">
+
+        <!-- KPI / Resumo -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-amber-200/60 shadow-sm ring-1 ring-amber-200/40">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="p-1 bg-amber-50 text-amber-600 rounded-lg inline-flex">
+                        <span class="material-symbols-outlined text-base">pending_actions</span>
+                    </span>
+                    <span class="text-[9px] font-bold text-amber-600/70 uppercase tracking-widest">Aguardando</span>
+                </div>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Pendentes</p>
+                <h3 id="apv-kpi-pendentes" class="text-2xl font-extrabold font-manrope text-amber-600 leading-none tabular-nums">0</h3>
+            </div>
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="p-1 bg-emerald-50 text-emerald-600 rounded-lg inline-flex">
+                        <span class="material-symbols-outlined text-base">add_circle</span>
+                    </span>
+                </div>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Novos cadastros</p>
+                <h3 id="apv-kpi-create" class="text-2xl font-extrabold font-manrope text-on-surface leading-none tabular-nums">0</h3>
+            </div>
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="p-1 bg-tertiary/10 text-tertiary rounded-lg inline-flex">
+                        <span class="material-symbols-outlined text-base">edit</span>
+                    </span>
+                </div>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Edições</p>
+                <h3 id="apv-kpi-update" class="text-2xl font-extrabold font-manrope text-on-surface leading-none tabular-nums">0</h3>
+            </div>
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="p-1 bg-red-50 text-red-600 rounded-lg inline-flex">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                    </span>
+                </div>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Exclusões</p>
+                <h3 id="apv-kpi-delete" class="text-2xl font-extrabold font-manrope text-on-surface leading-none tabular-nums">0</h3>
+            </div>
+        </section>
+
+        <!-- Tabela de Pendentes -->
+        <section class="bg-white rounded-2xl editorial-shadow border border-slate-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <h2 class="font-headline text-sm font-extrabold text-secondary">Solicitações pendentes</h2>
+                    <p id="apv-resumo" class="text-[11px] text-slate-400 font-medium mt-0.5">Sem solicitações pendentes.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select id="apv-filtro-tipo"
+                            class="px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium bg-white focus:ring-2 focus:ring-amber-300/40 focus:border-amber-400 outline-none transition-all">
+                        <option value="Todos">Todos os tipos</option>
+                        <option value="CREATE">Novos cadastros</option>
+                        <option value="UPDATE">Edições</option>
+                        <option value="DELETE">Exclusões</option>
+                        <option value="IMPORT_BATCH">Importações em lote</option>
+                    </select>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
+                        <tr>
+                            <th class="px-4 py-3 text-left w-28">Operação</th>
+                            <th class="px-4 py-3 text-left">O que está sendo solicitado</th>
+                            <th class="px-4 py-3 text-left w-32">Quando</th>
+                            <th class="px-4 py-3 text-right w-56">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="apv-corpo" class="divide-y divide-slate-100 bg-white text-xs"></tbody>
+                </table>
+            </div>
+            <div id="apv-vazio" class="px-8 py-16 text-center">
+                <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-3xl text-slate-300">inbox</span>
+                </div>
+                <h4 class="text-sm font-extrabold text-secondary mb-1">Nada na fila</h4>
+                <p class="text-[12px] text-slate-400 font-medium max-w-md mx-auto">
+                    Quando alguém propor um cadastro, edição ou exclusão, a solicitação aparece aqui esperando sua análise.
+                </p>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- MODAL: Detalhes da Solicitação -->
+<div id="modal-apv-detalhes" class="fixed inset-0 z-[75] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-apv-detalhes"></div>
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-12 h-12 rounded-2xl bg-tertiary/10 flex items-center justify-center shrink-0 shadow-inner">
+                    <span class="material-symbols-outlined text-tertiary text-2xl">policy</span>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="font-headline text-xl font-extrabold text-secondary tracking-tight">Detalhes da solicitação</h3>
+                    <p id="ad-subtitulo" class="text-[12px] text-slate-500 font-medium mt-0.5 truncate">—</p>
+                </div>
+            </div>
+            <button id="btn-fechar-apv-detalhes" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div id="ad-corpo" class="flex-1 overflow-y-auto px-7 py-5 space-y-3 text-sm text-slate-700"></div>
+        <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+            <button id="btn-cancelar-apv-detalhes" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-apv" class="hidden fixed bottom-6 right-6 z-[80] flex items-center gap-3 bg-secondary text-white px-5 py-3 rounded-xl shadow-2xl text-xs font-bold opacity-0 translate-y-2 transition-all duration-300">
+    <span id="toast-apv-icon" class="material-symbols-outlined text-primary">check_circle</span>
+    <span id="toast-apv-text">—</span>
+</div>
+
+<!-- LOADER OVERLAY -->
+<div id="apv-loader-overlay" class="hidden fixed inset-0 z-[90] items-center justify-center bg-slate-900/55 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 px-8 py-6 flex flex-col items-center gap-3 max-w-sm">
+        <span class="material-symbols-outlined text-amber-500 text-4xl spin">progress_activity</span>
+        <p id="apv-loader-titulo" class="font-headline text-sm font-extrabold text-secondary text-center">Aplicando aprovação…</p>
+        <p id="apv-loader-msg" class="text-[12px] text-slate-500 font-medium text-center">Aguarde a confirmação do banco.</p>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import {
+        getFirestore, collection, addDoc, doc, getDoc, getDocs, onSnapshot,
+        writeBatch, setDoc, updateDoc, deleteDoc, serverTimestamp, query, where
+    } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { renderSidebar } from "../sidebar.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+        authDomain: "centra-fin.firebaseapp.com",
+        projectId: "centra-fin",
+        storageBucket: "centra-fin.firebasestorage.app",
+        messagingSenderId: "666471089411",
+        appId: "1:666471089411:web:4630f5b2ced70ceb981536",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // ── CONSTANTES ───────────────────────────────────────────────────────────
+    const CHAVE_PAGINA = 'aprovacoes';
+    const COLECAO_APROV = 'CP_SolicitacoesAprovacao';
+    const CHUNK_SIZE = 450;
+
+    let usuarioLogadoNome = 'Sistema';
+    let usuarioLogadoEmail = '';
+    let _isAdmin = false;
+
+    // ── AUTH + GUARDIÃO ──────────────────────────────────────────────────────
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "../login.html"; return; }
+        try {
+            let docRef = doc(db, "Usuarios", user.email.toLowerCase());
+            let docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) { docRef = doc(db, "Usuarios", user.uid); docSnap = await getDoc(docRef); }
+            if (!docSnap.exists()) {
+                await signOut(auth);
+                window.location.href = "../login.html";
+                return;
+            }
+            const dadosUser = docSnap.data();
+            usuarioLogadoNome = dadosUser.nome || dadosUser.email || user.email;
+            usuarioLogadoEmail = String(dadosUser.email || user.email || '').toLowerCase();
+
+            if (dadosUser.status === 'inativo') {
+                await signOut(auth);
+                window.location.href = "../login.html";
+                return;
+            }
+
+            const perfil = dadosUser.perfil;
+            _isAdmin = (perfil === 'super_admin' || perfil === 'master');
+            const menusUser = Array.isArray(dadosUser.menus_permitidos) ? dadosUser.menus_permitidos : [];
+
+            // Guardião: aprovar/rejeitar é exclusivo de admin (master / super_admin),
+            // mas qualquer perfil com menu aprovacoes pode VER a fila — útil pra
+            // operadores acompanharem o status das suas próprias submissões. A
+            // checagem fina de aprovação roda na hora de Aplicar/Rejeitar.
+            const podeVer = _isAdmin || menusUser.includes(CHAVE_PAGINA);
+            if (!podeVer) {
+                window.location.href = "../login.html";
+                return;
+            }
+            renderSidebar(perfil, menusUser);
+            document.body.classList.add('auth-ok');
+            if (_isAdmin) document.body.setAttribute('data-perfil-admin', '1');
+
+            inscreverSolicitacoes();
+        } catch (err) {
+            console.error('[Aprovações] auth/bootstrap falhou:', err);
+        }
+    });
+
+    // ── Helpers genéricos ───────────────────────────────────────────────────
+    function escHTML(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function fmtDataSolicit(ts) {
+        if (!ts || typeof ts.seconds !== 'number') return '—';
+        const d = new Date(ts.seconds * 1000);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mi = String(d.getMinutes()).padStart(2, '0');
+        return `${dd}/${mm} ${hh}:${mi}`;
+    }
+
+    function badgeOperacao(op) {
+        const map = {
+            CREATE:       { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', ico: 'add_circle',    lbl: 'CADASTRO' },
+            UPDATE:       { bg: 'bg-amber-50 text-amber-700 border-amber-200',       ico: 'edit',          lbl: 'EDIÇÃO' },
+            DELETE:       { bg: 'bg-red-50 text-red-700 border-red-200',             ico: 'delete',        lbl: 'EXCLUSÃO' },
+            IMPORT_BATCH: { bg: 'bg-tertiary/10 text-tertiary border-tertiary/30',   ico: 'cloud_upload',  lbl: 'IMPORTAÇÃO' },
+        };
+        const m = map[op] || { bg: 'bg-slate-100 text-slate-500 border-slate-200', ico: 'help', lbl: op || '—' };
+        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${m.bg}"><span class="material-symbols-outlined text-[12px]">${m.ico}</span>${m.lbl}</span>`;
+    }
+
+    function descricaoAlvo(s) {
+        if (s.tipo_operacao === 'IMPORT_BATCH') {
+            const n = Array.isArray(s.dados_novos) ? s.dados_novos.length : 0;
+            return `${escHTML(s.colecao_alvo)} · ${n} registro(s) p/ importar`;
+        }
+        const novos = s.dados_novos || {};
+        const antigos = s.dados_antigos || {};
+        const nome = novos.nome || antigos.nome || s.doc_id_alvo || '—';
+        const codigo = novos.codigo || antigos.codigo || s.doc_id_alvo || '';
+        return `${escHTML(s.colecao_alvo)} · ${escHTML(nome)}${codigo ? ' (#' + escHTML(codigo) + ')' : ''}`;
+    }
+
+    // Quick-read operacional — auditoria 2026-05-20. Constrói uma frase
+    // humana e direta a partir da solicitação para a coluna principal da
+    // tabela. Master decide sem precisar abrir o modal: "O usuário X
+    // solicitou alteração do Y, estava A e vai para B, aprova?".
+    //
+    // - Chaves técnicas (created_at, updated_at, id, solicitante_uid,
+    //   *_timestamp) são ignoradas no diff de UPDATE (mesma trava que vale
+    //   no modal — ver `_isMetadadoTecnico`).
+    // - Valores são re-renderizados via `_fmtValorHumano` pra herdar a
+    //   formatação de moeda/origem/etc usada no modal.
+    function _isMetadadoTecnico(k) {
+        if (!k) return true;
+        const s = String(k);
+        if (s === 'created_at' || s === 'updated_at' || s === 'id' ||
+            s === 'solicitante_uid' || s === 'criado_por' ||
+            s === 'aprovado_por_email' || s === 'rejeitado_por_email') return true;
+        if (/_timestamp$/i.test(s)) return true;
+        return false;
+    }
+    function _camposDiff(antigos, novos) {
+        const keys = new Set([
+            ...Object.keys(antigos || {}),
+            ...Object.keys(novos || {}),
+        ]);
+        const diffs = [];
+        for (const k of keys) {
+            if (_isMetadadoTecnico(k)) continue;
+            if (String(k).startsWith('_')) continue;
+            const a = antigos ? antigos[k] : undefined;
+            const b = novos ? novos[k] : undefined;
+            // Comparação "fraca" — null/'' são considerados equivalentes pra
+            // não destacar falsos diffs vindos de campos vazios.
+            const aN = (a == null || a === '') ? null : a;
+            const bN = (b == null || b === '') ? null : b;
+            if (JSON.stringify(aN) === JSON.stringify(bN)) continue;
+            diffs.push({ chave: k, antes: a, depois: b });
+        }
+        return diffs;
+    }
+    function _badgeValor(chave, valor, tom) {
+        // Tom: 'antes' (âmbar) ou 'depois' (esmeralda). Reaproveita
+        // _fmtValorHumano pra herdar formatação de moeda/origem.
+        const cls = tom === 'antes'
+            ? 'bg-amber-50 text-amber-800 border-amber-200'
+            : 'bg-emerald-50 text-emerald-800 border-emerald-200';
+        return `<span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-bold border ${cls} align-middle">${_fmtValorHumano(chave, valor)}</span>`;
+    }
+    function descricaoHumana(s) {
+        const op = String(s.tipo_operacao || '').toUpperCase();
+        const quem = `<strong class="text-secondary">${escHTML(s.solicitado_por || 'Usuário')}</strong>`;
+        const colecao = _nomeColecaoAmigavel(s.colecao_alvo);
+        const novos = s.dados_novos || {};
+        const antigos = s.dados_antigos || {};
+        const nomeAlvo = escHTML(novos.nome || antigos.nome || s.doc_id_alvo || '—');
+        const codigoAlvo = novos.codigo || antigos.codigo || '';
+        const aposNome = codigoAlvo ? ` <span class="text-[10px] text-slate-400 font-mono">(#${escHTML(codigoAlvo)})</span>` : '';
+
+        if (op === 'CREATE') {
+            return `O usuário ${quem} solicitou o cadastro de <strong class="text-secondary">${nomeAlvo}</strong>${aposNome} em <em class="text-slate-500">${escHTML(colecao)}</em>. <span class="text-slate-400">Aprova?</span>`;
+        }
+        if (op === 'DELETE') {
+            return `O usuário ${quem} solicitou a <strong class="text-red-700">exclusão</strong> de <strong class="text-secondary">${nomeAlvo}</strong>${aposNome} em <em class="text-slate-500">${escHTML(colecao)}</em>. <span class="text-slate-400">Aprova?</span>`;
+        }
+        if (op === 'IMPORT_BATCH') {
+            const n = Array.isArray(s.dados_novos) ? s.dados_novos.length : 0;
+            return `O usuário ${quem} solicitou a importação em lote de <strong class="text-secondary">${n}</strong> registro(s) em <em class="text-slate-500">${escHTML(colecao)}</em>. <span class="text-slate-400">Aprova?</span>`;
+        }
+        if (op === 'UPDATE') {
+            const diffs = _camposDiff(antigos, novos);
+            if (!diffs.length) {
+                return `O usuário ${quem} solicitou ajustes em <strong class="text-secondary">${nomeAlvo}</strong>${aposNome}. <span class="text-slate-400">Aprova?</span>`;
+            }
+            const primeiro = diffs[0];
+            const rotulo = ROTULOS_AMIGAVEIS[primeiro.chave] || primeiro.chave;
+            const partes = [
+                `O usuário ${quem} solicitou alteração do <strong class="text-secondary">${escHTML(rotulo)}</strong>`,
+                `de <strong class="text-secondary">${nomeAlvo}</strong>${aposNome}`,
+                `&mdash; estava ${_badgeValor(primeiro.chave, primeiro.antes, 'antes')} e vai para ${_badgeValor(primeiro.chave, primeiro.depois, 'depois')}`,
+            ];
+            const extra = diffs.length > 1
+                ? ` <span class="text-[10px] text-slate-400 italic">(+${diffs.length - 1} outro(s) campo(s))</span>`
+                : '';
+            return partes.join(', ') + extra + '. <span class="text-slate-400">Aprova?</span>';
+        }
+        // Fallback genérico para operações desconhecidas.
+        return descricaoAlvo(s);
+    }
+
+    // ── Indicador "Última sincronização" ────────────────────────────────────
+    function atualizarUltimaSync() {
+        const el = document.getElementById('apv-ultima-sync');
+        if (!el) return;
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        el.innerHTML =
+            `<span class="material-symbols-outlined text-[14px] text-emerald-500">sync</span>` +
+            `<span>Última atualização: <strong class="font-bold text-slate-500 tabular-nums">${hh}:${mm}:${ss}</strong></span>`;
+    }
+
+    // ── Snapshot de pendências ──────────────────────────────────────────────
+    let _solicitacoes = [];
+    let _filtroTipo = 'Todos';
+
+    function inscreverSolicitacoes() {
+        try {
+            const qSol = query(collection(db, COLECAO_APROV), where('status', '==', 'Pendente'));
+            onSnapshot(qSol, (snap) => {
+                const lista = [];
+                snap.forEach(d => lista.push({ _id: d.id, ...d.data() }));
+                // Ordenação local: mais recente primeiro. Evita exigência de
+                // índice composto (status asc + criado_em desc).
+                lista.sort((a, b) => {
+                    const ta = a.criado_em?.seconds || 0;
+                    const tb = b.criado_em?.seconds || 0;
+                    return tb - ta;
+                });
+                _solicitacoes = lista;
+                renderKPIs();
+                renderLista();
+                atualizarUltimaSync();
+            }, (err) => {
+                console.warn('[Aprovações] listener falhou:', err?.code || err?.message);
+                _solicitacoes = [];
+                renderKPIs();
+                renderLista();
+            });
+        } catch (err) {
+            console.warn('[Aprovações] inscrição falhou:', err?.message);
+        }
+    }
+
+    function renderKPIs() {
+        let pend = 0, c = 0, u = 0, d = 0;
+        for (const s of _solicitacoes) {
+            pend++;
+            const op = String(s.tipo_operacao || '').toUpperCase();
+            if (op === 'CREATE' || op === 'IMPORT_BATCH') c++;
+            else if (op === 'UPDATE') u++;
+            else if (op === 'DELETE') d++;
+        }
+        document.getElementById('apv-kpi-pendentes').textContent = pend.toLocaleString('pt-BR');
+        document.getElementById('apv-kpi-create').textContent    = c.toLocaleString('pt-BR');
+        document.getElementById('apv-kpi-update').textContent    = u.toLocaleString('pt-BR');
+        document.getElementById('apv-kpi-delete').textContent    = d.toLocaleString('pt-BR');
+    }
+
+    function renderLista() {
+        const tbody = document.getElementById('apv-corpo');
+        const vazio = document.getElementById('apv-vazio');
+        const resumo = document.getElementById('apv-resumo');
+        if (!tbody) return;
+
+        const lista = (_filtroTipo === 'Todos')
+            ? _solicitacoes
+            : _solicitacoes.filter(s => String(s.tipo_operacao || '').toUpperCase() === _filtroTipo);
+
+        if (!lista.length) {
+            tbody.innerHTML = '';
+            vazio.classList.remove('hidden');
+            if (resumo) resumo.textContent = _solicitacoes.length === 0
+                ? 'Sem solicitações pendentes.'
+                : `Nenhuma solicitação do tipo ${_filtroTipo} no momento.`;
+            return;
+        }
+        vazio.classList.add('hidden');
+        if (resumo) resumo.textContent = `${lista.length} solicitação(ões) ${_filtroTipo === 'Todos' ? 'aguardando análise' : `do tipo ${_filtroTipo}`}.`;
+
+        const linhas = new Array(lista.length);
+        for (let i = 0; i < lista.length; i++) {
+            const s = lista[i];
+            const idAttr = escHTML(s._id);
+            const podeAgir = _isAdmin;
+            const acoesAdmin = podeAgir
+                ? `<button type="button" data-acao="aprovar" data-id="${idAttr}" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors text-[11px] font-bold" title="Aprovar">
+                       <span class="material-symbols-outlined text-[14px]">check_circle</span>Aprovar
+                   </button>
+                   <button type="button" data-acao="rejeitar" data-id="${idAttr}" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors text-[11px] font-bold" title="Rejeitar">
+                       <span class="material-symbols-outlined text-[14px]">cancel</span>Rejeitar
+                   </button>`
+                : '';
+            // Quick-read: a coluna principal narra em linguagem natural quem
+            // pediu, o que pediu e (em UPDATE) o "de → para" do campo mais
+            // relevante. E-mail do solicitante segue logo abaixo como rodapé
+            // discreto pra auditoria, sem ocupar coluna inteira.
+            const emailLinha = s.solicitado_por_email
+                ? `<div class="text-[10px] text-slate-400 font-mono mt-1 truncate" title="${escHTML(s.solicitado_por_email)}">${escHTML(s.solicitado_por_email)}</div>`
+                : '';
+            linhas[i] = `
+                <tr class="hover:bg-slate-50/60 transition-colors align-top">
+                    <td class="px-4 py-3 align-top">${badgeOperacao(s.tipo_operacao)}</td>
+                    <td class="px-4 py-3 text-xs text-slate-700 leading-relaxed">
+                        <div>${descricaoHumana(s)}</div>
+                        ${emailLinha}
+                    </td>
+                    <td class="px-4 py-3 align-top text-xs font-mono text-slate-500 tabular-nums">${fmtDataSolicit(s.criado_em)}</td>
+                    <td class="px-4 py-3 align-top text-right">
+                        <div class="flex justify-end gap-1">
+                            <button type="button" data-acao="ver" data-id="${idAttr}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-tertiary transition-colors" title="Ver detalhes">
+                                <span class="material-symbols-outlined text-base">visibility</span>
+                            </button>
+                            ${acoesAdmin}
+                        </div>
+                    </td>
+                </tr>`;
+        }
+        tbody.innerHTML = linhas.join('');
+    }
+
+    document.getElementById('apv-filtro-tipo').addEventListener('change', (e) => {
+        _filtroTipo = String(e.target.value || 'Todos');
+        renderLista();
+    });
+
+    // ── Aprovar / Rejeitar ──────────────────────────────────────────────────
+    function mostrarLoader(titulo, msg) {
+        const ov = document.getElementById('apv-loader-overlay');
+        if (!ov) return;
+        if (titulo) document.getElementById('apv-loader-titulo').textContent = titulo;
+        if (msg)    document.getElementById('apv-loader-msg').textContent = msg;
+        ov.classList.remove('hidden');
+        ov.classList.add('flex');
+    }
+    function esconderLoader() {
+        const ov = document.getElementById('apv-loader-overlay');
+        if (!ov) return;
+        ov.classList.add('hidden');
+        ov.classList.remove('flex');
+    }
+
+    async function aprovarSolicitacao(s) {
+        if (!_isAdmin) { mostrarToast('Apenas master/super_admin pode aprovar.', 'error', true); return; }
+        const op = String(s.tipo_operacao || '');
+        mostrarLoader('Aplicando aprovação…', `Operação: ${op}`);
+        try {
+            if (op === 'CREATE' || op === 'UPDATE') {
+                const dados = s.dados_novos || {};
+                const payload = { ...dados, updated_at: serverTimestamp() };
+                if (op === 'CREATE') payload.created_at = serverTimestamp();
+                if (s.doc_id_alvo) {
+                    await setDoc(doc(db, s.colecao_alvo, s.doc_id_alvo), payload, { merge: true });
+                } else {
+                    await addDoc(collection(db, s.colecao_alvo), payload);
+                }
+            } else if (op === 'DELETE') {
+                if (!s.doc_id_alvo) throw new Error('DELETE sem doc_id_alvo.');
+                await deleteDoc(doc(db, s.colecao_alvo, s.doc_id_alvo));
+            } else if (op === 'IMPORT_BATCH') {
+                const lista = Array.isArray(s.dados_novos) ? s.dados_novos : [];
+                if (!lista.length) throw new Error('IMPORT_BATCH sem registros.');
+                for (let i = 0; i < lista.length; i += CHUNK_SIZE) {
+                    const fatia = lista.slice(i, i + CHUNK_SIZE);
+                    const batch = writeBatch(db);
+                    for (const r of fatia) {
+                        const ref = doc(db, s.colecao_alvo, String(r.codigo || r._id));
+                        batch.set(ref, {
+                            ...r,
+                            updated_at: serverTimestamp(),
+                            created_at: serverTimestamp(),
+                            criado_por: s.solicitado_por,
+                        }, { merge: true });
+                    }
+                    await batch.commit();
+                }
+            } else {
+                throw new Error('Tipo de operação não suportado: ' + op);
+            }
+            // Audit trail: marca a solicitação como aprovada.
+            await updateDoc(doc(db, COLECAO_APROV, s._id), {
+                status: 'Aprovado',
+                aprovado_por: usuarioLogadoNome,
+                aprovado_por_email: usuarioLogadoEmail,
+                aprovado_em: serverTimestamp(),
+            });
+            mostrarToast('Solicitação aprovada e aplicada.', 'check_circle');
+        } catch (err) {
+            console.error('[Aprovação] aplicar falhou:', err);
+            const motivo = err?.code === 'permission-denied'
+                ? 'Acesso negado pelo Firestore.'
+                : (err?.message || 'erro desconhecido');
+            mostrarToast('Falha ao aplicar aprovação: ' + motivo, 'error', true);
+        } finally {
+            esconderLoader();
+        }
+    }
+
+    async function rejeitarSolicitacao(s) {
+        if (!_isAdmin) { mostrarToast('Apenas master/super_admin pode rejeitar.', 'error', true); return; }
+        try {
+            await updateDoc(doc(db, COLECAO_APROV, s._id), {
+                status: 'Rejeitado',
+                rejeitado_por: usuarioLogadoNome,
+                rejeitado_por_email: usuarioLogadoEmail,
+                rejeitado_em: serverTimestamp(),
+            });
+            mostrarToast('Solicitação rejeitada.', 'check_circle');
+        } catch (err) {
+            console.error('[Aprovação] rejeitar falhou:', err);
+            const motivo = err?.code === 'permission-denied'
+                ? 'Acesso negado pelo Firestore.'
+                : (err?.message || 'erro desconhecido');
+            mostrarToast('Falha ao rejeitar: ' + motivo, 'error', true);
+        }
+    }
+
+    // Tradução dos slugs técnicos pra rótulos humanos. Auditoria 2026-05-18 V6
+    // (Item 3): adeus JSON bruto no modal — vista premium de duas colunas.
+    const ROTULOS_AMIGAVEIS = {
+        codigo: 'Código',
+        nome: 'Nome',
+        empresa: 'Empresa',
+        tipo: 'Tipo de Fornecedor',
+        centro_custo: 'Centro de Custo',
+        despesa: 'Despesa',
+        despesa_norm: 'Despesa (normalizada)',
+        per_evento: 'Periodicidade do Evento',
+        per_valor: 'Periodicidade do Valor',
+        data_fim_contrato: 'Fim do Contrato',
+        valor_original: 'Valor (R$)',
+        data_vencimento: 'Vencimento',
+        competencia_ref: 'Competência',
+        entidade: 'Favorecido',
+        origem: 'Origem do Cadastro',
+        codigo_fornecedor: 'Código do Fornecedor',
+    };
+    const VALORES_AMIGAVEIS = {
+        'auto_cadastro_etl': 'Cadastro Automático via Lote',
+        'auto_cadastro_etl_txt': 'Cadastro Automático via Importação TXT',
+        'edit_projetado_recorrente': 'Projeção de Recorrência',
+        'edit_manual_master': 'Edição Manual (Master)',
+        'create_manual_master': 'Cadastro Manual (Master)',
+        'etl_txt_gerenciador': 'Importação TXT (Gerenciador CP)',
+        'etl_projetado_fixo': 'Projeção Fixo+Fixo (legado)',
+        'seeder_excel': 'Importação Excel',
+    };
+
+    function _fmtValorHumano(chave, valor) {
+        if (valor == null || valor === '') {
+            return '<span class="text-slate-400 italic">— vazio —</span>';
+        }
+        // Origem com badge dedicada.
+        if (chave === 'origem' && VALORES_AMIGAVEIS[valor]) {
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-tertiary/10 text-tertiary border border-tertiary/30">
+                <span class="material-symbols-outlined text-[12px]">auto_awesome</span>
+                ${escHTML(VALORES_AMIGAVEIS[valor])}
+            </span>`;
+        }
+        // Valor monetário — formata BRL quando for número significativo.
+        if (chave === 'valor_original' && typeof valor === 'number') {
+            return `<span class="font-mono tabular-nums font-bold text-secondary">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}</span>`;
+        }
+        if (typeof valor === 'object') {
+            // Fallback elegante pra objetos aninhados (raríssimo na esteira).
+            return `<span class="text-[11px] font-mono text-slate-500">${escHTML(JSON.stringify(valor))}</span>`;
+        }
+        return escHTML(String(valor));
+    }
+
+    function _renderCardCampos(titulo, obj, iconColor) {
+        if (obj == null) {
+            return `
+                <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2">${escHTML(titulo)}</p>
+                    <p class="text-xs text-slate-400 italic">— sem dados —</p>
+                </div>`;
+        }
+        if (Array.isArray(obj)) {
+            // Caso IMPORT_BATCH: array de docs. Mostra resumo + 3 primeiros.
+            const n = obj.length;
+            const preview = obj.slice(0, 3).map((item, idx) => {
+                const linhas = Object.entries(item || {})
+                    .filter(([k, v]) => v != null && v !== '' && !_isMetadadoTecnico(k) && !String(k).startsWith('_'))
+                    .slice(0, 4)
+                    .map(([k, v]) => `<dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${escHTML(ROTULOS_AMIGAVEIS[k] || k)}</dt><dd class="text-xs text-slate-700 truncate">${_fmtValorHumano(k, v)}</dd>`)
+                    .join('');
+                return `<div class="bg-white border border-slate-100 rounded-lg p-3"><p class="text-[10px] text-slate-400 mb-1">#${idx + 1} de ${n}</p><dl class="grid grid-cols-2 gap-x-3 gap-y-1.5">${linhas}</dl></div>`;
+            }).join('');
+            return `
+                <div class="bg-${iconColor}-50 border border-${iconColor}-100 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-${iconColor}-700 mb-2">${escHTML(titulo)}</p>
+                    <p class="text-xs text-slate-600 font-medium mb-3">Lote com <strong>${n}</strong> registro(s). Mostrando os ${Math.min(3, n)} primeiros:</p>
+                    <div class="space-y-2">${preview}</div>
+                    ${n > 3 ? `<p class="text-[10px] text-slate-400 italic mt-2">… mais ${n - 3} registro(s) no lote.</p>` : ''}
+                </div>`;
+        }
+        // Caso normal: dl chave → valor em grid 2 colunas.
+        // Auditoria 2026-05-20: metadados de banco (timestamps, IDs, UIDs)
+        // não têm valor gerencial e poluem a vista premium do modal — trava
+        // estrita em `_isMetadadoTecnico` cobre `created_at`, `updated_at`,
+        // `id`, `solicitante_uid` e qualquer chave terminada em `_timestamp`.
+        const entradas = Object.entries(obj).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+        if (!entradas.length) {
+            return `
+                <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2">${escHTML(titulo)}</p>
+                    <p class="text-xs text-slate-400 italic">— sem campos —</p>
+                </div>`;
+        }
+        const linhas = entradas.map(([k, v]) => `
+            <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${escHTML(ROTULOS_AMIGAVEIS[k] || k)}</dt>
+            <dd class="text-xs text-slate-700 break-words">${_fmtValorHumano(k, v)}</dd>
+        `).join('');
+        return `
+            <div class="bg-${iconColor}-50/40 border border-${iconColor}-100 rounded-xl p-4">
+                <p class="text-[10px] font-extrabold uppercase tracking-widest text-${iconColor}-700 mb-3 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px]">${iconColor === 'emerald' ? 'add_circle' : (iconColor === 'amber' ? 'history' : 'edit_note')}</span>
+                    ${escHTML(titulo)}
+                </p>
+                <dl class="grid grid-cols-2 gap-x-4 gap-y-2">${linhas}</dl>
+            </div>`;
+    }
+
+    // Badge da operação dentro do modal (cor + ícone consistentes com a lista).
+    function _badgeOperacao(op) {
+        const map = {
+            CREATE:       { bg: 'bg-emerald-100 text-emerald-800 border-emerald-200', ico: 'add_circle',    lbl: 'Novo Cadastro' },
+            UPDATE:       { bg: 'bg-amber-100 text-amber-800 border-amber-200',       ico: 'edit',          lbl: 'Edição' },
+            DELETE:       { bg: 'bg-red-100 text-red-800 border-red-200',             ico: 'delete',        lbl: 'Exclusão' },
+            IMPORT_BATCH: { bg: 'bg-tertiary/15 text-tertiary border-tertiary/30',    ico: 'cloud_upload',  lbl: 'Importação em Lote' },
+        };
+        const m = map[op] || { bg: 'bg-slate-100 text-slate-600 border-slate-200', ico: 'help', lbl: op || '—' };
+        return `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold border ${m.bg}">
+            <span class="material-symbols-outlined text-[14px]">${m.ico}</span>
+            ${m.lbl}
+        </span>`;
+    }
+
+    function _nomeColecaoAmigavel(col) {
+        const map = {
+            'Fornecedores': 'Banco de Fornecedores',
+            'CP_Base_Despesas': 'Banco de Despesas',
+            'ContasAPagar': 'Contas a Pagar',
+        };
+        return map[col] || col;
+    }
+
+    function abrirDetalhes(s) {
+        document.getElementById('ad-subtitulo').textContent =
+            `${_nomeColecaoAmigavel(s.colecao_alvo)}${s.doc_id_alvo ? ' · #' + s.doc_id_alvo : ''}`;
+        const corpo = document.getElementById('ad-corpo');
+        const op = String(s.tipo_operacao || '').toUpperCase();
+        const cabecalho = `
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                    ${_badgeOperacao(op)}
+                    <span class="text-[11px] font-mono text-slate-400 tabular-nums">${fmtDataSolicit(s.criado_em)}</span>
+                </div>
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Solicitado por</dt>
+                    <dd class="text-slate-800 font-bold">${escHTML(s.solicitado_por || '—')}</dd>
+                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">E-mail</dt>
+                    <dd class="text-slate-600 font-mono break-all">${escHTML(s.solicitado_por_email || '')}</dd>
+                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Coleção alvo</dt>
+                    <dd class="text-slate-700 font-medium">${escHTML(_nomeColecaoAmigavel(s.colecao_alvo))}</dd>
+                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Resumo</dt>
+                    <dd class="text-slate-700 font-medium">${escHTML(s.resumo || '—')}</dd>
+                </dl>
+            </div>`;
+
+        // Para CREATE: só mostra "dados novos"; pra DELETE: só "dados antigos";
+        // pra UPDATE: ambos lado a lado (diff visual). IMPORT_BATCH: dados_novos é array.
+        let cards = '';
+        if (op === 'CREATE') {
+            cards = _renderCardCampos('Dados a Cadastrar', s.dados_novos, 'emerald');
+        } else if (op === 'DELETE') {
+            cards = _renderCardCampos('Registro a Excluir', s.dados_antigos, 'red');
+        } else if (op === 'IMPORT_BATCH') {
+            cards = _renderCardCampos('Registros do Lote', s.dados_novos, 'tertiary');
+        } else {
+            // UPDATE: side-by-side.
+            cards = `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                ${_renderCardCampos('Antes', s.dados_antigos, 'amber')}
+                ${_renderCardCampos('Depois', s.dados_novos, 'emerald')}
+            </div>`;
+        }
+
+        corpo.innerHTML = cabecalho + cards;
+        abrirModal('modal-apv-detalhes');
+    }
+
+    // Delegação de cliques na tabela.
+    document.getElementById('apv-corpo').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-acao]');
+        if (!btn) return;
+        const acao = btn.getAttribute('data-acao');
+        const id = btn.getAttribute('data-id');
+        const sol = _solicitacoes.find(x => x._id === id);
+        if (!sol) return;
+        if (acao === 'ver')           abrirDetalhes(sol);
+        else if (acao === 'aprovar')  aprovarSolicitacao(sol);
+        else if (acao === 'rejeitar') rejeitarSolicitacao(sol);
+    });
+
+    document.getElementById('btn-fechar-apv-detalhes').addEventListener('click', () => fecharModal('modal-apv-detalhes'));
+    document.getElementById('btn-cancelar-apv-detalhes').addEventListener('click', () => fecharModal('modal-apv-detalhes'));
+
+    // ── Modal helpers ───────────────────────────────────────────────────────
+    function abrirModal(id) {
+        const m = document.getElementById(id);
+        if (!m) return;
+        m.classList.remove('opacity-0', 'pointer-events-none');
+        const card = m.querySelector('div.bg-white');
+        if (card) card.classList.remove('scale-95');
+    }
+    function fecharModal(id) {
+        const m = document.getElementById(id);
+        if (!m) return;
+        m.classList.add('opacity-0', 'pointer-events-none');
+        const card = m.querySelector('div.bg-white');
+        if (card) card.classList.add('scale-95');
+    }
+    document.querySelectorAll('[data-modal-overlay]').forEach(o => {
+        o.addEventListener('click', () => fecharModal(o.getAttribute('data-modal-overlay')));
+    });
+
+    // ── Toast ───────────────────────────────────────────────────────────────
+    let _toastTimer = null;
+    function mostrarToast(texto, icone = 'check_circle', erro = false) {
+        const t = document.getElementById('toast-apv');
+        document.getElementById('toast-apv-text').textContent = texto;
+        const icoEl = document.getElementById('toast-apv-icon');
+        const map = { info: 'info', warning: 'warning' };
+        icoEl.textContent = map[icone] || icone;
+        icoEl.className = erro
+            ? 'material-symbols-outlined text-red-400'
+            : (icone === 'info' || icone === 'warning')
+                ? 'material-symbols-outlined text-tertiary'
+                : 'material-symbols-outlined text-primary';
+        t.classList.remove('hidden');
+        requestAnimationFrame(() => t.classList.remove('opacity-0', 'translate-y-2'));
+        if (_toastTimer) clearTimeout(_toastTimer);
+        _toastTimer = setTimeout(() => {
+            t.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => t.classList.add('hidden'), 320);
+        }, 3500);
+    }
+</script>
+
+</body>
+</html>

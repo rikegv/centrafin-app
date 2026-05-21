@@ -9,7 +9,7 @@
     <!-- Multi-select por checkbox (upgrade reutilizável). Auditoria 2026-05-14:
          substitui o `<select multiple>` nativo (Ctrl+clique) por um dropdown
          com caixas de seleção, mantendo o <select> escondido como source-of-truth. -->
-    <script src="../assets/checkbox_multi.js?v=20260514a" defer></script>
+    <script src="../assets/checkbox_multi.js?v=20260518v5" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <script id="tailwind-config">
@@ -159,11 +159,25 @@
         <section class="bg-white rounded-2xl editorial-shadow border border-slate-100 overflow-hidden">
             <!-- Topbar: busca · [filtros · importar] -->
             <div class="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-100 flex-wrap">
-                <div class="flex items-center gap-3 flex-1 min-w-[280px]">
-                    <div class="relative flex-1 max-w-md">
+                <div class="flex items-center gap-3 flex-1 min-w-[280px] flex-wrap">
+                    <div class="relative flex-1 max-w-md min-w-[200px]">
                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">search</span>
                         <input id="input-busca" type="text" placeholder="Buscar por nome, CPF, centro de custo ou empresa…"
                                class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                    </div>
+                    <!-- Filtrar por Funcionário (auditoria 2026-05-20) — multi-select
+                         com checkbox + busca interna sticky. Diretoria pediu para
+                         comparar 2-3 PJs/CLTs lado a lado: agora o filtro aceita
+                         qualquer subconjunto de colaboradores. Vazio = todos. -->
+                    <div class="min-w-[240px] max-w-[280px]">
+                        <select id="filtro-funcionario" multiple size="6"
+                                data-checkbox-multi
+                                data-cb-portal
+                                data-placeholder="Todos os Funcionários"
+                                title="Filtrar por um ou mais funcionários (CLT ou PJ)"
+                                class="hidden">
+                            <option value="Todos">Todos os Funcionários</option>
+                        </select>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -193,8 +207,16 @@
                 </div>
             </div>
 
-            <!-- Chip de filtros ativos -->
-            <div id="chip-filtros-ativos" class="hidden items-center gap-2 px-6 py-2 bg-slate-50/60 border-b border-slate-100 text-[11px] text-slate-500 font-medium"></div>
+            <!-- Chip de filtros ativos + indicador de Última atualização
+                 (auditoria 2026-05-18). O indicador atualiza a cada disparo do
+                 onSnapshot — feedback de "tempo real" para a Controladoria. -->
+            <div class="flex items-center justify-between gap-3 px-6 py-2 bg-slate-50/60 border-b border-slate-100 flex-wrap">
+                <div id="chip-filtros-ativos" class="hidden items-center gap-2 text-[11px] text-slate-500 font-medium"></div>
+                <span id="folha-ultima-sync" class="ml-auto inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium">
+                    <span class="material-symbols-outlined text-[14px]">sync</span>
+                    <span>Aguardando sincronização…</span>
+                </span>
+            </div>
 
             <!-- Tabela -->
             <div class="overflow-x-auto">
@@ -804,6 +826,13 @@
     const CHAVE_PAGINA = 'custo_folha';
     const COLECAO = 'CustosFolha';
     const CHUNK_SIZE = 450;
+    // Integração PJ → Custo de Folha (auditoria 2026-05-18). Lançamentos no
+    // Contas a Pagar marcados como "Fornecedor Interno - PJ" são mapeados em
+    // tempo de execução para o schema da Folha (vide pjParaFolha()) e somam
+    // automaticamente nos KPIs / tabela / filtros desta tela.
+    const COLECAO_CP = 'ContasAPagar';
+    const TIPO_PJ = 'Fornecedor Interno - PJ';
+    const EMPRESA_PJ_SENTINELA = 'PJ';
 
     // ── ELEMENTOS UI ─────────────────────────────────────────────────────────
     // Form de importação (modal "Importar")
@@ -912,11 +941,134 @@
 
             // Libera a UI: auth + permissões resolvidos.
             document.body.classList.add('auth-ok');
+
+            // Listener PJ → Custo de Folha (auditoria 2026-05-18). Inscreve
+            // tudo que está em ContasAPagar com tipo_entidade == PJ, mapeia
+            // pro schema da Folha e dispara recombinação. Listener persistente
+            // (não amarrado a `unsubHistorico`) para sobreviver a mudanças de
+            // filtro da query principal.
+            inscreverFornecedoresCC();
+            inscreverPJContasAPagar();
         } catch (err) {
             console.error('Falha na autenticação:', err);
             window.location.href = "../login.html";
         }
     });
+
+    // Listener leve em /Fornecedores — só pra alimentar o mapa
+    // codigo → centro_custo (Fase 3 Conector). Auditoria 2026-05-18.
+    // A re-inscrição do PJ não é necessária quando CC muda; pjParaFolha lê do
+    // _cacheFornCC em runtime, então basta re-renderizar.
+    let _unsubFornCC = null;
+    function inscreverFornecedoresCC() {
+        if (_unsubFornCC) { _unsubFornCC(); _unsubFornCC = null; }
+        try {
+            _unsubFornCC = onSnapshot(collection(db, 'Fornecedores'), (snap) => {
+                const map = new Map();
+                snap.forEach(d => {
+                    const data = d.data() || {};
+                    const cc = String(data.centro_custo || '').trim();
+                    if (cc) map.set(String(data.codigo != null ? data.codigo : d.id), cc);
+                });
+                _cacheFornCC = map;
+                // Re-render: força o pjParaFolha a re-rodar sobre o cache atual
+                // do PJ — necessário pra refletir mudanças de CC nos cards.
+                if (_cachePJ.length) {
+                    const compRefs = getMultiValues(filtroCompetencia);
+                    const empresas = getMultiValues(filtroEmpresa);
+                    cacheRegistros = [..._cacheFolha, ..._aplicarFiltrosPJ(compRefs, empresas)];
+                    // Reaplica o pjParaFolha (cacheRegistros já tem PJs frios — não
+                    // tem o CC novo). Solução: recompor _cachePJ a partir dos docs
+                    // brutos guardados em _cachePJRaw. Simpler approach: re-fetch
+                    // não cabe aqui (loop). Usaremos o _cachePJRaw mantido pelo
+                    // listener PJ.
+                    if (Array.isArray(_cachePJRaw)) {
+                        _cachePJ = _cachePJRaw.map(({ id, data }) => pjParaFolha(id, data));
+                        cacheRegistros = [..._cacheFolha, ..._aplicarFiltrosPJ(compRefs, empresas)];
+                        renderHistorico();
+                    }
+                }
+            }, (err) => {
+                console.warn('[CustoFolha][Forn] listener falhou:', err?.code || err?.message);
+                _cacheFornCC = new Map();
+            });
+        } catch (err) {
+            console.warn('[CustoFolha][Forn] não foi possível inscrever:', err?.message);
+        }
+    }
+
+    // Listener persistente da fatia PJ do ContasAPagar. Mapeia em tempo de
+    // execução para o schema da Folha (via pjParaFolha). Filtros server-side
+    // (competência/empresa) continuam sendo aplicados client-side em cima do
+    // _cachePJ porque é volume baixo (centenas, não milhares).
+    let _unsubPJ = null;
+    let _cachePJRaw = []; // docs brutos (id+data) pra remapear quando CC mudar
+    function inscreverPJContasAPagar() {
+        if (_unsubPJ) { _unsubPJ(); _unsubPJ = null; }
+        try {
+            const qPJ = query(
+                collection(db, COLECAO_CP),
+                where('tipo_entidade', '==', TIPO_PJ)
+            );
+            _unsubPJ = onSnapshot(qPJ, (snap) => {
+                // ── Telemetria do Conector (auditoria 2026-05-18) ────────────
+                // Permite o admin abrir o DevTools e confirmar exatamente quantos
+                // PJs chegaram do Firestore, quantos passaram pelo filtro e
+                // quantos foram retidos — fim da "caixa preta" anterior.
+                console.log('[Conector PJ] Documentos brutos retornados do Firestore:', snap.size);
+
+                const lista = [];
+                const raws = [];
+                snap.forEach(d => {
+                    const data = d.data() || {};
+                    raws.push({ id: d.id, data });
+                    lista.push(pjParaFolha(d.id, data));
+                });
+                _cachePJ = lista;
+                _cachePJRaw = raws;
+                // Recompõe cacheRegistros mantendo a fatia Folha atual; respeita
+                // os filtros de competência/empresa correntes para os PJs.
+                const compRefs = getMultiValues(filtroCompetencia);
+                const empresas = getMultiValues(filtroEmpresa);
+
+                // Logs por registro — diagnóstico de quem entra e quem fica retido.
+                const compSet = !isMultiAll(compRefs) ? new Set(compRefs) : null;
+                const empSet  = !isMultiAll(empresas) ? new Set(empresas) : null;
+                let aceitos = 0, retidos = 0;
+                for (const p of _cachePJ) {
+                    const passaComp = !compSet || compSet.has(String(p.competencia_ref || ''));
+                    const passaEmp  = !empSet  || empSet.has(String(p.empresa_atribuida || ''));
+                    const passaCC   = !window._ccPermitidos || window._ccPermitidos.has(String(p.centro_custo || '').trim());
+                    if (passaComp && passaEmp && passaCC) {
+                        console.log('[Conector PJ] BINGO! PJ integrado com sucesso:', p.nome, '· competência:', p.competencia_ref, '· área:', p.centro_custo || '(sem CC)', '· Valor:', p.SERVICOS_PRESTADOS_Valor);
+                        aceitos++;
+                    } else {
+                        const motivos = [];
+                        if (!passaComp) motivos.push(`competência "${p.competencia_ref || ''}" fora de [${compRefs.join(',')}]`);
+                        if (!passaEmp)  motivos.push(`empresa "${p.empresa_atribuida || ''}" fora de [${empresas.join(',')}]`);
+                        if (!passaCC)   motivos.push(`CC "${p.centro_custo || ''}" fora do escopo permitido`);
+                        console.log('[Conector PJ] Registro retido por filtro. Motivo:', motivos.join(' · '), '· Doc:', { _id: p._id, raw_comp: p._competencia_raw });
+                        retidos++;
+                    }
+                }
+                console.log(`[Conector PJ] Resumo: ${aceitos} aceito(s), ${retidos} retido(s), total ${_cachePJ.length}.`);
+
+                cacheRegistros = [..._cacheFolha, ..._aplicarFiltrosPJ(compRefs, empresas)];
+                // Trigger explícito do recálculo: renderHistorico() (coalescido
+                // via rAF) chama atualizarKPIs(registros) ➔ pinta os 6 cards
+                // superiores com Folha + PJ unificados.
+                renderHistorico();
+                atualizarUltimaSync('folha-ultima-sync');
+            }, (err) => {
+                // Falha silenciosa: PJ é integração complementar; a Folha
+                // continua funcionando normalmente sem essa camada.
+                console.warn('[CustoFolha][PJ] listener falhou:', err?.code || err?.message);
+                _cachePJ = [];
+            });
+        } catch (err) {
+            console.warn('[CustoFolha][PJ] não foi possível inscrever:', err?.message);
+        }
+    }
 
     // ── PERSISTÊNCIA DOS FILTROS (localStorage) ──────────────────────────────
     const LS_COMP = 'centrafin.custofolha.competencia';
@@ -1355,8 +1507,115 @@
     // ── HISTÓRICO: estado + render ───────────────────────────────────────────
     let unsubHistorico = null;
     let ultimoFiltroKey = '';
-    let cacheRegistros = [];     // resultado bruto da query atual
+    let cacheRegistros = [];     // resultado bruto da query atual (Folha + PJ)
+    let _cacheFolha = [];         // só Folha (CustosFolha) — última fatia recebida
+    let _cachePJ = [];            // só PJ (ContasAPagar) — listener persistente
+    // Auditoria 2026-05-18 (Fase 3 — Conector). Mapa codigo_fornecedor →
+    // centro_custo populado por um listener leve em /Fornecedores. Usado como
+    // FALLBACK no pjParaFolha quando o lançamento PJ não trouxe centro_custo
+    // (caso de bases antigas anteriores à herança no ETL).
+    let _cacheFornCC = new Map();
     let termoBusca = '';          // filtro client-side (input #input-busca)
+    // Filtro por funcionário (auditoria 2026-05-20): multi-select com checkbox.
+    // Array de nomes selecionados (CLT ou PJ). Vazio ou contendo 'Todos' = sem
+    // filtro. Diretoria precisa comparar 2-3 colaboradores juntos (ex.: PJs de
+    // uma mesma célula) — match EXATO por nome contra qualquer item do array.
+    let filtroFuncionarios = ['Todos'];
+
+    // ── Integração PJ — auditoria 2026-05-18 ────────────────────────────────
+    // Mapeia um doc de ContasAPagar (PJ) para o schema da Folha. A chave
+    // SERVICOS_PRESTADOS_Valor é reconhecida pelos validadores existentes:
+    //   - isVencimento() → soma em Vencimentos
+    //   - isSalarioBrutoKey() → soma em Salário Bruto (subconjunto)
+    //   - isEncargo()/isBnfDesc()/SET_BNF_PAGO → não casam (correto)
+    // Resultado: o valor do PJ entra no Custo Total via Vencimentos sem
+    // duplicar nem mexer no cálculo dos buckets contábeis dos CLTs.
+    // Normaliza a `competencia_ref` recebida pra o formato canônico da Folha
+    // (`"YYYY-MM"`). Auditoria 2026-05-18 (caça-bug do Conector PJ):
+    //
+    //   Lado A — CustosFolha grava `competencia_ref` no formato "YYYY-MM"
+    //     (ex.: "2026-05"), porque vem direto do <input type="month">.
+    //   Lado B — ContasAPagar grava `competencia_ref` no formato "MM/YYYY"
+    //     (ex.: "05/2026"), porque o ETL TXT usa cpRefMMYYYY().
+    //
+    // Resultado: o filtro de competência da Folha (que monta um Set com valores
+    // "YYYY-MM" vindos dos <option>) nunca casava com o PJ que vinha como
+    // "05/2026" — o lançamento PJ era SILENCIOSAMENTE descartado.
+    //
+    // A normalização aceita ambos os formatos e cai num fallback de
+    // data_vencimento "YYYY-MM-DD" quando a competência veio ausente/inválida.
+    function _normalizarCompetenciaPJ(raw, fallbackVencimento) {
+        const s = String(raw || '').trim();
+        // Já no formato Folha — passthrough.
+        let m = s.match(/^(\d{4})-(\d{2})$/);
+        if (m) return s;
+        // Formato CP "MM/YYYY" → converte pra "YYYY-MM".
+        m = s.match(/^(\d{2})\/(\d{4})$/);
+        if (m) return `${m[2]}-${m[1]}`;
+        // Fallback: deriva da data_vencimento (YYYY-MM-DD).
+        const mv = String(fallbackVencimento || '').match(/^(\d{4})-(\d{2})/);
+        if (mv) return `${mv[1]}-${mv[2]}`;
+        return '';
+    }
+
+    function pjParaFolha(docId, r) {
+        const valor = Number(r?.valor_original) || 0;
+        // Centro de Custo (auditoria 2026-05-18 Fase 3 Conector). Preferência:
+        //   1. CC já gravado no lançamento (ETL com herança ativa).
+        //   2. CC cadastrado no Fornecedor (lookup pelo codigo_fornecedor).
+        //   3. String vazia (não bloqueia o lançamento, mas dificulta filtro).
+        const codForn = r?.codigo_fornecedor != null ? String(r.codigo_fornecedor) : '';
+        const ccLanc  = String(r?.centro_custo || '').trim();
+        const ccForn  = (codForn && _cacheFornCC.get(codForn)) || '';
+        const cc      = ccLanc || ccForn || '';
+        // Competência canônica "YYYY-MM" — sem isso o filtro da tela rejeita
+        // o PJ silenciosamente (ver _normalizarCompetenciaPJ).
+        const compRef = _normalizarCompetenciaPJ(r?.competencia_ref, r?.data_vencimento);
+        return {
+            _id: 'pj_' + docId,
+            is_pj: true,
+            nome: r.entidade || r.favorecido || '—',
+            cpf: '',
+            empresa_atribuida: EMPRESA_PJ_SENTINELA,
+            centro_custo: cc,
+            competencia_ref: compRef,
+            // Chave canônica que dispara isVencimento + isSalarioBrutoKey.
+            SERVICOS_PRESTADOS_Valor: valor,
+            // Metadados para o modal de visualização — não somam.
+            _origem_cp_id: docId,
+            _origem_doc: 'ContasAPagar',
+            _cc_origem: ccLanc ? 'lancamento' : (ccForn ? 'fornecedor' : 'sem_cc'),
+            // Auditoria: guarda o valor bruto da competência do CP pra debug.
+            _competencia_raw: r?.competencia_ref || null,
+        };
+    }
+
+    // Recombina Folha + PJ aplicando os mesmos filtros server-side de Folha.
+    // Mantém cacheRegistros como fonte única para a tabela/KPIs/render.
+    function _aplicarFiltrosPJ(compRefs, empresas) {
+        const compSet = !isMultiAll(compRefs) ? new Set(compRefs) : null;
+        const empSet  = !isMultiAll(empresas) ? new Set(empresas) : null;
+        return _cachePJ.filter(p => {
+            if (compSet && !compSet.has(String(p.competencia_ref || ''))) return false;
+            if (empSet  && !empSet.has(String(p.empresa_atribuida || ''))) return false;
+            if (window._ccPermitidos && !window._ccPermitidos.has(String(p.centro_custo || '').trim())) return false;
+            return true;
+        });
+    }
+
+    // Indicador "Última atualização" (auditoria 2026-05-18). Disparado a cada
+    // onSnapshot bem-sucedido — confirma visualmente que o tempo real está vivo.
+    function atualizarUltimaSync(elId) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        el.innerHTML =
+            `<span class="material-symbols-outlined text-[14px] text-emerald-500">sync</span>` +
+            `<span>Última atualização: <strong class="font-bold text-slate-500 tabular-nums">${hh}:${mm}:${ss}</strong></span>`;
+    }
 
     function aplicarBusca(registros) {
         let out = registros;
@@ -1365,6 +1624,13 @@
         if (!isMultiAll(filtroCcValores)) {
             const ccSet = new Set(filtroCcValores);
             out = out.filter(r => ccSet.has(String(r.centro_custo || '')));
+        }
+        // Filtro multi-critério por funcionário (auditoria 2026-05-20). Match
+        // EXATO contra qualquer nome do array — permite isolar 1, 2 ou N
+        // colaboradores (CLT ou PJ) simultaneamente. Vazio/['Todos'] = libera.
+        if (!isMultiAll(filtroFuncionarios)) {
+            const alvos = new Set(filtroFuncionarios.map(n => String(n).toLowerCase()));
+            out = out.filter(r => alvos.has(String(r.nome || '').toLowerCase()));
         }
         if (!termoBusca) return out;
         const t = termoBusca.toLowerCase();
@@ -1411,7 +1677,49 @@
         setKPI('kpi-descontos-bnf', descontosBnf, descontosBnf ? '-' : '');
     }
 
+    // Popula o multi-select "Filtrar por Funcionário" — auditoria 2026-05-20.
+    // Une os nomes únicos do cache atual (CLT + PJ), ordena A-Z (pt-BR),
+    // e preserva a seleção corrente. Funcionários removidos do cache são
+    // descartados do array selecionado; se sobrar nada, cai em ['Todos'].
+    function popularFiltroFuncionario() {
+        const sel = document.getElementById('filtro-funcionario');
+        if (!sel) return;
+        const previo = getMultiValues(sel);
+        const nomes = new Set();
+        for (const r of cacheRegistros) {
+            const n = String(r?.nome || '').trim();
+            if (n) nomes.add(n);
+        }
+        const ordenados = [...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const novoHtml =
+            '<option value="Todos" class="font-bold border-b pb-1 mb-1">Todos os Funcionários</option>' +
+            ordenados.map(n => `<option value="${escapeHTML(n)}">${escapeHTML(n)}</option>`).join('');
+        if (sel.innerHTML !== novoHtml) sel.innerHTML = novoHtml;
+        // Mantém só os nomes que ainda existem no cache; se sobrar vazio,
+        // volta a sentinela "Todos" — o estado em memória segue o select.
+        const sobrev = previo.filter(v => v === 'Todos' || ordenados.includes(v));
+        const proximo = sobrev.length ? sobrev : ['Todos'];
+        setMultiValues(sel, proximo);
+        filtroFuncionarios = proximo;
+    }
+
+    // Coalesce de re-renders via rAF — auditoria 2026-05-18 (Conector PJ).
+    // O onSnapshot da Folha e do PJ podem disparar 2 callbacks consecutivos;
+    // sem coalesce, ambos rodam render+innerHTML pesado. cancelAnimationFrame
+    // garante um único paint por frame com a versão mais recente dos dados.
+    let _renderHistRaf = 0;
     function renderHistorico() {
+        if (_renderHistRaf) cancelAnimationFrame(_renderHistRaf);
+        _renderHistRaf = requestAnimationFrame(() => {
+            _renderHistRaf = 0;
+            _renderHistoricoSync();
+        });
+    }
+    function _renderHistoricoSync() {
+        // Mantém o dropdown sincronizado com os nomes do cache atual antes
+        // de aplicar o filtro — assim novos PJs/CLTs entram na lista
+        // automaticamente e funcionários removidos saem.
+        popularFiltroFuncionario();
         const registros = aplicarBusca(cacheRegistros);
         atualizarKPIs(registros);
         if (!registros.length) {
@@ -1435,28 +1743,38 @@
             const comp = r.competencia_ref
                 ? competenciaBRfromRef(r.competencia_ref)
                 : (r.competencia || '—');
+            // PJs (origem = ContasAPagar): row distinguível visualmente, sem
+            // seleção/edição/exclusão local — o CRUD vive no Gerenciador CP.
+            // Auditoria 2026-05-18 (integração PJ → Custo de Folha).
+            const isPJ = r.is_pj === true;
+            const badgePJ = isPJ
+                ? `<span class="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-100" title="Lançamento PJ vindo do Contas a Pagar"><span class="material-symbols-outlined text-[11px]">link</span>PJ</span>`
+                : '';
             // Coluna de seleção e ícone de lixeira: renderizadas APENAS para
-            // super_admin. Mantemos a estrutura da linha com a checagem inline
-            // pra simplificar — quem não é super adm continua vendo a tabela
-            // exatamente como antes.
-            const cellSelecao = isSuperAdm
+            // super_admin e SOMENTE em linhas da Folha (PJ é gerido na outra tela).
+            const cellSelecao = (isSuperAdm && !isPJ)
                 ? `<td class="px-4 py-3 text-center align-middle">
                      <input type="checkbox" data-id="${escapeHTML(r._id)}" data-acao="selecionar"
                             ${selecaoIds.has(r._id) ? 'checked' : ''}
                             class="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer" />
                    </td>`
-                : '';
-            const btnExcluir = isSuperAdm
+                : (isSuperAdm ? `<td class="px-4 py-3"></td>` : '');
+            const btnExcluir = (isSuperAdm && !isPJ)
                 ? `<button data-acao="excluir" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir registro">
                        <span class="material-symbols-outlined text-base">delete</span>
                    </button>`
                 : '';
+            const btnEditar = isPJ
+                ? '' // PJ é gerido no Gerenciador CP — não permite editar aqui.
+                : `<button data-acao="editar" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors" title="Editar">
+                       <span class="material-symbols-outlined text-base">edit</span>
+                   </button>`;
             return `
-                <tr class="hover:bg-slate-50 transition-colors" data-row-id="${escapeHTML(r._id)}">
+                <tr class="hover:bg-slate-50 transition-colors ${isPJ ? 'bg-rose-50/30' : ''}" data-row-id="${escapeHTML(r._id)}"${isPJ ? ' title="Lançamento PJ — gerencie em Contas a Pagar."' : ''}>
                     ${cellSelecao}
                     <td class="px-4 py-3 text-xs text-slate-500 font-mono">${escapeHTML(comp)}</td>
-                    <td class="px-4 py-3 text-xs font-bold text-slate-900">${escapeHTML(nome)}</td>
-                    <td class="px-4 py-3 text-xs text-slate-500 font-mono">${fmtCPF(r.cpf)}</td>
+                    <td class="px-4 py-3 text-xs font-bold text-slate-900">${escapeHTML(nome)}${badgePJ}</td>
+                    <td class="px-4 py-3 text-xs text-slate-500 font-mono">${isPJ ? '—' : fmtCPF(r.cpf)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(emp)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(cc)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.salarioBruto)}</td>
@@ -1470,9 +1788,7 @@
                             <button data-acao="visualizar" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-tertiary transition-colors" title="Visualizar dados completos">
                                 <span class="material-symbols-outlined text-base">visibility</span>
                             </button>
-                            <button data-acao="editar" data-id="${escapeHTML(r._id)}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors" title="Editar">
-                                <span class="material-symbols-outlined text-base">edit</span>
-                            </button>
+                            ${btnEditar}
                             ${btnExcluir}
                         </div>
                     </td>
@@ -1658,11 +1974,16 @@
             if (compSet || empSet) {
                 refinados.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
             }
-            cacheRegistros = refinados;
+            // Folha + PJ (auditoria 2026-05-18): mescla com os PJs já em cache,
+            // filtrando-os pelos mesmos critérios server-side da query Folha.
+            _cacheFolha = refinados;
+            cacheRegistros = [..._cacheFolha, ..._aplicarFiltrosPJ(compRefs, empresas)];
             renderHistorico();
+            atualizarUltimaSync('folha-ultima-sync');
         }, (err) => {
             console.error('[Histórico] listener falhou:', err);
-            cacheRegistros = [];
+            _cacheFolha = [];
+            cacheRegistros = [..._aplicarFiltrosPJ(compRefs, empresas)];
             renderHistorico();
         });
     }
@@ -1728,6 +2049,19 @@
             renderHistorico();
         }, 180);
     });
+    // ── Filtro multi-critério por Funcionário (auditoria 2026-05-20) ───────
+    // O multi-select dispara `change` no <select> escondido a cada toggle de
+    // checkbox (ver assets/checkbox_multi.js). Lê o estado canônico, atualiza
+    // memória e re-renderiza. Zera a busca por texto quando há filtro ativo
+    // pra evitar contradição visual entre dois recortes concorrentes.
+    document.getElementById('filtro-funcionario').addEventListener('change', (e) => {
+        filtroFuncionarios = getMultiValues(e.target);
+        if (!isMultiAll(filtroFuncionarios) && termoBusca) {
+            termoBusca = '';
+            inputBusca.value = '';
+        }
+        renderHistorico();
+    });
 
     // ── Chips de competências disponíveis (estado vazio) ─────────────────────
     // Auditoria 2026-05-14: filtros são multi-select; clicar num chip aplica
@@ -1752,6 +2086,10 @@
     });
 
     // ── AÇÕES DA TABELA: Visualizar / Editar / Excluir ───────────────────────
+    // Auditoria 2026-05-18 (Conector PJ — defesa em profundidade): mesmo que o
+    // render não desenhe os botões pra PJ, alguém pode forjar um clique via
+    // DevTools / acessibilidade. Bloqueia aqui também com mensagem amigável.
+    const MSG_PJ_READONLY = 'Lançamentos de PJ devem ser gerenciados diretamente no módulo Gerenciador Contas a Pagar.';
     histCorpo.addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-acao]');
         if (!btn) return;
@@ -1759,6 +2097,12 @@
         const id = btn.getAttribute('data-id');
         const reg = cacheRegistros.find(r => r._id === id);
         if (!reg) return;
+
+        // Trava de Edição/Exclusão para PJs (origem = ContasAPagar).
+        if (reg.is_pj && (acao === 'editar' || acao === 'excluir')) {
+            mostrarErro(MSG_PJ_READONLY);
+            return;
+        }
 
         if (acao === 'visualizar') abrirVisualizar(reg);
         else if (acao === 'editar') abrirEditar(reg);
@@ -1785,7 +2129,8 @@
     const cbSelecionarTodos = document.getElementById('cb-selecionar-todos');
     if (cbSelecionarTodos) {
         cbSelecionarTodos.addEventListener('change', () => {
-            const visiveis = aplicarBusca(cacheRegistros);
+            // Auditoria 2026-05-18: PJ não é selecionável aqui (gerido no CP).
+            const visiveis = aplicarBusca(cacheRegistros).filter(r => !r.is_pj);
             if (cbSelecionarTodos.checked) {
                 visiveis.forEach(r => selecaoIds.add(r._id));
             } else {
@@ -1819,13 +2164,15 @@
     // selecionados; "indeterminate" se parcial; desmarcado se nenhum.
     function sincronizarMasterCheckbox(registrosVisiveis) {
         if (!cbSelecionarTodos) return;
-        if (!registrosVisiveis || registrosVisiveis.length === 0) {
+        // Auditoria 2026-05-18: PJ não conta no master checkbox (não selecionável).
+        const selecionaveis = (registrosVisiveis || []).filter(r => !r.is_pj);
+        if (selecionaveis.length === 0) {
             cbSelecionarTodos.checked = false;
             cbSelecionarTodos.indeterminate = false;
             return;
         }
-        const total = registrosVisiveis.length;
-        const marcados = registrosVisiveis.filter(r => selecaoIds.has(r._id)).length;
+        const total = selecionaveis.length;
+        const marcados = selecionaveis.filter(r => selecaoIds.has(r._id)).length;
         cbSelecionarTodos.checked = marcados === total;
         cbSelecionarTodos.indeterminate = marcados > 0 && marcados < total;
     }
@@ -1850,8 +2197,21 @@
         if (!isSuperAdm) {
             return mostrarErro('Apenas Super Adm pode excluir registros.');
         }
-        const lista = (ids || []).filter(Boolean);
-        if (!lista.length) return;
+        // Bloqueia exclusão de lançamentos PJ (prefixo "pj_") — gerenciados no
+        // Contas a Pagar. Auditoria 2026-05-18 (integração PJ → Folha):
+        // se TODOS os IDs forem PJ, avisa o usuário com a mensagem unificada.
+        const totalEntrada = (ids || []).length;
+        const lista = (ids || []).filter(id => id && !String(id).startsWith('pj_'));
+        const pjsFiltrados = totalEntrada - lista.length;
+        if (!lista.length) {
+            if (pjsFiltrados > 0) return mostrarErro(MSG_PJ_READONLY);
+            return;
+        }
+        if (pjsFiltrados > 0) {
+            // Mistura PJ + CLT na seleção: avisa que o PJ vai ser ignorado e
+            // segue exclusão só dos CLTs. Não bloqueia o batch.
+            mostrarErro(`Atenção: ${pjsFiltrados} lançamento(s) PJ ignorado(s) — ` + MSG_PJ_READONLY);
+        }
 
         const ok = await confirmarAcao({
             titulo: lista.length === 1 ? 'Excluir registro' : `Excluir ${lista.length} registros`,
@@ -1928,6 +2288,9 @@
     }
 
     function abrirEditar(reg) {
+        // Defesa em profundidade — PJ não passa por este modal (CRUD vive no
+        // Gerenciador CP). Mantém a mensagem unificada com a do click handler.
+        if (reg && reg.is_pj) { mostrarErro(MSG_PJ_READONLY); return; }
         editandoId = reg._id;
         editarNome.value    = reg.nome || '';
         editarCpf.value     = fmtCPF(reg.cpf);
