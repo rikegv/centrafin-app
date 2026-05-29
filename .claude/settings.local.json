@@ -37,7 +37,16 @@
       "PowerShell($path = 'dashboard_master_desktop\\\\code.html'; $bytes = [System.IO.File]::ReadAllBytes\\($path\\); $text = [System.Text.Encoding]::UTF8.GetString\\($bytes\\); $bs = [char]92; $old = \"replace\\(/[$\\([char]0x0300\\)-$\\([char]0x036F\\)]/g, \" + [char]34 + [char]34 + \"\\)\"; $new = \"replace\\(/[\" + $bs + \"u0300-\" + $bs + \"u036f]/g, \" + [char]34 + [char]34 + \"\\)\"; if \\($text.Contains\\($old\\)\\) { $text = $text.Replace\\($old, $new\\); [System.IO.File]::WriteAllBytes\\($path, [System.Text.Encoding]::UTF8.GetBytes\\($text\\)\\); 'replaced' } else { 'not-found' })",
       "PowerShell(firebase deploy --only hosting)",
       "PowerShell(firebase deploy --only hosting,firestore:rules)",
-      "PowerShell(firebase deploy --only \"hosting,firestore:rules\")"
+      "PowerShell(firebase deploy --only \"hosting,firestore:rules\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\Henrique\\\\Desktop\\\\centrafin-app\\\\master.html','c:\\\\Users\\\\Henrique\\\\Desktop\\\\centrafin-app\\\\gerenciador_contas_pagar_desktop\\\\code.html','c:\\\\Users\\\\Henrique\\\\Desktop\\\\centrafin-app\\\\custo_folha_desktop\\\\code.html' | Select-Object FullName, Length\")",
+      "Bash(where firebase *)",
+      "Bash(command -v firebase)",
+      "Bash(powershell -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\Henrique\\\\Desktop\\\\centrafin-app\\\\importacao_folha.js' | Select-Object FullName, Length\")",
+      "Bash(firebase firestore:databases:list)",
+      "Bash(gcloud --version)",
+      "Read(//c/Users/Henrique/Desktop/CENTRA DASH/**)",
+      "Bash(node -e \"const admin = require\\('firebase-admin'\\); admin.initializeApp\\({projectId: 'centra-fin'}\\); admin.firestore\\(\\).collection\\('CP_Beneficios_PJ'\\).where\\('competencia', '==', '2026-04'\\).limit\\(5\\).get\\(\\).then\\(s => { console.log\\('docs found:', s.size\\); s.forEach\\(d => console.log\\('-', d.id, 'fil_codigo:', d.data\\(\\).fil_codigo, 'nome:', d.data\\(\\).nome_planilha || d.data\\(\\).nome_fornecedor, 'valor_total:', d.data\\(\\).valor_total\\)\\); process.exit\\(0\\); }\\).catch\\(e => { console.error\\('ERRO:', e.code, '-', e.message.split\\('\\\\n'\\)[0]\\); process.exit\\(1\\); }\\);\")",
+      "Bash(git checkout *)"
     ]
   }
 }

@@ -15,6 +15,17 @@ service cloud.firestore {
              (userData.menus_permitidos != null && menuName in userData.menus_permitidos);
     }
 
+    // Perfil CONSULTA (Read-Only) — auditoria 2026-05-26.
+    // Defesa em profundidade: bloqueia qualquer escrita vinda do front-end de
+    // um usuário com perfil "consulta", mesmo que ele tenha menus operacionais
+    // marcados. Leitura segue normal (KPIs, gráficos, busca, exportação).
+    // Implementação: lookup em /Usuarios/{email}.perfil — alinhado com o
+    // padrão existente de isAdmin/hasMenu (NÃO usa custom claim).
+    function isConsulta() {
+      let perfil = get(/databases/$(database)/documents/Usuarios/$(request.auth.token.email)).data.perfil;
+      return perfil == "consulta";
+    }
+
     // LANCAMENTOS — base do Faturamento/CRF.
     // Auditoria 2026-05-13 (Privilege Segregation): leitura restrita aos menus
     // que efetivamente leem a coleção (CRF operacional, Dashboard Master,
@@ -27,13 +38,13 @@ service cloud.firestore {
         || hasMenu('dashboard_master')    // Dashboard Geral (Nível 1)
         || hasMenu('dash_aging')          // Aging standalone (Nível 2)
       );
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
 
     // METAS FINANCEIRAS
     match /MetasFinanceiras/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
 
     // USUARIOS
@@ -44,9 +55,14 @@ service cloud.firestore {
     // perfil/permissões fica bloqueada pelo `affectedKeys().hasOnly(...)`.
     match /Usuarios/{docId} {
       allow read: if request.auth != null;
-      allow create, delete: if request.auth != null && isAdmin();
+      allow create, delete: if request.auth != null && isAdmin() && !isConsulta();
+      // Auditoria 2026-05-26 (Perfil Consulta): bloqueio explícito do perfil
+      // consulta nas rotas de admin (defesa em profundidade). A self-update de
+      // presença (is_online/ultimo_acesso) segue liberada para QUALQUER perfil
+      // — necessária para o motor de presence em login.html + sidebar.js,
+      // inclusive do usuário consulta (aparece online na tela de Monitor).
       allow update: if request.auth != null && (
-        isAdmin()
+        (isAdmin() && !isConsulta())
         || (
           request.auth.token.email == docId
           && request.resource.data.diff(resource.data).affectedKeys()
@@ -80,33 +96,33 @@ service cloud.firestore {
     // Escrita: apenas admin (CRUD vive em Gestão de Parceiros / master).
     match /Base_Empresas/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
     match /Base_Fornecedores/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
     match /Base_Clientes/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
     match /Base_Categorias/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
     match /Base_Areas/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
     match /Base_Responsaveis/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
     // Base alimentada automaticamente pelo ETL de Custo de Folha — por isso a
     // escrita é liberada para usuários com o menu custo_folha (além de admin).
     match /Base_Centros_Custo/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && (isAdmin() || hasMenu('custo_folha'));
+      allow write: if request.auth != null && (isAdmin() || hasMenu('custo_folha')) && !isConsulta();
     }
 
     // CUSTOS FOLHA — Drop & Replace por competência.
@@ -119,7 +135,7 @@ service cloud.firestore {
         || hasMenu('custo_folha')         // Gerenciador Folha (Nível 1)
         || hasMenu('dash_custo_folha')    // Card no Dashboard / standalone (Nível 2)
       );
-      allow write: if request.auth != null && (isAdmin() || hasMenu('custo_folha'));
+      allow write: if request.auth != null && (isAdmin() || hasMenu('custo_folha')) && !isConsulta();
     }
 
     // CONTAS A PAGAR — Fase 1 + Fase 2 (auditoria 2026-04-29).
@@ -141,7 +157,7 @@ service cloud.firestore {
       );
       allow write: if request.auth != null && (
         hasMenu('contas_pagar') || hasMenu('gerenciador_contas_pagar')
-      );
+      ) && !isConsulta();
     }
 
     // REGRAS DE CONCILIAÇÃO — dicionário "De-Para" para o ETL automático.
@@ -150,7 +166,7 @@ service cloud.firestore {
     // vive na aba Configurações > Regras de Classificação).
     match /RegrasConciliacao/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
 
     // ÁREAS CONTAS A PAGAR — Fase 2.1 (auditoria 2026-04-29).
@@ -161,7 +177,7 @@ service cloud.firestore {
     // master.html → Configurações → Regras de Classificação → Áreas).
     match /AreasContasPagar/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
 
     // CP_GESTORES — Frente 3 (auditoria 2026-05-20).
@@ -172,7 +188,7 @@ service cloud.firestore {
     // Regras de Classificação → Áreas & Gestores).
     match /CP_Gestores/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
 
     // CP_BASE_MESTRA — auditoria 2026-05-14 (Fase 1 ETL Preditivo do Contas a Pagar).
@@ -183,9 +199,12 @@ service cloud.firestore {
     // ContasAPagar: tanto a tela legada (contas_pagar) quanto o novo
     // "Gerenciador Contas a Pagar" leem e gravam aqui.
     match /CP_BaseMestra/{docId} {
-      allow read, write: if request.auth != null && (
+      allow read: if request.auth != null && (
         hasMenu('contas_pagar') || hasMenu('gerenciador_contas_pagar')
       );
+      allow write: if request.auth != null && (
+        hasMenu('contas_pagar') || hasMenu('gerenciador_contas_pagar')
+      ) && !isConsulta();
     }
 
     // FORNECEDORES — auditoria 2026-05-15 (pivot Excel nativo) +
@@ -198,7 +217,7 @@ service cloud.firestore {
     // /CP_SolicitacoesAprovacao — defesa em profundidade (UI + DB).
     match /Fornecedores/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
 
     // CP_SOLICITACOESAPROVACAO — auditoria 2026-05-18 (Fase 3 — Governança).
@@ -216,9 +235,10 @@ service cloud.firestore {
       allow create: if request.auth != null
         && (hasMenu('aprovacoes') || hasMenu('gerenciador_contas_pagar'))
         && request.resource.data.solicitado_por_email == request.auth.token.email
-        && request.resource.data.status == 'Pendente';
-      allow update: if request.auth != null && isAdmin();
-      allow delete: if request.auth != null && isAdmin();
+        && request.resource.data.status == 'Pendente'
+        && !isConsulta();
+      allow update: if request.auth != null && isAdmin() && !isConsulta();
+      allow delete: if request.auth != null && isAdmin() && !isConsulta();
     }
 
     // CP_BASE_DESPESAS — auditoria 2026-05-15 (refatoração ETL).
@@ -229,9 +249,32 @@ service cloud.firestore {
     // memória dessa coleção pra reconciliar despesas truncadas pelo ERP.
     // Mesma permissão da ContasAPagar.
     match /CP_Base_Despesas/{docId} {
-      allow read, write: if request.auth != null && (
+      allow read: if request.auth != null && (
         isAdmin() || hasMenu('gerenciador_contas_pagar')
       );
+      allow write: if request.auth != null && (
+        isAdmin() || hasMenu('gerenciador_contas_pagar')
+      ) && !isConsulta();
+    }
+
+    // CP_BENEFICIOS_PJ — Frente 2/3 (auditoria 2026-05-21).
+    // Custos mensais de benefícios (VR/VT/Total) por PJ. Cruzados via
+    // Fornecedores.codigo_beneficio_folha (cadastro prévio). Lidos pelo
+    // Dashboard de Folha (compõe o custo unificado fatura+benefícios) e
+    // gravados pelo importador da Central no Gerenciador Contas a Pagar.
+    // Leitura aberta pra quem tem custo_folha (operacional + dashboard) ou
+    // gerenciador_contas_pagar; escrita exclusiva pro gerenciador (admin
+    // herda via isAdmin no `hasMenu`).
+    match /CP_Beneficios_PJ/{docId} {
+      allow read: if request.auth != null && (
+        isAdmin()
+        || hasMenu('custo_folha')
+        || hasMenu('dash_custo_folha')
+        || hasMenu('gerenciador_contas_pagar')
+      );
+      allow write: if request.auth != null && (
+        isAdmin() || hasMenu('gerenciador_contas_pagar')
+      ) && !isConsulta();
     }
 
     // METADADOS — telemetria leve de eventos do sistema (auditoria 2026-05-18).
@@ -243,7 +286,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if request.auth != null && (
         isAdmin() || hasMenu('gerenciador_contas_pagar')
-      );
+      ) && !isConsulta();
     }
   }
 }

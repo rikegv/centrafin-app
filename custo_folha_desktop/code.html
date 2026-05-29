@@ -278,43 +278,49 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                         <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Competência (Mês/Ano)</label>
-                        <input id="campo-competencia" type="month" required
+                        <input id="campo-competencia" type="month"
                                class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Empresa / Filial</label>
-                        <select id="campo-empresa" required
+                        <select id="campo-empresa"
                                 class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white">
                             <option value="">Selecione a empresa…</option>
                         </select>
                     </div>
                 </div>
 
+                <!-- Auditoria 2026-05-26 (Rollback): dois cards 100% isolados.
+                     Card 1 (vermelho) → Excel canônico do RH (fechamento de folha).
+                     Card 2 (azul)     → TXT analítico de benefícios (parser próprio).
+                     Cada botão dispara seu pipeline sem checar a estrutura do outro. -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <label class="dropzone block border-2 border-dashed border-slate-200 rounded-xl p-5 cursor-pointer hover:border-primary hover:bg-slate-50" data-target="file-folha">
+                    <!-- 🟥 BOTÃO 1: FOLHA EXCEL -->
+                    <label class="dropzone block border-2 border-dashed border-red-200 rounded-xl p-5 cursor-pointer hover:border-red-400 hover:bg-red-50/40 transition-colors" data-target="file-importar-folha-canonica">
                         <div class="flex items-center gap-4">
-                            <div class="w-11 h-11 rounded-xl bg-secondary/5 flex items-center justify-center shrink-0">
-                                <span class="material-symbols-outlined text-secondary">description</span>
+                            <div class="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-red-600">description</span>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-bold text-secondary">Folha + Encargos</p>
-                                <p id="label-file-folha" class="text-[11px] text-slate-500 mt-0.5 font-medium truncate">Clique para selecionar (.xlsx, .xls, .csv)</p>
+                                <p class="text-sm font-bold text-secondary">Importar Fechamento de Folha (Excel)</p>
+                                <p id="label-file-importar-folha-canonica" class="text-[11px] text-slate-500 mt-0.5 font-medium truncate">Clique para selecionar (.xlsx, .xls, .csv)</p>
                             </div>
                         </div>
-                        <input id="file-folha" type="file" accept=".xlsx,.xls,.csv" class="hidden" required />
+                        <input id="file-importar-folha-canonica" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
                     </label>
 
-                    <label class="dropzone block border-2 border-dashed border-slate-200 rounded-xl p-5 cursor-pointer hover:border-primary hover:bg-slate-50" data-target="file-beneficios">
+                    <!-- 🟦 BOTÃO 2: BENEFÍCIOS TXT -->
+                    <label class="dropzone block border-2 border-dashed border-blue-200 rounded-xl p-5 cursor-pointer hover:border-blue-400 hover:bg-blue-50/40 transition-colors" data-target="file-importar-beneficios-txt">
                         <div class="flex items-center gap-4">
-                            <div class="w-11 h-11 rounded-xl bg-secondary/5 flex items-center justify-center shrink-0">
-                                <span class="material-symbols-outlined text-secondary">card_travel</span>
+                            <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-blue-600">text_snippet</span>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-bold text-secondary">Benefícios <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider ml-1">(opcional)</span></p>
-                                <p id="label-file-beneficios" class="text-[11px] text-slate-500 mt-0.5 font-medium truncate">Clique para selecionar (.xlsx, .xls, .csv)</p>
+                                <p class="text-sm font-bold text-secondary">Importar Relatório de Benefícios (TXT)</p>
+                                <p id="label-file-importar-beneficios-txt" class="text-[11px] text-slate-500 mt-0.5 font-medium truncate">Clique para selecionar (.txt)</p>
                             </div>
                         </div>
-                        <input id="file-beneficios" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+                        <input id="file-importar-beneficios-txt" type="file" accept=".txt" class="hidden" />
                     </label>
                 </div>
 
@@ -799,6 +805,116 @@
     </div>
 </div>
 
+<!-- ════════════════════════════════════════════════════════════════════════
+     CENTRAL AVANÇADA DE EXPORTAÇÃO (auditoria 2026-05-26 — Frente 2)
+     Substitui o fluxo direto do botão "Exportar Base" por um modal de escopo:
+     Profundidade (Resumida × Completa) + Filtro de Escopo (Folha × Benefícios).
+     Filtros de empresa/competência/CC são herdados da tela (paridade KPI↔Excel).
+     Design Dark Glass: gradiente slate-900 + backdrop-blur, acentos emerald.
+     ════════════════════════════════════════════════════════════════════════ -->
+<div id="modal-exportar-folha-opcoes" class="fixed inset-0 z-[82] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-md" id="modal-exportar-folha-opcoes-overlay"></div>
+    <div class="w-full max-w-lg rounded-2xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] z-10 transform scale-95 transition-transform duration-300 relative overflow-hidden border border-white/10"
+         style="background: linear-gradient(150deg, rgba(15,23,42,0.96) 0%, rgba(2,6,23,0.94) 60%, rgba(6,11,28,0.96) 100%);"
+         id="modal-exportar-folha-opcoes-content">
+        <!-- Header -->
+        <div class="px-7 pt-7 pb-5 border-b border-white/5 flex items-start gap-4">
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner"
+                 style="background: radial-gradient(circle at 30% 30%, rgba(16,185,129,0.25), rgba(16,185,129,0.05));">
+                <span class="material-symbols-outlined text-emerald-300 text-2xl">analytics</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="font-headline text-lg font-extrabold text-white tracking-tight">Central de Exportação Avançada</h3>
+                <p class="text-[12px] text-slate-400 font-medium mt-0.5">Escolha a profundidade do relatório e o escopo de cruzamento com a base de benefícios.</p>
+            </div>
+            <button id="btn-fechar-exportar-folha-opcoes" type="button" class="text-slate-500 hover:text-white transition-colors shrink-0">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="px-7 py-6 space-y-6 max-h-[65vh] overflow-y-auto">
+            <!-- 1. Profundidade -->
+            <div>
+                <p class="text-[10px] font-extrabold text-emerald-300/80 uppercase tracking-[0.2em] mb-3">1. Profundidade</p>
+                <div class="space-y-2.5">
+                    <label class="flex items-start gap-3 p-3.5 rounded-xl border border-white/10 hover:border-emerald-400/40 hover:bg-white/[0.03] cursor-pointer transition-all"
+                           data-radio-card="resumida">
+                        <input type="radio" name="export-profundidade" value="resumida" checked
+                               class="mt-0.5 w-4 h-4 text-emerald-500 bg-slate-800 border-slate-600 focus:ring-emerald-500/40 focus:ring-2 cursor-pointer">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[13px] font-bold text-white">Base Resumida</p>
+                            <p class="text-[11px] text-slate-400 font-medium mt-0.5">Totais gerenciais calculados — 1 linha por colaborador com Salário Bruto, Vencimentos, Encargos, Benefícios e Custo Total.</p>
+                        </div>
+                    </label>
+                    <label class="flex items-start gap-3 p-3.5 rounded-xl border border-white/10 hover:border-emerald-400/40 hover:bg-white/[0.03] cursor-pointer transition-all"
+                           data-radio-card="completa">
+                        <input type="radio" name="export-profundidade" value="completa"
+                               class="mt-0.5 w-4 h-4 text-emerald-500 bg-slate-800 border-slate-600 focus:ring-emerald-500/40 focus:ring-2 cursor-pointer">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[13px] font-bold text-white">Base Completa <span class="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-400/20">Analítica</span></p>
+                            <p class="text-[11px] text-slate-400 font-medium mt-0.5">Abertura analítica funcional — cruza folha × benefícios PJ linha por linha (VT, VR, Outros) com Líquido e Custo Total consolidados.</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 2. Filtro de Escopo (só ativo quando Base Completa) -->
+            <div data-escopo-section>
+                <p class="text-[10px] font-extrabold text-emerald-300/80 uppercase tracking-[0.2em] mb-3">2. Filtro de Escopo
+                    <span class="ml-1 text-slate-500 font-medium normal-case tracking-normal" data-escopo-hint>(habilitado em Base Completa)</span>
+                </p>
+                <div class="space-y-2.5" data-escopo-grupo aria-disabled="true">
+                    <label class="flex items-start gap-3 p-3 rounded-xl border border-white/5 bg-white/[0.02] transition-all data-[escopo-disabled=true]:opacity-50 data-[escopo-disabled=true]:cursor-not-allowed cursor-pointer hover:border-emerald-400/30"
+                           data-escopo-item data-escopo-disabled="true">
+                        <input type="checkbox" id="export-escopo-folha" checked disabled
+                               class="mt-0.5 w-4 h-4 text-emerald-500 bg-slate-800 border-slate-600 rounded focus:ring-emerald-500/40 focus:ring-2 cursor-pointer disabled:cursor-not-allowed">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[13px] font-bold text-white">Incluir Lançamentos de Folha</p>
+                            <p class="text-[11px] text-slate-400 font-medium mt-0.5">Salários, vencimentos e descontos em folha.</p>
+                        </div>
+                    </label>
+                    <label class="flex items-start gap-3 p-3 rounded-xl border border-white/5 bg-white/[0.02] transition-all data-[escopo-disabled=true]:opacity-50 data-[escopo-disabled=true]:cursor-not-allowed cursor-pointer hover:border-emerald-400/30"
+                           data-escopo-item data-escopo-disabled="true">
+                        <input type="checkbox" id="export-escopo-beneficios" checked disabled
+                               class="mt-0.5 w-4 h-4 text-emerald-500 bg-slate-800 border-slate-600 rounded focus:ring-emerald-500/40 focus:ring-2 cursor-pointer disabled:cursor-not-allowed">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[13px] font-bold text-white">Incluir Lançamentos de Benefícios</p>
+                            <p class="text-[11px] text-slate-400 font-medium mt-0.5">VR, VT e Assistência Médica — cruzados com CP_Beneficios_PJ.</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Banner: filtros herdados da tela -->
+            <div class="flex items-start gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.05] text-[11px] text-emerald-200/90 font-medium">
+                <span class="material-symbols-outlined text-base text-emerald-300 mt-0.5">link</span>
+                <span>O recorte (empresa, competência, centro de custo e busca) reflete <strong class="text-emerald-200">exatamente o que está visível na tabela</strong>.</span>
+            </div>
+
+            <!-- Status / progresso -->
+            <div id="export-folha-opcoes-status" class="hidden items-start gap-2 px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] text-[11px] text-slate-300 font-medium">
+                <span class="material-symbols-outlined text-base text-emerald-300 spin">progress_activity</span>
+                <span id="export-folha-opcoes-status-msg">Processando…</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-7 py-5 border-t border-white/5 flex items-center justify-end gap-3"
+             style="background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.25) 100%);">
+            <button id="btn-cancelar-exportar-folha-opcoes" type="button"
+                    class="px-5 py-2.5 text-[12px] font-bold text-slate-300 hover:text-white border border-white/10 hover:border-white/25 rounded-xl transition-all">
+                Cancelar
+            </button>
+            <button id="btn-gerar-exportar-folha-opcoes" type="button"
+                    class="flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-xl text-[12px] font-extrabold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/30"
+                    style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #04140c;">
+                <span class="material-symbols-outlined text-base" id="export-folha-opcoes-btn-icon">download</span>
+                <span id="export-folha-opcoes-btn-label">Gerar Excel</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script type="module">
     import { renderSidebar } from "../sidebar.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -839,10 +955,16 @@
     const form = document.getElementById('form-importar');
     const inputCompetencia = document.getElementById('campo-competencia');
     const selectEmpresa = document.getElementById('campo-empresa');
-    const inputFolha = document.getElementById('file-folha');
-    const inputBeneficios = document.getElementById('file-beneficios');
-    const labelFolha = document.getElementById('label-file-folha');
-    const labelBeneficios = document.getElementById('label-file-beneficios');
+    // Auditoria 2026-05-26 (Rollback): os IDs do modal de importação foram
+    // separados — `inputFolha` agora aponta para o botão exclusivamente Excel
+    // (Fechamento RH) e `inputBeneficiosTxt` é o canal independente do TXT
+    // analítico de benefícios. As referências legadas a `inputBeneficios`
+    // (Excel benefícios opcional) foram removidas junto com o card antigo —
+    // a integração de benefícios PJ agora vive 100% no pipeline TXT.
+    const inputFolha = document.getElementById('file-importar-folha-canonica');
+    const inputBeneficiosTxt = document.getElementById('file-importar-beneficios-txt');
+    const labelFolha = document.getElementById('label-file-importar-folha-canonica');
+    const labelBeneficiosTxt = document.getElementById('label-file-importar-beneficios-txt');
     const btnProcessar = document.getElementById('btn-processar');
     const iconBtn = document.getElementById('icon-btn');
     const labelBtn = document.getElementById('label-btn');
@@ -879,6 +1001,152 @@
         const s = String(c || '').replace(/\D/g, '').padStart(11, '0');
         return s.length === 11 ? `${s.slice(0,3)}.${s.slice(3,6)}.${s.slice(6,9)}-${s.slice(9,11)}` : (c || '—');
     };
+
+    // ── PERFIL CONSULTA (Read-Only) — auditoria 2026-05-26 ────────────────────
+    // Trava de UI estrita: oculta gatilhos de Importação, Excluir Selecionados,
+    // checkboxes de seleção e ícones de Editar/Excluir por linha. Mantém os
+    // KPIs, gráficos, filtros avançados, busca e o botão Exportar Base 100%
+    // funcionais. O ícone "Visualizar" (data-acao="visualizar") segue ativo —
+    // mas o modal de edição abre em Read-Only (inputs disabled + Salvar oculto).
+    // Defesa em DEPTH — as Firestore Rules (isConsulta) já barram qualquer
+    // tentativa de write originada do browser.
+    function _cpAplicarRestricoesLeitura(usuarioRole) {
+        const role = String(usuarioRole || '').trim().toLowerCase();
+        if (role !== 'consulta') return false;
+
+        document.body.setAttribute('data-perfil-consulta', '1');
+
+        if (!document.getElementById('css-perfil-consulta')) {
+            const style = document.createElement('style');
+            style.id = 'css-perfil-consulta';
+            style.textContent = `
+                body[data-perfil-consulta="1"] #btn-abrir-importar,
+                body[data-perfil-consulta="1"] #btn-excluir-selecionados,
+                body[data-perfil-consulta="1"] #th-selecao,
+                body[data-perfil-consulta="1"] [data-acao="selecionar"],
+                body[data-perfil-consulta="1"] [data-acao="editar"],
+                body[data-perfil-consulta="1"] [data-acao="excluir"],
+                body[data-perfil-consulta="1"] #btn-editar-salvar,
+                body[data-perfil-consulta="1"] [data-acao-cadastrar] {
+                    display: none !important;
+                }
+                body[data-perfil-consulta="1"] #modal-editar input,
+                body[data-perfil-consulta="1"] #modal-editar select,
+                body[data-perfil-consulta="1"] #modal-editar textarea {
+                    pointer-events: none !important;
+                    background-color: #f3f4f6 !important;
+                    color: #6b7280 !important;
+                    cursor: not-allowed !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const MODAIS_EDICAO = ['modal-editar'];
+
+        function _travarModal(modalEl) {
+            if (!modalEl) return;
+            modalEl.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea')
+                .forEach(el => { el.disabled = true; el.setAttribute('aria-readonly', 'true'); });
+            modalEl.querySelectorAll('#btn-editar-salvar, button[id*="salvar" i], [data-acao-salvar]')
+                .forEach(b => { b.classList.add('hidden'); b.disabled = true; });
+        }
+
+        function _sweep() {
+            for (const id of MODAIS_EDICAO) _travarModal(document.getElementById(id));
+            document.querySelectorAll('[data-acao="selecionar"], #cb-selecionar-todos')
+                .forEach(el => { el.disabled = true; el.checked = false; });
+            document.querySelectorAll('[data-acao="editar"], [data-acao="excluir"]')
+                .forEach(el => { el.disabled = true; });
+        }
+
+        _sweep();
+        document.addEventListener('click', () => { setTimeout(_sweep, 30); }, true);
+
+        try {
+            setTimeout(() => {
+                if (typeof mostrarToast === 'function') {
+                    mostrarToast('Sessão em modo CONSULTA — alterações desabilitadas.', 'visibility');
+                }
+            }, 900);
+        } catch (_) {}
+
+        return true;
+    }
+    window._cpAplicarRestricoesLeitura = _cpAplicarRestricoesLeitura;
+
+    // ── TRAVA DE USUÁRIO COMUM (Read-Only operacional) ────────────────────────
+    // Auditoria 2026-05-26 (Frente 1). Política mais restritiva que o perfil
+    // "consulta": QUALQUER usuário que NÃO seja master/super_admin perde os
+    // gatilhos de mutação na tela — Importar Folha, Editar (lápis) e Excluir
+    // (lixeira) por linha, bem como o bulk delete. KPIs, gráficos, filtros,
+    // busca e Exportar Base permanecem 100% intactos. Defesa em DEPTH — as
+    // Firestore Rules continuam permitindo write para hasMenu('custo_folha'),
+    // então um operador legítimo poderia reabilitar via DevTools; este lock
+    // é UX/segurança visual, não authz definitivo.
+    function folhaBloquearAcoesEscrita(perfilUsuario) {
+        const perfil = String(perfilUsuario || '').trim().toLowerCase();
+        const isAdminFolha = (perfil === 'master' || perfil === 'super_admin');
+        if (isAdminFolha) return false;
+
+        document.body.setAttribute('data-folha-readonly', '1');
+
+        if (!document.getElementById('css-folha-readonly')) {
+            const style = document.createElement('style');
+            style.id = 'css-folha-readonly';
+            style.textContent = `
+                body[data-folha-readonly="1"] #btn-abrir-importar,
+                body[data-folha-readonly="1"] #btn-excluir-selecionados,
+                body[data-folha-readonly="1"] #th-selecao,
+                body[data-folha-readonly="1"] [data-acao="selecionar"],
+                body[data-folha-readonly="1"] [data-acao="editar"],
+                body[data-folha-readonly="1"] [data-acao="excluir"],
+                body[data-folha-readonly="1"] #btn-editar-salvar {
+                    display: none !important;
+                }
+                body[data-folha-readonly="1"] #modal-editar input,
+                body[data-folha-readonly="1"] #modal-editar select,
+                body[data-folha-readonly="1"] #modal-editar textarea {
+                    pointer-events: none !important;
+                    background-color: #f3f4f6 !important;
+                    color: #6b7280 !important;
+                    cursor: not-allowed !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function _travarModalEdicao() {
+            const m = document.getElementById('modal-editar');
+            if (!m) return;
+            m.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea')
+                .forEach(el => { el.disabled = true; el.setAttribute('aria-readonly', 'true'); });
+            const btnSalvar = document.getElementById('btn-editar-salvar');
+            if (btnSalvar) { btnSalvar.classList.add('hidden'); btnSalvar.disabled = true; }
+        }
+
+        function _sweep() {
+            _travarModalEdicao();
+            document.querySelectorAll('[data-acao="selecionar"], #cb-selecionar-todos')
+                .forEach(el => { el.disabled = true; el.checked = false; });
+            document.querySelectorAll('[data-acao="editar"], [data-acao="excluir"]')
+                .forEach(el => { el.disabled = true; });
+        }
+
+        _sweep();
+        document.addEventListener('click', () => { setTimeout(_sweep, 30); }, true);
+
+        try {
+            setTimeout(() => {
+                if (typeof mostrarToast === 'function') {
+                    mostrarToast('Sessão operacional — edição de folha desabilitada (read-only).', 'shield');
+                }
+            }, 900);
+        } catch (_) {}
+
+        return true;
+    }
+    window.folhaBloquearAcoesEscrita = folhaBloquearAcoesEscrita;
 
     // ── AUTH / SIDEBAR / GUARDIÃO ────────────────────────────────────────────
     onAuthStateChanged(auth, async (user) => {
@@ -942,6 +1210,19 @@
             // Libera a UI: auth + permissões resolvidos.
             document.body.classList.add('auth-ok');
 
+            // Auditoria 2026-05-26: Perfil CONSULTA (Read-Only). Hot-patch
+            // das ações de mutação no DOM (Importar, Excluir Selecionados,
+            // checkboxes de linha, Editar/Excluir por linha) — Firestore Rules
+            // garantem defesa em depth no backend.
+            _cpAplicarRestricoesLeitura(dadosUser.perfil);
+
+            // Auditoria 2026-05-26 (Frente 1 — Governança RH): trava ampla
+            // para QUALQUER usuário não-admin (perfil != master && != super_admin).
+            // Política endurecida — operadores de Folha agora só editam via
+            // master/super_admin. Mantém intactos KPIs, gráficos, filtros,
+            // busca e Exportar Base.
+            folhaBloquearAcoesEscrita(dadosUser.perfil);
+
             // Listener PJ → Custo de Folha (auditoria 2026-05-18). Inscreve
             // tudo que está em ContasAPagar com tipo_entidade == PJ, mapeia
             // pro schema da Folha e dispara recombinação. Listener persistente
@@ -949,11 +1230,533 @@
             // filtro da query principal.
             inscreverFornecedoresCC();
             inscreverPJContasAPagar();
+            inscreverBeneficiosPJ();
+            // Auditoria 2026-05-26 (Frente 3): cruzamento Centro de Custo → Gestor
+            // para o motor de Base Completa do export. Volume baixo (dezenas).
+            inscreverAreasGestor();
         } catch (err) {
             console.error('Falha na autenticação:', err);
             window.location.href = "../login.html";
         }
     });
+
+    // Listener leve em /CP_Beneficios_PJ (Frente 3 — 2026-05-21).
+    // Alimenta _cacheBeneficiosPJ (chave `${comp}_${fornecedor_id}`) usado em
+    // pjParaFolha. Sempre que muda, remapeia _cachePJ a partir de _cachePJRaw
+    // pra recalcular o custo unificado (fatura + benefícios) e re-renderiza.
+    // Volume baixo (~30 PJs × 12 meses); mantém em memória sem paginação.
+    let _unsubBeneficiosPJ = null;
+    // Cache decomposto VT/VR/Outros (auditoria 2026-05-26 Frente 3). Mantemos
+    // o `_cacheBeneficiosPJ` (Map<string, number>) intacto para preservar o
+    // contrato com `pjParaFolha` (que só precisa do total). Em paralelo,
+    // `_cacheBeneficiosPJFull` guarda a decomposição completa por chave
+    // `${comp}_${fid}`, usada exclusivamente no motor de Base Completa.
+    let _cacheBeneficiosPJFull = new Map();
+    // ── Auditoria 2026-05-26 (Pente Fino — Card Benefícios CLT) ─────────────
+    // Mapa UNIVERSAL por matrícula. Antes, a trava `fid === 'ORFAO'` descartava
+    // todos os registros do TXT cujo fornecedor_id não casava com o cadastro de
+    // Fornecedores — o caso dos CLTs (que não são PJ). Agora preservamos TODOS
+    // os registros do TXT em paralelo, indexados por `${competencia}_${fil_codigo}`.
+    // O motor `enriquecerCltComBeneficios()` consulta este mapa pra anexar os
+    // benefícios à cada linha de CLT antes do render.
+    let _cacheBeneficiosPorMatricula = new Map();
+    function inscreverBeneficiosPJ() {
+        if (_unsubBeneficiosPJ) { _unsubBeneficiosPJ(); _unsubBeneficiosPJ = null; }
+        try {
+            _unsubBeneficiosPJ = onSnapshot(collection(db, 'CP_Beneficios_PJ'), (snap) => {
+                const mapPJ = new Map();         // legado: comp_fid → total (PJ Internos)
+                const mapFull = new Map();       // legado: comp_fid → {vt,vr,total} (export Base Completa)
+                const mapMatricula = new Map();  // NOVO:   comp_matricula → abertura completa (CLT)
+
+                snap.forEach(d => {
+                    const data = d.data() || {};
+                    const comp = String(data.competencia || '').trim();
+                    const fid  = String(data.fornecedor_id || '').trim();
+                    // Auditoria 2026-05-26 (Pente Fino — Asymmetry Bug): RH emite
+                    // matrícula no TXT com zeros à esquerda ("027521") enquanto
+                    // o Excel canônico vem sem ("27521"). Sem strip, o `.get()`
+                    // do Map nunca casa → CLT fica com Benef. Pagos zerado.
+                    // Normalizamos AMBOS os lados via `.replace(/^0+/, '')`
+                    // (aqui no índice + em `enriquecerCltComBeneficios` no lookup).
+                    const matricula = String(data.fil_codigo || '').trim().replace(/^0+/, '');
+
+                    if (!comp || !matricula) return;
+
+                    // 1) Mapa de contexto para PJs Internos (LEGADO INTACTO).
+                    //    Pulamos ORFAO aqui porque `pjParaFolha` faz lookup
+                    //    por `fornecedor_id` — ORFAO não bate em PJ algum.
+                    if (fid && fid !== 'ORFAO') {
+                        const chavePJ = `${comp}_${fid}`;
+                        const valor = Number(data.valor_total) || 0;
+                        if (valor > 0) {
+                            mapPJ.set(chavePJ, (mapPJ.get(chavePJ) || 0) + valor);
+                            const vt = Number(data.valor_vt) || 0;
+                            const vr = Number(data.valor_vr) || 0;
+                            const prev = mapFull.get(chavePJ) || { valor_vt: 0, valor_vr: 0, valor_total: 0 };
+                            mapFull.set(chavePJ, {
+                                valor_vt:    prev.valor_vt + vt,
+                                valor_vr:    prev.valor_vr + vr,
+                                valor_total: prev.valor_total + valor,
+                            });
+                        }
+                    }
+
+                    // 2) NOVO: Mapa universal por matrícula — inclui ORFAO (CLT).
+                    //    Captura a abertura completa de proventos e descontos
+                    //    do TXT, alinhando com a granularidade do gerenciador.
+                    const chaveMatricula = `${comp}_${matricula}`;
+                    mapMatricula.set(chaveMatricula, {
+                        vt_pago:               Number(data.valor_vt  || 0),
+                        vr_pago:               Number(data.valor_vr  || 0),
+                        va_pago:               Number(data.valor_va  || 0),
+                        med_pago:              Number(data.valor_med || 0),
+                        total_proventos_benef: Number(data.valor_total || 0),
+                        desconto_vt:           Number(data.desconto_vt  || 0),
+                        desconto_vr:           Number(data.desconto_vr  || 0),
+                        desconto_va:           Number(data.desconto_va  || 0),
+                        desconto_med:          Number(data.desconto_med || 0),
+                        total_descontos_benef: Number(data.total_descontos || 0),
+                    });
+                });
+
+                _cacheBeneficiosPJ = mapPJ;
+                _cacheBeneficiosPJFull = mapFull;
+                _cacheBeneficiosPorMatricula = mapMatricula;
+
+                // Re-render em cascata:
+                //  (a) PJ — remapeia `_cachePJ` a partir do raw pra refletir
+                //      os novos benefícios via pjParaFolha (lookup por fid).
+                //  (b) CLT — força re-subscribe da query da Folha pra que
+                //      enriquecerCltComBeneficios() rode sobre os refinados
+                //      antes de virar `_cacheFolha`.
+                if (Array.isArray(_cachePJRaw) && _cachePJRaw.length) {
+                    _cachePJ = _cachePJRaw.map(({ id, data }) => pjParaFolha(id, data));
+                }
+                if (Array.isArray(cacheRegistros) && cacheRegistros.length) {
+                    ultimoFiltroKey = '';
+                    carregarDadosTabela();
+                }
+            }, (err) => {
+                console.warn('[CustoFolha][BeneficiosPJ] listener falhou:', err?.code || err?.message);
+                _cacheBeneficiosPJ = new Map();
+                _cacheBeneficiosPJFull = new Map();
+                _cacheBeneficiosPorMatricula = new Map();
+            });
+        } catch (err) {
+            console.warn('[CustoFolha][BeneficiosPJ] não foi possível inscrever:', err?.message);
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PARSER TXT ANALÍTICO DE BENEFÍCIOS — auditoria 2026-05-26 (Unificação RH).
+    // ════════════════════════════════════════════════════════════════════════
+    // Replica a máquina de estados de `_benefParsearTXT` do gerenciador_contas_pagar.
+    // Auditoria 2026-05-26 (Rollback): este pipeline é acionado EXCLUSIVAMENTE
+    // pelo Botão 2 do modal (#file-importar-beneficios-txt) — 100% isolado do
+    // canal de Folha (Excel). O change handler do Botão 2 valida a extensão
+    // e dispara `folhaParsearTxtBeneficios(file)` imediatamente.
+    //
+    // Persistência: /CP_Beneficios_PJ com docId determinístico
+    // `${competencia}_${fil_codigo}` (UPSERT). O listener inscreverBeneficiosPJ
+    // já ativo neste módulo dispara o re-render automaticamente — o
+    // renderHistorico() explícito ao final é apenas belt+suspenders.
+
+    const _FOLHA_MESES_PT = {
+        janeiro: '01', fevereiro: '02', marco: '03', 'março': '03', abril: '04',
+        maio: '05', junho: '06', julho: '07', agosto: '08', setembro: '09',
+        outubro: '10', novembro: '11', dezembro: '12',
+    };
+    function _folhaBenefMesParaMM(mesPT) {
+        // Auditoria 2026-05-27 (Caso LAURA Março — Encoding Mojibake):
+        // O RH emite o TXT em Windows-1252. Meses sem acento funcionam, mas
+        // "Março" vira "MarÃ§o" quando lido como UTF-8. A regex `\w+` para
+        // captura no caractere "Ã" e devolve só "Mar" — que não casa no mapa,
+        // forçando o fallback para o mês ATUAL do sistema. Resultado: todos
+        // os funcionários de março gravam com `competencia = "2026-05"` (mês
+        // corrente) em vez de "2026-03" → cross-reference não casa.
+        // FALLBACK heurístico: 3 primeiras letras do mês PT-BR. Cobre tanto
+        // "março" puro quanto "MarÃ§o" mojibake — ambos começam com "mar".
+        if (!mesPT) return '';
+        const original = String(mesPT).trim().toLowerCase();
+        const semAcento = original.normalize('NFD').replace(/[̀-ͯ]/g, '');
+        // Tentativa 1: chave canônica (sem acento)
+        if (_FOLHA_MESES_PT[semAcento]) return _FOLHA_MESES_PT[semAcento];
+        // Tentativa 2: chave original (com acento UTF-8 puro)
+        if (_FOLHA_MESES_PT[original]) return _FOLHA_MESES_PT[original];
+        // Tentativa 3: prefixo de 3 letras — robusto contra qualquer mojibake.
+        const pref3 = semAcento.slice(0, 3);
+        const PREFIXOS_MES = {
+            jan: '01', fev: '02', mar: '03', abr: '04',
+            mai: '05', jun: '06', jul: '07', ago: '08',
+            set: '09', out: '10', nov: '11', dez: '12',
+        };
+        return PREFIXOS_MES[pref3] || '';
+    }
+    function _folhaBenefNormFilCodigo(s) {
+        return String(s == null ? '' : s).trim().toUpperCase();
+    }
+    function _folhaBenefParseValorBR(v) {
+        if (v == null || v === '') return 0;
+        if (typeof v === 'number') return v;
+        const s = String(v).replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.');
+        const n = parseFloat(s);
+        return isFinite(n) ? n : 0;
+    }
+    function _folhaBenefLerArquivoUTF8(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(reader.error || new Error('Falha ao ler o arquivo.'));
+            reader.onload  = () => resolve(String(reader.result || ''));
+            reader.readAsText(file, 'UTF-8');
+        });
+    }
+    function _folhaBenefCcZerado(codigo, nome) {
+        const cod = String(codigo || '').trim();
+        const nom = String(nome || '').trim().replace(/[.\s]/g, '');
+        if (!cod && !nom) return true;
+        if (/^0+$/.test(cod) && !nom) return true;
+        return false;
+    }
+    function _folhaBenefExtrairValorBR(linha) {
+        const matches = String(linha || '').match(/-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2}/g);
+        if (!matches || !matches.length) return 0;
+        return _folhaBenefParseValorBR(matches[matches.length - 1]);
+    }
+
+    const _FOLHA_COD_VT  = '276';
+    const _FOLHA_COD_VR  = '277';
+    const _FOLHA_COD_VA  = '284';
+    const _FOLHA_COD_MED = '279';
+    // Auditoria 2026-05-26 (Granularidade): descontos isolados por código.
+    // Espelha exatamente o gerenciador_contas_pagar — cada código → propriedade
+    // individual; total_descontos é derivado da soma dos 4 ao fechar o registro.
+    const _FOLHA_COD_DESC_VT  = '672';
+    const _FOLHA_COD_DESC_VR  = '773';
+    const _FOLHA_COD_DESC_VA  = '776';
+    const _FOLHA_COD_DESC_MED = '774';
+
+    function _folhaBenefParsearTXT(texto) {
+        const linhas = String(texto || '').split(/\r?\n/);
+        let competencia = '';
+        let centroCustoContexto = '';
+        let nomeCcContexto = '';
+        let atual = null;
+        const registros = [];
+
+        function fechar(valorLiquido) {
+            if (!atual) return;
+            if (valorLiquido != null) atual.valor_liquido = valorLiquido;
+            // total_descontos derivado da soma dos 4 acumuladores individuais
+            // (auditoria 2026-05-26 — granularidade espelhada do gerenciador).
+            atual.total_descontos = (atual.desconto_vt || 0)
+                + (atual.desconto_vr || 0)
+                + (atual.desconto_va || 0)
+                + (atual.desconto_med || 0);
+            registros.push(atual);
+            atual = null;
+        }
+
+        for (const linha of linhas) {
+            if (!linha) continue;
+
+            // (1) Competência — top do arquivo. Regex tolerante a posição.
+            // Auditoria 2026-05-27 (diag2): aceita "Benefício"/"Benefícios"
+            // com ou sem acento UTF-8 puro OU mojibake (BenefÃ­cio).
+            // Padrão: <palavra raiz Benef...> <espaços> <mês> <opc espaços>
+            // <"/"> <opc espaços> <ano 4 dígitos>. Tolerância: usa caractere-
+            // wildcard `.{0,4}` entre "Benef" e o mês — cobre "Benefício",
+            // "Beneficios", "Benefícios", abreviação "Benef.".
+            if (!competencia) {
+                const m = linha.match(/Benef[\w\.À-ſ]{0,6}\s+([A-Za-zÀ-ſ-ÿ]+)\s*\/\s*(\d{4})/i);
+                if (m) {
+                    const mm = _folhaBenefMesParaMM(m[1]);
+                    if (mm) competencia = `${m[2]}-${mm}`;
+                }
+            }
+
+            // (2) Âncora de bloco — Centro de Custo.
+            // Auditoria 2026-05-27 (Caso BIANCA — Page Break Bug):
+            // O RH RE-IMPRIME o cabeçalho completo (Emp-Fil + Cliente +
+            // C. Custo) no topo de cada página, MESMO no meio de um
+            // funcionário em curso. O parser legado descartava `atual` sempre
+            // que via uma linha "C. Custo:" — comendo registros que cruzavam
+            // a quebra de página (caso Bianca abril/2026: VT pago na pg.1,
+            // VR+Med+VA na pg.2; o parser perdia o funcionário inteiro).
+            // CORREÇÃO: só descartamos `atual` quando o CC NOVO é DIFERENTE
+            // do contexto corrente (mudança real de seção). Mesmo CC =
+            // re-impressão de cabeçalho = continuação válida do mesmo func.
+            const mcc = linha.match(/C\.\s*Custo:\s*([\d\w]+)-\s*(.+?)\s*$/i);
+            if (mcc) {
+                const codigo = String(mcc[1] || '').trim();
+                const nome   = String(mcc[2] || '').trim();
+                const novoContexto = _folhaBenefCcZerado(codigo, nome)
+                    ? ''
+                    : `${codigo} - ${nome}`.trim();
+                // Só descarta funcionário inacabado se NOVO CC ≠ contexto atual.
+                // Mesma seção re-impressa no topo da página = preserva `atual`.
+                if (atual && novoContexto !== centroCustoContexto) {
+                    atual = null; // nova seção real — descarta funcionário órfão
+                }
+                if (_folhaBenefCcZerado(codigo, nome)) {
+                    centroCustoContexto = '';
+                    nomeCcContexto = '';
+                } else {
+                    centroCustoContexto = novoContexto;
+                    nomeCcContexto = nome;
+                }
+                continue;
+            }
+
+            // (3) Marcador de funcionário.
+            const mfunc = linha.match(/^\s*Funcionario:\s*(\d+)\s*(.+?)\s*$/i);
+            if (mfunc) {
+                if (atual) fechar(null);
+                atual = {
+                    fil_codigo: _folhaBenefNormFilCodigo(mfunc[1]),
+                    nome: String(mfunc[2] || '').trim(),
+                    centro_custo_txt: centroCustoContexto,
+                    centro_custo_txt_nome: nomeCcContexto,
+                    vt_pago: 0,
+                    vr_pago: 0,
+                    va_pago: 0,
+                    med_pago: 0,
+                    // Descontos individuais por código (auditoria 2026-05-26).
+                    desconto_vt: 0,
+                    desconto_vr: 0,
+                    desconto_va: 0,
+                    desconto_med: 0,
+                    total_descontos: 0, // derivado no fechar()
+                    valor_liquido: 0,
+                };
+                continue;
+            }
+
+            // (4) Fechamento "Liquido (T O T A L)".
+            if (/Liquido\s*\(\s*T\s*O?\s*T?\s*A?\s*L?\s*\)/i.test(linha)) {
+                fechar(_folhaBenefExtrairValorBR(linha));
+                continue;
+            }
+
+            // (5) Eventos numéricos — só com funcionário aberto.
+            if (!atual) continue;
+
+            // Auditoria 2026-05-27 (Caso BARBARA NUNES — Bug crítico de Parser):
+            // O TXT do RH é emitido em DUAS colunas separadas pelo delimitador
+            // `||` — coluna ESQUERDA tem proventos (276/277/279/284) e coluna
+            // DIREITA tem descontos (672/773/774/776 + devoluções 671/771).
+            // O parser legado pegava o ÚLTIMO valor da linha inteira, o que
+            // capturava o desconto da coluna direita no lugar do provento da
+            // esquerda quando ambos coexistiam. Ex.: a linha
+            //     "276 Vale Transporte (Pago) 002 93,80 || 672 Descto VT 1,00"
+            // tinha o "276 → 93.80" sobrescrito por "1.00" (último valor).
+            // CORREÇÃO: splitamos a linha pelo `||` e processamos cada metade
+            // de forma independente — assim o código 276 da esquerda pega
+            // 93,80 e o 672 da direita pega 1,00, sem cruzamento.
+            const partes = linha.split('||');
+            const colEsq = partes[0] || '';
+            const colDir = partes[1] || '';
+
+            // (5a) Coluna ESQUERDA — proventos pagos.
+            const mcodEsq = colEsq.match(/^\s*(\d{3})\b/);
+            if (mcodEsq) {
+                const codE = mcodEsq[1];
+                const valE = _folhaBenefExtrairValorBR(colEsq);
+                if (codE === _FOLHA_COD_VT)       atual.vt_pago  += valE;
+                else if (codE === _FOLHA_COD_VR)  atual.vr_pago  += valE;
+                else if (codE === _FOLHA_COD_VA)  atual.va_pago  += valE;
+                else if (codE === _FOLHA_COD_MED) atual.med_pago += valE;
+                // Edge case (auditoria): se a coluna esquerda vier vazia mas
+                // a direita tiver um código de DESCONTO (linhas tipo
+                // "                          || 771   Devolução de VR  570,00"),
+                // o ramo (5b) abaixo processa o desconto normalmente.
+                // Edge case 2: alguns layouts emitem o desconto NO MESMO
+                // código da esquerda quando não há provento (raro, mas
+                // existe em rescisões). Tratamos abaixo se aplicável.
+                else if (codE === _FOLHA_COD_DESC_VT  || codE === '671') atual.desconto_vt  += valE;
+                else if (codE === _FOLHA_COD_DESC_VR  || codE === '771') atual.desconto_vr  += valE;
+                else if (codE === _FOLHA_COD_DESC_VA)                    atual.desconto_va  += valE;
+                else if (codE === _FOLHA_COD_DESC_MED)                   atual.desconto_med += valE;
+            }
+
+            // (5b) Coluna DIREITA — descontos isolados por código.
+            // 671/771 são variantes de DEVOLUÇÃO de VT/VR (rescisão) —
+            // mapeadas nos mesmos buckets dos descontos canônicos (672/773).
+            // total_descontos é derivado da soma dos 4 acumuladores em `fechar()`.
+            const mcodDir = colDir.match(/^\s*(\d{3})\b/);
+            if (mcodDir) {
+                const codD = mcodDir[1];
+                const valD = _folhaBenefExtrairValorBR(colDir);
+                if (codD === _FOLHA_COD_DESC_VT  || codD === '671') atual.desconto_vt  += valD;
+                else if (codD === _FOLHA_COD_DESC_VR  || codD === '771') atual.desconto_vr  += valD;
+                else if (codD === _FOLHA_COD_DESC_VA)                    atual.desconto_va  += valD;
+                else if (codD === _FOLHA_COD_DESC_MED)                   atual.desconto_med += valD;
+            }
+        }
+        if (atual) fechar(null);
+        return { competencia, registros };
+    }
+
+    // ── Importação ponta-a-ponta: lê o TXT, faz lookup nos Fornecedores,
+    //    grava em /CP_Beneficios_PJ com idempotência estrita, atualiza UI.
+    //
+    // Auditoria 2026-05-26 (Estágio Uniforme): aceita o flag `isSubmitContext`
+    // para suprimir o fechamento automático do modal, o toast de sucesso e
+    // os resets de UI — quando chamada do pipeline unificado em `form.submit`,
+    // o caller é quem orquestra esses passos no final. Erros são RETHROW
+    // nesse modo, pra o submit cair no seu próprio try/catch.
+    async function folhaParsearTxtBeneficios(file, isSubmitContext = false) {
+        const userEmail = (auth.currentUser && auth.currentUser.email) || 'sistema';
+        // Auditoria 2026-05-26 (Rollback): feedback de progresso usa APENAS
+        // o label do Botão 2 (TXT) — não toca em `btnProcessar`/`iconBtn`/
+        // `labelBtn` (que pertencem ao form do Excel/Folha) nem em
+        // `inputFolha`/`labelFolha` (Botão 1). Isolamento absoluto.
+        if (labelBeneficiosTxt) {
+            labelBeneficiosTxt.textContent = `Processando ${file.name}…`;
+            labelBeneficiosTxt.parentElement.parentElement.classList.add('has-file');
+        }
+        if (inputBeneficiosTxt) inputBeneficiosTxt.disabled = true;
+
+        try {
+            // 1) Lê UTF-8 e roda a máquina de estados.
+            const texto = await _folhaBenefLerArquivoUTF8(file);
+            if (!texto || !texto.trim()) throw new Error('Arquivo TXT vazio ou ilegível.');
+            const { competencia, registros } = _folhaBenefParsearTXT(texto);
+            if (!registros.length) {
+                throw new Error('Nenhum funcionário detectado. Verifique o layout (linhas "Funcionario:" e "Liquido (T O T A L)").');
+            }
+            let competenciaFinal = competencia;
+            if (!competenciaFinal) {
+                const d = new Date();
+                competenciaFinal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                console.warn('[FolhaTXT] Competência não detectada — usando', competenciaFinal);
+            }
+
+            // 2) Mapa O(1) de Fornecedores indexado por codigo_beneficio_folha.
+            const snapForn = await getDocs(collection(db, 'Fornecedores'));
+            const mapaCB = new Map();
+            snapForn.forEach(d => {
+                const data = d.data() || {};
+                const cb = _folhaBenefNormFilCodigo(data.codigo_beneficio_folha);
+                if (cb) mapaCB.set(cb, { _id: d.id, ...data });
+            });
+
+            // 3) Monta docs e grava com setDoc + merge: true (idempotente estrito).
+            const docsParaGravar = [];
+            let orfaos = 0;
+            let usaramFallbackCC = 0;
+            for (const reg of registros) {
+                if (!reg.fil_codigo) continue;
+                const forn = mapaCB.get(reg.fil_codigo) || null;
+                const ccTXT = String(reg.centro_custo_txt || '').trim();
+                let centro_custo = ccTXT;
+                let usouFallback = false;
+                if (forn && !ccTXT) {
+                    const ccForn = String(forn.centro_custo || '').trim();
+                    if (ccForn) { centro_custo = ccForn; usouFallback = true; }
+                }
+                if (!forn) orfaos++; else if (usouFallback) usaramFallbackCC++;
+                const valor_total = reg.vt_pago + reg.vr_pago + reg.va_pago + reg.med_pago;
+                docsParaGravar.push({
+                    competencia: competenciaFinal,
+                    fil_codigo: reg.fil_codigo,
+                    nome_planilha: reg.nome,
+                    fornecedor_id: forn ? forn._id : 'ORFAO',
+                    codigo_fornecedor_erp: forn ? (forn.codigo ?? null) : null,
+                    centro_custo: centro_custo || null,
+                    centro_custo_origem: forn ? (usouFallback ? 'fornecedor' : 'txt') : 'txt',
+                    nome_fornecedor: forn ? (forn.nome || reg.nome) : reg.nome,
+                    valor_vt:        Number(reg.vt_pago)  || 0,
+                    valor_vr:        Number(reg.vr_pago)  || 0,
+                    valor_va:        Number(reg.va_pago)  || 0,
+                    valor_med:       Number(reg.med_pago) || 0,
+                    // Descontos isolados por código (auditoria 2026-05-26 — granularidade).
+                    desconto_vt:     Number(reg.desconto_vt)  || 0,
+                    desconto_vr:     Number(reg.desconto_vr)  || 0,
+                    desconto_va:     Number(reg.desconto_va)  || 0,
+                    desconto_med:    Number(reg.desconto_med) || 0,
+                    total_descontos: Number(reg.total_descontos) || 0,
+                    valor_liquido:   Number(reg.valor_liquido)   || 0,
+                    valor_total:     Number(valor_total)         || 0,
+                });
+            }
+            if (!docsParaGravar.length) {
+                throw new Error('Nenhum funcionário válido após o parsing — confira o arquivo.');
+            }
+
+            // 4) writeBatch (mesmo contrato de setDoc + merge:true) em chunks de 450.
+            const CHUNK = 450;
+            let gravados = 0;
+            for (let i = 0; i < docsParaGravar.length; i += CHUNK) {
+                const fatia = docsParaGravar.slice(i, i + CHUNK);
+                const batch = writeBatch(db);
+                for (const reg of fatia) {
+                    const safeFil = reg.fil_codigo.replace(/[^A-Za-z0-9_\-]/g, '_');
+                    const docId = `${reg.competencia}_${safeFil}`;
+                    batch.set(doc(db, 'CP_Beneficios_PJ', docId), {
+                        ...reg,
+                        arquivo: file.name,
+                        updated_at: serverTimestamp(),
+                        created_at: serverTimestamp(),
+                        criado_por: userEmail,
+                    }, { merge: true });
+                }
+                await batch.commit();
+                gravados += fatia.length;
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+            }
+
+            // 5) Coleta o texto consolidado de telemetria. O caller decide
+            //    se vai mostrá-lo em mostrarSucesso (auto-dispatch) ou
+            //    coalescer no feedback unificado (submit context).
+            const partes = [`${gravados} funcionário(s) processados (${competenciaFinal})`];
+            if (usaramFallbackCC > 0) partes.push(`${usaramFallbackCC} CC herdado(s) do cadastro de Fornecedores`);
+            if (orfaos > 0)           partes.push(`${orfaos} matrícula(s) sem cadastro prévio (gravadas como ÓRFÃO)`);
+
+            // 6) Fechamento — APENAS em modo auto-dispatch (sem submit context).
+            //    Quando chamada pelo pipeline unificado, o caller (form.submit)
+            //    é quem fecha modal, mostra sucesso e reseta UI no final.
+            if (!isSubmitContext) {
+                cardFeedback.classList.remove('hidden');
+                feedbackBody.textContent = partes.join(' · ');
+                fecharModal('modal-importar');
+                if (labelBeneficiosTxt) {
+                    labelBeneficiosTxt.textContent = 'Clique para selecionar (.txt)';
+                    labelBeneficiosTxt.closest('.dropzone').classList.remove('has-file');
+                }
+                setTimeout(() => {
+                    try { renderHistorico(); } catch (_) {}
+                }, 80);
+                mostrarSucesso(`Benefícios atualizados: ${partes.join(' · ')}`);
+            }
+            // Devolve o resumo pro caller usar no feedback consolidado.
+            return { gravados, competencia: competenciaFinal, partes, orfaos, usaramFallbackCC };
+        } catch (err) {
+            console.error('[FolhaTXT] falha:', err);
+            const motivo = err?.code === 'permission-denied'
+                ? 'Acesso negado: seu perfil não tem permissão para gravar em CP_Beneficios_PJ.'
+                : (err?.message || 'erro desconhecido');
+            if (isSubmitContext) {
+                // Rethrow pro pipeline unificado tratar com seu próprio modal de erro
+                // e abortar a operação consolidada.
+                throw new Error(motivo);
+            }
+            mostrarErro('Falha ao processar TXT analítico de benefícios: ' + motivo);
+        } finally {
+            // Reseta UI APENAS em modo auto-dispatch. No pipeline unificado o
+            // form.submit faz a limpeza final consolidada de ambos os canais.
+            if (!isSubmitContext) {
+                if (inputBeneficiosTxt) {
+                    inputBeneficiosTxt.disabled = false;
+                    inputBeneficiosTxt.value = '';
+                }
+                if (labelBeneficiosTxt) {
+                    labelBeneficiosTxt.textContent = 'Clique para selecionar (.txt)';
+                    labelBeneficiosTxt.closest('.dropzone').classList.remove('has-file');
+                }
+            }
+        }
+    }
+    window.folhaParsearTxtBeneficios = folhaParsearTxtBeneficios;
 
     // Listener leve em /Fornecedores — só pra alimentar o mapa
     // codigo → centro_custo (Fase 3 Conector). Auditoria 2026-05-18.
@@ -965,12 +1768,23 @@
         try {
             _unsubFornCC = onSnapshot(collection(db, 'Fornecedores'), (snap) => {
                 const map = new Map();
+                const mapFull = new Map();
                 snap.forEach(d => {
                     const data = d.data() || {};
                     const cc = String(data.centro_custo || '').trim();
-                    if (cc) map.set(String(data.codigo != null ? data.codigo : d.id), cc);
+                    const codigo = String(data.codigo != null ? data.codigo : d.id);
+                    if (cc) map.set(codigo, cc);
+                    // Cache paralelo (auditoria 2026-05-26 Frente 3) — guarda
+                    // codigo_beneficio_folha e nome para o motor de Base Completa.
+                    mapFull.set(codigo, {
+                        codigo,
+                        centro_custo: cc,
+                        nome: String(data.nome || '').trim(),
+                        codigo_beneficio_folha: String(data.codigo_beneficio_folha || '').trim(),
+                    });
                 });
                 _cacheFornCC = map;
+                _cacheFornInfo = mapFull;
                 // Re-render: força o pjParaFolha a re-rodar sobre o cache atual
                 // do PJ — necessário pra refletir mudanças de CC nos cards.
                 if (_cachePJ.length) {
@@ -991,6 +1805,7 @@
             }, (err) => {
                 console.warn('[CustoFolha][Forn] listener falhou:', err?.code || err?.message);
                 _cacheFornCC = new Map();
+                _cacheFornInfo = new Map();
             });
         } catch (err) {
             console.warn('[CustoFolha][Forn] não foi possível inscrever:', err?.message);
@@ -1265,6 +2080,13 @@
         //    Encargos, Descontos de Folha e Bases de cálculo.
         if (key.endsWith('_QTDE')) return false;
 
+        // 1a. Auditoria 2026-05-27 (Caso DANILO): salario_cadastral é APENAS
+        //     informativo (registro do contrato com sufixo /M, /Q, /H, /D).
+        //     Não é Vencimento. O ETL já move o cadastral pra essa chave
+        //     quando NÃO há Dias Trabalhados — funcionários demitidos com
+        //     bônus residual NÃO devem ter o salário cadastral somado.
+        if (key === 'SALARIO_CADASTRAL') return false;
+
         // 1b. Pró-labore é PROVENTO (vencimento), mesmo quando o slug contém
         //     "FGTS" — caso clássico: "PRO_LABORE_C_FGTS_Valor" (pró-labore com
         //     incidência opcional de FGTS, comum para sócio-administrador).
@@ -1301,6 +2123,13 @@
             // valores importados" e ficava fora do Custo Total — agora soma
             // a Vencimentos e alimenta também a coluna Salário Bruto.
             'SERVICOS_PRESTADOS',
+            // Auditoria 2026-05-27 (Caso Danilo Lopes — Estagiários):
+            // estagiários recebem por "Bolsa Auxílio (Estagiário)" e jovens
+            // aprendizes têm "Complemento Bolsa Auxílio". Sem o salário
+            // cadastral, essas verbas precisam ser o vencimento canônico.
+            // Cobre slugs `BOLSA_AUXILIO_ESTAGIARIO_Valor` e
+            // `COMPLEMENTO_BOLSA_AUXILIO_Valor` via `includes`.
+            'BOLSA_AUXILIO',
         ];
 
         // 3. Se contém qualquer raiz acima, é Vencimento.
@@ -1436,12 +2265,19 @@
         if (key.startsWith('DESC') || key.startsWith('DESCTO')) return false;
         if (key.includes('DESCONTO')) return false;
         if (key.startsWith('BASE')) return false;
+        // Auditoria 2026-05-27 (Caso DANILO): salario_cadastral é registro
+        // contratual (com sufixo /M /Q /H /D), NÃO compõe Salário Bruto pago.
+        if (key === 'SALARIOCADASTRAL') return false;
 
         // (1) Pró-labore (sócios/diretores) — captura "Pro Labore",
         //     "Pró-Labore", "Pro Labore S FGTS", "Pro Labore C FGTS" etc.
         if (key.includes('PROLABORE')) return true;
         // (2) Serviços Prestados (autônomos / PJs).
         if (key.includes('SERVICOSPRESTADOS')) return true;
+        // (2b) Bolsa Auxílio (estagiários / jovens aprendizes) — auditoria
+        //      2026-05-27 (Caso Danilo Lopes). Cobre tanto BOLSAAUXILIO puro
+        //      quanto COMPLEMENTOBOLSAAUXILIO (a normalização tira underscores).
+        if (key.includes('BOLSAAUXILIO')) return true;
         // (3) Salário Base — qualquer chave que contenha "SALARIOBASE".
         //     Cobre tanto `SALARIO_BASE_Valor` (Folha) quanto `salario_base`
         //     (Bnf), pois a normalização remove os underscores.
@@ -1463,6 +2299,19 @@
 
     function calcularTotais(reg) {
         let vencimentos = 0, encargos = 0, beneficios = 0, descontosBnf = 0, salarioBruto = 0;
+        // Auditoria 2026-05-27 (Caso Aline Dias — Isolamento de Escopo TXT × Excel):
+        // Quando o colaborador tem importação de TXT analítico
+        // (`_has_benef_txt === true`), o TXT é a fonte da verdade para os
+        // PROVENTOS de benefícios. O Excel canônico pode trazer
+        // VALE_TRANSPORTE_Valor com rateio parcial que poluiria a soma do real
+        // — por isso travamos `SET_BNF_PAGO` quando há TXT.
+        //
+        // CORREÇÃO 2026-05-27 (booleano): os DESCONTOS de benefícios
+        // (`isBnfDesc` — DESCTO_DE_VALE_TRANSPORTE/VR/MEDICA, coparticipação
+        // odontológica etc.) DEVEM ser lidos sempre, independente do TXT —
+        // o `enriquecerCltComBeneficios` injeta só os proventos (Bnf_*) e
+        // mantém os descontos no Excel pra compor o líquido contábil.
+        const usarSomenteTXT = (reg && reg._has_benef_txt === true);
         for (const k of Object.keys(reg || {})) {
             const raw = reg[k];
             if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
@@ -1475,9 +2324,21 @@
             //   4. Vencimentos (validador flexível por substring).
             if (isDescFolhaInfo(k))    { continue; } // não soma — só informativo
             if (isEncargo(k))          { encargos += raw; continue; }
-            if (k.startsWith('Bnf_'))  { beneficios += raw; continue; }
-            if (SET_BNF_PAGO.has(k))   { beneficios += raw; continue; }
-            if (isBnfDesc(k))          { descontosBnf += raw; continue; }
+            // PROVENTOS de benefícios via TXT (prefixo Bnf_*) — sempre soma.
+            // Quando há TXT, os Bnf_* injetados são a verdade absoluta.
+            if (k.startsWith('Bnf_'))     { beneficios += raw; continue; }
+            // DESCONTOS de benefícios via TXT (prefixo BnfDesc_*) — sempre soma.
+            // Injetados por enriquecerCltComBeneficios a partir do TXT analítico.
+            if (k.startsWith('BnfDesc_')) { descontosBnf += raw; continue; }
+            // PROVENTOS de benefícios via Excel — só lemos quando NÃO há TXT
+            // (caso contrário os Bnf_* do TXT já compõem o total).
+            if (!usarSomenteTXT && SET_BNF_PAGO.has(k)) { beneficios += raw; continue; }
+            // DESCONTOS de benefícios via Excel — só lemos quando NÃO há TXT.
+            // Auditoria 2026-05-27 (TXT como Fonte de Verdade Absoluta):
+            // quando o TXT está presente, BnfDesc_* (acima) é a fonte —
+            // bloqueamos DESCTO_DE_VALE_TRANSPORTE/VR/MED, coparticipação
+            // odontológica etc. do Excel pra não dobrar o desconto.
+            if (!usarSomenteTXT && isBnfDesc(k)) { descontosBnf += raw; continue; }
             if (isVencimento(k))       {
                 vencimentos += raw;
                 // VISÃO Salário Bruto (auditoria 2026-05-14): captura paralela,
@@ -1492,6 +2353,15 @@
         // Custo Total = Vencimentos + Encargos Patronais + (Bnf Pagos − Desc. Bnf).
         // INSS/IRRF retidos do funcionário NÃO entram — já embutidos no Bruto.
         const total = vencimentos + encargos + beneficios - descontosBnf;
+        // Injeção volátil de paridade (auditoria 2026-05-27) — escreve os
+        // totais de benefícios de volta no próprio `reg` pra que colunas da
+        // tabela operacional ou cards que leiam diretamente do registro
+        // (sem passar pelo objeto de retorno) recebam o valor canônico.
+        if (reg && typeof reg === 'object') {
+            reg.total_beneficios_pago     = beneficios;
+            reg.total_beneficios_desconto = descontosBnf;
+            reg.total_beneficios_liquido  = Math.max(0, beneficios - descontosBnf);
+        }
         return { vencimentos, encargos, beneficios, descontosBnf, total, salarioBruto };
     }
 
@@ -1515,6 +2385,19 @@
     // FALLBACK no pjParaFolha quando o lançamento PJ não trouxe centro_custo
     // (caso de bases antigas anteriores à herança no ETL).
     let _cacheFornCC = new Map();
+    // Cache paralelo (auditoria 2026-05-26 Frente 3): info completa do Fornecedor
+    // (codigo, nome, centro_custo, codigo_beneficio_folha) usada pelo motor de
+    // Base Completa para resolver Código/Matrícula e cruzar com CP_Beneficios_PJ.
+    let _cacheFornInfo = new Map();
+    // Mapa Centro de Custo → Gestor Responsável (auditoria 2026-05-26 Frente 3).
+    // Listener leve em /AreasContasPagar (mesma fonte usada pelo gerenciador).
+    let _areaGestorMap = new Map();
+    // Frente 3 (2026-05-21) — Mapa de Benefícios PJ ativos. Chave:
+    // `${competencia}_${fornecedor_id}` (mesmo id usado pelo importador em CP).
+    // Valor: soma de valor_total dos benefícios daquele PJ naquele mês.
+    // Quando o cache muda, força re-render do _cachePJ pra recalcular
+    // SERVICOS_PRESTADOS_Valor (fatura + benefícios) em todo o ranking/KPI.
+    let _cacheBeneficiosPJ = new Map();
     let termoBusca = '';          // filtro client-side (input #input-busca)
     // Filtro por funcionário (auditoria 2026-05-20): multi-select com checkbox.
     // Array de nomes selecionados (CLT ou PJ). Vazio ou contendo 'Todos' = sem
@@ -1559,7 +2442,7 @@
     }
 
     function pjParaFolha(docId, r) {
-        const valor = Number(r?.valor_original) || 0;
+        const valorFatura = Number(r?.valor_original) || 0;
         // Centro de Custo (auditoria 2026-05-18 Fase 3 Conector). Preferência:
         //   1. CC já gravado no lançamento (ETL com herança ativa).
         //   2. CC cadastrado no Fornecedor (lookup pelo codigo_fornecedor).
@@ -1571,6 +2454,16 @@
         // Competência canônica "YYYY-MM" — sem isso o filtro da tela rejeita
         // o PJ silenciosamente (ver _normalizarCompetenciaPJ).
         const compRef = _normalizarCompetenciaPJ(r?.competencia_ref, r?.data_vencimento);
+        // Frente 3 (2026-05-21) — Custo Unificado = Fatura + Benefícios PJ.
+        // Lookup pelo par (competência, fornecedor_id). fornecedor_id segue
+        // o padrão da coleção Fornecedores onde docId = String(codigo). Os
+        // benefícios entram somando ao SERVICOS_PRESTADOS_Valor — chave
+        // reconhecida por isVencimento + isSalarioBrutoKey, garantindo
+        // propagação automática aos 6 KPIs + gráfico + ranking sem código
+        // adicional nos agregadores existentes.
+        const chaveBenef = (compRef && codForn) ? `${compRef}_${codForn}` : '';
+        const valorBeneficios = chaveBenef ? (Number(_cacheBeneficiosPJ.get(chaveBenef)) || 0) : 0;
+        const valor = valorFatura + valorBeneficios;
         return {
             _id: 'pj_' + docId,
             is_pj: true,
@@ -1587,7 +2480,103 @@
             _cc_origem: ccLanc ? 'lancamento' : (ccForn ? 'fornecedor' : 'sem_cc'),
             // Auditoria: guarda o valor bruto da competência do CP pra debug.
             _competencia_raw: r?.competencia_ref || null,
+            // Auditoria Frente 3 — desmembrado para a UI de detalhes do PJ.
+            _valor_fatura: valorFatura,
+            _valor_beneficios: valorBeneficios,
+            // Auditoria 2026-05-26 Frente 3 — exportação analítica: preserva
+            // codigo_fornecedor (chave do PJ no /Fornecedores) e codigo_beneficio_folha
+            // (chave da planilha do RH em CP_Beneficios_PJ) para cruzamento no Excel.
+            _codigo_fornecedor: codForn,
+            _codigo_beneficio_folha: codForn && _cacheFornInfo.get(codForn)
+                ? _cacheFornInfo.get(codForn).codigo_beneficio_folha
+                : '',
         };
+    }
+
+    // ── ENRIQUECIMENTO DE CLT COM BENEFÍCIOS DO TXT ──────────────────────────
+    // Auditoria 2026-05-26 (Pente Fino — Bug Card Benefícios CLT).
+    //
+    // O Excel canônico do RH NÃO traz a abertura granular de benefícios
+    // (VT/VR/VA/Médico) por funcionário CLT — esses números vivem APENAS no
+    // TXT analítico (que alimenta /CP_Beneficios_PJ). Sem cross-reference, a
+    // coluna "Benef. Pagos" da tabela e o KPI ficavam zerados pra todo CLT.
+    //
+    // Esta função intercepta cada linha CLT e injeta as verbas do TXT sob o
+    // prefixo `Bnf_*` — chave reconhecida pelo `calcularTotais` (linha
+    // `if (k.startsWith('Bnf_')) { beneficios += raw; continue; }`), de modo
+    // que a soma de Benefícios entra automaticamente em KPIs, tabela e Custo
+    // Total sem alterar a fórmula contábil.
+    //
+    // PJ é skipado (já tem o lookup via pjParaFolha + _cacheBeneficiosPJ).
+    function enriquecerCltComBeneficios(reg) {
+        if (!reg || reg.is_pj) return reg;
+
+        // Tenta múltiplas chaves do schema da Folha — `codigo` é o canônico
+        // (vem da coluna CODIGO/MATRICULA/CHAPA do Excel via ROTULOS_FIXOS).
+        // UPPERCASE alinha com a normalização do lado TXT.
+        // Auditoria 2026-05-26 (Pente Fino — Asymmetry Bug): strip de zeros à
+        // esquerda neutraliza a divergência de formatos do RH ("027521" no TXT
+        // vs "27521" no Excel). MESMA regex aplicada do lado da gravação em
+        // `inscreverBeneficiosPJ` — chaves canônicas batem sempre.
+        const matriculaRaw = reg.matricula || reg.codigo || reg.chapa || '';
+        const matriculaSafe = String(matriculaRaw).trim().toUpperCase().replace(/^0+/, '');
+        const compRef = String(reg.competencia_ref || '').trim();
+        if (!matriculaSafe || !compRef) return reg;
+
+        const chave = `${compRef}_${matriculaSafe}`;
+        const benefTXT = _cacheBeneficiosPorMatricula.get(chave);
+
+        if (benefTXT) {
+            // Injeta proventos sob prefixo `Bnf_` — calcularTotais soma
+            // automaticamente no bucket "beneficios" (R$).
+            reg.Bnf_VT  = Number(benefTXT.vt_pago)  || 0;
+            reg.Bnf_VR  = Number(benefTXT.vr_pago)  || 0;
+            reg.Bnf_VA  = Number(benefTXT.va_pago)  || 0;
+            reg.Bnf_MED = Number(benefTXT.med_pago) || 0;
+            // Auditoria 2026-05-27 (TXT como Fonte de Verdade Absoluta):
+            // injeta também os DESCONTOS de coparticipação sob prefixo
+            // `BnfDesc_*`. calcularTotais lê esse prefixo e bloqueia
+            // `isBnfDesc` do Excel quando `_has_benef_txt = true`. Garante
+            // que o líquido contábil reflita 100% o TXT analítico.
+            reg.BnfDesc_VT  = Number(benefTXT.desconto_vt)  || 0;
+            reg.BnfDesc_VR  = Number(benefTXT.desconto_vr)  || 0;
+            reg.BnfDesc_VA  = Number(benefTXT.desconto_va)  || 0;
+            reg.BnfDesc_MED = Number(benefTXT.desconto_med) || 0;
+            reg._has_benef_txt = true;
+        } else {
+            // Fallback de segurança — campos definidos como 0 pra não deixar
+            // undefined que poderia confundir o `Object.keys` no Olho.
+            reg.Bnf_VT  = reg.Bnf_VT  || 0;
+            reg.Bnf_VR  = reg.Bnf_VR  || 0;
+            reg.Bnf_VA  = reg.Bnf_VA  || 0;
+            reg.Bnf_MED = reg.Bnf_MED || 0;
+        }
+        return reg;
+    }
+
+    // Listener leve de AreasContasPagar (auditoria 2026-05-26 Frente 3) —
+    // alimenta _areaGestorMap (CC → gestor_nome) usado pela coluna "Gestor
+    // Responsável" do export analítico. Mesma fonte do gerenciador_contas_pagar.
+    let _unsubAreasGestor = null;
+    function inscreverAreasGestor() {
+        if (_unsubAreasGestor) { _unsubAreasGestor(); _unsubAreasGestor = null; }
+        try {
+            _unsubAreasGestor = onSnapshot(collection(db, 'AreasContasPagar'), (snap) => {
+                const map = new Map();
+                snap.forEach(d => {
+                    const data = d.data() || {};
+                    const nome = String(data.nome || '').trim();
+                    const gestor = String(data.gestor_nome || '').trim();
+                    if (nome && gestor) map.set(nome, gestor);
+                });
+                _areaGestorMap = map;
+            }, (err) => {
+                console.warn('[CustoFolha][AreasGestor] listener falhou:', err?.code || err?.message);
+                _areaGestorMap = new Map();
+            });
+        } catch (err) {
+            console.warn('[CustoFolha][AreasGestor] não foi possível inscrever:', err?.message);
+        }
     }
 
     // Recombina Folha + PJ aplicando os mesmos filtros server-side de Folha.
@@ -1651,13 +2640,18 @@
     function atualizarKPIs(registrosFiltrados) {
         let salarioBruto = 0, vencimentos = 0, encargos = 0,
             beneficios = 0, descontosBnf = 0, total = 0;
+        // Auditoria 2026-05-27 (Paridade Macro × Linha): acumulamos benefícios
+        // a partir das propriedades injetadas (`reg.total_beneficios_pago` e
+        // `reg.total_beneficios_desconto`) em vez do retorno solto — chamamos
+        // `calcularTotais(r)` antes pra garantir que a injeção esteja feita.
+        // Resultado: card macro lê EXATAMENTE o mesmo número exibido na linha.
         for (const r of (registrosFiltrados || [])) {
             const t = calcularTotais(r);
             salarioBruto += t.salarioBruto;
             vencimentos  += t.vencimentos;
             encargos     += t.encargos;
-            beneficios   += t.beneficios;
-            descontosBnf += t.descontosBnf;
+            beneficios   += (Number(r.total_beneficios_pago)     || 0);
+            descontosBnf += (Number(r.total_beneficios_desconto) || 0);
             total        += t.total;
         }
         const setKPI = (id, valor, prefixo = '') => {
@@ -1780,8 +2774,8 @@
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.salarioBruto)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.vencimentos)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.encargos)}</td>
-                    <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.beneficios)}</td>
-                    <td class="px-4 py-3 text-xs text-right font-semibold text-red-600">${t.descontosBnf ? '-' + fmtBRL.format(t.descontosBnf) : fmtBRL.format(0)}</td>
+                    <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(Number(r.total_beneficios_pago) || 0)}</td>
+                    <td class="px-4 py-3 text-xs text-right font-semibold text-red-600">${(Number(r.total_beneficios_desconto) || 0) ? '-' + fmtBRL.format(r.total_beneficios_desconto) : fmtBRL.format(0)}</td>
                     <td class="px-4 py-3 text-xs text-right font-extrabold text-secondary">${fmtBRL.format(t.total)}</td>
                     <td class="px-4 py-3 text-right">
                         <div class="flex justify-end gap-1">
@@ -1974,6 +2968,12 @@
             if (compSet || empSet) {
                 refinados.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
             }
+            // Auditoria 2026-05-26 (Pente Fino — Bug Card Benefícios CLT):
+            // Cross-reference TXT × CLT. Cada linha de Folha passa pelo
+            // enriquecerCltComBeneficios ANTES de ir para `_cacheFolha` —
+            // os campos Bnf_VT/VR/VA/MED são injetados no `reg` em tempo de
+            // runtime e capturados pelo calcularTotais sem mudanças no motor.
+            refinados.forEach(enriquecerCltComBeneficios);
             // Folha + PJ (auditoria 2026-05-18): mescla com os PJs já em cache,
             // filtrando-os pelos mesmos critérios server-side da query Folha.
             _cacheFolha = refinados;
@@ -2378,17 +3378,51 @@
     //   7. Outros — strings/objetos restantes (seção residual discreta)
     const IDENT_KEYS = new Set(['nome','cpf','codigo','centro_custo','funcao','departamento','filial']);
     const META_KEYS = new Set(['competencia','competencia_ref','empresa_atribuida','tipo','_id','_origens','_origem']);
-    const RGX_DATA = /(?:DT|DATA|VECTO|PRORROGACAO|ADMISSAO)/;
+    const RGX_DATA = /(?:DT|DATA|VECTO|PRORROGACAO|ADMISSAO|DEMISSAO)/;
     const RGX_QTDE_IDX = /DIAS|PERCENTUAL/;
 
     // Chaves da planilha que são puramente informativas/ruidosas e não devem
     // aparecer no Modal Olho. Lista extensível — manter comentário de origem.
     //   HORARIO / HORARIO_*: serial de tempo do Excel (ex.: 9:00:18 → 9001800),
-    //   não é valor em R$ e não tem função no cálculo.
-    const RGX_SUPRIMIDAS_NO_OLHO = /HORARIO/;
+    //     não é valor em R$ e não tem função no cálculo.
+    //   PIS / PASEP / NIT (auditoria 2026-05-26 — Pente Fino): identificadores
+    //     trabalhistas, PII desnecessária no modal de detalhes financeiros.
+    //   DIAS_TRABALHADOS_VALOR (auditoria 2026-05-26): duplicata da Qtde.
+    //     O Excel emite Qtde+Valor para "Dias Trabalhados" e o Valor às vezes
+    //     pega lixo de coluna adjacente (ex.: 2000 = salário invadindo).
+    //     Suprimimos o _VALOR; o _QTDE (canônico) é o que rende "30".
+    // Auditoria 2026-05-27 (Pente Fino — PIS leak): a regex anterior usava
+    // `\b` (word boundary) que NÃO dispara entre letra e `_` (ambos são `\w`).
+    // Então `^PIS\b` casava `PIS` puro mas DEIXAVA PASSAR `PIS_Valor` —
+    // que é exatamente o slug produzido pelo ETL para colunas dinâmicas.
+    // Trocamos `\b` por `(?:_|$)` pra suprimir AMBAS variantes (com e sem
+    // sufixo `_Valor`). Idem para PASEP e NIT.
+    // Auditoria 2026-05-28 (Cleanup do Modal Olho): adicionadas chaves
+    // que poluíam o visual sem agregar:
+    //   ^CPF$                     — já exibido no subtítulo do modal (header).
+    //   _SALARIO_CADASTRAL_RAW    — duplicata do salario_cadastral (com /M), o
+    //                               número canônico já é renderizado em R$.
+    //   _HAS_BENEF_TXT            — flag interna de roteamento, não é UI.
+    //   PENDENTE_TRATAMENTO       — flag interna de retidos, não é UI.
+    const RGX_SUPRIMIDAS_NO_OLHO = /HORARIO|^PIS(?:_|$)|^PASEP(?:_|$)|^NIT(?:_|$)|DIAS_TRABALHADOS_VALOR|^CPF$|^_SALARIO_CADASTRAL_RAW$|^_HAS_BENEF_TXT$|^PENDENTE_TRATAMENTO$/;
     function ehChaveSuprimidaNoOlho(k) {
         return RGX_SUPRIMIDAS_NO_OLHO.test(String(k).toUpperCase());
     }
+
+    // Mapa de rótulos corporativos oficiais (auditoria 2026-05-26 — Pente Fino).
+    // Sobrescreve a humanização genérica de `rotuloBonitoChave` para chaves
+    // técnicas específicas que o cliente quer ver com nomes de negócio.
+    // Chave do mapa = chave do registro UPPERCASED + sem sufixo _Valor/_Qtde.
+    const ROTULOS_AMIGAVEIS = {
+        'DATAIMPORTACAO': 'Data da Importação',
+        'DTVECTO_CONTRATO': 'Data de Vencimento do Contrato',
+        'DTVECTO_PRORROGACAO': 'Data de Vencimento da Prorrogação',
+        'TOTAL_VECTO': 'Total de Vencimento',
+        // Auditoria 2026-05-27 (Caso DANILO): rótulos informativos do
+        // salário cadastral (registro de contrato, não pago no mês).
+        'SALARIO_CADASTRAL': 'Salário Cadastral (contrato)',
+        '_SALARIO_CADASTRAL_RAW': 'Salário Cadastral (bruto)',
+    };
 
     function ehChaveData(k) {
         return RGX_DATA.test(String(k).toUpperCase());
@@ -2402,6 +3436,20 @@
     }
 
     function classificarChave(k, raw) {
+        // Auditoria 2026-05-26 (Pente Fino): "TOTAL VECTO" é a SOMA dos
+        // vencimentos do colaborador em R$ — NÃO é data. A regex de datas
+        // antiga matava o V de "VECTO" e jogava o número (≈2000) no
+        // formatarData via epoch do Excel, gerando "01/01/1905". Forçamos
+        // o roteamento pro bucket "outros_valores" (amber) preservando
+        // o número original e exibindo via fmtBRL.
+        const KU = String(k).toUpperCase();
+        if (/^TOTAL[_\s]VECTO/.test(KU)) {
+            if (typeof raw === 'number' && Number.isFinite(raw)) return 'outros_valores';
+            return 'outros';
+        }
+        // Auditoria 2026-05-27 (Caso DANILO): salario_cadastral e seu raw vão
+        // para a seção Identificação (informativo), NÃO para Vencimentos.
+        if (k === 'salario_cadastral' || k === '_salario_cadastral_raw') return 'identificacao';
         // A) Datas e Prazos — prioridade máxima.
         if (ehChaveData(k)) return 'datas';
         // B) Quantidades e Índices.
@@ -2416,6 +3464,9 @@
             if (isEncargo(k))                return 'encargos';
             if (k.startsWith('Bnf_'))        return 'beneficios';
             if (SET_BNF_PAGO.has(k))         return 'beneficios';
+            // Auditoria 2026-05-27 (TXT como Fonte de Verdade): prefixo
+            // BnfDesc_* injetado pelo enriquecedor a partir do TXT analítico.
+            if (k.startsWith('BnfDesc_'))    return 'descontos_bnf';
             if (isBnfDesc(k))                return 'descontos_bnf';
             if (isVencimento(k))             return 'vencimentos';
             // D) Amber — só o que sobrou E é número (dinheiro não mapeado).
@@ -2451,9 +3502,16 @@
             if (br) return `${pad(br[1])}/${pad(br[2])}/${normalizarAno(br[3])}`;
             return s; // formato desconhecido — devolve como veio
         }
-        // Excel serial date (epoch 1899-12-30)
+        // Excel serial date (epoch 1899-12-30).
+        // Auditoria 2026-05-26 (Pente Fino): sanity check do range. Excel
+        // serial date plausível ≈ 30000 (≈1982) a 75000 (≈2105). Números
+        // fora dessa faixa quase certamente são valores NÃO-data lidos
+        // por engano (ex.: TOTAL VECTO=2000 → "19/06/1905"). Devolve "—"
+        // ao invés de uma data espúria no passado.
         if (typeof raw === 'number' && Number.isFinite(raw)) {
             const d = new Date(Date.UTC(1899, 11, 30) + raw * 86400000);
+            const ano = d.getUTCFullYear();
+            if (ano < 1990 || ano > 2099) return '—';
             return fmtDataBR.format(d);
         }
         return String(raw);
@@ -2470,6 +3528,13 @@
             if (b)      return 'Apenas Benefícios';
             return '—';
         }
+        // Auditoria 2026-05-26 (Pente Fino): TOTAL VECTO é SOMA em R$ — JAMAIS
+        // passa pelo formatarData, mesmo casando com a regex de datas (via
+        // substring "VECTO"). Sem este escudo, número 2000 vira "19/06/1905".
+        const KU_FV = String(k).toUpperCase();
+        if (/^TOTAL[_\s]VECTO/.test(KU_FV) && typeof raw === 'number' && Number.isFinite(raw)) {
+            return fmtBRL.format(raw);
+        }
         // Datas: se a chave for de data (e não caiu no bucket _origens acima).
         if (ehChaveData(k)) return formatarData(raw);
         if (typeof raw === 'number') {
@@ -2477,6 +3542,17 @@
                 return raw.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
             }
             if (k.endsWith('_Qtde') || RGX_QTDE_IDX.test(String(k).toUpperCase()) || k === 'codigo') {
+                // Auditoria 2026-05-26 (Pente Fino) — Dias Trabalhados: o RH
+                // às vezes emite valores absurdos (ex.: 2000, quando o Excel
+                // pega o valor do salário em coluna desalinhada). Validação
+                // de negócio: clamp 0-31 dias; fora da faixa → padrão de
+                // fechamento de folha "30" dias.
+                const KU = String(k).toUpperCase();
+                if (KU.includes('DIAS') && KU.includes('TRABALH')) {
+                    const n = Math.round(raw);
+                    if (!Number.isFinite(n) || n < 0 || n > 31) return '30';
+                    return String(n);
+                }
                 return String(raw);
             }
             return fmtBRL.format(raw);
@@ -2490,11 +3566,15 @@
     }
 
     function rotuloBonitoChave(k) {
-        // Converte "INSS_PATRONAL_Valor" → "INSS Patronal"; "Bnf_VT" → "Bnf VT"; etc.
-        return k.replace(/_(Valor|Qtde)$/i, '')
-                .replace(/_/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
+        // Auditoria 2026-05-26 (Pente Fino): rótulos corporativos oficiais
+        // têm precedência sobre a humanização genérica. Strip do sufixo
+        // _Valor/_Qtde antes de buscar no mapa pra capturar variantes
+        // (ex.: "DTVECTO_CONTRATO_Valor" → "DTVECTO_CONTRATO" → match).
+        const semSufixo = String(k).replace(/_(Valor|Qtde)$/i, '');
+        const chaveMapa = semSufixo.toUpperCase();
+        if (ROTULOS_AMIGAVEIS[chaveMapa]) return ROTULOS_AMIGAVEIS[chaveMapa];
+        // Fallback genérico: "INSS_PATRONAL" → "INSS PATRONAL"; "Bnf_VT" → "Bnf VT".
+        return semSufixo.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
     function abrirVisualizar(reg) {
@@ -2502,11 +3582,25 @@
         document.getElementById('visualizar-subtitulo').textContent =
             `${fmtCPF(reg.cpf)} · ${reg.centro_custo || '—'} · ${reg.competencia || '—'} · ${reg.empresa_atribuida || '—'}`;
 
+        // Auditoria 2026-05-27 (Paridade Olho × Linha): força a injeção das
+        // propriedades canônicas de benefício no `reg` antes da renderização,
+        // pra que o resumo destacado abaixo exiba EXATAMENTE o mesmo valor que
+        // a coluna da tabela e o card macro — neutraliza qualquer percepção
+        // residual de "valor diferente entre tela e modal".
+        calcularTotais(reg);
+
         const grupos = {
             identificacao: [], datas: [], vencimentos: [], encargos: [],
             beneficios: [], descontos_bnf: [], descontos_folha: [],
             quantidades: [], outros_valores: [], metadados: [], outros: [],
         };
+        // Auditoria 2026-05-28 (Cleanup do Modal Olho — duplicata de descontos):
+        // Quando há importação TXT (`_has_benef_txt === true`), o BnfDesc_* do
+        // TXT é a fonte da verdade. O Excel canônico traz a mesma verba sob
+        // DESCTO_DE_VALE_TRANSPORTE/VR/MED etc., que já é suprimida do CÁLCULO
+        // por calcularTotais — aqui suprimimos também do DISPLAY pra não
+        // exibir a verba duplicada no Quadro "Descontos em Benefícios".
+        const _suprimirExcelBnfDesc = (reg && reg._has_benef_txt === true);
         for (const k of Object.keys(reg)) {
             const raw = reg[k];
             // Limpeza dinâmica: campos numéricos exatamente zero não agregam
@@ -2517,6 +3611,9 @@
             // soma os 4 buckets contábeis). HORARIO vem como serial de tempo do
             // Excel (ex.: 9:00:18 → 9.001.800), não é valor em R$.
             if (ehChaveSuprimidaNoOlho(k)) continue;
+            // Suprime a verba de desconto do EXCEL quando o TXT é fonte (evita
+            // exibir "DESCTO DE VALE TRANSPORTE" + "BnfDesc VT" com o mesmo valor).
+            if (_suprimirExcelBnfDesc && !k.startsWith('BnfDesc_') && isBnfDesc(k)) continue;
             grupos[classificarChave(k, raw)].push({ k, raw });
         }
         // Ordena cada grupo por chave.
@@ -2539,6 +3636,12 @@
                 </section>`;
         };
 
+        // Auditoria 2026-05-28 (Cleanup do Modal Olho): KPI "Resumo de Benefícios"
+        // removido por solicitação do usuário — as seções "Benefícios Pagos" e
+        // "Descontos em Benefícios" abaixo já mostram as verbas com detalhe.
+        // Seção residual "Outros" removida também — campos internos
+        // (_has_benef_txt, pendente_tratamento) já estão suprimidos por chave.
+
         const body = document.getElementById('visualizar-body');
         body.innerHTML =
             secao('Identificação', 'badge', 'text-secondary', grupos.identificacao) +
@@ -2552,8 +3655,7 @@
             secao('Quantidades e Índices', 'functions', 'text-slate-500', grupos.quantidades) +
             secao('Outros valores importados', 'help', 'text-amber-500', grupos.outros_valores,
                   ` <span class="normal-case text-slate-400 font-normal">— não mapeados no cálculo</span>`) +
-            secao('Log de Importação', 'info', 'text-slate-400', grupos.metadados) +
-            secao('Outros', 'more_horiz', 'text-slate-400', grupos.outros);
+            secao('Log de Importação', 'info', 'text-slate-400', grupos.metadados);
 
         abrirModal('modal-visualizar');
     }
@@ -2880,11 +3982,325 @@
         }
     }
 
-    document.getElementById('btn-exportar-excel').onclick = abrirModalExportar;
+    // ════════════════════════════════════════════════════════════════════════
+    // CENTRAL AVANÇADA DE EXPORTAÇÃO (auditoria 2026-05-26 — Frentes 2 & 3)
+    // ════════════════════════════════════════════════════════════════════════
+    // Substitui o flow direto do botão "Exportar Base". O usuário sempre passa
+    // pelo modal de Escopo (Profundidade + Filtro de Escopo). O recorte
+    // (empresa/competência/CC + busca) é HERDADO da tela — mesma fonte usada
+    // pelos KPIs/gráficos/tabela. Paridade visual garantida.
+
+    function _slugSafe(s) {
+        return _slugArquivo(s); // reaproveita o helper existente do export legado
+    }
+
+    function _competenciaDeRegistroBR(r) {
+        const ref = String(r?.competencia_ref || '').trim();
+        if (/^\d{4}-\d{2}$/.test(ref)) return `${ref.slice(5,7)}/${ref.slice(0,4)}`;
+        return ref || (r?.competencia || '—');
+    }
+
+    // Resolve o "tipo de contrato" textual a partir dos sinais disponíveis no
+    // registro. Não há campo dedicado no schema legado da Folha — inferimos.
+    function _resolverTipoContrato(r) {
+        if (r?.is_pj) return 'PJ Interno';
+        const fonte = String(r?.tipo_vinculo || r?.tipo || r?.cargo || '').trim();
+        if (fonte) {
+            const norm = fonte.toLowerCase();
+            if (norm.includes('diret')) return 'Diretor';
+            if (norm.includes('pj'))    return 'PJ Interno';
+            if (norm.includes('clt'))   return 'CLT';
+            return fonte; // valor original (estagiário, autônomo etc.)
+        }
+        // Default: se tem CPF preenchido e não é PJ, assume CLT.
+        return r?.cpf ? 'CLT' : '—';
+    }
+
+    // Resolve Salário Base / Vencimentos / Descontos / Benefícios decompostos
+    // para cada registro, respeitando o tipo. PJ usa _valor_fatura/lookup; CLT
+    // usa calcularTotais. Auditoria 2026-05-26 Frente 3.
+    function _decomporRegistroParaExport(r) {
+        if (r?.is_pj) {
+            const codForn = String(r._codigo_fornecedor || '').trim();
+            const compRef = String(r.competencia_ref || '').trim();
+            const chave = (codForn && compRef) ? `${compRef}_${codForn}` : '';
+            const full = chave ? (_cacheBeneficiosPJFull.get(chave) || null) : null;
+            const valor_vt = full ? Number(full.valor_vt) || 0 : 0;
+            const valor_vr = full ? Number(full.valor_vr) || 0 : 0;
+            const valor_total_benef = full ? Number(full.valor_total) || 0 : Number(r._valor_beneficios) || 0;
+            const valor_outros = Math.max(0, valor_total_benef - valor_vt - valor_vr);
+            const fatura = Number(r._valor_fatura) || 0;
+            return {
+                salario_base: fatura,           // valor nominal da PJ (fatura)
+                proventos:    fatura,           // proventos = mesma fatura (não há decomposição)
+                descontos:    0,                // PJ não tem descontos em folha
+                bnf_vt:       valor_vt,
+                bnf_vr:       valor_vr,
+                bnf_outros:   valor_outros,
+                liquido:      fatura,           // Líquido a Receber = valor da fatura (PJ não tem retenções aqui)
+                custo_total:  fatura + valor_total_benef, // Custo Total = fatura + benefícios
+            };
+        }
+        // CLT / Diretor — reaproveita calcularTotais para paridade absoluta.
+        const t = calcularTotais(r);
+        return {
+            salario_base: t.salarioBruto || 0,
+            proventos:    t.vencimentos || 0,
+            descontos:    t.descontosBnf || 0,
+            // Folha "pura" não tem decomposição VT/VR/Outros no schema legado —
+            // o bucket "beneficios" agrega tudo que o ETL classificou como Bnf_*.
+            // Reportamos no campo "Outros" para preservar o valor total agregado.
+            bnf_vt:       0,
+            bnf_vr:       0,
+            bnf_outros:   t.beneficios || 0,
+            liquido:      Math.max(0, (t.vencimentos || 0) - (t.descontosBnf || 0)),
+            custo_total:  t.total || 0,
+        };
+    }
+
+    // Constrói a fatia visível na tela (mesmo recorte de KPIs/tabela).
+    function _registrosDaTela() {
+        // cacheRegistros já tem competência + empresa aplicadas server-side.
+        // aplicarBusca adiciona busca textual + filtro de CC (multi-select).
+        return aplicarBusca(cacheRegistros);
+    }
+
+    // Contexto pro nome do arquivo — herda dos filtros da tela.
+    function _contextoArquivoTela() {
+        const compRefs = getMultiValues(filtroCompetencia);
+        const empresas = getMultiValues(filtroEmpresa);
+        const ccs      = filtroCcValores;
+        const fmtCtx = (arr, fallback) => {
+            if (!Array.isArray(arr) || isMultiAll(arr)) return '';
+            if (arr.length === 1) return arr[0];
+            return `${fallback}${arr.length}`;
+        };
+        return {
+            empresa:     fmtCtx(empresas,  'empresas'),
+            competencia: fmtCtx(compRefs,   'comps'),
+            centroCusto: fmtCtx(ccs,        'ccs'),
+        };
+    }
+
+    function _setExportFolhaOpcoesLoading(estado, msg) {
+        const status = document.getElementById('export-folha-opcoes-status');
+        const statusMsg = document.getElementById('export-folha-opcoes-status-msg');
+        const btn = document.getElementById('btn-gerar-exportar-folha-opcoes');
+        const btnCancel = document.getElementById('btn-cancelar-exportar-folha-opcoes');
+        const btnX = document.getElementById('btn-fechar-exportar-folha-opcoes');
+        const icon = document.getElementById('export-folha-opcoes-btn-icon');
+        const label = document.getElementById('export-folha-opcoes-btn-label');
+        if (!status || !btn) return;
+        if (estado) {
+            statusMsg.textContent = msg || 'Processando…';
+            status.classList.remove('hidden');
+            status.classList.add('flex');
+            btn.disabled = true;
+            if (btnCancel) btnCancel.disabled = true;
+            if (btnX)      btnX.disabled = true;
+            icon.textContent = 'progress_activity';
+            icon.classList.add('spin');
+            label.textContent = 'Gerando…';
+        } else {
+            status.classList.add('hidden');
+            status.classList.remove('flex');
+            btn.disabled = false;
+            if (btnCancel) btnCancel.disabled = false;
+            if (btnX)      btnX.disabled = false;
+            icon.textContent = 'download';
+            icon.classList.remove('spin');
+            label.textContent = 'Gerar Excel';
+        }
+    }
+
+    // ── Motor único de exportação (Frente 3) ────────────────────────────────
+    // Recebe `config = { profundidade: 'resumida'|'completa', escopo: { folha, beneficios } }`.
+    // Resumida → delega para gerarExcelDeRegistros (cabeçalho gerencial legado).
+    // Completa → reconstrução analítica com cruzamento Folha × Benefícios PJ.
+    function folhaProcessarExportacaoExcel(config) {
+        if (typeof window === 'undefined' || !window.XLSX) {
+            throw new Error('Biblioteca de exportação (SheetJS) não carregada.');
+        }
+        const cfg = config || {};
+        const profundidade = (cfg.profundidade === 'completa') ? 'completa' : 'resumida';
+        const escopo = cfg.escopo || { folha: true, beneficios: true };
+        const incluirFolha = escopo.folha !== false;
+        const incluirBenef = escopo.beneficios !== false;
+
+        const registros = _registrosDaTela();
+        if (!registros.length) {
+            throw new Error('Nenhum registro no recorte atual. Ajuste os filtros da tela e tente novamente.');
+        }
+
+        const contexto = _contextoArquivoTela();
+
+        // ── Resumida (legado) ─────────────────────────────────────────────────
+        if (profundidade === 'resumida') {
+            return gerarExcelDeRegistros(registros, contexto);
+        }
+
+        // ── Completa (analítica) ──────────────────────────────────────────────
+        // Constrói linha por linha respeitando a ordem do spec.
+        const linhas = [];
+        for (const r of registros) {
+            const d = _decomporRegistroParaExport(r);
+            const tipoContrato = _resolverTipoContrato(r);
+            const cc = String(r?.centro_custo || '').trim();
+            linhas.push({
+                'Empresa/Filial': r?.empresa_atribuida || '—',
+                'Competência': _competenciaDeRegistroBR(r),
+                'Código/Matrícula': r?.matricula || r?._codigo_beneficio_folha || r?._codigo_fornecedor || '—',
+                'Nome do Colaborador': r?.nome || '—',
+                'Tipo Contrato': tipoContrato,
+                'Centro de Custo': cc || '—',
+                'Gestor Responsável': _areaGestorMap.get(cc) || '—',
+
+                // Colunas de Folha (zeradas se desmarcado no escopo).
+                'Salário Base / Valor Nominal': incluirFolha ? Number(d.salario_base) || 0 : 0,
+                '(+) Proventos / Vencimentos':  incluirFolha ? Number(d.proventos)    || 0 : 0,
+                '(-) Descontos em Folha':       incluirFolha ? -(Number(d.descontos)  || 0) : 0,
+
+                // Colunas de Benefícios (zeradas se desmarcado).
+                '(+) Benefício VT':       incluirBenef ? Number(d.bnf_vt)     || 0 : 0,
+                '(+) Benefício VR':       incluirBenef ? Number(d.bnf_vr)     || 0 : 0,
+                '(+) Outros Benefícios':  incluirBenef ? Number(d.bnf_outros) || 0 : 0,
+
+                // Totais consolidados — sempre presentes (auditoria).
+                '(=) Líquido a Receber':  Number(d.liquido)     || 0,
+                '(=) Custo Total para a Holding': Number(d.custo_total) || 0,
+            });
+        }
+
+        const ws = window.XLSX.utils.json_to_sheet(linhas, { skipHeader: false });
+
+        // Largura mínima das colunas pra leitura ergonômica.
+        ws['!cols'] = [
+            { wch: 22 }, // Empresa/Filial
+            { wch: 12 }, // Competência
+            { wch: 18 }, // Código/Matrícula
+            { wch: 32 }, // Nome
+            { wch: 14 }, // Tipo
+            { wch: 24 }, // CC
+            { wch: 24 }, // Gestor
+            { wch: 18 }, // Salário Base
+            { wch: 18 }, // Proventos
+            { wch: 18 }, // Descontos
+            { wch: 14 }, // VT
+            { wch: 14 }, // VR
+            { wch: 16 }, // Outros Benefícios
+            { wch: 18 }, // Líquido
+            { wch: 20 }, // Custo Total
+        ];
+        // Formato BRL nas colunas financeiras (índices 7..14).
+        const fmtBRL_excel = '"R$ "#,##0.00;[Red]-"R$ "#,##0.00';
+        const colsNum = [7, 8, 9, 10, 11, 12, 13, 14];
+        for (let r = 1; r <= linhas.length; r++) {
+            for (const c of colsNum) {
+                const addr = window.XLSX.utils.encode_cell({ r, c });
+                const cell = ws[addr];
+                if (!cell) continue;
+                cell.t = 'n';
+                cell.z = fmtBRL_excel;
+            }
+        }
+        // Congela header.
+        ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+        if (!ws['!views']) ws['!views'] = [{ state: 'frozen', ySplit: 1 }];
+
+        const wb = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(wb, ws, 'Folha Analítica');
+
+        // Nome do arquivo: data + contexto da tela + sufixo "Analitico".
+        const hoje = new Date();
+        const yyyy = hoje.getFullYear();
+        const mm = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoje.getDate()).padStart(2, '0');
+        const partes = ['Folha_Analitica', `${yyyy}-${mm}-${dd}`];
+        if (contexto.competencia) partes.push(_slugSafe(contexto.competencia));
+        if (contexto.empresa)     partes.push(_slugSafe(contexto.empresa));
+        if (contexto.centroCusto) partes.push(_slugSafe(contexto.centroCusto));
+        if (!incluirFolha) partes.push('sem_folha');
+        if (!incluirBenef) partes.push('sem_beneficios');
+        const nomeArquivo = partes.join('_').slice(0, 140) + '.xlsx';
+
+        window.XLSX.writeFile(wb, nomeArquivo);
+        return { nomeArquivo, total: linhas.length };
+    }
+    window.folhaProcessarExportacaoExcel = folhaProcessarExportacaoExcel;
+
+    // ── Abre o novo modal de escopo, sincronizando estado dos controles ─────
+    function abrirModalExportarFolhaOpcoes() {
+        // Estado inicial: Resumida selecionada, Escopo desabilitado.
+        const radResumida = document.querySelector('input[name="export-profundidade"][value="resumida"]');
+        if (radResumida) radResumida.checked = true;
+        document.getElementById('export-escopo-folha').checked = true;
+        document.getElementById('export-escopo-beneficios').checked = true;
+        _aplicarEstadoEscopo('resumida');
+        _setExportFolhaOpcoesLoading(false);
+        abrirModal('modal-exportar-folha-opcoes');
+    }
+
+    function _aplicarEstadoEscopo(profundidade) {
+        const habilitado = (profundidade === 'completa');
+        const cbFolha   = document.getElementById('export-escopo-folha');
+        const cbBenef   = document.getElementById('export-escopo-beneficios');
+        if (cbFolha) cbFolha.disabled = !habilitado;
+        if (cbBenef) cbBenef.disabled = !habilitado;
+        // Estado visual dos cards (opacity via data attribute usado no CSS).
+        document.querySelectorAll('[data-escopo-item]').forEach(card => {
+            card.setAttribute('data-escopo-disabled', habilitado ? 'false' : 'true');
+        });
+        const hint = document.querySelector('[data-escopo-hint]');
+        if (hint) hint.textContent = habilitado ? '(escolha o que entra no .xlsx)' : '(habilitado em Base Completa)';
+    }
+
+    async function _gerarPeloModalFolhaOpcoes() {
+        const profundidadeEl = document.querySelector('input[name="export-profundidade"]:checked');
+        const profundidade = profundidadeEl ? profundidadeEl.value : 'resumida';
+        const escopo = {
+            folha:      document.getElementById('export-escopo-folha').checked,
+            beneficios: document.getElementById('export-escopo-beneficios').checked,
+        };
+        // Resumida ignora o escopo (sempre traz o cabeçalho gerencial completo).
+        const config = { profundidade, escopo };
+
+        _setExportFolhaOpcoesLoading(true, profundidade === 'completa'
+            ? 'Reconstruindo abertura analítica (Folha × Benefícios)…'
+            : 'Gerando relatório gerencial resumido…');
+        await new Promise(r => setTimeout(r, 30)); // cede frame pro spinner
+
+        let info;
+        try {
+            info = folhaProcessarExportacaoExcel(config);
+        } catch (err) {
+            console.error('[Export Folha Opções] falhou:', err);
+            _setExportFolhaOpcoesLoading(false);
+            return mostrarErro('Falha ao gerar o Excel: ' + (err.message || 'erro desconhecido'));
+        }
+        _setExportFolhaOpcoesLoading(false);
+        fecharModal('modal-exportar-folha-opcoes');
+        console.log(`[Export Folha Opções] ${info.total} linha(s) → ${info.nomeArquivo}`, config);
+    }
+
+    // ── Religação do botão "Exportar Base" (auditoria 2026-05-26) ───────────
+    // O onclick antigo apontava para `abrirModalExportar` (modal-exportar-config).
+    // Agora vai para o novo modal de escopo. O modal antigo segue no DOM por
+    // segurança (zero risco de regressão se outro fluxo o invocar), mas não é
+    // mais alcançável via UI.
+    document.getElementById('btn-exportar-excel').onclick = abrirModalExportarFolhaOpcoes;
     document.getElementById('btn-gerar-excel').onclick = gerarExcelDoModal;
     document.getElementById('btn-cancelar-exportar-config').onclick = () => fecharModal('modal-exportar-config');
     document.getElementById('btn-fechar-exportar-config').onclick   = () => fecharModal('modal-exportar-config');
     document.getElementById('modal-exportar-config-overlay').onclick = () => fecharModal('modal-exportar-config');
+
+    // ── Handlers do novo modal #modal-exportar-folha-opcoes ─────────────────
+    document.getElementById('btn-fechar-exportar-folha-opcoes').onclick   = () => fecharModal('modal-exportar-folha-opcoes');
+    document.getElementById('btn-cancelar-exportar-folha-opcoes').onclick = () => fecharModal('modal-exportar-folha-opcoes');
+    document.getElementById('modal-exportar-folha-opcoes-overlay').onclick = () => fecharModal('modal-exportar-folha-opcoes');
+    document.getElementById('btn-gerar-exportar-folha-opcoes').onclick = _gerarPeloModalFolhaOpcoes;
+    document.querySelectorAll('input[name="export-profundidade"]').forEach(rad => {
+        rad.addEventListener('change', (e) => _aplicarEstadoEscopo(e.target.value));
+    });
 
     // ── MODAL IMPORTAR: abrir pelo botão da topbar, fechar pelo X/overlay ───
     document.getElementById('btn-abrir-importar').onclick = () => {
@@ -3121,18 +4537,27 @@
         }
     });
 
-    // ── UI: DROPZONES → abrir input ao clicar no label ───────────────────────
-    // (O <label for> nativo já faria isso, mas como o input está dentro do label,
-    //  basta garantir o feedback visual ao selecionar arquivo.)
+    // ── UI: DROPZONES → handlers SIMÉTRICOS (auditoria 2026-05-26 — Estágio Uniforme).
+    //
+    // Ambos os botões agora se comportam IGUAL: o change apenas atualiza o
+    // label e marca `.has-file` no card. O processamento (Excel + TXT) só
+    // acontece quando o usuário clica "Processar e Importar" — fluxo único
+    // pelo `form.submit`. Isso permite o usuário selecionar UM arquivo, ou
+    // O OUTRO, ou OS DOIS, e processar tudo na mesma operação sem que o TXT
+    // dispare sozinho e mate a seleção do Excel.
+    //
+    // Uso explícito de `.closest('.dropzone')` em vez de `parentElement.parentElement`
+    // pra não amarrar o JS à profundidade exata do DOM do label.
     inputFolha.addEventListener('change', () => {
         const f = inputFolha.files?.[0];
         labelFolha.textContent = f ? f.name : 'Clique para selecionar (.xlsx, .xls, .csv)';
-        labelFolha.parentElement.parentElement.classList.toggle('has-file', !!f);
+        labelFolha.closest('.dropzone').classList.toggle('has-file', !!f);
     });
-    inputBeneficios.addEventListener('change', () => {
-        const f = inputBeneficios.files?.[0];
-        labelBeneficios.textContent = f ? f.name : 'Clique para selecionar (.xlsx, .xls, .csv)';
-        labelBeneficios.parentElement.parentElement.classList.toggle('has-file', !!f);
+
+    inputBeneficiosTxt.addEventListener('change', () => {
+        const f = inputBeneficiosTxt.files?.[0];
+        labelBeneficiosTxt.textContent = f ? f.name : 'Clique para selecionar (.txt)';
+        labelBeneficiosTxt.closest('.dropzone').classList.toggle('has-file', !!f);
     });
 
     // ── MODAIS ───────────────────────────────────────────────────────────────
@@ -3252,24 +4677,19 @@
                 </div>
                 <span class="text-sm font-bold ${cor}">${valor}</span>
             </div>`;
-        // Aviso visível quando o lote rodou sem Bnf — reforça o que o sucesso já diz.
-        const avisoSemBnf = diag.beneficiosImportado === false
-            ? `<div class="mb-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100 text-[11px] font-medium text-amber-700">
-                 <span class="material-symbols-outlined text-amber-500 text-[16px] mt-0.5">info</span>
-                 <span>Importação parcial: planilha de Benefícios não enviada — VR/VA/VT/Plano/Odonto/Seguro foram zerados neste lote.</span>
-               </div>`
-            : '';
+        // Auditoria 2026-05-26 (Rollback): o aviso amarelo "Importação parcial:
+        // planilha de Benefícios não enviada" foi REMOVIDO. O canal Excel de
+        // benefícios não existe mais neste modal — benefícios PJ chegam via
+        // TXT no Botão 2 e populam /CP_Beneficios_PJ, não /CustosFolha.
+        // Linhas de Bnf no diagnóstico continuam sendo exibidas (vão a zero
+        // quando esperado) — são informativas, não bloqueantes.
         feedbackBody.innerHTML = `
             <div class="mb-2 text-[11px] uppercase tracking-widest font-bold text-slate-400">
                 Competência ${competenciaBR} · ${empresa}
             </div>
-            ${avisoSemBnf}
             ${linha('table_view', 'Linhas lidas da Folha', diag.totalFolha)}
-            ${linha('card_travel', 'Linhas lidas de Benefícios', diag.totalBeneficios)}
             ${linha('merge', 'Registros gravados', diag.totalUnificado, 'text-primary')}
-            ${linha('link', 'Com benefícios vinculados', diag.comBeneficiosVinculados)}
-            ${linha('swap_horiz', 'Apenas na Folha (sem Bnf)', diag.somenteFolha, 'text-tertiary')}
-            ${linha('swap_horiz', 'Apenas em Benefícios', diag.somenteBeneficios, 'text-tertiary')}`;
+            ${linha('swap_horiz', 'Linhas processadas', diag.somenteFolha, 'text-tertiary')}`;
     }
 
     // ── MOTOR DE QUARENTENA — CENTRO DE CUSTO ────────────────────────────────
@@ -3516,158 +4936,143 @@
     document.getElementById('btn-fechar-quarentena').onclick   = () => _fecharQuarentena(null);
     document.getElementById('modal-quarentena-overlay').onclick = () => _fecharQuarentena(null);
 
-    // ── SUBMIT ───────────────────────────────────────────────────────────────
+    // ── SUBMIT — PIPELINE UNIFICADO (auditoria 2026-05-26 — Estágio Uniforme) ─
+    // Aceita 3 modos: SÓ Folha (Excel) · SÓ Benefícios (TXT) · OS DOIS juntos.
+    // Cada canal roda sua máquina específica; o estado da tela é resincronizado
+    // UMA vez ao final com um feedback consolidado.
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const competenciaMes = inputCompetencia.value; // "YYYY-MM"
         const empresa = selectEmpresa.value.trim();
         const fileFolha = inputFolha.files?.[0];
-        const fileBeneficios = inputBeneficios.files?.[0];
+        const fileBeneficios = inputBeneficiosTxt.files?.[0];
 
-        if (!competenciaMes) return mostrarErro('Selecione a competência (mês/ano).');
-        if (!empresa) return mostrarErro('Selecione a empresa/filial.');
-        // Cenário A — sem Folha: erro crítico, fluxo abortado.
-        if (!fileFolha) {
-            return mostrarErro('Erro: É necessário selecionar ao menos o relatório de Folha de Pagamento.');
-        }
-        // Cenário B — só Folha: aviso + confirmação. Bnf será zerada.
-        // Auditoria 2026-04-28: Diretores e similares aparecem só na Folha;
-        // antes a importação era bloqueada e o usuário precisava montar uma
-        // planilha-fantasma de Bnf. Agora o sistema avisa e segue em frente.
-        if (!fileBeneficios) {
-            const ok = await confirmarAcao({
-                titulo: 'Benefícios não detectados',
-                mensagem: 'A base de Benefícios não foi detectada. Os custos de benefícios (VR, VA, VT, Plano de Saúde, Odonto, Seguro) serão zerados para este lote.\n\nDeseja prosseguir mesmo assim?',
-                labelConfirmar: 'Sim, importar só a Folha',
-                labelCancelar: 'Cancelar',
-                tom: 'aviso',
-            });
-            if (!ok) return; // usuário cancelou
-        }
-        // Cenário C — ambos selecionados: fluxo normal abaixo, sem prompt.
-
-        const [ano, mes] = competenciaMes.split('-');
-        const competenciaBR = `${mes}/${ano}`;
-
-        // 1) ETL — fileBeneficios pode ser undefined (Cenário B), ETL trata.
-        setLoading(true, fileBeneficios ? 'Lendo planilhas...' : 'Lendo Folha (sem Benefícios)...');
-        let unificado, diagnostico;
-        try {
-            const r = await importarCustoFolha({
-                fileFolha,
-                fileBeneficios: fileBeneficios || null,
-                competencia: competenciaBR,
-                empresa,
-            });
-            unificado = r.unificado;
-            diagnostico = r.diagnostico;
-            if (!unificado.length) throw new Error('Nenhum funcionário válido foi identificado a partir da Folha.');
-        } catch (err) {
-            console.error('[ETL] falhou:', err);
-            setLoading(false);
-            return mostrarErro(err.message || 'Não foi possível processar as planilhas. Verifique o formato.');
+        // Pelo menos UM arquivo é obrigatório — Folha Excel OU Benefícios TXT.
+        if (!fileFolha && !fileBeneficios) {
+            return mostrarErro('Por favor, selecione pelo menos um arquivo para processar (Folha Excel ou Benefícios TXT).');
         }
 
-        // 1.5) MOTOR DE QUARENTENA — sanitização de centro_custo.
-        // Auditoria 2026-05-14: se o ETL marcou registros com `pendente_tratamento`
-        // (centro_custo vazio/"."/"-"), pausamos aqui ANTES da gravação. Busca o
-        // histórico do CPF na empresa atual e abre o modal pra o usuário confirmar
-        // a sugestão ou digitar manualmente. Cancelar = aborta sem gravar nada.
-        if (diagnostico.pendentesTratamento > 0) {
-            setLoading(true, `Buscando histórico de ${diagnostico.pendentesTratamento} pendente(s)...`);
-            const cpfsPendentes = new Set();
-            for (const reg of unificado) {
-                if (reg.pendente_tratamento && reg.cpf) cpfsPendentes.add(reg.cpf);
-            }
-            let sugestoes = new Map();
+        // Competência + empresa só são exigidas no canal Folha.
+        if (fileFolha) {
+            if (!competenciaMes) return mostrarErro('Selecione a competência (mês/ano) para realizar a importação da Folha.');
+            if (!empresa)        return mostrarErro('Selecione a empresa/filial para realizar a importação da Folha.');
+        }
+
+        setLoading(true, 'Iniciando pipeline unificado de importação...');
+        const partesFeedback = [];
+
+        // ─── EXECUÇÃO 1: FOLHA DE PAGAMENTO (Excel) ──────────────────────────
+        if (fileFolha) {
+            const [ano, mes] = competenciaMes.split('-');
+            const competenciaBR = `${mes}/${ano}`;
             try {
-                sugestoes = await buscarHistoricoCentroCusto(cpfsPendentes, empresa, competenciaMes);
-            } catch (err) {
-                console.warn('[Quarentena] lookback falhou totalmente — segue com 0 sugestões:', err?.code || err?.message);
-            }
-            setLoading(false);
-
-            const correcoes = await abrirQuarentena(unificado, sugestoes);
-            if (!correcoes) {
-                // Usuário cancelou — nada foi gravado, deixa o form pronto pra
-                // novo Process. Não fecha o modal de importação, pra ele poder
-                // reescolher arquivos ou corrigir a planilha.
-                return mostrarErro('Importação cancelada. Nenhum registro foi gravado — corrija a planilha de origem ou tente novamente.');
-            }
-
-            // Aplica as correções no array em memória (mesmo doc, agora limpo).
-            for (const [idx, novoCC] of correcoes) {
-                if (unificado[idx]) {
-                    unificado[idx].centro_custo = novoCC;
-                    unificado[idx].pendente_tratamento = false;
+                setLoading(true, 'Lendo Folha (Excel)...');
+                const r = await importarCustoFolha({
+                    fileFolha,
+                    fileBeneficios: null,
+                    competencia: competenciaBR,
+                    empresa,
+                });
+                if (!r.unificado.length) {
+                    throw new Error('Nenhum funcionário válido foi identificado a partir da Folha.');
                 }
+
+                // ── Motor de Quarentena (centro_custo) — auditoria 2026-05-14.
+                if (r.diagnostico.pendentesTratamento > 0) {
+                    setLoading(true, `Aguardando resolução de ${r.diagnostico.pendentesTratamento} exceção(ões) de Centro de Custo...`);
+                    const cpfsPendentes = new Set();
+                    for (const reg of r.unificado) {
+                        if (reg.pendente_tratamento && reg.cpf) cpfsPendentes.add(reg.cpf);
+                    }
+                    let sugestoes = new Map();
+                    try {
+                        sugestoes = await buscarHistoricoCentroCusto(cpfsPendentes, empresa, competenciaMes);
+                    } catch (err) {
+                        console.warn('[Quarentena] lookback falhou — segue com 0 sugestões:', err?.code || err?.message);
+                    }
+                    setLoading(false);
+
+                    const correcoes = await abrirQuarentena(r.unificado, sugestoes);
+                    if (!correcoes) {
+                        return mostrarErro('Importação cancelada pelo usuário durante o tratamento de Centros de Custo.');
+                    }
+                    for (const [idx, novoCC] of correcoes) {
+                        if (r.unificado[idx]) {
+                            r.unificado[idx].centro_custo = novoCC;
+                            r.unificado[idx].pendente_tratamento = false;
+                        }
+                    }
+                    r.diagnostico.pendentesTratamento = 0;
+                    console.log(`[Quarentena] ${correcoes.size} centro(s) de custo sanitizado(s) antes da gravação.`);
+                }
+
+                setLoading(true, 'Gravando registros de folha (upsert)...');
+                await gravarUnificado(r.unificado, competenciaMes, competenciaBR, empresa);
+
+                setLoading(true, 'Atualizando Centros de Custo...');
+                try { await sincronizarCentrosDeCusto(r.unificado); }
+                catch (err) { console.warn('[Base_Centros_Custo] sync geral falhou:', err); }
+
+                const _x = r.diagnostico.totalUnificado;
+                const _y = r.diagnostico.comBeneficiosVinculados;
+                partesFeedback.push(`${_x} registro(s) de Folha gravados (${_y} com Bnf vinculados) — ${competenciaBR} · ${empresa}`);
+            } catch (err) {
+                console.error('[Pipeline Folha] Falhou:', err);
+                setLoading(false);
+                if (err.code === 'permission-denied') {
+                    return mostrarErro('Acesso Negado: seu perfil não tem permissão para gravar em CustosFolha.');
+                }
+                return mostrarErro('Falha no processamento da Folha Excel: ' + (err.message || err));
             }
-            console.log(`[Quarentena] ${correcoes.size} centro(s) de custo sanitizado(s) antes da gravação.`);
-            // Atualiza diagnóstico — fica em 0 após aplicar.
-            diagnostico.pendentesTratamento = 0;
         }
 
-        // 2) UPSERT — grava o lote em batches de 450 com setDoc + merge:true.
-        // Auditoria 2026-04-28: o passo de "DROP em massa" (deletar todos os
-        // docs de competencia_ref+empresa antes de gravar) foi removido. Agora
-        // a importação é IDEMPOTENTE por chave composta cpf+comp+cargo+empresa
-        // — reimportar 61 registros e depois +3 deixa o banco com 64; corrigir
-        // um campo num CPF/Cargo existente apenas atualiza aquela linha. A
-        // exclusão deixou de ser efeito colateral da importação e virou ação
-        // explícita (Super Adm) na própria tabela.
-        setLoading(true, 'Gravando registros (upsert)...');
-        try {
-            await gravarUnificado(unificado, competenciaMes, competenciaBR, empresa);
-        } catch (err) {
-            console.error('[UPSERT] falhou:', err);
-            setLoading(false);
-            if (err.code === 'permission-denied') {
-                return mostrarErro('Acesso Negado: seu perfil não tem permissão para gravar em CustosFolha.');
+        // ─── EXECUÇÃO 2: RELATÓRIO ANALÍTICO DE BENEFÍCIOS (TXT) ─────────────
+        if (fileBeneficios) {
+            setLoading(true, 'Processando Relatório Analítico de Benefícios (TXT)...');
+            try {
+                // Flag isSubmitContext=true: a função NÃO fecha modal, NÃO mostra
+                // toast e RETHROW em caso de erro — o submit é quem orquestra.
+                const resumoBnf = await folhaParsearTxtBeneficios(fileBeneficios, true);
+                const detalhe = resumoBnf && Array.isArray(resumoBnf.partes)
+                    ? resumoBnf.partes.join(' · ')
+                    : 'Relatório de Benefícios TXT integrado com sucesso';
+                partesFeedback.push(detalhe);
+            } catch (err) {
+                console.error('[Pipeline Benefícios] Falhou:', err);
+                setLoading(false);
+                return mostrarErro('Falha no processamento dos Benefícios TXT: ' + (err.message || err));
             }
-            return mostrarErro('Falha ao gravar os registros: ' + (err.message || 'erro desconhecido'));
         }
 
-        // 4) Sincroniza a base de Centros de Custo (não-crítico — falhas ficam no console).
-        setLoading(true, 'Atualizando Centros de Custo...');
-        try { await sincronizarCentrosDeCusto(unificado); }
-        catch (err) { console.warn('[Base_Centros_Custo] sync geral falhou:', err); }
-
-        // Sucesso — exibe diagnóstico no modal, sincroniza filtros com o que foi gravado,
-        // invalida cache de "disponíveis" (pois a lista mudou) e fecha o modal após o OK.
-        renderDiagnostico(diagnostico, empresa, competenciaBR);
+        // ─── FINALIZAÇÃO UNIFICADA + SINCRONIA DE INTERFACE ─────────────────
         setLoading(false);
+
+        // Limpeza de todos os inputs/labels dos DOIS cards.
         inputFolha.value = '';
-        inputBeneficios.value = '';
+        inputBeneficiosTxt.value = '';
         labelFolha.textContent = 'Clique para selecionar (.xlsx, .xls, .csv)';
-        labelBeneficios.textContent = 'Clique para selecionar (.xlsx, .xls, .csv)';
+        labelBeneficiosTxt.textContent = 'Clique para selecionar (.txt)';
         document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('has-file'));
 
-        // Sincroniza os filtros da tabela com a competência/empresa que acabou de ser gravada.
-        // Auditoria 2026-05-14: filtros são multi-select; aplicamos como seleção única
-        // dentro do mesmo array. Re-popula competência primeiro (cache invalidado mais abaixo).
-        disponiveisCache = null; disponiveisPromise = null;
-        await popularMultiCompetencias();
-        setMultiValues(filtroCompetencia, [competenciaMes]);
-        setMultiValues(filtroEmpresa, [empresa]);
-        localStorage.setItem(LS_COMP, JSON.stringify([competenciaMes]));
-        localStorage.setItem(LS_EMP, JSON.stringify([empresa]));
-        // Import não é "Aplicar" — mantém o chip escondido para tela limpa.
-        atualizarChipFiltros();
+        // Sincroniza filtros da tabela com o que acabou de ser gravado — só
+        // se houve gravação de Folha (Benefícios PJ não afeta competência/empresa).
+        if (fileFolha) {
+            disponiveisCache = null; disponiveisPromise = null;
+            await popularMultiCompetencias();
+            setMultiValues(filtroCompetencia, [competenciaMes]);
+            setMultiValues(filtroEmpresa, [empresa]);
+            localStorage.setItem(LS_COMP, JSON.stringify([competenciaMes]));
+            localStorage.setItem(LS_EMP, JSON.stringify([empresa]));
+            atualizarChipFiltros();
+        }
 
-        // Invalida o cache de disponíveis (há novos dados).
-        disponiveisCache = null;
-        disponiveisPromise = null;
-
-        // Força refresh da query (carregarDadosTabela usa filtroKey; com novos dados
-        // no mesmo filtro, o onSnapshot já atualiza; mas se a tabela estava em outro
-        // filtro, agora reassina).
-        ultimoFiltroKey = ''; // força re-subscribe mesmo se filtro for o mesmo
+        // Força re-subscribe + recálculo instantâneo (KPIs + gráficos + ranking).
+        ultimoFiltroKey = '';
         carregarDadosTabela();
-
         fecharModal('modal-importar');
-        const _x = diagnostico.totalUnificado;
-        const _y = diagnostico.comBeneficiosVinculados;
-        mostrarSucesso(`${_x} registros de folha processados (${_y} com benefícios vinculados) — ${competenciaBR} · ${empresa}.`);
+
+        // Feedback consolidado — uma mensagem só, com TODOS os canais que rodaram.
+        mostrarSucesso(`Sucesso absoluto na operação! · ${partesFeedback.join(' · ')}`);
     });
 
     // ── HELPERS: UPSERT (sem DROP em massa) ──────────────────────────────────

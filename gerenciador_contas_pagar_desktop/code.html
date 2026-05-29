@@ -117,7 +117,7 @@
              - botão lightbulb (data-kpi) → modal explicativo (comportamento legado)
              - body do card (data-kpi-card) → toggle de filtro
              Quando ativo, o card recebe ring-2 + cor próxima ao seu acento. -->
-        <section id="kpi-grid-cp" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <section id="kpi-grid-cp" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
             <!-- 1. Total Geral (DESTAQUE) — Toggle = limpa todos os filtros. -->
             <div data-kpi-card="total" role="button" tabindex="0" title="Limpar filtros e ver tudo"
                  class="relative bg-surface-container-lowest p-4 rounded-xl border border-secondary/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all ring-1 ring-secondary/10 cursor-pointer select-none">
@@ -199,6 +199,26 @@
                 <h3 id="kpi-vencido" class="text-base font-extrabold font-manrope text-red-600 leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1"><span id="kpi-vencido-count">0</span> atrasados</p>
             </div>
+
+            <!-- 7. Tarifas & Comissões Bancárias (APARTADO — auditoria 2026-05-28).
+                 Métrica isolada por governança: TARIFA / COMISSÃO BANCÁRIA são
+                 expurgadas de Total Geral / Pago / A Pagar / Vencidos / OPEX /
+                 Custo Cliente — concentradas aqui. Sem `data-kpi-card` (não
+                 vira toggle de filtro) porque a classificação é cruzada
+                 textual e não há filtro de "tipo bancário" no sistema.
+                 Lightbulb (data-kpi) explica a regra ao usuário. -->
+            <div title="Tarifas e Comissões Bancárias — métrica apartada"
+                 class="relative bg-surface-container-lowest p-4 rounded-xl border border-slate-200 shadow-sm select-none">
+                <button type="button" data-kpi="tarifas" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
+                    <span class="material-symbols-outlined text-[14px]">lightbulb</span>
+                </button>
+                <span class="p-1 bg-slate-100 text-slate-500 rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">payments</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Tarifas &amp; Comissões</p>
+                <h3 id="kpi-tarifas" class="text-base font-extrabold font-manrope text-slate-700 leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1"><span id="kpi-tarifas-count">0</span> apartados</p>
+            </div>
         </section>
 
         <!-- TOPBAR DE FILTROS -->
@@ -217,27 +237,41 @@
                     <span class="material-symbols-outlined text-[16px]">close</span>
                 </button>
             </div>
+            <!-- "Filtrar Base" (auditoria 2026-05-20). Renomeado de "Filtros
+                 Avançados" pra deixar claro que é o ponto único de saneamento
+                 e segmentação operacional. Mesmo ID por compatibilidade. -->
             <button id="btn-abrir-filtros-cp" type="button"
                 class="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:border-primary hover:bg-primary/5 text-secondary rounded-xl text-xs font-bold transition-all">
-                <span class="material-symbols-outlined text-base text-primary">tune</span>
-                Filtros Avançados
+                <span class="material-symbols-outlined text-base text-primary">filter_alt</span>
+                Filtrar Base
             </button>
-            <!-- Auditoria 2026-05-18: "Base de Fornecedores" migrou pra
-                 master.html (governança × operacional) e "Aprovações Pendentes"
-                 ganhou módulo próprio (aprovacoes_desktop) — botões removidos. -->
+            <!-- "Exportar Planilha" (Frente 1 — 2026-05-21). Estilo Secondary
+                 Glassmorphic: fundo branco semi-transparente, borda suave,
+                 ícone download em emerald (acento de "extração"). Lê o estado
+                 canônico `_cpUltimosFiltrados` (recorte ativo dos filtros) —
+                 nunca pagina, sempre exporta a base completa do recorte. -->
+            <button id="btn-cp-exportar-excel" type="button"
+                class="flex items-center gap-1.5 px-3 py-2 bg-white/60 backdrop-blur-sm border border-white/10 hover:border-emerald-300 hover:bg-emerald-50/80 text-secondary rounded-xl text-xs font-bold shadow-sm transition-all"
+                title="Exportar para Excel exatamente o recorte visível na tela (todos os filtros aplicados).">
+                <span id="btn-cp-exportar-excel-ico" class="material-symbols-outlined text-base text-emerald-600">download</span>
+                <span id="btn-cp-exportar-excel-lbl">Exportar Planilha</span>
+            </button>
             <button id="btn-limpar-filtros-cp" type="button"
                 class="hidden items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-bold transition-colors">
                 <span class="material-symbols-outlined text-base">filter_alt_off</span>
                 Limpar Filtros
             </button>
             <span id="cp-chip-filtros" class="hidden text-[11px] font-medium text-slate-500 px-3 py-1 bg-slate-100 rounded-full"></span>
-            <!-- Excluir Selecionados (auditoria 2026-05-18 V5 — Item 3).
-                 Visível só quando _cpSelecao.size > 0. Confirmação reaproveita
-                 modal-confirmar-delete-fatura-cp (já existente). -->
+            <!-- Ações em Massa (auditoria 2026-05-20). Substitui o botão
+                 antigo "Excluir Selecionados" — agora unifica alteração em
+                 lote (Empresa / Tipo / CC) E exclusão num único modal
+                 #modal-acoes-massa-industrial. ID mantido pra preservar
+                 toda a lógica de visibilidade já existente. -->
             <button id="btn-cp-excluir-sel" type="button"
-                class="hidden items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-red-600/20 hover:brightness-110 active:scale-95 transition-all">
-                <span class="material-symbols-outlined text-base">delete_sweep</span>
-                Excluir Selecionados (<span id="cp-sel-count" class="tabular-nums">0</span>)
+                class="hidden items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold shadow-md active:scale-95 transition-all"
+                style="background-color:#002443;color:#ffffff;">
+                <span class="material-symbols-outlined text-base" style="color:#aad12f;">bolt</span>
+                <span style="color:#ffffff;">Ações em Massa (<span id="cp-sel-count" class="tabular-nums">0</span>)</span>
             </button>
             <div class="flex-1"></div>
             <span id="cp-ultima-sync" class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
@@ -265,6 +299,12 @@
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Despesa</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Detalhe / Obs.</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">CC</th>
+                            <!-- Coluna GESTOR (Frente 1 — 2026-05-20).
+                                 Cruzamento em memória: cada linha procura o
+                                 gestor_nome cadastrado na Área correspondente
+                                 (master.html → Regras de Classificação →
+                                 Áreas & Gestores). Sem leituras extras ao DB. -->
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Gestor</th>
                             <th class="px-4 py-3 text-right font-bold text-secondary uppercase tracking-widest">Valor</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest w-24">Ações</th>
                         </tr>
@@ -421,6 +461,98 @@
      Confirmação genérica reaproveitada por qualquer linha do CP via
      `cpAbrirConfirmarExclusao(id, descricao)`. z-[80] pra cobrir o modal
      de edição (z-[72]) se o usuário decidir excluir a partir de lá. -->
+<!-- MODAL: Ações em Massa Industrial (Frente 2 — 2026-05-20).
+     Substitui o fluxo isolado de "Excluir Selecionados". Painel central
+     unifica edição em lote dos 3 campos críticos (Empresa, Tipo, CC) +
+     exclusão em massa como ação destrutiva separada no rodapé.
+     - Dropdown "O que alterar?" controla a visibilidade dos sub-selects.
+     - Sub-selects "Empresa" e "CC" usam data-cb-portal (escapam de overflow).
+     - Botão "Aplicar" só habilita quando há alvo + valor escolhido.
+     - Botão "Excluir Selecionados" reaproveita modal-confirmar-delete-fatura-cp
+       no fluxo __BULK__ legado (mantém auditoria do delete em lote). -->
+<div id="modal-acoes-massa-industrial" class="fixed inset-0 z-[78] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-acoes-massa-industrial"></div>
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner"
+                     style="background-color:rgba(170,209,47,0.12);">
+                    <span class="material-symbols-outlined text-2xl" style="color:#aad12f;">bolt</span>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="font-headline text-xl font-extrabold text-secondary tracking-tight">Ações em Massa</h3>
+                    <p class="text-[12px] text-slate-500 font-medium mt-0.5">
+                        Aplicando a <strong id="acoes-massa-alvo" class="text-primary tabular-nums">0</strong> lançamento(s) selecionado(s).
+                    </p>
+                </div>
+            </div>
+            <button id="btn-fechar-acoes-massa" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="px-7 py-5 space-y-4 overflow-y-auto">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">O que você deseja alterar nos registros selecionados?</label>
+                <select id="acoes-massa-campo"
+                        class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white font-medium text-secondary focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="">— escolha um campo —</option>
+                    <option value="empresa">Empresa</option>
+                    <option value="tipo_entidade">Tipo de Lançamento</option>
+                    <option value="centro_custo">Centro de Custo</option>
+                </select>
+            </div>
+            <!-- Sub-painel dinâmico — só um fica visível conforme a escolha. -->
+            <div id="acoes-massa-painel-empresa" class="hidden">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo valor — Empresa</label>
+                <select id="acoes-massa-valor-empresa"
+                        class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="">Selecione a empresa…</option>
+                </select>
+                <p class="text-[11px] text-slate-400 italic mt-1">Lista oficial vinda de Base_Empresas.</p>
+            </div>
+            <div id="acoes-massa-painel-tipo" class="hidden">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo valor — Tipo de Lançamento</label>
+                <select id="acoes-massa-valor-tipo"
+                        class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="">Selecione o tipo…</option>
+                    <option value="Cliente">Cliente</option>
+                    <option value="Fornecedor Externo">Fornecedor Externo</option>
+                    <option value="Fornecedor Interno">Fornecedor Interno</option>
+                    <option value="Fornecedor Interno - PJ">Fornecedor Interno - PJ</option>
+                </select>
+            </div>
+            <div id="acoes-massa-painel-cc" class="hidden">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo valor — Centro de Custo / Área</label>
+                <select id="acoes-massa-valor-cc"
+                        class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="">Selecione a área…</option>
+                </select>
+                <p class="text-[11px] text-slate-400 italic mt-1">Lista vinda de AreasContasPagar.</p>
+            </div>
+            <div class="text-[11px] text-slate-500 italic flex items-start gap-1.5 leading-relaxed border-t border-slate-100 pt-3">
+                <span class="material-symbols-outlined text-[14px] mt-0.5 text-tertiary">info</span>
+                <span>A alteração reescreve o campo escolhido em todas as faturas selecionadas. Operadores não-admin geram uma solicitação na esteira para aprovação.</span>
+            </div>
+        </div>
+        <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-slate-50/50 rounded-b-2xl flex-wrap">
+            <button id="btn-acoes-massa-excluir" type="button"
+                    class="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold transition-all active:scale-95">
+                <span class="material-symbols-outlined text-base">delete_sweep</span>
+                Excluir Selecionados
+            </button>
+            <div class="flex items-center gap-3">
+                <button id="btn-cancelar-acoes-massa" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                <button id="btn-aplicar-acoes-massa" type="button"
+                        class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        style="background-color:#002443;color:#ffffff;" disabled>
+                    <span class="material-symbols-outlined text-base" style="color:#aad12f;">published_with_changes</span>
+                    <span style="color:#ffffff;">Aplicar Alteração</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="modal-confirmar-delete-fatura-cp" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-confirmar-delete-fatura-cp"></div>
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100">
@@ -494,26 +626,27 @@
     </div>
 </div>
 
-<!-- MODAL: Filtros Avançados (multi-select por checkbox) — auditoria 2026-05-18 V6 (Item 5).
-     Largura ampliada (2xl → 3xl) para acomodar os 6 selects multi com folga.
-     overflow-y-auto preservado, mas os dropdowns internos usam data-cb-portal
-     (position:fixed via JS) e escapam de qualquer clip de ancestral. -->
+<!-- MODAL: Filtrar Base (auditoria 2026-05-20) — antigo "Filtros Avançados".
+     Renomeado pra refletir o novo papel: além de recortar a base, agora é o
+     hub de SANEAMENTO via sentinelas `[ SEM XXX ]` que isolam faturas com
+     campos vazios. Layout em 3 colunas no md+ pra acomodar os 8 selects
+     (Competência, Status, Favorecido, Despesa, Empresa, Tipo, CC, Classif). -->
 <div id="modal-filtros-cp" class="fixed inset-0 z-[68] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-filtros-cp"></div>
-    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] overflow-y-auto">
+    <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] overflow-y-auto">
         <div class="flex items-center gap-3 mb-6">
             <div class="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center">
-                <span class="material-symbols-outlined text-secondary">tune</span>
+                <span class="material-symbols-outlined text-secondary">filter_alt</span>
             </div>
             <div class="flex-1">
-                <h3 class="font-headline text-base font-bold text-secondary">Filtros Avançados</h3>
-                <p class="text-[11px] text-slate-400 font-medium">Recorte a base e os 6 KPIs recalculam em tempo real.</p>
+                <h3 class="font-headline text-base font-bold text-secondary">Filtrar Base</h3>
+                <p class="text-[11px] text-slate-400 font-medium">Recorte a base, sane dados faltantes e os 6 KPIs recalculam em tempo real.</p>
             </div>
             <button id="btn-fechar-filtros-cp" type="button" class="text-slate-400 hover:text-slate-700 transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
                 <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Competência</label>
                 <select id="cp-filtro-competencia" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todas as competências"
@@ -547,15 +680,40 @@
                     <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as Despesas</option>
                 </select>
             </div>
+            <!-- Filtro Empresa + sentinela de saneamento (Frente 1 — 2026-05-20). -->
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Empresa</label>
+                <select id="cp-filtro-empresa" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todas as Empresas"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as Empresas</option>
+                    <option value="__SEM_EMPRESA__">[ ⚠️ MOSTRAR LANÇAMENTOS SEM EMPRESA ]</option>
+                </select>
+            </div>
+            <!-- Filtro Tipo (granular — diferente de Classificação que agrega).
+                 Valores são os do schema /Fornecedores.tipo, replicados na fatura
+                 via tipo_entidade. Sentinela "[ SEM TIPO / CATEGORIA ]" isola
+                 faturas que ficaram com tipo_entidade vazio. -->
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Tipo</label>
+                <select id="cp-filtro-tipo" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todos os Tipos"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Tipos</option>
+                    <option value="__SEM_TIPO__">[ ⚠️ MOSTRAR LANÇAMENTOS SEM TIPO ]</option>
+                    <option value="Cliente">Cliente</option>
+                    <option value="Fornecedor Externo">Fornecedor Externo</option>
+                    <option value="Fornecedor Interno">Fornecedor Interno</option>
+                    <option value="Fornecedor Interno - PJ">Fornecedor Interno - PJ</option>
+                </select>
+            </div>
             <div>
                 <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Centro de Custo</label>
                 <select id="cp-filtro-cc" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todos os Centros"
                         class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
                     <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Centros</option>
-                    <!-- Sentinela "Sem CC" (auditoria 2026-05-18 V5 — Item 2):
-                         recorta as faturas sem `centro_custo`. _popularSelectMulti
-                         preserva opções pré-cadastradas no DOM. -->
-                    <option value="__SEM_CC__">[ SEM CENTRO DE CUSTO ]</option>
+                    <!-- Sentinela "[ ⚠️ MOSTRAR LANÇAMENTOS SEM CC ]" (Frente 2 — 2026-05-20):
+                         recorta as faturas sem `centro_custo`. _popularSelectMulti­
+                         Chunked preserva opções pré-cadastradas no DOM. -->
+                    <option value="__SEM_CC__">[ ⚠️ MOSTRAR LANÇAMENTOS SEM CC ]</option>
                 </select>
             </div>
             <div>
@@ -578,7 +736,10 @@
 <!-- Inputs file ocultos. -->
 <input id="file-cp-txt" type="file" accept=".txt" class="hidden" />
 <!-- file-fornecedores-xlsx removido (auditoria 2026-05-18): governança migrada pra master.html -->
-<input id="file-despesas-xlsx" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+<!-- file-despesas-xlsx removido (auditoria 2026-05-21): card de Despesas
+     migrou pra Benefícios PJ. CP_Base_Despesas continua sendo alimentado
+     em background pelo ETL TXT (auto-seed em _cpFinalizarImportacao). -->
+<input id="file-beneficios-pj" type="file" accept=".txt" class="hidden" />
 
 <!-- MODAL: Central de Importações — auditoria 2026-05-15.
      Hub único de importação. Cada card abre o file picker correspondente.
@@ -600,20 +761,22 @@
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <!-- Central de Importações — auditoria 2026-05-18 (V2):
-             ESTRITAMENTE upload. Toda gestão visual da Base de Despesas
-             (cadastrar, editar, listar, excluir) migrou pra master.html →
-             Regras de Classificação → "4. Banco de Despesas". Aqui o operador
-             só dispara o batch de leitura via SheetJS. -->
+        <!-- Central de Importações (Frente 2 — 2026-05-21):
+             O card de "Base de Despesas" foi REMOVIDO. CP_Base_Despesas
+             continua sendo alimentado em background pelo ETL TXT (auto-seed
+             em _cpFinalizarImportacao) e pelo CRUD individual em master.html.
+             O novo card "Benefícios de PJs" substitui o antigo — usa o
+             cadastro prévio do PJ (codigo_beneficio_folha) como chave mestre
+             pra cruzar com o relatório mensal de VR/VT do RH. -->
         <div class="p-7 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button id="card-importar-despesas" type="button"
+            <button id="card-importar-beneficios-pj" type="button"
                 class="text-left p-5 rounded-xl border border-slate-200 hover:border-secondary hover:bg-secondary/5 active:scale-[0.98] transition-all group">
                 <div class="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-3 group-hover:bg-secondary/20 transition-all">
-                    <span class="material-symbols-outlined text-secondary text-2xl">upload_file</span>
+                    <span class="material-symbols-outlined text-secondary text-2xl">card_membership</span>
                 </div>
-                <h4 class="font-headline text-sm font-extrabold text-secondary">Upload da Base de Despesas</h4>
-                <p class="text-[11px] text-slate-500 font-medium mt-1">Arquivo <strong>.xlsx</strong> / <strong>.csv</strong> · só leitura em lote.</p>
-                <p class="text-[10px] text-slate-400 italic mt-2">Para cadastrar, editar ou excluir despesas individualmente, acesse <strong>Configurações &rsaquo; Regras de Classificação</strong>.</p>
+                <h4 class="font-headline text-sm font-extrabold text-secondary">Importar Relatório Analítico de Benefícios (TXT)</h4>
+                <p class="text-[11px] text-slate-500 font-medium mt-1">Arquivo <strong>.txt</strong> · Parser por máquina de estados (Competência · Centro de Custo · Funcionário).</p>
+                <p class="text-[10px] text-slate-400 italic mt-2">Decompõe códigos 276/277/284/279 (VT/VR/VA/Médico) e descontos 672/773/774/776. Sem CC no TXT, usa o canônico do cadastro prévio.</p>
             </button>
             <button id="card-importar-txt" type="button"
                 class="text-left p-5 rounded-xl border border-slate-200 hover:border-primary hover:bg-primary/5 active:scale-[0.98] transition-all group">
@@ -743,6 +906,12 @@
     // /CP_SolicitacoesAprovacao para revisão por um aprovador.
     let _isAdmin = false;
     let _ccDisponiveis = []; // alimentado pelo onSnapshot de AreasContasPagar
+    // Map<nome_area, gestor_nome> — Frente 1 (2026-05-20). Mantém o cruzamento
+    // entre Centro de Custo da fatura e o gestor responsável (cadastrado em
+    // master.html). Atualizado pelo mesmo listener de AreasContasPagar e
+    // consumido pela coluna "Gestor" da tabela. Lookup O(1) — sem leituras
+    // extras ao Firestore por linha.
+    let _areaGestorMap = new Map();
 
     // ── AUTH + GUARDIÃO ─────────────────────────────────────────────────────
     onAuthStateChanged(auth, async (user) => {
@@ -778,17 +947,21 @@
                 '| _isAdmin:', _isAdmin
             );
             // Toast de diagnóstico (curto, 3s). mostrarToast existe no escopo do módulo.
+            // Auditoria 2026-05-26: para perfil consulta, suprime esse toast —
+            // _cpAplicarRestricoesLeitura emite seu próprio aviso explícito.
             try {
-                setTimeout(() => {
-                    if (typeof mostrarToast === 'function') {
-                        mostrarToast(
-                            _isAdmin
-                                ? `Sessão Master ativa (${usuarioLogadoEmail})`
-                                : `Sessão Operacional ativa — ações restritas via Esteira (${usuarioLogadoEmail})`,
-                            _isAdmin ? 'verified_user' : 'info'
-                        );
-                    }
-                }, 600);
+                if (_perfilUsuario !== 'consulta') {
+                    setTimeout(() => {
+                        if (typeof mostrarToast === 'function') {
+                            mostrarToast(
+                                _isAdmin
+                                    ? `Sessão Master ativa (${usuarioLogadoEmail})`
+                                    : `Sessão Operacional ativa — ações restritas via Esteira (${usuarioLogadoEmail})`,
+                                _isAdmin ? 'verified_user' : 'info'
+                            );
+                        }
+                    }, 600);
+                }
             } catch (_) {}
 
             if (dadosUser.status === 'inativo') {
@@ -812,6 +985,11 @@
             // (vive em aprovacoes_desktop). A visibilidade admin-only continua
             // sinalizada via data-perfil-admin pra eventuais hooks futuros.
             _cpAtualizarVisibilidadeAdmin();
+            // Auditoria 2026-05-26: Perfil CONSULTA (Read-Only). Hot-patch da
+            // UI logo após a resolução do perfil — bloqueia Central de Imports,
+            // bulk actions, lápis/lixeira por linha e força modais de edição
+            // a abrirem em modo somente-leitura.
+            _cpAplicarRestricoesLeitura(_perfilUsuario);
         } catch (err) {
             console.error('[GerenciadorCP] Falha auth/bootstrap:', err);
         }
@@ -820,12 +998,21 @@
     function inscreverAreas() {
         onSnapshot(collection(db, 'AreasContasPagar'), (snap) => {
             const nomes = [];
+            const mapaGestor = new Map();
             snap.forEach(d => {
-                const n = String((d.data() || {}).nome || '').trim();
-                if (n) nomes.push(n);
+                const data = d.data() || {};
+                const n = String(data.nome || '').trim();
+                if (!n) return;
+                nomes.push(n);
+                const gestor = String(data.gestor_nome || '').trim();
+                if (gestor) mapaGestor.set(n, gestor);
             });
             nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
             _ccDisponiveis = nomes;
+            // Atualiza o mapa Centro de Custo → Gestor (Frente 1, 2026-05-20)
+            // e força um re-render para que a coluna "Gestor" recalcule.
+            _areaGestorMap = mapaGestor;
+            if (typeof renderTudo === 'function') renderTudo();
         }, (err) => console.warn('[AreasContasPagar] listener falhou:', err?.code || err?.message));
     }
 
@@ -897,14 +1084,50 @@
     }
 
     // ── Snapshot principal ─────────────────────────────────────────────────
+    // Frente 2 (auditoria 2026-05-20): pipeline de PASSO ÚNICO. Antes havia
+    // 2 loops sequenciais pesados em bases com 10k+ docs — um pra montar
+    // cacheRegistros e outro pra extrair Sets de Competência/Favorecido/
+    // Despesa/CC. Agora um único `snap.forEach` alimenta TUDO em paralelo,
+    // e a inserção das <option>s vai pra chunks (requestIdleCallback) que
+    // cedem o controle ao paint entre lotes — main thread não engasga.
     function inscreverContasPagar() {
         const q = query(collection(db, COLECAO), orderBy('data_vencimento', 'desc'));
         onSnapshot(q, (snap) => {
+            // ─── Single-pass: regs + Sets de filtros num único loop ───
+            // Frente 1 (2026-05-20): extrai também `empresa` (string vazia
+            // tolerada — vira `__SEM_EMPRESA__` no filtro) — base do novo
+            // dropdown "Empresa" no modal "Filtrar Base".
             const regs = [];
-            snap.forEach(d => regs.push({ _id: d.id, ...d.data() }));
+            const comps = new Set(), favs = new Set(), desp = new Set(),
+                  ccs = new Set(), empresas = new Set();
+            snap.forEach(d => {
+                const reg = { _id: d.id, ...d.data() };
+                regs.push(reg);
+                const comp = fmtCompetenciaBR(reg);
+                if (comp) comps.add(comp);
+                if (reg.entidade)     favs.add(reg.entidade);
+                if (reg.categoria)    desp.add(reg.categoria);
+                if (reg.centro_custo) ccs.add(reg.centro_custo);
+                const emp = String(reg.empresa || '').trim();
+                if (emp) empresas.add(emp);
+            });
             cacheRegistros = regs;
-            popularDropdownsFiltros(cacheRegistros);
+            // Renderiza JÁ — os filtros atuais (ou os restaurados via
+            // sessionStorage) operam sobre cacheRegistros independente de
+            // qual <option> está renderizada nos dropdowns. A paginação
+            // estrita de 50 (PAGE_SIZE_CP) limita o DOM ao recorte visível.
             renderTudo();
+            // Popula os dropdowns em chunks assíncronos. Quando o primeiro
+            // snapshot termina de preencher as <option>s, restaura o estado
+            // de filtros do sessionStorage UMA ÚNICA VEZ — depois é só
+            // atualização incremental.
+            _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresas, () => {
+                if (!_cpFiltrosRestaurados) {
+                    _cpFiltrosRestaurados = true;
+                    _cpRestaurarEstadoFiltros();
+                    renderTudo();
+                }
+            });
         }, (err) => {
             console.error('[ContasAPagar] listener falhou:', err);
             cacheRegistros = [];
@@ -916,60 +1139,216 @@
     // abaixo) — agora marca o tempo do último ETL real, não o último
     // disparo de snapshot.
 
-    // ── Popula dropdowns dos filtros dinâmicos (Competência/Favorecido/
-    // Despesa/CC). Lista derivada do próprio cacheRegistros — só aparecem
-    // valores que de fato existem na base atual.
-    function popularDropdownsFiltros(cache) {
-        const comps = new Set(), favs = new Set(), desp = new Set(), ccs = new Set();
-        for (const r of cache) {
-            const comp = fmtCompetenciaBR(r);
-            if (comp) comps.add(comp);
-            if (r.entidade) favs.add(r.entidade);
-            if (r.categoria) desp.add(r.categoria);
-            if (r.centro_custo) ccs.add(r.centro_custo);
-        }
-        // Competência ordenada do mais recente pro mais antigo.
+    // ── Popula dropdowns em chunks (Frente 2 — 2026-05-20) ──────────────────
+    // Ordena cada conjunto e enche os 4 selects em SÉRIE (um após o outro),
+    // cada um delegando para `_popularSelectMultiChunked` que insere as
+    // <option>s em blocos de 500 via requestIdleCallback. Em série pra evitar
+    // 4 cascatas paralelas que competem pelo mesmo idle time do browser.
+    function _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresas, onDone) {
         const compsOrd = [...comps].sort((a, b) => {
             const ka = a.slice(3) + a.slice(0, 2);
             const kb = b.slice(3) + b.slice(0, 2);
             return kb.localeCompare(ka);
         });
-        _popularSelectMulti('cp-filtro-competencia', compsOrd, 'Todas as competências');
-        _popularSelectMulti('cp-filtro-favorecido', [...favs].sort((a, b) => a.localeCompare(b, 'pt-BR')), 'Todos os Favorecidos');
-        _popularSelectMulti('cp-filtro-despesa',    [...desp].sort((a, b) => a.localeCompare(b, 'pt-BR')), 'Todas as Despesas');
-        _popularSelectMulti('cp-filtro-cc',         [...ccs].sort((a, b) => a.localeCompare(b, 'pt-BR')), 'Todos os Centros');
+        const favsOrd = [...favs].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const despOrd = [...desp].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const ccsOrd  = [...ccs].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const empsOrd = [...(empresas || [])].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+        _popularSelectMultiChunked('cp-filtro-competencia', compsOrd, 'Todas as competências', () => {
+            _popularSelectMultiChunked('cp-filtro-favorecido', favsOrd, 'Todos os Favorecidos', () => {
+                _popularSelectMultiChunked('cp-filtro-despesa', despOrd, 'Todas as Despesas', () => {
+                    _popularSelectMultiChunked('cp-filtro-cc', ccsOrd, 'Todos os Centros', () => {
+                        _popularSelectMultiChunked('cp-filtro-empresa', empsOrd, 'Todas as Empresas', () => {
+                            if (typeof onDone === 'function') onDone();
+                        });
+                    });
+                });
+            });
+        });
     }
 
-    function _popularSelectMulti(id, valores, labelTodos) {
+    // Scheduler portável: usa requestIdleCallback quando disponível
+    // (Chrome/Edge/Firefox modernos), com fallback pra setTimeout(0) que
+    // garante yield ao paint mesmo em Safari. timeout=200ms blinda contra
+    // tabs inativas que postergam indefinidamente o idle.
+    const _cpSched = (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function')
+        ? (fn) => window.requestIdleCallback(fn, { timeout: 200 })
+        : (fn) => setTimeout(fn, 0);
+
+    function _popularSelectMultiChunked(id, valores, labelTodos, onDone) {
         const sel = document.getElementById(id);
-        if (!sel) return;
+        if (!sel) { onDone && onDone(); return; }
         const previo = getMultiValues(sel);
+        // Reset estrutural síncrono (cabeçalho "Todos" + sentinelas fixas).
         sel.innerHTML = `<option value="Todos" class="font-bold border-b pb-1 mb-1">${labelTodos}</option>`;
-        // Sentinela "[ SEM CENTRO DE CUSTO ]" — re-injetada após o reset do
-        // innerHTML porque o _popularSelectMulti zera todas as opções fixas.
-        // Auditoria 2026-05-18 V5 (Item 2).
         if (id === 'cp-filtro-cc') {
             const optSem = document.createElement('option');
             optSem.value = '__SEM_CC__';
-            optSem.textContent = '[ SEM CENTRO DE CUSTO ]';
+            optSem.textContent = '[ ⚠️ MOSTRAR LANÇAMENTOS SEM CC ]';
             sel.appendChild(optSem);
         }
-        for (const v of valores) {
-            const opt = document.createElement('option');
-            opt.value = v;
-            opt.textContent = v;
-            sel.appendChild(opt);
+        // Sentinela "[ ⚠️ MOSTRAR LANÇAMENTOS SEM EMPRESA ]" (Frente 2 — 2026-05-20).
+        // O select de empresas é repopulado a cada snapshot — sem essa
+        // re-injeção, a sentinela do HTML some no primeiro refresh.
+        if (id === 'cp-filtro-empresa') {
+            const optSemEmp = document.createElement('option');
+            optSemEmp.value = '__SEM_EMPRESA__';
+            optSemEmp.textContent = '[ ⚠️ MOSTRAR LANÇAMENTOS SEM EMPRESA ]';
+            sel.appendChild(optSemEmp);
         }
-        // Mantém fantasmas (valores selecionados que sumiram da base).
-        // "__SEM_CC__" não conta como fantasma — ele é sentinela fixa, sempre presente.
-        const fantasmas = previo.filter(p => p !== 'Todos' && p !== '__SEM_CC__' && !valores.includes(p));
-        for (const v of fantasmas) {
-            const opt = document.createElement('option');
-            opt.value = v;
-            opt.textContent = `${v} (sem dados)`;
-            sel.appendChild(opt);
+        const valoresSet = new Set(valores);
+        // Limiar pra ir direto (sync) sem overhead de chunks. Listas pequenas
+        // (< 800 opções) cabem em um único frame sem bloqueio perceptível.
+        const SYNC_LIMITE = 800;
+        const CHUNK = 500;
+
+        function popularFantasmasEAplicar() {
+            // Fantasmas: valores previamente selecionados que sumiram da base.
+            // Sentinelas fixas (__SEM_CC__, __SEM_EMPRESA__, __SEM_TIPO__)
+            // são SEMPRE re-injetadas — não viram fantasma "(sem dados)".
+            const SENTINELAS = new Set(['Todos', '__SEM_CC__', '__SEM_EMPRESA__', '__SEM_TIPO__']);
+            const fantasmas = previo.filter(p => !SENTINELAS.has(p) && !valoresSet.has(p));
+            if (fantasmas.length) {
+                const frag = document.createDocumentFragment();
+                for (const v of fantasmas) {
+                    const opt = document.createElement('option');
+                    opt.value = v;
+                    opt.textContent = `${v} (sem dados)`;
+                    frag.appendChild(opt);
+                }
+                sel.appendChild(frag);
+            }
+            setMultiValues(sel, previo);
+            if (typeof onDone === 'function') onDone();
         }
-        setMultiValues(sel, previo);
+
+        if (valores.length <= SYNC_LIMITE) {
+            // Sync: um único reflow via DocumentFragment (~1 ordem de
+            // magnitude mais barato que appendChild N vezes).
+            const frag = document.createDocumentFragment();
+            for (const v of valores) {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                frag.appendChild(opt);
+            }
+            sel.appendChild(frag);
+            popularFantasmasEAplicar();
+            return;
+        }
+
+        // Async chunks: insere CHUNK opções por frame até zerar a lista,
+        // cedendo o controle entre blocos. Browser fica responsivo a clicks
+        // e scroll enquanto a tabela já está pintada e funcional.
+        let i = 0;
+        function proximoChunk() {
+            const fim = Math.min(i + CHUNK, valores.length);
+            const frag = document.createDocumentFragment();
+            for (let j = i; j < fim; j++) {
+                const opt = document.createElement('option');
+                opt.value = valores[j];
+                opt.textContent = valores[j];
+                frag.appendChild(opt);
+            }
+            sel.appendChild(frag);
+            i = fim;
+            if (i < valores.length) {
+                _cpSched(proximoChunk);
+            } else {
+                popularFantasmasEAplicar();
+            }
+        }
+        _cpSched(proximoChunk);
+    }
+
+    // ── Persistência de filtros (Frente 1 — sticky filtros, 2026-05-20) ───
+    // Os filtros aplicados (busca, multi-selects) são salvos no sessionStorage
+    // a cada mudança e restaurados na inicialização. Resultado: o operador
+    // pode trocar de tela (Aprovações, Folha, etc.) e voltar com TUDO no
+    // lugar — sem perder horas refazendo recortes em arquivos grandes.
+    //
+    // - sessionStorage (não localStorage): zera ao fechar a aba, mas
+    //   sobrevive a F5 e navegação interna. É o comportamento certo —
+    //   uma "sessão de trabalho" do dia.
+    // - try/catch em volta de get/set: blinda contra quota cheia, modo
+    //   privativo do Safari, JSON corrompido.
+    // - `_cpFiltrosRestaurados`: flag que garante restauração UMA única vez
+    //   (após o primeiro snapshot popular os dropdowns). Saves subsequentes
+    //   sobrescrevem o SS normalmente.
+    const _CP_SS_FILTROS = 'centrafin_cp_filters';
+    let _cpFiltrosRestaurados = false;
+    let _cpSaveTimer = null;
+
+    function _cpSalvarEstadoFiltros() {
+        // Debounce 120ms — vários setMultiValues em série (limparTodosFiltros,
+        // toggle de KPI) não disparam 6 writes consecutivos no SS.
+        if (_cpSaveTimer) clearTimeout(_cpSaveTimer);
+        _cpSaveTimer = setTimeout(() => {
+            try {
+                const estado = {
+                    busca: _cpTermoBusca || '',
+                    competencia:   getMultiValues(document.getElementById('cp-filtro-competencia')),
+                    status:        getMultiValues(document.getElementById('cp-filtro-status')),
+                    favorecido:    getMultiValues(document.getElementById('cp-filtro-favorecido')),
+                    despesa:       getMultiValues(document.getElementById('cp-filtro-despesa')),
+                    empresa:       getMultiValues(document.getElementById('cp-filtro-empresa')),
+                    tipo:          getMultiValues(document.getElementById('cp-filtro-tipo')),
+                    cc:            getMultiValues(document.getElementById('cp-filtro-cc')),
+                    classificacao: getMultiValues(document.getElementById('cp-filtro-classificacao')),
+                };
+                sessionStorage.setItem(_CP_SS_FILTROS, JSON.stringify(estado));
+            } catch (e) {
+                // Quota cheia ou modo privado — não fatal. Tenta limpar pra
+                // liberar espaço pra próxima tentativa.
+                try { sessionStorage.removeItem(_CP_SS_FILTROS); } catch (_) {}
+            }
+        }, 120);
+    }
+
+    function _cpLimparEstadoFiltrosSS() {
+        try { sessionStorage.removeItem(_CP_SS_FILTROS); } catch (_) {}
+    }
+
+    function _cpRestaurarEstadoFiltros() {
+        let est = null;
+        try {
+            const raw = sessionStorage.getItem(_CP_SS_FILTROS);
+            if (!raw) return;
+            est = JSON.parse(raw);
+            if (!est || typeof est !== 'object') return;
+        } catch (e) {
+            // JSON corrompido — descarta e segue com filtros zerados.
+            _cpLimparEstadoFiltrosSS();
+            return;
+        }
+        // Busca textual: sincroniza memória + input + botão "X".
+        if (typeof est.busca === 'string' && est.busca) {
+            _cpTermoBusca = est.busca;
+            if (typeof _inputBuscaCP !== 'undefined' && _inputBuscaCP) {
+                _inputBuscaCP.value = est.busca;
+                if (_btnLimparBuscaCP) _btnLimparBuscaCP.classList.remove('hidden');
+            }
+        }
+        // Multi-selects: setMultiValues lida com fantasmas (valores que
+        // foram salvos antes de existirem na base atual — `_popularSelect­
+        // MultiChunked` os mantém como "(sem dados)" pra não perder seleção).
+        const mapeamento = [
+            ['cp-filtro-competencia',   est.competencia],
+            ['cp-filtro-status',        est.status],
+            ['cp-filtro-favorecido',    est.favorecido],
+            ['cp-filtro-despesa',       est.despesa],
+            ['cp-filtro-empresa',       est.empresa],
+            ['cp-filtro-tipo',          est.tipo],
+            ['cp-filtro-cc',            est.cc],
+            ['cp-filtro-classificacao', est.classificacao],
+        ];
+        for (const [id, vals] of mapeamento) {
+            if (Array.isArray(vals) && vals.length) {
+                setMultiValues(document.getElementById(id), vals);
+            }
+        }
+        _cpPage = 1;
     }
 
     // ── Busca rápida textual (auditoria 2026-05-18 V6 — Item 1) ────────────
@@ -996,6 +1375,7 @@
                 }
                 _cpPage = 1; // recorte mudou → volta pra pág 1.
                 renderTudo();
+                _cpSalvarEstadoFiltros(); // sticky filtros (Frente 1)
             }, 180);
         });
         // Esc dentro do campo zera busca + tira foco.
@@ -1006,6 +1386,7 @@
                 if (_btnLimparBuscaCP) _btnLimparBuscaCP.classList.add('hidden');
                 _cpPage = 1;
                 renderTudo();
+                _cpSalvarEstadoFiltros();
             }
         });
     }
@@ -1017,6 +1398,7 @@
             _cpPage = 1;
             renderTudo();
             _inputBuscaCP.focus();
+            _cpSalvarEstadoFiltros();
         });
     }
 
@@ -1033,6 +1415,8 @@
         const statusArr  = getMultiValues(document.getElementById('cp-filtro-status'));
         const favsArr    = getMultiValues(document.getElementById('cp-filtro-favorecido'));
         const despArr    = getMultiValues(document.getElementById('cp-filtro-despesa'));
+        const empArr     = getMultiValues(document.getElementById('cp-filtro-empresa'));
+        const tipoArr    = getMultiValues(document.getElementById('cp-filtro-tipo'));
         const ccArr      = getMultiValues(document.getElementById('cp-filtro-cc'));
         const classArr   = getMultiValues(document.getElementById('cp-filtro-classificacao'));
 
@@ -1040,6 +1424,8 @@
         const statusSet = !isMultiAll(statusArr) ? new Set(statusArr) : null;
         const favSet   = !isMultiAll(favsArr)   ? new Set(favsArr)   : null;
         const despSet  = !isMultiAll(despArr)   ? new Set(despArr)   : null;
+        const empSet   = !isMultiAll(empArr)    ? new Set(empArr)    : null;
+        const tipoSet  = !isMultiAll(tipoArr)   ? new Set(tipoArr)   : null;
         const ccSet    = !isMultiAll(ccArr)     ? new Set(ccArr)     : null;
         // Resolve classificação em conjunto agregado de tipo_entidade.
         let classSetExpandido = null;
@@ -1052,12 +1438,13 @@
         }
 
         const hoje = hojeISO();
-        // Sentinela "Sem CC" (auditoria 2026-05-18 V5 — Item 2): se o usuário
-        // marcou "[ SEM CENTRO DE CUSTO ]" sozinho ou junto com CCs explícitos,
-        // expandimos a regra pra aceitar EM AMBOS — ou tem o CC selecionado,
-        // ou o registro tem CC vazio/null. Cobre o pedido de auditoria de
-        // notas sem área alocada (saneamento da base).
-        const ccFiltraSemCC = ccSet && ccSet.has('__SEM_CC__');
+        // Sentinelas de saneamento (Frente 1 — 2026-05-20). Cada filtro
+        // aceita um "[ SEM XXX ]" combinável com valores específicos: ou o
+        // registro casa exatamente, ou o campo está vazio. Permite ao
+        // operador isolar lacunas (ex.: faturas sem Empresa E sem CC).
+        const ccFiltraSemCC      = ccSet  && ccSet.has('__SEM_CC__');
+        const empFiltraSemEmp    = empSet && empSet.has('__SEM_EMPRESA__');
+        const tipoFiltraSemTipo  = tipoSet && tipoSet.has('__SEM_TIPO__');
         // Busca rápida textual (auditoria 2026-05-18 V6 — Item 1).
         const termo = _cpTermoBusca;
         return registros.filter(r => {
@@ -1065,6 +1452,18 @@
             if (statusSet && !statusSet.has(statusVisual(r, hoje))) return false;
             if (favSet && !favSet.has(r.entidade || '')) return false;
             if (despSet && !despSet.has(r.categoria || '')) return false;
+            if (empSet) {
+                const empReg = String(r.empresa || '').trim();
+                const passaSemEmp = empFiltraSemEmp && !empReg;
+                const passaEspec  = empSet.has(empReg);
+                if (!passaSemEmp && !passaEspec) return false;
+            }
+            if (tipoSet) {
+                const tipoReg = String(r.tipo_entidade || '').trim();
+                const passaSemTipo = tipoFiltraSemTipo && !tipoReg;
+                const passaEspec   = tipoSet.has(tipoReg);
+                if (!passaSemTipo && !passaEspec) return false;
+            }
             if (ccSet) {
                 const ccReg = String(r.centro_custo || '').trim();
                 const passaSemCC = ccFiltraSemCC && !ccReg;
@@ -1201,6 +1600,15 @@
                         <span class="italic align-middle">${escHTML(r.observacao || '—')}</span>
                     </td>
                     <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${escHTML(r.centro_custo || '—')}</td>
+                    <td class="px-4 py-3 text-xs text-slate-700 font-semibold">${
+                        (() => {
+                            const cc = String(r.centro_custo || '').trim();
+                            const gestor = cc ? _areaGestorMap.get(cc) : '';
+                            return gestor
+                                ? escHTML(gestor)
+                                : '<span class="text-slate-500 italic text-xs">— sem alocação —</span>';
+                        })()
+                    }</td>
                     <td class="px-4 py-3 text-xs text-right font-extrabold text-secondary tabular-nums">${fmtBRL.format(Number(r.valor_original) || 0)}</td>
                     <td class="px-4 py-3 text-right">
                         <div class="flex justify-end gap-1">
@@ -1220,12 +1628,40 @@
     }
 
     // ── KPIs reativos ──────────────────────────────────────────────────────
+    // Auditoria 2026-05-28 — Governança Bancária:
+    // Tarifas/Comissões Bancárias são EXPURGADAS dos 6 cards tradicionais
+    // (Total / Pago / A Pagar / Vencidos / OPEX / Custo Cliente) e
+    // concentradas no card #kpi-tarifas. Isso isola o custo financeiro do
+    // custo operacional. Os lançamentos permanecem na tabela e podem ser
+    // editados; apenas a matemática dos cards macro foi segregada.
     function atualizarKPIs(filtrados) {
         const hoje = hojeISO();
+        // Normalizador: UPPER + strip de acentos (NFD) — captura "COMISSÃO"
+        // igual a "COMISSAO". Padrão idêntico ao usado em outros pontos do app.
+        const normTexto = (s) => String(s || '').trim().toUpperCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '');
         let total = 0, pago = 0, aPagar = 0, vencido = 0, opex = 0, cliente = 0;
         let cTotal = 0, cPago = 0, cAPagar = 0, cVencido = 0;
+        let tarifas = 0, cTarifas = 0;
         for (const r of filtrados) {
             const v = Number(r.valor_original) || 0;
+
+            // Regra Contábil de Identificação de Tarifa/Comissão Bancária.
+            // "TARIFA" sozinho qualifica (uso ~100% bancário na ERP).
+            // "COMISSAO" exige qualificador "BANC" — protege contra comissão
+            // de vendas/representação. Olha categoria + entidade pois o
+            // fornecedor pode trazer "BANCO BRADESCO — TARIFA MENSAL".
+            const blob = `${normTexto(r.categoria)} ${normTexto(r.entidade)}`;
+            const ehTarifaOuComissao =
+                blob.includes('TARIFA') ||
+                (blob.includes('COMISSAO') && blob.includes('BANC'));
+
+            if (ehTarifaOuComissao) {
+                tarifas += v;
+                cTarifas++;
+                continue; // Expurgo: NÃO entra em Total/Pago/A Pagar/Vencidos/OPEX/Cliente
+            }
+
             total += v; cTotal++;
             const vs = statusVisual(r, hoje);
             if (vs === 'pago') { pago += v; cPago++; }
@@ -1249,6 +1685,7 @@
         setKPI('kpi-opex',     opex);
         setKPI('kpi-cliente',  cliente);
         setKPI('kpi-vencido',  vencido, cVencido,'kpi-vencido-count');
+        setKPI('kpi-tarifas',  tarifas, cTarifas,'kpi-tarifas-count');
     }
 
     // ── Chip de filtros ativos + botão Limpar visível ─────────────────────
@@ -1260,6 +1697,8 @@
             ['Status', getMultiValues(document.getElementById('cp-filtro-status'))],
             ['Favorecido', getMultiValues(document.getElementById('cp-filtro-favorecido'))],
             ['Despesa', getMultiValues(document.getElementById('cp-filtro-despesa'))],
+            ['Empresa', getMultiValues(document.getElementById('cp-filtro-empresa'))],
+            ['Tipo', getMultiValues(document.getElementById('cp-filtro-tipo'))],
             ['CC', getMultiValues(document.getElementById('cp-filtro-cc'))],
             ['Classif.', getMultiValues(document.getElementById('cp-filtro-classificacao'))],
         ];
@@ -1286,9 +1725,17 @@
 
     function limparTodosFiltros() {
         ['cp-filtro-competencia','cp-filtro-status','cp-filtro-favorecido',
-         'cp-filtro-despesa','cp-filtro-cc','cp-filtro-classificacao'].forEach(id => {
+         'cp-filtro-despesa','cp-filtro-empresa','cp-filtro-tipo',
+         'cp-filtro-cc','cp-filtro-classificacao'].forEach(id => {
             setMultiValues(document.getElementById(id), ['Todos']);
         });
+        // Frente 1 (sticky filtros): "limpar" também zera a busca textual —
+        // estado inicial canônico. Limpa o sessionStorage explicitamente pra
+        // não restaurar nada no próximo F5.
+        if (_inputBuscaCP) _inputBuscaCP.value = '';
+        _cpTermoBusca = '';
+        if (_btnLimparBuscaCP) _btnLimparBuscaCP.classList.add('hidden');
+        _cpLimparEstadoFiltrosSS();
         _cpPage = 1; // mudança explícita de recorte → volta pra pág 1.
         renderTudo();
     }
@@ -1301,6 +1748,7 @@
     document.getElementById('btn-filtros-cp-aplicar').addEventListener('click', () => {
         _cpPage = 1; // mudança explícita de recorte → volta pra pág 1.
         renderTudo();
+        _cpSalvarEstadoFiltros(); // sticky filtros (Frente 1)
         fecharModal('modal-filtros-cp');
     });
 
@@ -1376,15 +1824,188 @@
         else _cpSelecao.delete(id);
         _cpAtualizarUIBulk();
     });
-    // Botão "Excluir Selecionados" — abre confirmação genérica.
+    // Botão "Ações em Massa" (Frente 2 — 2026-05-20). Renomeado do antigo
+    // "Excluir Selecionados". Agora abre o modal-acoes-massa-industrial que
+    // oferece 3 alterações em lote (Empresa, Tipo, CC) + exclusão como
+    // ação destrutiva separada. O fluxo de DELETE em massa segue intacto —
+    // o botão "Excluir Selecionados" dentro do modal reabre o modal antigo
+    // de confirmação com o flag __BULK__.
     document.getElementById('btn-cp-excluir-sel').addEventListener('click', () => {
         const n = _cpSelecao.size;
         if (!n) return;
+        document.getElementById('acoes-massa-alvo').textContent = String(n);
+        _cpResetarModalAcoesMassa();
+        abrirModal('modal-acoes-massa-industrial');
+    });
+
+    // ── Modal "Ações em Massa" — handlers + helpers (Frente 2, 2026-05-20) ──
+    // Listener leve em Base_Empresas alimenta o dropdown de Empresas do modal.
+    // Cache simples — re-popula a cada snapshot. Usa o `db` global já criado.
+    let _cpEmpresasOficiais = [];
+    onSnapshot(collection(db, 'Base_Empresas'), (snap) => {
+        const nomes = [];
+        snap.forEach(d => {
+            const data = d.data() || {};
+            const nome = String(data.nome_fantasia || data.nome || d.id || '').trim();
+            if (nome) nomes.push(nome);
+        });
+        nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        _cpEmpresasOficiais = nomes;
+        const sel = document.getElementById('acoes-massa-valor-empresa');
+        if (sel) {
+            const v = sel.value;
+            sel.innerHTML = '<option value="">Selecione a empresa…</option>' +
+                nomes.map(n => `<option value="${escHTML(n)}">${escHTML(n)}</option>`).join('');
+            if (v && nomes.includes(v)) sel.value = v;
+        }
+    }, (err) => console.warn('[Base_Empresas] listener falhou:', err?.code || err?.message));
+
+    // Re-popula o select de CC do modal sempre que AreasContasPagar atualizar.
+    // Usa o mesmo cache _ccDisponiveis que já é alimentado por inscreverAreas().
+    function _cpRepopularSelectCCMassa() {
+        const sel = document.getElementById('acoes-massa-valor-cc');
+        if (!sel) return;
+        const v = sel.value;
+        sel.innerHTML = '<option value="">Selecione a área…</option>' +
+            (_ccDisponiveis || []).map(n => `<option value="${escHTML(n)}">${escHTML(n)}</option>`).join('');
+        if (v && (_ccDisponiveis || []).includes(v)) sel.value = v;
+    }
+    // Patch one-shot: invoca a repopulação a cada renderTudo (idempotente,
+    // muito barato — só re-injeta options em um <select>).
+    const _renderTudoOrig = renderTudo;
+    renderTudo = function () { _renderTudoOrig(); _cpRepopularSelectCCMassa(); };
+
+    function _cpResetarModalAcoesMassa() {
+        document.getElementById('acoes-massa-campo').value = '';
+        document.getElementById('acoes-massa-valor-empresa').value = '';
+        document.getElementById('acoes-massa-valor-tipo').value = '';
+        document.getElementById('acoes-massa-valor-cc').value = '';
+        for (const id of ['acoes-massa-painel-empresa','acoes-massa-painel-tipo','acoes-massa-painel-cc']) {
+            document.getElementById(id).classList.add('hidden');
+        }
+        document.getElementById('btn-aplicar-acoes-massa').disabled = true;
+        _cpRepopularSelectCCMassa();
+    }
+
+    // Mostra o sub-painel correto conforme o campo escolhido.
+    document.getElementById('acoes-massa-campo').addEventListener('change', (e) => {
+        const v = e.target.value;
+        document.getElementById('acoes-massa-painel-empresa').classList.toggle('hidden', v !== 'empresa');
+        document.getElementById('acoes-massa-painel-tipo').classList.toggle('hidden', v !== 'tipo_entidade');
+        document.getElementById('acoes-massa-painel-cc').classList.toggle('hidden', v !== 'centro_custo');
+        _cpAvaliarHabilitarAplicar();
+    });
+    function _cpAvaliarHabilitarAplicar() {
+        const campo = document.getElementById('acoes-massa-campo').value;
+        let valor = '';
+        if (campo === 'empresa')        valor = document.getElementById('acoes-massa-valor-empresa').value;
+        else if (campo === 'tipo_entidade') valor = document.getElementById('acoes-massa-valor-tipo').value;
+        else if (campo === 'centro_custo')  valor = document.getElementById('acoes-massa-valor-cc').value;
+        document.getElementById('btn-aplicar-acoes-massa').disabled = !(campo && valor);
+    }
+    ['acoes-massa-valor-empresa','acoes-massa-valor-tipo','acoes-massa-valor-cc']
+        .forEach(id => document.getElementById(id).addEventListener('change', _cpAvaliarHabilitarAplicar));
+
+    document.getElementById('btn-fechar-acoes-massa').addEventListener('click', () => fecharModal('modal-acoes-massa-industrial'));
+    document.getElementById('btn-cancelar-acoes-massa').addEventListener('click', () => fecharModal('modal-acoes-massa-industrial'));
+
+    // "Excluir Selecionados" dentro do modal de Ações em Massa — reabre o
+    // fluxo legado de confirmação destrutiva. Mantém a separação visual:
+    // alteração ≠ exclusão, e a exclusão ainda exige a 2ª confirmação.
+    document.getElementById('btn-acoes-massa-excluir').addEventListener('click', () => {
+        const n = _cpSelecao.size;
+        if (!n) return;
+        fecharModal('modal-acoes-massa-industrial');
         const desc = `<strong>${n}</strong> lançamento${n === 1 ? '' : 's'} selecionado${n === 1 ? '' : 's'}`;
         document.getElementById('dl-fcp-descricao').innerHTML = desc;
-        _cpDeleteFaturaId = '__BULK__'; // sinaliza fluxo em lote
+        _cpDeleteFaturaId = '__BULK__';
         abrirModal('modal-confirmar-delete-fatura-cp');
     });
+
+    // Núcleo: persistência em lote. Admin grava direto via writeBatch (chunks
+    // de 450 — limite Firestore é 500/batch, deixamos margem). Não-admin gera
+    // 1 solicitação UPDATE por fatura na esteira CP_SolicitacoesAprovacao
+    // (defesa em profundidade: as rules barram write direto sem perfil admin).
+    async function cpExecutarAlteracaoEmMassa() {
+        const ids = [..._cpSelecao];
+        if (!ids.length) return;
+        const campo = document.getElementById('acoes-massa-campo').value;
+        if (!['empresa','tipo_entidade','centro_custo'].includes(campo)) return;
+        let valor = '';
+        if (campo === 'empresa')        valor = document.getElementById('acoes-massa-valor-empresa').value;
+        else if (campo === 'tipo_entidade') valor = document.getElementById('acoes-massa-valor-tipo').value;
+        else                                valor = document.getElementById('acoes-massa-valor-cc').value;
+        valor = String(valor || '').trim();
+        if (!valor) return;
+
+        const btn = document.getElementById('btn-aplicar-acoes-massa');
+        const ico = btn.querySelector('.material-symbols-outlined');
+        btn.disabled = true;
+        if (ico) ico.classList.add('animate-spin');
+
+        try {
+            if (_isAdmin) {
+                // Admin: writeBatch em chunks de 450 (margem dos 500/batch).
+                const CHUNK = 450;
+                let aplicados = 0;
+                for (let i = 0; i < ids.length; i += CHUNK) {
+                    const fatia = ids.slice(i, i + CHUNK);
+                    const b = writeBatch(db);
+                    for (const id of fatia) {
+                        b.update(doc(db, COLECAO, id), {
+                            [campo]: valor,
+                            updated_at: serverTimestamp(),
+                            updated_by: usuarioLogadoNome,
+                            alterado_em_massa: true,
+                        });
+                    }
+                    await b.commit();
+                    aplicados += fatia.length;
+                    // Yield ao browser entre chunks pra main thread fluida.
+                    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+                }
+                mostrarToast(`${aplicados} lançamento(s) atualizados com sucesso.`, 'check_circle');
+                _cpSelecao.clear();
+                _cpAtualizarUIBulk();
+            } else {
+                // Não-admin: 1 solicitação UPDATE por fatura. As rules da
+                // /CP_SolicitacoesAprovacao exigem solicitado_por_email do
+                // próprio usuário e status="Pendente" — o master aprova depois.
+                let pendentes = 0;
+                for (const id of ids) {
+                    const reg = cacheRegistros.find(r => r._id === id);
+                    const antesObj = reg ? { [campo]: (reg[campo] || null) } : null;
+                    await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
+                        tipo_operacao: 'UPDATE',
+                        colecao_alvo: COLECAO,
+                        doc_id_alvo: id,
+                        dados_antigos: antesObj,
+                        dados_novos: { [campo]: valor },
+                        resumo: `Alteração em massa de "${campo}" → "${valor}" (lote de ${ids.length}).`,
+                        status: 'Pendente',
+                        solicitado_por: usuarioLogadoNome,
+                        solicitado_por_email: usuarioLogadoEmail,
+                        criado_em: serverTimestamp(),
+                    });
+                    pendentes++;
+                }
+                mostrarToast(`${pendentes} solicitação(ões) enviadas para a Esteira de Aprovações.`, 'check_circle');
+                _cpSelecao.clear();
+                _cpAtualizarUIBulk();
+            }
+            fecharModal('modal-acoes-massa-industrial');
+        } catch (err) {
+            console.error('[Ações em Massa] falha:', err);
+            const motivo = err?.code === 'permission-denied'
+                ? 'Acesso negado pelo Firestore.'
+                : (err?.message || 'erro desconhecido');
+            mostrarToast('Falha ao aplicar alteração em massa: ' + motivo, 'error', true);
+        } finally {
+            btn.disabled = false;
+            if (ico) ico.classList.remove('animate-spin');
+        }
+    }
+    document.getElementById('btn-aplicar-acoes-massa').addEventListener('click', () => cpExecutarAlteracaoEmMassa());
 
     // ── Toast ────────────────────────────────────────────────────────────────
     let _toastTimer = null;
@@ -1538,6 +2159,10 @@
             linhas: linhas.length,
             cabecalhos: 0, lancamentos: 0,
             ignoradas: 0, semCabecalho: 0,
+            // Telemetria de Trânsito Bancário (2026-05-20). Conta linhas
+            // descartadas pela regra "TRANSFERÊNCIA DE CONTA CORRENT" — não
+            // são faturas reais e não devem entrar no banco / inflar KPIs.
+            transferenciasIgnoradas: 0,
         };
         const cabecalhosUnicos = new Set();
 
@@ -1605,6 +2230,24 @@
                 despesa = linha.slice(ultimoValor.index + ultimoValor[0].length).replace(/\s{2,}/g, ' ').trim();
             }
             despesa = despesa.replace(/^\d{2,8}\s+/, '').trim();
+
+            // ── Trava de Trânsito Bancário (2026-05-20) ───────────────────
+            // Linhas com despesa "TRANSFERÊNCIA DE CONTA CORRENT" são saldos
+            // internos entre contas da própria empresa — NÃO são faturas.
+            // Aceitarias inflariam KPIs e distorceriam relatórios da diretoria.
+            // Mata a linha aqui, antes do push, garantindo que não entre no
+            // batch de gravação, não vire clone recorrente em
+            // _cpExpandirProjecaoFixo e não dispare auto-cadastro de fornecedor.
+            // Normalização NFD + remove acentos blinda contra falhas de
+            // codificação do ERP (TRANSFERÊNCIA / TRANSFERENCIA / variações).
+            const despesaUpper = String(despesa || '')
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toUpperCase()
+                .trim();
+            if (despesaUpper.includes('TRANSFERENCIA DE CONTA CORRENT')) {
+                stats.transferenciasIgnoradas++;
+                continue; // descarte limpo — linha morre na memória
+            }
 
             // Lançamento exige código do cabeçalho + valor > 0.
             // (Lançamentos antes do primeiro cabeçalho são contados em `semCabecalho`.)
@@ -1719,6 +2362,11 @@
             despesasLista: null,       // lista pré-normalizada de /CP_Base_Despesas
             pendentes: [],
             mapeamentos: new Map(),    // chave (codigo|despesa_norm) → {per_evento, per_valor, data_fim_contrato}
+            // Telemetria do parser (2026-05-20). Resetada a cada importação
+            // pra não misturar contagens de lotes anteriores no toast final.
+            // O campo `transferenciasIgnoradas` vem do parser quando ele detecta
+            // linhas "TRANSFERÊNCIA DE CONTA CORRENT" e as descarta antes do push.
+            stats: null,
         };
     }
 
@@ -1740,10 +2388,20 @@
             const { lancamentos, stats } = cpParsearTXT(texto);
             console.log('[ETL GerenciadorCP] parser:', { ...stats });
             if (!lancamentos.length) {
-                mostrarToast('Nenhum lançamento detectado no arquivo. Verifique o formato.', 'warning', true);
+                // Aviso especial quando TODAS as linhas reconhecidas eram
+                // transferências de conta corrente — explica ao operador
+                // por que o lote ficou vazio (não é falha de formato).
+                if (stats.transferenciasIgnoradas > 0) {
+                    mostrarToast(
+                        `Nenhum lançamento válido — ${stats.transferenciasIgnoradas} linha(s) de transferência interna foram descartadas.`,
+                        'warning', true);
+                } else {
+                    mostrarToast('Nenhum lançamento detectado no arquivo. Verifique o formato.', 'warning', true);
+                }
                 return;
             }
             _cpEtlState.lancamentos = lancamentos;
+            _cpEtlState.stats = stats;
             // Carrega Fornecedores + CP_Base_Despesas em paralelo.
             const [fornMap, despLista] = await Promise.all([
                 cpCarregarFornecedoresMap(),
@@ -2368,7 +3026,7 @@
                 console.warn('[CP_Base_Despesas auto-seed] falhou (best-effort):', despErr?.code || despErr?.message);
             }
 
-            const partes = [`${expandido.length} lançamento(s) gravado(s)`];
+            const partes = [`${expandido.length} lançamento(s) gravado(s) com sucesso`];
             if (projetados) partes.push(`${projetados} projetado(s) (Fixo)`);
             if (_calibradosPago) partes.push(`${_calibradosPago} baixado(s) como pago (vencimento expirado)`);
             if (_cpEtlState.mapeamentos.size) partes.push(`${_cpEtlState.mapeamentos.size} despesa(s) aprendida(s)`);
@@ -2381,6 +3039,14 @@
                     : `${autoCadastrados} fornecedor(es) novo(s) na esteira`);
             } else if (semFornecedor) {
                 partes.push(`${semFornecedor} sem fornecedor cadastrado`);
+            }
+            // Trânsito Bancário — telemetria gerencial (2026-05-20). Faz parte
+            // do toast pra a diretoria saber, em cada importação, quantas
+            // transferências internas foram filtradas e não foram contadas
+            // como despesa nos KPIs.
+            const transferencias = _cpEtlState?.stats?.transferenciasIgnoradas || 0;
+            if (transferencias > 0) {
+                partes.push(`⚠️ ${transferencias} registro(s) de Transferência Interna identificados e descartados para não inflar os KPIs`);
             }
             mostrarToast(partes.join(' · '), 'check_circle');
         } catch (err) {
@@ -2497,42 +3163,15 @@
         return gravados;
     }
 
-    const inputFileDespesas = document.getElementById('file-despesas-xlsx');
-    inputFileDespesas.addEventListener('change', async (e) => {
-        const f = e.target.files?.[0];
-        if (!f) return;
-        if (typeof XLSX === 'undefined') {
-            mostrarToast('Biblioteca SheetJS não carregou — recarregue a página.', 'error', true);
-            inputFileDespesas.value = '';
-            return;
-        }
-        if (window._cpMostrarLoader) window._cpMostrarLoader('Importando Despesas…', `Lendo ${f.name} · aguarde.`);
-        await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
-        try {
-            const rows = await _fornLerExcel(f);  // reusa leitor SheetJS genérico
-            const { registros, stats, erro, colMap } = _despProcessarLinhas(rows);
-            console.log('[Despesas] parser:', { ...stats, colMap });
-            if (erro) { mostrarToast(erro, 'warning', true); return; }
-            if (!registros.length) {
-                mostrarToast(`Nenhuma linha válida (${stats.ignoradas} ignoradas).`, 'warning', true);
-                return;
-            }
-            const gravados = await _despGravarDespesas(registros);
-            if (window._cpRegistrarUltimaImportacao) {
-                await window._cpRegistrarUltimaImportacao('Despesas', gravados);
-            }
-            mostrarToast(`${gravados} despesa(s) cadastrada(s) em CP_Base_Despesas.`, 'check_circle');
-        } catch (err) {
-            console.error('[Despesas XLSX] falha:', err);
-            const motivo = err?.code === 'permission-denied'
-                ? 'Acesso negado: seu perfil não tem permissão para gravar Despesas.'
-                : (err?.message || 'erro desconhecido');
-            mostrarToast('Falha ao importar Despesas: ' + motivo, 'error', true);
-        } finally {
-            inputFileDespesas.value = '';
-            if (window._cpEsconderLoader) window._cpEsconderLoader();
-        }
-    });
+    // Handler de `file-despesas-xlsx` REMOVIDO (2026-05-21). O input correspondente
+    // foi excluído do DOM quando o card "Base de Despesas" migrou pra "Benefícios
+    // de PJs", mas este bloco JS ficou órfão — `document.getElementById(...)`
+    // retornava `null` e o `addEventListener` subsequente lançava TypeError,
+    // matando o restante do script (incluindo TODOS os handlers da Central de
+    // Importação registrados abaixo). A funcionalidade segue viva via:
+    //  - ETL TXT (auto-seed de CP_Base_Despesas em _cpFinalizarImportacao)
+    //  - CRUD individual em master.html → Regras → Banco de Despesas
+    //  - Novo card "Benefícios de PJs" para o fluxo mensal de VR/VT.
 
     // ── Snapshot live de /CP_Base_Despesas ─────────────────────────────────
     let _despesasRegistros = [];
@@ -2544,16 +3183,410 @@
         }, (err) => console.warn('[CP_Base_Despesas] listener falhou:', err?.code || err?.message));
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    // FRENTE 2 (2026-05-21) — IMPORTADOR DE BENEFÍCIOS DE PJs
+    // ════════════════════════════════════════════════════════════════════════
+    // Parser TXT analítico (auditoria 2026-05-26 — Frentes 2 & 3): substitui
+    // o leitor XLSX legado por uma máquina de estados que lê o relatório bruto
+    // do RH linha a linha, decompondo Competência · Centro de Custo (âncora
+    // de bloco) · Funcionário · Eventos (276/277/284/279) · Descontos
+    // (672/773/776/774) · Fechamento ("Liquido (T O T A L)"). Persistência em
+    // /CP_Beneficios_PJ com docId determinístico = `${competencia}_${fil_codigo}`
+    // — reimportar a mesma competência substitui em UPSERT (idempotência estrita).
+    const COLECAO_BENEFICIOS = 'CP_Beneficios_PJ';
+
+    function _benefNormFilCodigo(s) {
+        // Mesma normalização aplicada na hora de salvar o codigo_beneficio_folha
+        // no master.html: UPPER + trim. Não removemos os zeros à esquerda nem
+        // o hífen — eles são parte da chave do RH (ex.: "000-000077").
+        return String(s == null ? '' : s).trim().toUpperCase();
+    }
+    function _benefParseValorBR(v) {
+        if (v == null || v === '') return 0;
+        if (typeof v === 'number') return v;
+        const s = String(v).replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.');
+        const n = parseFloat(s);
+        return isFinite(n) ? n : 0;
+    }
+
+    // ── PARSER TXT ANALÍTICO (auditoria 2026-05-26 — Frentes 2 & 3) ─────────
+    // Substitui o leitor XLSX por uma máquina de estados que percorre o TXT
+    // do RH linha a linha. Capturas:
+    //  · Competência via "Beneficio <Mês>/<AAAA>" (top do arquivo)
+    //  · Centro de Custo (âncora de bloco) via "C.Custo: <cod>-<nome>"
+    //  · Funcionário via "Funcionario: <matricula> <nome>"
+    //  · Eventos numéricos: 276=VT · 277=VR · 284=VA · 279=Médico
+    //  · Descontos individuais: 672=desconto_vt · 773=desconto_vr ·
+    //    776=desconto_va · 774=desconto_med (total_descontos = soma dos 4)
+    //  · Fechamento via "Liquido (T O T A L)"
+
+    const MESES_PT = {
+        janeiro: '01', fevereiro: '02', marco: '03', 'março': '03', abril: '04',
+        maio: '05', junho: '06', julho: '07', agosto: '08', setembro: '09',
+        outubro: '10', novembro: '11', dezembro: '12',
+    };
+    function _benefMesParaMM(mesPT) {
+        // Auditoria 2026-05-27 (Caso LAURA Março — Encoding Mojibake):
+        // O RH emite o TXT em Windows-1252. "Março" vira "MarÃ§o" lido como
+        // UTF-8 — a regex `\w+` para no `Ã` e devolve só "Mar" (não casa no
+        // mapa). Fallback heurístico de 3 letras resolve ambos os casos.
+        if (!mesPT) return '';
+        const original = String(mesPT).trim().toLowerCase();
+        const semAcento = original.normalize('NFD').replace(/[̀-ͯ]/g, '');
+        if (MESES_PT[semAcento]) return MESES_PT[semAcento];
+        if (MESES_PT[original]) return MESES_PT[original];
+        const pref3 = semAcento.slice(0, 3);
+        const PREFIXOS_MES = {
+            jan: '01', fev: '02', mar: '03', abr: '04',
+            mai: '05', jun: '06', jul: '07', ago: '08',
+            set: '09', out: '10', nov: '11', dez: '12',
+        };
+        return PREFIXOS_MES[pref3] || '';
+    }
+
+    // Lê o arquivo bruto em UTF-8. Promise wrapper sobre FileReader.
+    function _benefLerArquivoUTF8(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(reader.error || new Error('Falha ao ler o arquivo.'));
+            reader.onload  = () => resolve(String(reader.result || ''));
+            reader.readAsText(file, 'UTF-8');
+        });
+    }
+
+    // CC "00000000-  ." (ou variações com tracinho/ponto/espaços apenas) é a
+    // sentinela do ERP — significa "sem CC definido". Normaliza para vazio.
+    function _benefCcZerado(codigo, nome) {
+        const cod = String(codigo || '').trim();
+        const nom = String(nome || '').trim().replace(/[.\s]/g, '');
+        if (!cod && !nom) return true;
+        if (/^0+$/.test(cod) && !nom) return true;
+        return false;
+    }
+
+    // Extrai o último número BR válido de uma linha. Formato: 1.234,56 · 0,00.
+    // Aceita prefixo opcional "-". Não captura datas (12/2026) — exige ",".
+    function _benefExtrairValorBR(linha) {
+        const matches = String(linha || '').match(/-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2}/g);
+        if (!matches || !matches.length) return 0;
+        const ultimo = matches[matches.length - 1];
+        return _benefParseValorBR(ultimo);
+    }
+
+    // Códigos de evento contábil do TXT (3 dígitos, primeira coluna).
+    const COD_VT  = '276';
+    const COD_VR  = '277';
+    const COD_VA  = '284';
+    const COD_MED = '279';
+    // Auditoria 2026-05-26 (Granularidade): descontos isolados por código.
+    // Cada código → propriedade dedicada. Antes era Set agregando em
+    // total_descontos — agora total_descontos é DERIVADO da soma dos 4.
+    const COD_DESC_VT  = '672';
+    const COD_DESC_VR  = '773';
+    const COD_DESC_VA  = '776';
+    const COD_DESC_MED = '774';
+
+    // State Machine: itera as linhas mantendo o contexto acumulado.
+    function _benefParsearTXT(texto) {
+        const linhas = String(texto || '').split(/\r?\n/);
+        let competencia = '';
+        let centroCustoContexto = ''; // herdado pelos funcionários do bloco
+        let nomeCcContexto = '';
+        let atual = null;             // funcionário em construção
+        const registros = [];
+
+        function fecharFuncionarioCorrente(valorLiquido) {
+            if (!atual) return;
+            if (valorLiquido != null) atual.valor_liquido = valorLiquido;
+            // total_descontos é DERIVADO da soma dos 4 acumuladores individuais
+            // (auditoria 2026-05-26 — granularidade). Mantém invariante:
+            // total_descontos === desconto_vt + desconto_vr + desconto_va + desconto_med.
+            atual.total_descontos = (atual.desconto_vt || 0)
+                + (atual.desconto_vr || 0)
+                + (atual.desconto_va || 0)
+                + (atual.desconto_med || 0);
+            registros.push(atual);
+            atual = null;
+        }
+
+        for (let i = 0; i < linhas.length; i++) {
+            const linha = linhas[i];
+            if (!linha) continue;
+
+            // (1) Competência — só no topo, mas tolerante a aparecer em qualquer linha.
+            if (!competencia) {
+                const m = linha.match(/Beneficio\s+(\w+)\s*\/\s*(\d{4})/i);
+                if (m) {
+                    const mm = _benefMesParaMM(m[1]);
+                    if (mm) competencia = `${m[2]}-${mm}`;
+                }
+            }
+
+            // (2) Âncora de bloco — Centro de Custo. Atualiza o contexto vigente.
+            const mcc = linha.match(/C\.\s*Custo:\s*([\d\w]+)-\s*(.+?)\s*$/i);
+            if (mcc) {
+                // Antes de trocar contexto, se houver funcionário aberto, descarta-o
+                // (cenário defensivo — TXT bem-formado fecha com Liquido antes do
+                // próximo CC; mas se o RH gerar truncado, evita lixo no batch).
+                if (atual) atual = null;
+                const codigo = String(mcc[1] || '').trim();
+                const nome   = String(mcc[2] || '').trim();
+                if (_benefCcZerado(codigo, nome)) {
+                    centroCustoContexto = '';
+                    nomeCcContexto = '';
+                } else {
+                    centroCustoContexto = `${codigo} - ${nome}`.trim();
+                    nomeCcContexto = nome;
+                }
+                continue;
+            }
+
+            // (3) Marcador de funcionário — abre novo registro herdando o CC contexto.
+            const mfunc = linha.match(/^\s*Funcionario:\s*(\d+)\s*(.+?)\s*$/i);
+            if (mfunc) {
+                // Fecha anterior se ainda aberto (RH às vezes emite blocos
+                // sem a linha "Liquido"; preserva os valores parciais).
+                if (atual) fecharFuncionarioCorrente(null);
+                atual = {
+                    fil_codigo: _benefNormFilCodigo(mfunc[1]),
+                    nome: String(mfunc[2] || '').trim(),
+                    centro_custo_txt: centroCustoContexto,
+                    centro_custo_txt_nome: nomeCcContexto,
+                    vt_pago: 0,
+                    vr_pago: 0,
+                    va_pago: 0,
+                    med_pago: 0,
+                    // Descontos individuais por código (auditoria 2026-05-26).
+                    desconto_vt: 0,
+                    desconto_vr: 0,
+                    desconto_va: 0,
+                    desconto_med: 0,
+                    total_descontos: 0, // derivado no close (soma dos 4 acima)
+                    valor_liquido: 0,
+                };
+                continue;
+            }
+
+            // (4) Linha de fechamento — "Liquido (T O T A L)".
+            //     Aceita variações no espaçamento dos parênteses ("(T O T A L)" ou "(TOTAL)").
+            if (/Liquido\s*\(\s*T\s*O?\s*T?\s*A?\s*L?\s*\)/i.test(linha)) {
+                const liq = _benefExtrairValorBR(linha);
+                fecharFuncionarioCorrente(liq);
+                continue;
+            }
+
+            // (5) Eventos numéricos — só fazem sentido com funcionário aberto.
+            if (!atual) continue;
+
+            // Auditoria 2026-05-27 (Caso BARBARA NUNES — Bug crítico de Parser):
+            // O TXT do RH é emitido em DUAS colunas separadas pelo delimitador
+            // `||` — coluna ESQUERDA tem proventos (276/277/279/284) e DIREITA
+            // tem descontos (672/773/774/776 + devoluções 671/771).
+            // O parser legado pegava o ÚLTIMO valor da linha inteira via
+            // `_benefExtrairValorBR`, capturando o desconto da direita no
+            // lugar do provento da esquerda. Ex.:
+            //     "276 Vale Transporte (Pago) 002 93,80 || 672 Descto VT 1,00"
+            // → 276 recebia 1,00 (último valor) em vez de 93,80.
+            // CORREÇÃO: splitamos a linha pelo `||` e processamos cada metade
+            // independente.
+            const partes = linha.split('||');
+            const colEsq = partes[0] || '';
+            const colDir = partes[1] || '';
+
+            // (5a) Coluna ESQUERDA — proventos pagos.
+            const mcodEsq = colEsq.match(/^\s*(\d{3})\b/);
+            if (mcodEsq) {
+                const codE = mcodEsq[1];
+                const valE = _benefExtrairValorBR(colEsq);
+                if (codE === COD_VT)       atual.vt_pago  += valE;
+                else if (codE === COD_VR)  atual.vr_pago  += valE;
+                else if (codE === COD_VA)  atual.va_pago  += valE;
+                else if (codE === COD_MED) atual.med_pago += valE;
+                // Edge case: linhas raras onde o desconto aparece sozinho na
+                // coluna esquerda (sem provento na mesma linha).
+                else if (codE === COD_DESC_VT)  atual.desconto_vt  += valE;
+                else if (codE === COD_DESC_VR)  atual.desconto_vr  += valE;
+                else if (codE === COD_DESC_VA)  atual.desconto_va  += valE;
+                else if (codE === COD_DESC_MED) atual.desconto_med += valE;
+            }
+
+            // (5b) Coluna DIREITA — descontos isolados por código.
+            // total_descontos é derivado da soma dos 4 acumuladores no close.
+            const mcodDir = colDir.match(/^\s*(\d{3})\b/);
+            if (mcodDir) {
+                const codD = mcodDir[1];
+                const valD = _benefExtrairValorBR(colDir);
+                if (codD === COD_DESC_VT)       atual.desconto_vt  += valD;
+                else if (codD === COD_DESC_VR)  atual.desconto_vr  += valD;
+                else if (codD === COD_DESC_VA)  atual.desconto_va  += valD;
+                else if (codD === COD_DESC_MED) atual.desconto_med += valD;
+            }
+            // Demais códigos: ignorados (preserva escopo restrito ao TXT analítico).
+        }
+        // Fim de arquivo: se sobrou alguém em construção, persiste mesmo assim.
+        if (atual) fecharFuncionarioCorrente(null);
+
+        return { competencia, registros };
+    }
+
+    async function _benefImportar(file) {
+        if (window._cpMostrarLoader) window._cpMostrarLoader('Importando Benefícios PJ…', `Lendo ${file.name} · parser TXT analítico.`);
+        await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+        try {
+            // 1) FileReader UTF-8.
+            const texto = await _benefLerArquivoUTF8(file);
+            if (!texto || !texto.trim()) {
+                throw new Error('Arquivo vazio ou ilegível.');
+            }
+
+            // 2) Máquina de estados (Frente 2).
+            const { competencia, registros } = _benefParsearTXT(texto);
+            if (!registros.length) {
+                throw new Error('Nenhum funcionário detectado no TXT. Verifique o layout (linhas "Funcionario:" e "Liquido (T O T A L)").');
+            }
+            let competenciaFinal = competencia;
+            if (!competenciaFinal) {
+                // Fallback: assume o mês corrente. Loga aviso pro operador.
+                const d = new Date();
+                competenciaFinal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                console.warn('[Benefícios PJ TXT] Competência não detectada no cabeçalho — usando', competenciaFinal);
+            }
+
+            // 3) Mapa $O(1)$ Fornecedores: chave = codigo_beneficio_folha (UPPER).
+            const snapForn = await getDocs(collection(db, COLECAO_FORN));
+            const mapaCB = new Map();
+            snapForn.forEach(d => {
+                const data = d.data() || {};
+                const cb = _benefNormFilCodigo(data.codigo_beneficio_folha);
+                if (cb) mapaCB.set(cb, { _id: d.id, ...data });
+            });
+
+            // 4) Persistência (Frente 3) — fallback de CC + idempotência estrita.
+            const docsParaGravar = [];
+            let orfaos = 0;
+            let usaramFallbackCC = 0;
+            for (const reg of registros) {
+                if (!reg.fil_codigo) continue;
+                const forn = mapaCB.get(reg.fil_codigo) || null;
+                const ccTXT = String(reg.centro_custo_txt || '').trim();
+                // Match: herda fornecedor_id + usa CC canônico do cadastro como
+                // fallback quando o TXT veio zerado.
+                let centro_custo = ccTXT;
+                let usouFallback = false;
+                if (forn && !ccTXT) {
+                    const ccForn = String(forn.centro_custo || '').trim();
+                    if (ccForn) {
+                        centro_custo = ccForn;
+                        usouFallback = true;
+                    }
+                }
+                if (!forn) {
+                    orfaos++;
+                } else if (usouFallback) {
+                    usaramFallbackCC++;
+                }
+
+                // Valor total bruto (compatível com export.outros = total-vt-vr).
+                const valor_total = reg.vt_pago + reg.vr_pago + reg.va_pago + reg.med_pago;
+
+                docsParaGravar.push({
+                    competencia: competenciaFinal,
+                    fil_codigo: reg.fil_codigo,
+                    nome_planilha: reg.nome,
+                    fornecedor_id: forn ? forn._id : 'ORFAO',
+                    codigo_fornecedor_erp: forn ? (forn.codigo ?? null) : null,
+                    centro_custo: centro_custo || null,
+                    centro_custo_origem: forn ? (usouFallback ? 'fornecedor' : 'txt') : 'txt',
+                    nome_fornecedor: forn ? (forn.nome || reg.nome) : reg.nome,
+                    valor_vt:        Number(reg.vt_pago)  || 0,
+                    valor_vr:        Number(reg.vr_pago)  || 0,
+                    valor_va:        Number(reg.va_pago)  || 0,
+                    valor_med:       Number(reg.med_pago) || 0,
+                    // Descontos isolados por código (auditoria 2026-05-26 — granularidade).
+                    desconto_vt:     Number(reg.desconto_vt)  || 0,
+                    desconto_vr:     Number(reg.desconto_vr)  || 0,
+                    desconto_va:     Number(reg.desconto_va)  || 0,
+                    desconto_med:    Number(reg.desconto_med) || 0,
+                    total_descontos: Number(reg.total_descontos) || 0,
+                    valor_liquido:   Number(reg.valor_liquido)   || 0,
+                    valor_total:     Number(valor_total)         || 0,
+                });
+            }
+            if (!docsParaGravar.length) {
+                mostrarToast('Nenhum funcionário válido após o parsing — confira o arquivo.', 'warning', true);
+                return;
+            }
+
+            // 5) writeBatch com docId determinístico: ${competencia}_${fil_codigo}.
+            //    UPSERT estrito — reimportar o MESMO período substitui sem duplicar.
+            const CHUNK = 450;
+            let gravados = 0;
+            for (let i = 0; i < docsParaGravar.length; i += CHUNK) {
+                const fatia = docsParaGravar.slice(i, i + CHUNK);
+                const batch = writeBatch(db);
+                for (const reg of fatia) {
+                    const safeFil = reg.fil_codigo.replace(/[^A-Za-z0-9_\-]/g, '_');
+                    const docId = `${reg.competencia}_${safeFil}`;
+                    batch.set(doc(db, COLECAO_BENEFICIOS, docId), {
+                        ...reg,
+                        arquivo: file.name,
+                        updated_at: serverTimestamp(),
+                        created_at: serverTimestamp(),
+                        criado_por: usuarioLogadoNome,
+                    }, { merge: true });
+                }
+                await batch.commit();
+                gravados += fatia.length;
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+            }
+            if (window._cpRegistrarUltimaImportacao) {
+                await window._cpRegistrarUltimaImportacao('BeneficiosPJ', gravados);
+            }
+            // 6) Telemetria pro operador — destaca órfãos e fallbacks.
+            const partes = [`${gravados} funcionário(s) processados (${competenciaFinal})`];
+            if (usaramFallbackCC > 0) {
+                partes.push(`🛟 ${usaramFallbackCC} CC herdado(s) do cadastro de Fornecedores`);
+            }
+            if (orfaos > 0) {
+                partes.push(`⚠️ ${orfaos} matrícula(s) sem cadastro prévio (gravadas como ÓRFÃO)`);
+            }
+            mostrarToast(partes.join(' · '), 'check_circle');
+        } catch (err) {
+            console.error('[Benefícios PJ TXT] falha:', err);
+            const motivo = err?.code === 'permission-denied'
+                ? 'Acesso negado: seu perfil não tem permissão para gravar benefícios PJ.'
+                : (err?.message || 'erro desconhecido');
+            mostrarToast('Falha ao importar benefícios: ' + motivo, 'error', true);
+        } finally {
+            if (window._cpEsconderLoader) window._cpEsconderLoader();
+        }
+    }
+
+    const inputFileBeneficios = document.getElementById('file-beneficios-pj');
+    inputFileBeneficios.addEventListener('change', async (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        try {
+            await _benefImportar(f);
+        } finally {
+            inputFileBeneficios.value = '';
+        }
+    });
+
     // ========================================================================
     // CENTRAL DE IMPORTAÇÕES — handlers do modal
     // ========================================================================
     document.getElementById('btn-central-importacao').addEventListener('click', () => abrirModal('modal-central-importacao'));
     document.getElementById('btn-fechar-central-importacao').addEventListener('click', () => fecharModal('modal-central-importacao'));
     // Card "Importar Fornecedores" removido (auditoria 2026-05-18): governança migrou pra master.html.
-    document.getElementById('card-importar-despesas').addEventListener('click', () => {
+    // Card "Importar Despesas" removido (Frente 2 — 2026-05-21): substituído
+    // pelo "Benefícios de PJs". CP_Base_Despesas segue sendo alimentado pelo
+    // ETL TXT (auto-seed) + CRUD do master.html.
+    document.getElementById('card-importar-beneficios-pj').addEventListener('click', () => {
         fecharModal('modal-central-importacao');
-        inputFileDespesas.value = '';
-        inputFileDespesas.click();
+        const inp = document.getElementById('file-beneficios-pj');
+        inp.value = '';
+        inp.click();
     });
     document.getElementById('card-importar-txt').addEventListener('click', () => {
         fecharModal('modal-central-importacao');
@@ -2575,6 +3608,149 @@
     // Adicionado a pedido do cliente: corrigir CC de PJ recém-importado sem
     // reabrir o ETL. Persiste via updateDoc/deleteDoc — não mexe nos demais
     // campos do registro (status, classificações etc.).
+
+    // ════════════════════════════════════════════════════════════════════════
+    // EXPORTAÇÃO INDUSTRIAL PRA EXCEL (Frente 2/3 — 2026-05-21)
+    // ════════════════════════════════════════════════════════════════════════
+    // Espelha 1:1 o recorte ativo (filtros de cards + busca + Filtrar Base)
+    // em uma planilha Excel. O motor lê `_cpUltimosFiltrados` (estado canônico
+    // calculado em renderTudo) — NÃO faz query nova ao Firestore (proteção da
+    // cota) e NÃO se limita à paginação visual (PAGE_SIZE_CP = 50).
+    //
+    // - Status → label humano via BADGE_MAP[statusVisual(...)].lbl
+    // - Gestor → lookup em _areaGestorMap (Map<centro_custo, gestor_nome>),
+    //   alimentado pelo listener de AreasContasPagar.
+    // - Valor → Number puro (Excel agrega automaticamente em SOMA / Σ).
+    // - Data Venc → string DD/MM/YYYY (fmtDataBR), aceita pela coluna do Excel.
+    // - Cabeçalho em ordem fixa via array `colunas` — preserva a ordem mesmo
+    //   se a função json_to_sheet escolher chaves não-determinísticas.
+    function _cpFmtVazio(v) {
+        if (v == null) return '';
+        const s = String(v).trim();
+        return s === '' ? '' : s;
+    }
+    async function cpExecutarExportacaoExcel() {
+        if (typeof XLSX === 'undefined') {
+            mostrarToast('Biblioteca SheetJS não carregou — recarregue a página.', 'error', true);
+            return;
+        }
+        const fonte = Array.isArray(_cpUltimosFiltrados) ? _cpUltimosFiltrados : [];
+        if (!fonte.length) {
+            mostrarToast('Nada para exportar — o recorte atual está vazio.', 'warning', true);
+            return;
+        }
+        const btn = document.getElementById('btn-cp-exportar-excel');
+        const lbl = document.getElementById('btn-cp-exportar-excel-lbl');
+        const ico = document.getElementById('btn-cp-exportar-excel-ico');
+        const lblOrig = lbl ? lbl.textContent : 'Exportar Planilha';
+        const icoOrig = ico ? ico.textContent : 'download';
+        // Loading state — só aparece quando há volume significativo (10k+).
+        // Tipicamente o processamento de 1k–5k linhas é instantâneo; mostrar
+        // "Gerando…" pra pouca coisa cria ruído visual.
+        const grande = fonte.length > 10000;
+        if (grande) {
+            if (btn) btn.disabled = true;
+            if (lbl) lbl.textContent = 'Gerando arquivo…';
+            if (ico) ico.textContent = 'progress_activity';
+            if (ico) ico.classList.add('animate-spin');
+            // Cede a thread pro paint do estado de loading antes do trabalho pesado.
+            await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+        }
+        try {
+            const hoje = hojeISO();
+            // De/Para defensivo (auditoria 2026-05-21) — múltiplos fallbacks
+            // por coluna pra blindar contra schemas legados/variações do banco.
+            //
+            // ATENÇÃO: as transformações abaixo intencionalmente preservam o
+            // que `renderTabela` faz em tela (não copiam o bruto cego):
+            //   - Despesa real fica em `r.categoria` (ETL TXT grava categoria
+            //     ← l.despesa). Fallbacks `r.despesa`/`r.historico`/`r.descricao`
+            //     cobrem schemas legados de seeders externos.
+            //   - Fornecedor/Favorecido real é `r.entidade` (vide linha do
+            //     renderTabela). Fallbacks defensivos cobrem variantes.
+            //   - Valor é Number(r.valor_original) — `r.valor` NÃO EXISTE no
+            //     schema canônico (aplicaria zero a tudo). Fallback adicional
+            //     `r.valor` p/ docs legados que ainda usem a chave curta.
+            //   - Status humanizado via BADGE_MAP[statusVisual(r,hoje)].lbl —
+            //     diferencia "VENCIDO" de "A PAGAR" pela data; o `r.status`
+            //     bruto só conhece "pago"/"pendente"/"cancelado", perdendo
+            //     essa nuance crítica pro Diretor Financeiro.
+            //   - Data formatada em DD/MM/YYYY via fmtDataBR — string ISO
+            //     "2026-05-21" não é o padrão BR esperado no relatório.
+            const linhas = new Array(fonte.length);
+            for (let i = 0; i < fonte.length; i++) {
+                const r = fonte[i];
+                const cc = String(r.centro_custo || '').trim();
+                const gestor = cc ? (_areaGestorMap.get(cc) || '') : '';
+                const visual = statusVisual(r, hoje);
+                const statusLbl = (BADGE_MAP[visual] && BADGE_MAP[visual].lbl) || '';
+                const valor = Number(r.valor_original || r.valor || 0);
+                linhas[i] = {
+                    // Empresa — fallbacks múltiplos pra schemas legados.
+                    'Empresa':              r.empresa || r.empresa_nome || r.nome_empresa || r.filial || '—',
+                    'Fornecedor/Favorecido': r.entidade || r.fornecedor_nome || r.favorecido || '—',
+                    // Despesa — campo que estava OMITIDO. Usa a mesma variável
+                    // que `renderTabela` (r.categoria) com fallbacks legados.
+                    'Despesa':              r.categoria || r.despesa || r.historico || r.descricao || '—',
+                    'Tipo de Lançamento':   r.tipo_entidade || r.tipo || r.classificacao || '—',
+                    'CC (Centro de Custo)': cc || '—',
+                    'Gestor Responsável':   gestor || '—',
+                    'Código Título/Ord':    r.codigo_titulo_ord || '—',
+                    'Valor (R$)':           valor,
+                    'Data de Vencimento':   fmtDataBR(r.data_vencimento) || '—',
+                    'Status':               statusLbl || '—',
+                    'Detalhe / Observação': r.observacao || r.detalhe || '—',
+                };
+            }
+            const worksheet = XLSX.utils.json_to_sheet(linhas, {
+                header: [
+                    'Empresa',
+                    'Fornecedor/Favorecido',
+                    'Despesa',
+                    'Tipo de Lançamento',
+                    'CC (Centro de Custo)',
+                    'Gestor Responsável',
+                    'Código Título/Ord',
+                    'Valor (R$)',
+                    'Data de Vencimento',
+                    'Status',
+                    'Detalhe / Observação',
+                ],
+            });
+            // Larguras aproximadas — não é obrigatório, mas evita o operador
+            // ter que ajustar manualmente após abrir o arquivo. Ordem alinhada
+            // com o `header` acima (11 colunas após a inclusão de "Despesa").
+            worksheet['!cols'] = [
+                { wch: 18 }, // Empresa
+                { wch: 38 }, // Fornecedor/Favorecido
+                { wch: 30 }, // Despesa
+                { wch: 22 }, // Tipo de Lançamento
+                { wch: 24 }, // CC
+                { wch: 26 }, // Gestor
+                { wch: 16 }, // Código Título/Ord
+                { wch: 14 }, // Valor
+                { wch: 16 }, // Data Venc
+                { wch: 14 }, // Status
+                { wch: 40 }, // Detalhe / Observação
+            ];
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Contas a Pagar');
+            // Nome do arquivo: timestamp DD_MM_YYYY (a partir do "hoje" do navegador).
+            const dataAtual = new Date().toISOString().slice(0, 10).split('-').reverse().join('_');
+            XLSX.writeFile(workbook, `CentraFin_Contas_a_Pagar_${dataAtual}.xlsx`);
+            mostrarToast(`Planilha exportada com ${fonte.length.toLocaleString('pt-BR')} lançamento(s).`, 'check_circle');
+        } catch (err) {
+            console.error('[Exportar Excel CP] falha:', err);
+            mostrarToast('Falha ao gerar a planilha: ' + (err?.message || 'erro desconhecido'), 'error', true);
+        } finally {
+            if (grande) {
+                if (btn) btn.disabled = false;
+                if (lbl) lbl.textContent = lblOrig;
+                if (ico) { ico.textContent = icoOrig; ico.classList.remove('animate-spin'); }
+            }
+        }
+    }
+    document.getElementById('btn-cp-exportar-excel').addEventListener('click', () => cpExecutarExportacaoExcel());
 
     const COL_METADADOS = 'Metadados';
     const DOC_ULTIMA_IMP_CP = 'UltimaImportacao_CP';
@@ -2986,6 +4162,100 @@
         else document.body.removeAttribute('data-perfil-admin');
     }
 
+    // --- 1.b. Trava de UI — Perfil CONSULTA (auditoria 2026-05-26) ----------
+    // Read-Only estrito: oculta TODOS os gatilhos de mutação (Central de
+    // Importações, dropdowns de Cadastrar, checkboxes de seleção, Ações em
+    // Massa, lápis/lixeira por linha) e força os modais de edição a abrirem
+    // em modo somente-leitura (inputs disabled + Salvar oculto). Mantém 100%
+    // a capacidade de análise: KPIs, gráficos, busca, filtros e Exportar
+    // Planilha continuam intactos. Defesa em DEPTH — as Firestore Rules
+    // (isConsulta()) já bloqueiam qualquer write que escape do front-end.
+    function _cpAplicarRestricoesLeitura(usuarioRole) {
+        const role = String(usuarioRole || '').trim().toLowerCase();
+        if (role !== 'consulta') return false;
+
+        document.body.setAttribute('data-perfil-consulta', '1');
+
+        if (!document.getElementById('css-perfil-consulta')) {
+            const style = document.createElement('style');
+            style.id = 'css-perfil-consulta';
+            style.textContent = `
+                /* Hide write-action triggers when perfil=consulta. */
+                body[data-perfil-consulta="1"] #btn-central-importacao,
+                body[data-perfil-consulta="1"] #btn-cp-excluir-sel,
+                body[data-perfil-consulta="1"] #btn-acoes-massa-excluir,
+                body[data-perfil-consulta="1"] #btn-aplicar-acoes-massa,
+                body[data-perfil-consulta="1"] #btn-cancelar-acoes-massa,
+                body[data-perfil-consulta="1"] [data-cp-acao],
+                body[data-perfil-consulta="1"] .cp-row-checkbox,
+                body[data-perfil-consulta="1"] #cp-selecionar-todos,
+                body[data-perfil-consulta="1"] [data-acao-cadastrar],
+                body[data-perfil-consulta="1"] .acao-cadastro,
+                body[data-perfil-consulta="1"] [data-bulk-action],
+                body[data-perfil-consulta="1"] #btn-ef-cp-salvar,
+                body[data-perfil-consulta="1"] [data-acao-salvar] {
+                    display: none !important;
+                }
+                /* Esconde o th de seleção em massa (Chrome/Edge/Firefox 121+). */
+                body[data-perfil-consulta="1"] thead th:has(> #cp-selecionar-todos) {
+                    width: 0 !important;
+                    padding: 0 !important;
+                    border: 0 !important;
+                }
+                /* Modais de edição em Read-Only — visual de campo desabilitado. */
+                body[data-perfil-consulta="1"] #modal-editar-fatura-cp input,
+                body[data-perfil-consulta="1"] #modal-editar-fatura-cp select,
+                body[data-perfil-consulta="1"] #modal-editar-fatura-cp textarea {
+                    pointer-events: none !important;
+                    background-color: #f3f4f6 !important;
+                    color: #6b7280 !important;
+                    cursor: not-allowed !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Modais que MUTAM dados — recebem disabled + Salvar oculto.
+        // Filtros (modal-filtros-cp) ficam intactos: o usuário consulta
+        // precisa continuar filtrando para Exportar.
+        const MODAIS_EDICAO = ['modal-editar-fatura-cp'];
+
+        function _travarModal(modalEl) {
+            if (!modalEl) return;
+            modalEl.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea')
+                .forEach(el => { el.disabled = true; el.setAttribute('aria-readonly', 'true'); });
+            modalEl.querySelectorAll('button[id*="salvar" i], button[id*="-save" i], [data-acao-salvar]')
+                .forEach(b => { b.classList.add('hidden'); b.disabled = true; });
+        }
+
+        function _sweep() {
+            for (const id of MODAIS_EDICAO) _travarModal(document.getElementById(id));
+            document.querySelectorAll('.cp-row-checkbox, #cp-selecionar-todos')
+                .forEach(el => { el.disabled = true; el.checked = false; });
+            document.querySelectorAll('[data-cp-acao]')
+                .forEach(el => { el.disabled = true; });
+        }
+
+        _sweep();
+
+        // Click listener (capture phase) — re-aplica disable após qualquer
+        // interação que possa ter aberto um modal ou re-renderizado a tabela.
+        // Lightweight: o sweep visita poucos elementos.
+        document.addEventListener('click', () => { setTimeout(_sweep, 30); }, true);
+
+        // Toast informativo via API existente (mostrarToast). Sem alert nativo.
+        try {
+            setTimeout(() => {
+                if (typeof mostrarToast === 'function') {
+                    mostrarToast('Sessão em modo CONSULTA — alterações desabilitadas.', 'visibility');
+                }
+            }, 900);
+        } catch (_) {}
+
+        return true;
+    }
+    window._cpAplicarRestricoesLeitura = _cpAplicarRestricoesLeitura;
+
     // --- 2. KPI Lâmpadas (modal-explicacao-kpi) -----------------------------
     // Textos humanizados (auditoria 2026-05-18): cada KPI ganhou uma explicação
     // em linguagem natural, sem jargão técnico. O campo `detalhe` (caixa amber)
@@ -3014,6 +4284,10 @@
         vencido: {
             titulo: 'Vencidos',
             texto: 'Atenção: Este é o sinal de alerta. São as contas que já passaram da data limite de pagamento e continuam em aberto.',
+        },
+        tarifas: {
+            titulo: 'Tarifas & Comissões Bancárias',
+            texto: 'Despesas bancárias (tarifa de manutenção, TED, IOF, comissão bancária etc.) são automaticamente expurgadas do Total Geral e dos demais cards e concentradas aqui. Isso isola o custo financeiro do custo operacional para análise de governança. Os lançamentos continuam visíveis na tabela para auditoria detalhada.',
         },
     };
 
@@ -3074,6 +4348,7 @@
         _cpPage = 1; // mudança de recorte → volta pra pág 1
         renderTudo();
         _cpAtualizarKPIsAtivos();
+        _cpSalvarEstadoFiltros(); // sticky filtros (Frente 1)
     }
     function _cpAtualizarKPIsAtivos() {
         // Marca cards cujos filtros equivalentes estão exatamente isolados.

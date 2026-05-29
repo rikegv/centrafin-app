@@ -170,9 +170,24 @@ export function chaveContrato(cpf, cargo) {
     return `${cpf}::${slugCargo(cargo)}`;
 }
 
+/**
+ * Normaliza o texto de uma c\u00e9lula do cabe\u00e7alho para casamento de aliases
+ * (auditoria 2026-05-26 \u2014 Pente Fino dos cabe\u00e7alhos da Folha):
+ *   1. NFD + remove diacr\u00edticos (acentos)
+ *   2. Substitui caracteres n\u00e3o-alfanum\u00e9ricos por espa\u00e7o (h\u00edfen, ponto,
+ *      barra, asterisco etc. \u2014 comuns em "Fil-Codigo", "I.N.S.S.", "S/N")
+ *   3. Colapsa m\u00faltiplos espa\u00e7os
+ *   4. Trim + UPPERCASE
+ * O resultado \u00e9 invariante a varia\u00e7\u00f5es cosm\u00e9ticas do RH ("Sal\u00e1rio  Base ",
+ * "salario base", "Sal\u00e1rio-Base" \u2192 todos viram "SALARIO BASE").
+ */
 function normalizarCelula(v) {
-    return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .trim().toUpperCase();
+    return String(v || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Za-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase();
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -213,20 +228,43 @@ export function lerArquivoExcel(file) {
  *  Auditoria 2026-04-28: DEMISSAO/DESLIGAMENTO/RESCISAO entraram aqui para que
  *  o ETL pare de jogar essas colunas no parseNumeroBR (que zerava as datas) e
  *  passe a guardá-las como STRING preservando o valor original. Necessário
- *  para a regra cronológica antigo→novo no modal de Movimentações. */
+ *  para a regra cronológica antigo→novo no modal de Movimentações.
+ *
+ *  Auditoria 2026-05-26 (Pente Fino): dicionário expandido com aliases reais
+ *  vistos no campo. Inclui também rótulos FINANCEIROS agregados (Total Proventos,
+ *  Total Descontos, Líquido) que o RH costuma colocar no fim do relatório como
+ *  colunas-resumo. Esses campos são marcados em CAMPOS_FIXOS_NUMERICOS abaixo
+ *  para que o loop principal parseie como Number (via parseNumeroBR), e não
+ *  como String (default das colunas cadastrais). */
 const ROTULOS_FIXOS = {
-    CODIGO: ['CODIGO', 'COD', 'MATRICULA'],
-    NOME: ['NOME', 'NOME FUNCIONARIO', 'FUNCIONARIO'],
-    CPF: ['CPF'],
+    // Identificação cadastral (STRING).
+    CODIGO: ['CODIGO', 'COD', 'MATRICULA', 'CHAPA', 'FIL CODIGO'],
+    NOME: ['NOME', 'NOME FUNCIONARIO', 'FUNCIONARIO', 'NOME DO COLABORADOR', 'COLABORADOR'],
+    CPF: ['CPF', 'DOCUMENTO', 'IDENTIFICACAO'],
     FUNCAO: ['FUNCAO', 'CARGO'],
     CENTRO_CUSTO: ['CENTRO DE CUSTO', 'CENTRO CUSTO', 'CCUSTO', 'CC'],
     DEPARTAMENTO: ['DEPARTAMENTO', 'DEPTO', 'SETOR'],
+    // Datas (STRING — preservadas no formato original).
     ADMISSAO: ['ADMISSAO', 'DATA ADMISSAO', 'DT ADMISSAO', 'DATA DE ADMISSAO'],
     DEMISSAO: ['DEMISSAO', 'DATA DEMISSAO', 'DT DEMISSAO', 'DATA DE DEMISSAO',
                'DESLIGAMENTO', 'DATA DESLIGAMENTO', 'DT DESLIGAMENTO',
                'DATA DE DESLIGAMENTO', 'DATA RESCISAO', 'DT RESCISAO'],
-    SALARIO_BASE: ['SALARIO BASE', 'SALARIO'],
+    // Financeiros agregados (NÚMERO — entram em CAMPOS_FIXOS_NUMERICOS).
+    SALARIO_BASE:    ['SALARIO BASE', 'SALARIO', 'SALARIO MES', 'SALARIO NOMINAL',
+                      'VENCIMENTO BASE', 'VALOR NOMINAL'],
+    TOTAL_PROVENTOS: ['PROVENTOS', 'VENCIMENTOS', 'TOTAL PROVENTOS',
+                      'TOTAL VENCIMENTOS', 'CREDITOS', 'TOTAL CREDITOS'],
+    TOTAL_DESCONTOS: ['DESCONTOS', 'TOTAL DESCONTOS', 'DEBITOS', 'TOTAL DEBITOS'],
+    VALOR_LIQUIDO:   ['LIQUIDO', 'VALOR LIQUIDO', 'LIQUIDO A RECEBER', 'TOTAL LIQUIDO'],
 };
+
+/** Rótulos fixos que devem ser parseados como NÚMERO (via parseNumeroBR) em
+ *  vez de String. Auditoria 2026-05-26 — sem este Set, salario_base e os
+ *  totais agregados caíam no branch de String e ficavam como strings vazias
+ *  ou cruas (não somavam em calcularTotais nem na exportação analítica). */
+const CAMPOS_FIXOS_NUMERICOS = new Set([
+    'SALARIO_BASE', 'TOTAL_PROVENTOS', 'TOTAL_DESCONTOS', 'VALOR_LIQUIDO'
+]);
 
 function classificarColunaFixa(textoNormalizado) {
     for (const chave of Object.keys(ROTULOS_FIXOS)) {
@@ -255,11 +293,16 @@ export function processarRelatorioFolha(dadosBrutos) {
     }
 
     // 1) Localizar sub-cabeçalho.
+    // Auditoria 2026-05-26 (Pente Fino): detecção usa os mesmos aliases do
+    // ROTULOS_FIXOS — assim planilhas com "CHAPA" no lugar de "CODIGO" ou
+    // "COLABORADOR" no lugar de "NOME" também são reconhecidas.
+    const SET_CODIGO_DETECT = new Set(ROTULOS_FIXOS.CODIGO);
+    const SET_NOME_DETECT   = new Set(ROTULOS_FIXOS.NOME);
     let idxSub = -1;
     for (let i = 0; i < dadosBrutos.length; i++) {
         const row = dadosBrutos[i].map(normalizarCelula);
-        const temCodigo = row.some(c => c === 'CODIGO' || c === 'COD' || c === 'MATRICULA');
-        const temNome = row.some(c => c === 'NOME' || c === 'FUNCIONARIO');
+        const temCodigo = row.some(c => SET_CODIGO_DETECT.has(c));
+        const temNome   = row.some(c => SET_NOME_DETECT.has(c));
         if (temCodigo && temNome) { idxSub = i; break; }
     }
     if (idxSub === -1) {
@@ -347,6 +390,13 @@ export function processarRelatorioFolha(dadosBrutos) {
         }
 
         const obj = { cpf: cpfLimpo, _origem: 'folha' };
+        // Auditoria 2026-05-27 (Caso DANILO — Salário Cadastral vs Pago):
+        // a coluna "Salário" do RH vem com sufixo de cadência (/M, /Q, /H, /D)
+        // sinalizando que é CADASTRAL (registro de contrato), não o pago no
+        // mês. Capturamos o bruto pra detectar esse sufixo abaixo na regra
+        // de derivação. Funcionários demitidos têm Salário cadastral cheio
+        // mas NÃO trabalharam dias na competência — caso clássico do bug.
+        let salarioBrutoStr = '';
         for (const colStr of Object.keys(mapaColunas)) {
             const col = Number(colStr);
             const { tipo, chave } = mapaColunas[col];
@@ -354,11 +404,64 @@ export function processarRelatorioFolha(dadosBrutos) {
 
             if (tipo === 'fixo') {
                 if (chave === 'CPF') continue; // já tratado
-                obj[chave.toLowerCase()] = String(bruto || '').trim();
+                // Auditoria 2026-05-26 (Pente Fino): rótulos fixos
+                // FINANCEIROS (salário, total proventos, total descontos,
+                // valor líquido) PRECISAM ser Number — caso contrário, ficam
+                // como string crua ("R$ 1.234,56") e o calcularTotais()
+                // os ignora (só itera valores numéricos), zerando os KPIs.
+                if (CAMPOS_FIXOS_NUMERICOS.has(chave)) {
+                    if (chave === 'SALARIO_BASE') {
+                        salarioBrutoStr = String(bruto == null ? '' : bruto).trim();
+                    }
+                    obj[chave.toLowerCase()] = parseNumeroBR(bruto);
+                } else {
+                    obj[chave.toLowerCase()] = String(bruto || '').trim();
+                }
             } else {
                 obj[chave] = parseNumeroBR(bruto);
             }
         }
+
+        // ── Regra contábil DEFINITIVA (auditoria 2026-05-27 — Caso DANILO) ──
+        // O Salário SÓ entra em Vencimentos se houver Qtde > 0 E Valor > 0
+        // em "Dias Trabalhados". Quando entra, o valor REAL é o pago
+        // (coluna Q = DIAS_TRABALHADOS_Valor), que já reflete proporcional
+        // por admissão recente/demissão no meio do mês. A coluna "Salário"
+        // cadastral (col K) com sufixo /M é puramente referencial:
+        // movemos para `salario_cadastral` e zeramos `salario_base` quando
+        // não há dias trabalhados.
+        //
+        // Defesa em profundidade: a regra SÓ se aplica quando detectamos a
+        // cadência cadastral (sufixo /M /Q /H /D) na célula bruta do Salário.
+        // Sem isso, deixamos o comportamento legado intacto — outros RHs
+        // podem emitir a coluna "Salário" já como valor pago do mês.
+        const qtdeDias  = Number(obj.DIAS_TRABALHADOS_Qtde)  || 0;
+        const valorDias = Number(obj.DIAS_TRABALHADOS_Valor) || 0;
+        const temCadenciaCadastral = /\/(M|Q|H|D)\s*$/i.test(salarioBrutoStr);
+
+        if (temCadenciaCadastral) {
+            // Schema com cadência: aplica a regra Qtde × Valor.
+            obj.salario_cadastral = Number(obj.salario_base) || 0;
+            obj._salario_cadastral_raw = salarioBrutoStr;
+            if (qtdeDias > 0 && valorDias > 0) {
+                obj.salario_base = valorDias; // valor pago proporcional
+            } else {
+                obj.salario_base = 0; // desligado/suspenso/ainda não admitido
+            }
+        }
+        // Schema sem cadência: deixa `salario_base` como veio (fluxo legado).
+
+        // Log de auditoria por colaborador (auditoria 2026-05-26). Permite ao
+        // operador abrir o DevTools e validar extração de Salário/Proventos
+        // linha a linha durante a importação. Verboso por design — desligar
+        // depois com filter no console se incomodar.
+        console.log('[ETL Excel] Colaborador:', obj.nome,
+            '· Salário Base (pago):', obj.salario_base,
+            '· Salário Cadastral:', obj.salario_cadastral || '—',
+            '· Dias Trab. Qtde:', qtdeDias,
+            '· Dias Trab. Valor:', valorDias,
+            '· Proventos:', obj.total_proventos,
+            '· Líquido:',   obj.valor_liquido);
         saida.push(obj);
     }
 

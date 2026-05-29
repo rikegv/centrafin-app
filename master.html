@@ -14,6 +14,10 @@
     <!-- SheetJS — leitura nativa de .xlsx/.xls/.csv pra Base de Fornecedores
          (governança migrada do Gerenciador CP em 2026-05-18). UMD global `XLSX`. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Multi-select por checkbox (auditoria 2026-05-20) — necessário pelo
+         novo modal "Filtros Avançados" do Banco de Fornecedores, que usa o
+         padrão `data-checkbox-multi data-cb-portal` (idêntico ao Contas a Pagar). -->
+    <script src="./assets/checkbox_multi.js?v=20260518v5" defer></script>
     <script>
         tailwind.config = {
             theme: {
@@ -327,7 +331,15 @@
                                     class="hidden text-xs font-bold p-2.5 rounded-lg flex items-start gap-2"></div>
                                 <button type="submit" id="btn-salvar-area"
                                     class="w-full py-2.5 bg-primary text-secondary font-extrabold rounded-xl shadow-md hover:brightness-105 transition-all flex items-center justify-center gap-2 text-xs">
-                                    <span class="material-symbols-outlined text-base">add</span> Adicionar Área
+                                    <span id="area-save-icon" class="material-symbols-outlined text-base">add</span>
+                                    <span id="lbl-salvar-area">Adicionar Área</span>
+                                </button>
+                                <!-- Modo Edição (Frente 2 — 2026-05-20): aparece
+                                     quando cpAbrirEdicaoArea() seta editandoAreaId.
+                                     Restaura o form ao estado de cadastro novo. -->
+                                <button type="button" id="btn-cancelar-edicao-area"
+                                    class="hidden w-full py-2 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                                    Cancelar edição
                                 </button>
                             </form>
                         </div>
@@ -556,44 +568,132 @@
                         <h2 class="font-headline text-base font-extrabold text-secondary">3. Banco de Fornecedores</h2>
                         <p class="text-[11px] text-slate-400 font-medium">Cadastro de parceiros (clientes, fornecedores externos, internos, PJs). Importação .xlsx · edição inline · exclusão em massa.</p>
                     </div>
-                    <!-- Toolbar premium (auditoria 2026-05-18 — produtividade da
-                         Controladoria). Bot 5 grupos visuais: Cadastro manual,
-                         Importação + Modelo, Exportação, Bulk-actions, Excluir.
-                         Bulk-actions e Excluir só aparecem quando há seleção. -->
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <button id="forn-master-btn-novo" type="button"
-                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-secondary/20 text-secondary hover:bg-secondary/5 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all">
-                            <span class="material-symbols-outlined text-base text-secondary">person_add</span>
-                            Cadastrar Manual
-                        </button>
-                        <button id="forn-master-btn-importar" type="button"
-                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-primary text-[#341100] rounded-lg text-xs font-bold shadow-sm hover:brightness-105 active:scale-95 transition-all">
-                            <span class="material-symbols-outlined text-base">cloud_upload</span>
-                            Importar Excel
-                        </button>
-                        <button id="forn-master-btn-modelo" type="button"
-                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-secondary rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all"
-                                title="Baixar planilha modelo (.xlsx) com o cabeçalho esperado">
-                            <span class="material-symbols-outlined text-base">download_for_offline</span>
-                            Baixar Modelo
-                        </button>
-                        <button id="forn-master-btn-exportar" type="button"
-                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all"
-                                title="Exportar a base atual para Excel">
-                            <span class="material-symbols-outlined text-base">download</span>
-                            Exportar Base
-                        </button>
-                        <button id="forn-master-btn-cc-massa" type="button"
-                                class="hidden items-center gap-1.5 px-3 py-2 bg-tertiary/10 border border-tertiary/30 hover:bg-tertiary/15 text-tertiary rounded-lg text-xs font-bold transition-all active:scale-95"
-                                title="Aplicar um Centro de Custo a todos os selecionados">
-                            <span class="material-symbols-outlined text-base">hub</span>
-                            Alterar CC em Massa (<span id="forn-master-cc-massa-count" class="tabular-nums">0</span>)
-                        </button>
-                        <button id="forn-master-btn-deletar" type="button"
-                                class="hidden items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold transition-all active:scale-95">
-                            <span class="material-symbols-outlined text-base">delete</span>
-                            Excluir Selecionados (<span id="forn-master-sel-count" class="tabular-nums">0</span>)
-                        </button>
+                    <!-- Toolbar Premium (Frente 1 — 2026-05-20). Substitui a
+                         sopa de 6 botões soltos por 3 componentes únicos:
+                         (1) Dropdown "Cadastrar" (Primary) — manual + import lote
+                         (2) Dropdown "Arquivos" (Secondary) — modelo + export
+                         (3) Dropdown "Ações em Lote" (Glass dark, contextual) —
+                             alterar CC/Empresa/Tipo em massa + excluir.
+                         Botões antigos viram menu items dentro dos dropdowns —
+                         IDs preservados pra que os handlers existentes sigam
+                         funcionando sem reescrever a lógica de cada um. -->
+                    <div class="flex items-center gap-2 flex-wrap" id="fornm-toolbar">
+                        <!-- ▸ Dropdown CADASTRAR (Primary) -->
+                        <div class="relative" data-fornm-dropdown="cadastrar">
+                            <button type="button" data-fornm-trigger="cadastrar"
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-extrabold shadow-md active:scale-95 transition-all"
+                                    style="background-color:#aad12f;color:#341100;">
+                                <span class="material-symbols-outlined text-base" style="color:#341100;">add</span>
+                                Cadastrar
+                                <span class="material-symbols-outlined text-[16px]" style="color:#341100;">arrow_drop_down</span>
+                            </button>
+                            <div data-fornm-menu="cadastrar"
+                                 class="hidden absolute right-0 mt-2 w-64 rounded-xl shadow-2xl z-[100] p-1.5 border"
+                                 style="background-color:#0b2540;border-color:rgba(255,255,255,0.10);">
+                                <button id="forn-master-btn-novo" type="button"
+                                        class="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]" style="color:#aad12f;">person_add</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Cadastro Individual Manual</p>
+                                        <p class="text-[10px] font-medium text-slate-300/70 mt-0.5">Formulário 1-a-1, com unicidade do código.</p>
+                                    </div>
+                                </button>
+                                <button id="forn-master-btn-importar" type="button"
+                                        class="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]" style="color:#aad12f;">cloud_upload</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Importação em Lote (.xlsx)</p>
+                                        <p class="text-[10px] font-medium text-slate-300/70 mt-0.5">Sobe arquivo Excel; merge pelo Cód.</p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ▸ Dropdown ARQUIVOS (Secondary) -->
+                        <div class="relative" data-fornm-dropdown="arquivos">
+                            <button type="button" data-fornm-trigger="arquivos"
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-secondary rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-all">
+                                <span class="material-symbols-outlined text-base">description</span>
+                                Arquivos
+                                <span class="material-symbols-outlined text-[16px]">arrow_drop_down</span>
+                            </button>
+                            <div data-fornm-menu="arquivos"
+                                 class="hidden absolute right-0 mt-2 w-64 rounded-xl shadow-2xl z-[100] p-1.5 border"
+                                 style="background-color:#0b2540;border-color:rgba(255,255,255,0.10);">
+                                <button id="forn-master-btn-modelo" type="button"
+                                        class="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]" style="color:#59a4d8;">download_for_offline</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Baixar Planilha Modelo</p>
+                                        <p class="text-[10px] font-medium text-slate-300/70 mt-0.5">Cabeçalho oficial do importador (.xlsx).</p>
+                                    </div>
+                                </button>
+                                <button id="forn-master-btn-exportar" type="button"
+                                        class="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]" style="color:#34d399;">download</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Exportar Base Completa</p>
+                                        <p class="text-[10px] font-medium text-slate-300/70 mt-0.5">Snapshot da base atual em Excel.</p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ▸ Dropdown AÇÕES EM LOTE (Glass dark, contextual).
+                             Trigger fica desabilitado/opacidade reduzida sem
+                             seleção. Quando _fornMSelecao.size > 0 ele ganha
+                             vida (border tertiary + cursor pointer).
+                             O badge à direita exibe a contagem. -->
+                        <div class="relative" data-fornm-dropdown="acoes">
+                            <button type="button" id="fornm-trigger-acoes" data-fornm-trigger="acoes" disabled
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-extrabold shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed enabled:active:scale-95"
+                                    style="background-color:#002443;color:#ffffff;border:1px solid rgba(170,209,47,0.0);">
+                                <span class="material-symbols-outlined text-base" style="color:#aad12f;">bolt</span>
+                                <span style="color:#ffffff;">Ações em Lote</span>
+                                <span id="fornm-sel-badge" class="hidden ml-1 px-1.5 rounded-full text-[10px] font-extrabold tabular-nums"
+                                      style="background-color:#aad12f;color:#341100;">0</span>
+                                <span class="material-symbols-outlined text-[16px]" style="color:#ffffff;">arrow_drop_down</span>
+                            </button>
+                            <div data-fornm-menu="acoes"
+                                 class="hidden absolute right-0 mt-2 w-72 rounded-xl shadow-2xl z-[100] p-1.5 border"
+                                 style="background-color:#0b2540;border-color:rgba(255,255,255,0.10);">
+                                <button id="forn-master-btn-cc-massa" type="button"
+                                        class="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]" style="color:#59a4d8;">hub</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Alterar Centro de Custo em Massa</p>
+                                        <p class="text-[10px] font-medium text-slate-300/70 mt-0.5">Cascateia automaticamente para faturas.</p>
+                                    </div>
+                                    <span id="forn-master-cc-massa-count" class="text-[10px] font-bold tabular-nums text-slate-300/70">0</span>
+                                </button>
+                                <button id="forn-master-btn-empresa-massa" type="button"
+                                        class="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]" style="color:#aad12f;">domain</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Alterar Empresa em Massa</p>
+                                        <p class="text-[10px] font-medium text-slate-300/70 mt-0.5">Carimba a empresa em cascata nas faturas.</p>
+                                    </div>
+                                </button>
+                                <button id="forn-master-btn-tipo-massa" type="button"
+                                        class="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]" style="color:#fbbf24;">category</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Alterar Tipo em Massa</p>
+                                        <p class="text-[10px] font-medium text-slate-300/70 mt-0.5">Atualiza tipo_entidade em cascata.</p>
+                                    </div>
+                                </button>
+                                <div class="my-1 border-t border-white/10"></div>
+                                <button id="forn-master-btn-deletar" type="button"
+                                        class="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-bold text-red-300 hover:bg-red-500/15 transition-colors">
+                                    <span class="material-symbols-outlined text-[18px] text-red-300">delete</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Excluir Selecionados</p>
+                                        <p class="text-[10px] font-medium text-red-300/70 mt-0.5">Operação destrutiva — exige confirmação.</p>
+                                    </div>
+                                    <span id="forn-master-sel-count" class="text-[10px] font-bold tabular-nums text-red-300/70">0</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -606,23 +706,21 @@
                             <input id="forn-master-busca" type="text" placeholder="Buscar código, empresa ou nome…"
                                    class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-secondary/30 focus:border-secondary outline-none transition-all" />
                         </div>
-                        <select id="forn-master-filtro-tipo"
-                                class="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white focus:ring-2 focus:ring-secondary/30 focus:border-secondary outline-none transition-all">
-                            <option value="Todos">Todos os tipos</option>
-                            <option value="Fornecedor Externo">Fornecedor Externo</option>
-                            <option value="Cliente">Cliente</option>
-                            <option value="Fornecedor Interno">Fornecedor Interno</option>
-                            <option value="Fornecedor Interno - PJ">Fornecedor Interno - PJ</option>
-                        </select>
-                        <!-- Filtro de Centro de Custo / Área — alimentado por
-                             AreasContasPagar via _ccDisponiveis. A entrada
-                             sentinela "__SEM_CC__" recorta os registros sem CC
-                             (saneamento da base). Auditoria 2026-05-18. -->
-                        <select id="forn-master-filtro-cc"
-                                class="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white focus:ring-2 focus:ring-secondary/30 focus:border-secondary outline-none transition-all">
-                            <option value="Todos">Todos os CCs</option>
-                            <option value="__SEM_CC__" class="text-amber-700 font-bold">[ SEM CENTRO DE CUSTO / NÃO ALOCADO ]</option>
-                        </select>
+                        <!-- "Filtros Avançados" (Frente 1 — 2026-05-20). Substitui
+                             os 2 <select> nativos por um único modal premium com
+                             3 multi-selects + busca interna + sentinelas de
+                             saneamento. Mesmo padrão visual do Contas a Pagar. -->
+                        <button id="btn-abrir-filtros-fornm" type="button"
+                            class="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:border-secondary hover:bg-secondary/5 text-secondary rounded-xl text-xs font-bold transition-all">
+                            <span class="material-symbols-outlined text-base text-secondary">filter_alt</span>
+                            Filtros Avançados
+                        </button>
+                        <button id="btn-limpar-filtros-fornm" type="button"
+                            class="hidden items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-bold transition-colors">
+                            <span class="material-symbols-outlined text-base">filter_alt_off</span>
+                            Limpar
+                        </button>
+                        <span id="fornm-chip-filtros" class="hidden text-[11px] font-medium text-slate-500 px-3 py-1 bg-slate-100 rounded-full"></span>
                         <span id="forn-master-hint" class="text-[11px] text-slate-400 font-medium">—</span>
                         <div class="flex-1"></div>
                         <span id="forn-master-contador" class="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full tabular-nums">0 fornecedores</span>
@@ -838,6 +936,20 @@
                         </select>
                         <p class="text-[10px] text-slate-400 mt-1 italic">Alimenta a integração com Custo de Folha quando o tipo é "Fornecedor Interno - PJ".</p>
                     </div>
+                    <!-- Código de Benefício da Folha (Frente 1 — 2026-05-21).
+                         Chave mestre que casa o PJ com sua linha no relatório de
+                         benefícios importado em /CP_Beneficios_PJ. Visível e
+                         obrigatório APENAS quando tipo === "Fornecedor Interno - PJ"
+                         (toggle gerenciado pelo listener change do select tipo). -->
+                    <div id="forn-master-edit-cb-wrap" class="hidden md:col-span-2">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                            Código de Benefício da Folha (Fil-Codigo) <span class="text-red-500">*</span>
+                        </label>
+                        <input id="forn-master-edit-codigo-beneficio" type="text"
+                               placeholder="Ex.: 000-000077"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono uppercase tabular-nums focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                        <p class="text-[10px] text-slate-400 mt-1 italic">Casa este PJ com a planilha de benefícios mensal (VR/VT). Sem ele a importação fica órfã.</p>
+                    </div>
                 </div>
                 <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
                     <button id="btn-cancelar-forn-master-editar" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
@@ -929,6 +1041,131 @@
             </div>
         </div>
 
+        <!-- Modal genérico: Alterar Empresa/Tipo em Massa (Frente 1 — 2026-05-20).
+             Reaproveita o esqueleto visual do CC em massa, mas o campo alvo é
+             dinâmico (`empresa` ou `tipo`). _fornMCampoMassa guarda qual campo
+             está em jogo; o submit aplica writeBatch + cascata em ContasAPagar.
+             Para Tipo (select estático) e Empresa (select dinâmico vindo de
+             Base_Empresas), um sub-container é mostrado/oculto. -->
+        <div id="modal-alterar-genrico-massa" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-alterar-genrico-massa"></div>
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100">
+                <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner"
+                             style="background-color:rgba(170,209,47,0.12);">
+                            <span id="fornm-massa-icon" class="material-symbols-outlined text-2xl" style="color:#aad12f;">domain</span>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 id="fornm-massa-titulo" class="font-headline text-xl font-extrabold text-secondary tracking-tight">Alterar em Massa</h3>
+                            <p class="text-[12px] text-slate-500 font-medium mt-0.5">
+                                Aplicar a <strong id="fornm-massa-alvo" class="text-primary tabular-nums">0</strong> fornecedor(es) selecionado(s).
+                            </p>
+                        </div>
+                    </div>
+                    <button id="btn-fechar-fornm-massa" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="px-7 py-5 space-y-3">
+                    <!-- Campo Empresa (lista oficial vinda de Base_Empresas). -->
+                    <div id="fornm-massa-painel-empresa" class="hidden">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nova Empresa</label>
+                        <select id="fornm-massa-select-empresa"
+                                class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                            <option value="">Selecione a empresa…</option>
+                        </select>
+                        <p class="text-[11px] text-slate-400 italic mt-1">Lista vinda de Base_Empresas.</p>
+                    </div>
+                    <!-- Campo Tipo (categorias canônicas do schema /Fornecedores). -->
+                    <div id="fornm-massa-painel-tipo" class="hidden">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo Tipo</label>
+                        <select id="fornm-massa-select-tipo"
+                                class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                            <option value="">Selecione o tipo…</option>
+                            <option value="Cliente">Cliente</option>
+                            <option value="Fornecedor Externo">Fornecedor Externo</option>
+                            <option value="Fornecedor Interno">Fornecedor Interno</option>
+                            <option value="Fornecedor Interno - PJ">Fornecedor Interno - PJ</option>
+                        </select>
+                    </div>
+                    <p class="text-[11px] text-slate-400 italic flex items-start gap-1.5 leading-relaxed">
+                        <span class="material-symbols-outlined text-[14px] mt-0.5 text-tertiary">info</span>
+                        <span>Esta operação sobrescreve o campo nos fornecedores selecionados E propaga em cascata para as faturas em /ContasAPagar — dashboards permanecem conciliados.</span>
+                    </p>
+                </div>
+                <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
+                    <button id="btn-cancelar-fornm-massa" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                    <button id="btn-confirmar-fornm-massa" type="button"
+                            style="background-color:#002443;color:#ffffff;"
+                            class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-lg hover:brightness-125 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-base" style="color:#aad12f;">check_circle</span>
+                        <span style="color:#ffffff;">Aplicar a Selecionados</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Filtros Avançados do Banco de Fornecedores (Frente 2 — 2026-05-20).
+             Padrão idêntico ao "Filtrar Base" do Contas a Pagar. 3 multi-selects
+             com busca interna + sentinelas de saneamento + data-cb-portal para
+             escapar do overflow do modal. z-[80] para sobrepor a tabela. -->
+        <div id="modal-filtros-fornecedores" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-filtros-fornecedores"></div>
+            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl z-10 p-8 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] overflow-y-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-secondary">filter_alt</span>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-headline text-base font-bold text-secondary">Filtros Avançados — Fornecedores</h3>
+                        <p class="text-[11px] text-slate-400 font-medium">Cruze Empresa, Tipo e Centro de Custo. Use as opções <span class="text-amber-600 font-bold">⚠️</span> para isolar lacunas de cadastro.</p>
+                    </div>
+                    <button id="btn-fechar-filtros-fornm" type="button" class="text-slate-400 hover:text-slate-700 transition-colors">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Empresa</label>
+                        <select id="fornm-filtro-empresa" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todas as Empresas"
+                                class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/30 focus:border-secondary outline-none transition-all bg-white shadow-inner">
+                            <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as Empresas</option>
+                            <option value="__SEM_EMPRESA__">[ ⚠️ MOSTRAR SEM EMPRESA CADASTRADA ]</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Tipo / Classificação</label>
+                        <select id="fornm-filtro-tipo" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todos os Tipos"
+                                class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/30 focus:border-secondary outline-none transition-all bg-white shadow-inner">
+                            <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Tipos</option>
+                            <option value="__SEM_TIPO__">[ ⚠️ MOSTRAR SEM TIPO / CATEGORIA ]</option>
+                            <option value="Cliente">Cliente</option>
+                            <option value="Fornecedor Externo">Fornecedor Externo</option>
+                            <option value="Fornecedor Interno">Fornecedor Interno</option>
+                            <option value="Fornecedor Interno - PJ">Fornecedor Interno - PJ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Centro de Custo / Área</label>
+                        <select id="fornm-filtro-cc" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todos os Centros"
+                                class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/30 focus:border-secondary outline-none transition-all bg-white shadow-inner">
+                            <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Centros</option>
+                            <option value="__SEM_CC__">[ ⚠️ MOSTRAR SEM CENTRO DE CUSTO ]</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-8 flex gap-3">
+                    <button id="btn-filtros-fornm-limpar" type="button" class="flex-1 px-5 py-2.5 text-slate-500 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all">Limpar</button>
+                    <button id="btn-filtros-fornm-aplicar" type="button"
+                            class="flex-1 px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg active:scale-95 transition-all"
+                            style="background-color:#002443;color:#ffffff;">
+                        <span style="color:#ffffff;">Aplicar Filtros</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal: Cadastro Manual de Fornecedor — auditoria 2026-05-18.
              Pra cadastrar um único fornecedor sem precisar gerar planilha.
              Valida unicidade do código contra o cache em memória (_fornMRegistros)
@@ -989,6 +1226,18 @@
                                 <option value="">— sem CC —</option>
                             </select>
                         </div>
+                    </div>
+                    <!-- Código de Benefício da Folha (Frente 1 — 2026-05-21).
+                         Aparece e fica obrigatório quando tipo === "Fornecedor
+                         Interno - PJ". Hidden por padrão; toggle no listener. -->
+                    <div id="forn-novo-cb-wrap" class="hidden">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                            Código de Benefício da Folha (Fil-Codigo) <span class="text-red-500">*</span>
+                        </label>
+                        <input id="forn-novo-codigo-beneficio" type="text"
+                               placeholder="Ex.: 000-000077"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono uppercase tabular-nums focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
+                        <p class="text-[10px] text-slate-400 mt-1 italic">Sem este código a integração com benefícios mensais (VR/VT) cai em órfão.</p>
                     </div>
                 </div>
                 <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
@@ -1268,6 +1517,65 @@
 
         let usuarioLogadoNome = "Sistema";
         let usuarioLogadoPerfil = "";
+
+        // ── PERFIL CONSULTA (Read-Only) — auditoria 2026-05-26 ────────────────
+        // Defesa em profundidade. master.html já possui guardião exclusivo de
+        // super_admin (linha 1865) — então usuário consulta NUNCA chega aqui.
+        // Mesmo assim, mantemos o utilitário disponível pelo mesmo padrão dos
+        // demais módulos. Se for invocado, oculta toda a UI de CRUD (criação
+        // de usuários, edição de permissões, exclusão, "Cadastrar" em massa,
+        // botões Salvar) e desabilita campos de formulário.
+        function _cpAplicarRestricoesLeitura(usuarioRole) {
+            const role = String(usuarioRole || '').trim().toLowerCase();
+            if (role !== 'consulta') return false;
+
+            document.body.setAttribute('data-perfil-consulta', '1');
+
+            if (!document.getElementById('css-perfil-consulta')) {
+                const style = document.createElement('style');
+                style.id = 'css-perfil-consulta';
+                style.textContent = `
+                    body[data-perfil-consulta="1"] form#form-criar-usuario,
+                    body[data-perfil-consulta="1"] #btn-salvar-user,
+                    body[data-perfil-consulta="1"] #btn-salvar-edicao,
+                    body[data-perfil-consulta="1"] [data-acao-cadastrar],
+                    body[data-perfil-consulta="1"] [data-acao-salvar],
+                    body[data-perfil-consulta="1"] [data-acao-deletar],
+                    body[data-perfil-consulta="1"] [data-acao-excluir],
+                    body[data-perfil-consulta="1"] button[onclick*="abrirModalEdicao"],
+                    body[data-perfil-consulta="1"] button[id*="-salvar"],
+                    body[data-perfil-consulta="1"] button[id*="-excluir"],
+                    body[data-perfil-consulta="1"] button[id*="-deletar"],
+                    body[data-perfil-consulta="1"] button[id*="-cadastrar"],
+                    body[data-perfil-consulta="1"] button[id*="-novo"] {
+                        display: none !important;
+                    }
+                    body[data-perfil-consulta="1"] input,
+                    body[data-perfil-consulta="1"] select,
+                    body[data-perfil-consulta="1"] textarea {
+                        pointer-events: none !important;
+                        background-color: #f3f4f6 !important;
+                        color: #6b7280 !important;
+                        cursor: not-allowed !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            function _sweep() {
+                document.querySelectorAll('input:not([type=hidden]), select, textarea')
+                    .forEach(el => { el.disabled = true; el.setAttribute('aria-readonly', 'true'); });
+                document.querySelectorAll(
+                    'button[id*="-salvar"], button[id*="-excluir"], button[id*="-deletar"], '
+                    + 'button[id*="-cadastrar"], button[id*="-novo"], [data-acao-salvar], '
+                    + '[data-acao-deletar], [data-acao-excluir], [data-acao-cadastrar]'
+                ).forEach(b => { b.classList.add('hidden'); b.disabled = true; });
+            }
+            _sweep();
+            document.addEventListener('click', () => { setTimeout(_sweep, 30); }, true);
+            return true;
+        }
+        window._cpAplicarRestricoesLeitura = _cpAplicarRestricoesLeitura;
 
         // ── MATRIZ DE PERMISSÕES (RBAC granular) ─────────────────────────────
         // Auditoria 2026-04-28: refatoração para suportar 2 níveis de gating:
@@ -1629,6 +1937,12 @@
 
                     // Libera overlay anti-FoUC — todas as guardas passaram.
                     document.body.classList.add('auth-ok');
+
+                    // Auditoria 2026-05-26: Perfil CONSULTA (Read-Only).
+                    // master.html já bloqueia perfis != super_admin acima, mas
+                    // mantemos a invocação como defesa em depth — caso a guarda
+                    // seja afrouxada no futuro, o lockdown da UI já está pronto.
+                    _cpAplicarRestricoesLeitura(usuarioLogadoPerfil);
                 } else {
                     await signOut(auth);
                     alert('Acesso Negado: Usuário não encontrado no sistema.');
@@ -2280,6 +2594,10 @@
         const listaAreas = document.getElementById('lista-areas');
         const contadorAreas = document.getElementById('contador-areas');
         const dropdownRegraCC = document.getElementById('regra-cc');
+        // Estado de edição de Áreas (Frente 2 — 2026-05-20). Quando setado,
+        // o submit do form vira updateDoc em vez de addDoc — preservando o
+        // docId original e tudo que referencia a área pelo nome no banco.
+        let editandoAreaId = null;
 
         function _showMsgArea(texto, tipo = 'erro') {
             msgArea.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'border-red-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
@@ -2307,15 +2625,24 @@
                     const gestorChip = a.gestor_nome
                         ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-tertiary/10 text-tertiary border border-tertiary/30" title="Gestor responsável"><span class="material-symbols-outlined text-[12px]">supervisor_account</span>${escapeHTMLm(a.gestor_nome)}</span>`
                         : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200" title="Nenhum gestor vinculado">sem gestor</span>`;
+                    // Destaca a linha em edição com ring sutil — feedback
+                    // pro usuário de qual área está sendo manipulada.
+                    const emEdicao = editandoAreaId === a._id;
+                    const rowExtra = emEdicao ? ' bg-primary/5 ring-1 ring-primary/40' : '';
                     return `
-                    <li class="px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
+                    <li class="px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors${rowExtra}">
                         <div class="flex items-center gap-3 min-w-0 flex-1">
                             <span class="text-sm font-bold text-secondary truncate">${escapeHTMLm(a.nome)}</span>
                             ${gestorChip}
                         </div>
-                        <button data-acao-area="excluir" data-id="${escapeHTMLm(a._id)}" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors shrink-0" title="Excluir área">
-                            <span class="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button data-acao-area="editar" data-id="${escapeHTMLm(a._id)}" class="p-1.5 rounded-lg text-slate-400 hover:bg-primary/10 hover:text-secondary transition-colors" title="Editar área">
+                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                            </button>
+                            <button data-acao-area="excluir" data-id="${escapeHTMLm(a._id)}" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir área">
+                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                        </div>
                     </li>`;
                 }).join('');
             }
@@ -2369,12 +2696,64 @@
             listaAreas.innerHTML = `<li class="px-5 py-8 text-center text-xs text-red-500 font-bold">Falha ao carregar áreas: ${err.code || err.message}</li>`;
         });
 
+        // ── Frente 2 (2026-05-20) — Edição de Áreas ────────────────────────
+        // Entra em modo edição: preenche o form com os dados da área, força o
+        // dropdown de gestor pelo gestor_id atual e troca o label do botão.
+        // O submit detecta `editandoAreaId` e chama updateDoc preservando o ID.
+        function cpAbrirEdicaoArea(areaId, areaDados) {
+            const dados = areaDados || areasCache.find(a => a._id === areaId);
+            if (!dados) return;
+            editandoAreaId = areaId;
+            inputAreaNome.value = dados.nome || '';
+            const gestorSelect = document.getElementById('area-gestor');
+            if (gestorSelect) {
+                // Garante que o option desejado já está renderizado antes de
+                // setar — caso o listener de gestores ainda não tenha rodado,
+                // _renderGestores cuida disso na próxima atualização.
+                gestorSelect.value = dados.gestor_id || '';
+            }
+            // Troca o visual do botão para "Salvar Alterações" + mostra Cancelar.
+            const lblSalvar = document.getElementById('lbl-salvar-area');
+            const iconSalvar = document.getElementById('area-save-icon');
+            if (lblSalvar)  lblSalvar.textContent  = 'Salvar Alterações';
+            if (iconSalvar) iconSalvar.textContent = 'save';
+            const btnCancelar = document.getElementById('btn-cancelar-edicao-area');
+            if (btnCancelar) btnCancelar.classList.remove('hidden');
+            msgArea.classList.add('hidden');
+            // Foco e re-render da lista para destacar a linha em edição.
+            inputAreaNome.focus();
+            renderAreas();
+        }
+
+        function _resetFormArea() {
+            editandoAreaId = null;
+            formArea.reset();
+            const lblSalvar = document.getElementById('lbl-salvar-area');
+            const iconSalvar = document.getElementById('area-save-icon');
+            if (lblSalvar)  lblSalvar.textContent  = 'Adicionar Área';
+            if (iconSalvar) iconSalvar.textContent = 'add';
+            const btnCancelar = document.getElementById('btn-cancelar-edicao-area');
+            if (btnCancelar) btnCancelar.classList.add('hidden');
+            msgArea.classList.add('hidden');
+            renderAreas();
+        }
+
+        const btnCancelarEdicaoArea = document.getElementById('btn-cancelar-edicao-area');
+        if (btnCancelarEdicaoArea) {
+            btnCancelarEdicaoArea.addEventListener('click', _resetFormArea);
+        }
+
         formArea.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nome = inputAreaNome.value.trim();
             if (!nome) { _showMsgArea('Informe o nome da área.'); return; }
-            if (areasCache.some(a => a.nome.toLowerCase() === nome.toLowerCase())) {
-                _showMsgArea(`A área "${nome}" já existe.`); return;
+            // Dedup ignorando a própria área quando em edição (não conflita
+            // consigo mesma se o usuário só editou o gestor).
+            const conflito = areasCache.some(a =>
+                a.nome.toLowerCase() === nome.toLowerCase() && a._id !== editandoAreaId
+            );
+            if (conflito) {
+                _showMsgArea(`Já existe uma área com o nome "${nome}".`); return;
             }
             if (usuarioLogadoPerfil !== 'master' && usuarioLogadoPerfil !== 'super_admin') {
                 _showMsgArea('Apenas administradores podem cadastrar áreas.'); return;
@@ -2389,19 +2768,37 @@
             btnSalvarArea.disabled = true;
             btnSalvarArea.classList.add('opacity-60');
             try {
-                await addDoc(collection(db, 'AreasContasPagar'), {
-                    nome,
-                    gestor_id: gestorObj ? gestorObj._id : null,
-                    gestor_nome: gestorObj ? gestorObj.nome : null,
-                    criado_em: serverTimestamp(),
-                    criado_por: usuarioLogadoNome,
-                });
-                registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Áreas Contas a Pagar", `Cadastrou a área "${nome}"${gestorObj ? ` (gestor: ${gestorObj.nome})` : ''}.`);
-                formArea.reset();
-                _showMsgArea(`Área "${nome}" adicionada.`, 'sucesso');
+                if (editandoAreaId) {
+                    // Modo edição (Frente 2 — 2026-05-20). updateDoc preserva o
+                    // docId — qualquer Regra/Fornecedor/ContasAPagar que ainda
+                    // referencia a área pelo NOME só quebra se o nome mudar
+                    // (delegamos isso ao operador, como já era pelo delete-then-create).
+                    const nomeAntigo = (areasCache.find(a => a._id === editandoAreaId) || {}).nome || '—';
+                    await updateDoc(doc(db, 'AreasContasPagar', editandoAreaId), {
+                        nome,
+                        gestor_id: gestorObj ? gestorObj._id : null,
+                        gestor_nome: gestorObj ? gestorObj.nome : null,
+                        atualizado_em: serverTimestamp(),
+                        atualizado_por: usuarioLogadoNome,
+                    });
+                    registrarLogAutomático(usuarioLogadoNome, "EDIÇÃO", "Áreas Contas a Pagar", `Editou a área "${nomeAntigo}" → "${nome}"${gestorObj ? ` (gestor: ${gestorObj.nome})` : ' (sem gestor)'}.`);
+                    _showMsgArea(`Área "${nome}" atualizada.`, 'sucesso');
+                    _resetFormArea();
+                } else {
+                    await addDoc(collection(db, 'AreasContasPagar'), {
+                        nome,
+                        gestor_id: gestorObj ? gestorObj._id : null,
+                        gestor_nome: gestorObj ? gestorObj.nome : null,
+                        criado_em: serverTimestamp(),
+                        criado_por: usuarioLogadoNome,
+                    });
+                    registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Áreas Contas a Pagar", `Cadastrou a área "${nome}"${gestorObj ? ` (gestor: ${gestorObj.nome})` : ''}.`);
+                    formArea.reset();
+                    _showMsgArea(`Área "${nome}" adicionada.`, 'sucesso');
+                }
                 setTimeout(() => msgArea.classList.add('hidden'), 1800);
             } catch (err) {
-                console.error('[AreasContasPagar] addDoc falhou:', err);
+                console.error('[AreasContasPagar] salvar falhou:', err);
                 _showMsgArea(err.code === 'permission-denied'
                     ? 'Acesso negado: apenas administradores.'
                     : `Falha ao salvar: ${err.message || 'erro desconhecido'}`);
@@ -2412,26 +2809,38 @@
         });
 
         listaAreas.addEventListener('click', async (e) => {
-            const btn = e.target.closest('button[data-acao-area="excluir"]');
+            const btn = e.target.closest('button[data-acao-area]');
             if (!btn) return;
+            const acao = btn.getAttribute('data-acao-area');
             const id = btn.getAttribute('data-id');
             const a = areasCache.find(x => x._id === id);
             if (!a) return;
-            // Verifica se há regras usando essa área antes de excluir — evita
-            // deixar regras órfãs apontando para uma área que não existe.
-            const regrasUsando = regrasCache.filter(r => r.centro_custo === a.nome);
-            const aviso = regrasUsando.length > 0
-                ? `\n\nATENÇÃO: ${regrasUsando.length} regra(s) ainda usa(m) essa área. Recadastre-as após excluir.`
-                : '';
-            if (!confirm(`Excluir a área "${a.nome}"?${aviso}`)) return;
-            try {
-                await deleteDoc(doc(db, 'AreasContasPagar', id));
-                registrarLogAutomático(usuarioLogadoNome, "EXCLUSÃO", "Áreas Contas a Pagar", `Excluiu a área "${a.nome}".`);
-            } catch (err) {
-                console.error('[AreasContasPagar] delete falhou:', err);
-                alert(err.code === 'permission-denied'
-                    ? 'Acesso negado: apenas administradores.'
-                    : `Falha ao excluir: ${err.message || 'erro desconhecido'}`);
+
+            if (acao === 'editar') {
+                cpAbrirEdicaoArea(id, a);
+                return;
+            }
+
+            if (acao === 'excluir') {
+                // Se estava editando exatamente esta área, sai do modo edição
+                // antes de remover — evita state stale após o delete.
+                if (editandoAreaId === id) _resetFormArea();
+                // Verifica se há regras usando essa área antes de excluir —
+                // evita deixar regras órfãs apontando para uma área que não existe.
+                const regrasUsando = regrasCache.filter(r => r.centro_custo === a.nome);
+                const aviso = regrasUsando.length > 0
+                    ? `\n\nATENÇÃO: ${regrasUsando.length} regra(s) ainda usa(m) essa área. Recadastre-as após excluir.`
+                    : '';
+                if (!confirm(`Excluir a área "${a.nome}"?${aviso}`)) return;
+                try {
+                    await deleteDoc(doc(db, 'AreasContasPagar', id));
+                    registrarLogAutomático(usuarioLogadoNome, "EXCLUSÃO", "Áreas Contas a Pagar", `Excluiu a área "${a.nome}".`);
+                } catch (err) {
+                    console.error('[AreasContasPagar] delete falhou:', err);
+                    alert(err.code === 'permission-denied'
+                        ? 'Acesso negado: apenas administradores.'
+                        : `Falha ao excluir: ${err.message || 'erro desconhecido'}`);
+                }
             }
         });
 
@@ -2850,6 +3259,35 @@
             o.addEventListener('click', () => fornMFecharModal(o.getAttribute('data-modal-overlay')));
         });
 
+        // ── Helpers Multi-Select (Frente 1 — 2026-05-20) ───────────────────
+        // Padrão idêntico aos outros módulos (custo_folha_desktop, CP). Cada
+        // <select multiple> escondido pelo checkbox_multi.js continua sendo
+        // a fonte da verdade — esses helpers traduzem entre Array<string> e
+        // estado de option.selected, com a sentinela "Todos" como zero-state.
+        function getMultiValues(sel) {
+            if (!sel) return ['Todos'];
+            const vals = Array.from(sel.selectedOptions).map(o => o.value);
+            if (vals.length === 0 || vals.includes('Todos')) return ['Todos'];
+            return vals;
+        }
+        function isMultiAll(arr) {
+            return !arr || arr.length === 0 || arr.includes('Todos');
+        }
+        function setMultiValues(sel, vals) {
+            if (!sel) return;
+            const wanted = new Set(vals && vals.length ? vals : ['Todos']);
+            let qualquerSelecionado = false;
+            Array.from(sel.options).forEach(opt => {
+                opt.selected = wanted.has(opt.value);
+                if (opt.selected) qualquerSelecionado = true;
+            });
+            if (!qualquerSelecionado) {
+                const todos = sel.querySelector('option[value="Todos"]');
+                if (todos) todos.selected = true;
+            }
+            try { sel.dispatchEvent(new Event('cb-multi-sync')); } catch (_) {}
+        }
+
         // ── Snapshot live de /Fornecedores ────────────────────────────────
         let _fornMRegistros = [];
         let _fornMUltimosFiltrados = [];
@@ -2873,9 +3311,139 @@
                 // Limpa IDs órfãos
                 const ids = new Set(regs.map(r => r._id));
                 for (const id of [..._fornMSelecao]) if (!ids.has(id)) _fornMSelecao.delete(id);
+                // Re-popula os 3 multi-selects do novo modal "Filtros Avançados"
+                // com os valores observados na base atual + sentinelas. Frente 1.
+                _fornmRepopularFiltrosModal();
                 fornMRender();
             }, (err) => console.warn('[FornM] listener falhou:', err?.code || err?.message));
         }
+
+        // ── Filtros Avançados de Fornecedores (Frente 1/2/3 — 2026-05-20) ───
+        // Os 3 multi-selects do modal são populados em SÉRIE conforme o
+        // cache (_fornMRegistros) muda. Preservamos a seleção atual usando
+        // setMultiValues — fantasmas (valores selecionados que sumiram) são
+        // mantidos no DOM como "(sem dados)" pra não perder o recorte.
+        function _fornmPopularSelectFiltro(id, valores, labelTodos, sentinelas) {
+            const sel = document.getElementById(id);
+            if (!sel) return;
+            const previo = getMultiValues(sel);
+            sel.innerHTML = `<option value="Todos" class="font-bold border-b pb-1 mb-1">${labelTodos}</option>`;
+            // Sentinelas fixas (re-injetadas após o reset).
+            for (const sentinela of (sentinelas || [])) {
+                const opt = document.createElement('option');
+                opt.value = sentinela.value;
+                opt.textContent = sentinela.label;
+                sel.appendChild(opt);
+            }
+            const frag = document.createDocumentFragment();
+            for (const v of valores) {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                frag.appendChild(opt);
+            }
+            sel.appendChild(frag);
+            // Fantasmas — valores previamente marcados que sumiram da base.
+            const valoresSet = new Set(valores);
+            const sentinelasSet = new Set((sentinelas || []).map(s => s.value).concat(['Todos']));
+            const fantasmas = previo.filter(p => !sentinelasSet.has(p) && !valoresSet.has(p));
+            for (const v of fantasmas) {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = `${v} (sem dados)`;
+                sel.appendChild(opt);
+            }
+            setMultiValues(sel, previo);
+        }
+        function _fornmRepopularFiltrosModal() {
+            // Empresa: união de _fornMEmpresasDisponiveis (Base_Empresas) +
+            // empresas presentes nos próprios fornecedores (cobre legados).
+            const empSet = new Set();
+            for (const r of _fornMRegistros) {
+                const e = String(r.empresa || '').trim();
+                if (e) empSet.add(e);
+            }
+            for (const e of (_fornMEmpresasDisponiveis || [])) empSet.add(e);
+            const empresas = [...empSet].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            _fornmPopularSelectFiltro('fornm-filtro-empresa', empresas, 'Todas as Empresas', [
+                { value: '__SEM_EMPRESA__', label: '[ ⚠️ MOSTRAR SEM EMPRESA CADASTRADA ]' },
+            ]);
+            // Tipo: também extrai do cache pra não perder tipos legados (mesmo
+            // sendo categorias canônicas, opções vindas do HTML já cobrem).
+            // As 4 categorias do schema já estão no HTML estático; aqui só
+            // adicionamos as que aparecem no banco mas não no HTML (fantasmas).
+            const tiposBase = new Set(['Cliente', 'Fornecedor Externo', 'Fornecedor Interno', 'Fornecedor Interno - PJ']);
+            const tiposCache = new Set();
+            for (const r of _fornMRegistros) {
+                const t = String(r.tipo || '').trim();
+                if (t && !tiposBase.has(t)) tiposCache.add(t);
+            }
+            _fornmPopularSelectFiltro('fornm-filtro-tipo', [...tiposBase, ...tiposCache], 'Todos os Tipos', [
+                { value: '__SEM_TIPO__', label: '[ ⚠️ MOSTRAR SEM TIPO / CATEGORIA ]' },
+            ]);
+            // CC: união de _ccDisponiveis (AreasContasPagar) + CCs presentes
+            // nos fornecedores. Cobre CCs legados que não estão mais cadastrados.
+            const ccSet = new Set();
+            for (const r of _fornMRegistros) {
+                const c = String(r.centro_custo || '').trim();
+                if (c) ccSet.add(c);
+            }
+            for (const c of (_ccDisponiveis || [])) ccSet.add(c);
+            const ccs = [...ccSet].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            _fornmPopularSelectFiltro('fornm-filtro-cc', ccs, 'Todos os Centros', [
+                { value: '__SEM_CC__', label: '[ ⚠️ MOSTRAR SEM CENTRO DE CUSTO ]' },
+            ]);
+        }
+
+        // Chip + botão "Limpar" externo ficam visíveis quando há filtro ativo.
+        function _fornmAtualizarChipFiltros() {
+            const chip = document.getElementById('fornm-chip-filtros');
+            const btnLimpar = document.getElementById('btn-limpar-filtros-fornm');
+            const dims = [
+                ['Empresa', getMultiValues(document.getElementById('fornm-filtro-empresa'))],
+                ['Tipo',    getMultiValues(document.getElementById('fornm-filtro-tipo'))],
+                ['CC',      getMultiValues(document.getElementById('fornm-filtro-cc'))],
+            ];
+            const partes = [];
+            for (const [label, arr] of dims) {
+                if (isMultiAll(arr)) continue;
+                partes.push(arr.length === 1 ? `${label}: ${arr[0]}` : `${label}: ${arr.length}`);
+            }
+            if (!chip || !btnLimpar) return;
+            if (partes.length) {
+                chip.textContent = partes.join(' · ');
+                chip.classList.remove('hidden');
+                btnLimpar.classList.remove('hidden');
+                btnLimpar.classList.add('flex');
+            } else {
+                chip.classList.add('hidden');
+                btnLimpar.classList.add('hidden');
+                btnLimpar.classList.remove('flex');
+            }
+        }
+
+        function fornmLimparTodosFiltros() {
+            for (const id of ['fornm-filtro-empresa','fornm-filtro-tipo','fornm-filtro-cc']) {
+                setMultiValues(document.getElementById(id), ['Todos']);
+            }
+            _fornMPage = 1;
+            _fornmAtualizarChipFiltros();
+            fornMRender();
+        }
+
+        // Handlers — abrir/fechar/aplicar/limpar.
+        document.getElementById('btn-abrir-filtros-fornm').addEventListener('click', () => {
+            fornMAbrirModal('modal-filtros-fornecedores');
+        });
+        document.getElementById('btn-fechar-filtros-fornm').addEventListener('click', () => fornMFecharModal('modal-filtros-fornecedores'));
+        document.getElementById('btn-filtros-fornm-aplicar').addEventListener('click', () => {
+            _fornMPage = 1;
+            _fornmAtualizarChipFiltros();
+            fornMRender();
+            fornMFecharModal('modal-filtros-fornecedores');
+        });
+        document.getElementById('btn-filtros-fornm-limpar').addEventListener('click', () => fornmLimparTodosFiltros());
+        document.getElementById('btn-limpar-filtros-fornm').addEventListener('click', () => fornmLimparTodosFiltros());
 
         function fornMRender() {
             const tbody = document.getElementById('forn-master-corpo');
@@ -2884,19 +3452,41 @@
             const hint  = document.getElementById('forn-master-hint');
             const termo  = String(document.getElementById('forn-master-busca').value || '').toLowerCase().trim();
             const termoDig = termo.replace(/\D/g, '');
-            const filtroTipo = String(document.getElementById('forn-master-filtro-tipo').value || 'Todos');
-            // Auditoria 2026-05-18: filtro de CC com sentinela "__SEM_CC__".
-            // Permite o usuário sanear a base mostrando só fornecedores sem CC
-            // alocado (PJ que ainda não foi conectado pra Folha).
-            const filtroCC = String(document.getElementById('forn-master-filtro-cc').value || 'Todos');
+            // ── Filtros Avançados (Frente 3 — 2026-05-20) ────────────────
+            // 3 multi-selects substituem os 2 <select> nativos antigos. Cada
+            // dimensão é AND com as outras; OR interno entre marcações. As
+            // sentinelas __SEM_* aceitam combinar com valores específicos:
+            // ou o registro casa exatamente, ou o campo está vazio/null.
+            const empArr   = getMultiValues(document.getElementById('fornm-filtro-empresa'));
+            const tipoArr  = getMultiValues(document.getElementById('fornm-filtro-tipo'));
+            const ccArr    = getMultiValues(document.getElementById('fornm-filtro-cc'));
+            const empSet   = !isMultiAll(empArr)  ? new Set(empArr)  : null;
+            const tipoSet  = !isMultiAll(tipoArr) ? new Set(tipoArr) : null;
+            const ccSet    = !isMultiAll(ccArr)   ? new Set(ccArr)   : null;
+            const empFiltraSem  = empSet  && empSet.has('__SEM_EMPRESA__');
+            const tipoFiltraSem = tipoSet && tipoSet.has('__SEM_TIPO__');
+            const ccFiltraSem   = ccSet   && ccSet.has('__SEM_CC__');
 
             const filtrados = _fornMRegistros.filter(r => {
-                if (filtroTipo !== 'Todos' && String(r.tipo || '') !== filtroTipo) return false;
-                if (filtroCC === '__SEM_CC__') {
-                    const cc = String(r.centro_custo || '').trim();
-                    if (cc) return false; // tem CC → fora do recorte
-                } else if (filtroCC !== 'Todos') {
-                    if (String(r.centro_custo || '').trim() !== filtroCC) return false;
+                if (empSet) {
+                    const empReg = String(r.empresa || '').trim();
+                    const passaSem   = empFiltraSem && !empReg;
+                    const passaEspec = empSet.has(empReg);
+                    if (!passaSem && !passaEspec) return false;
+                }
+                if (tipoSet) {
+                    const tipoReg = String(r.tipo || '').trim();
+                    const passaSem   = tipoFiltraSem && !tipoReg;
+                    const passaEspec = tipoSet.has(tipoReg);
+                    if (!passaSem && !passaEspec) return false;
+                }
+                if (ccSet) {
+                    // Defesa: o spec menciona `area` como alternativa legada
+                    // ao `centro_custo`. Aceitamos ambos como fonte do "vazio".
+                    const ccReg = String(r.centro_custo || r.area || '').trim();
+                    const passaSem   = ccFiltraSem && !ccReg;
+                    const passaEspec = ccSet.has(ccReg);
+                    if (!passaSem && !passaEspec) return false;
                 }
                 if (!termo) return true;
                 const cod = String(r.codigo || '');
@@ -2909,7 +3499,7 @@
             if (filtrados.length !== _fornMUltimosFiltrados.length) _fornMPage = 1;
             _fornMUltimosFiltrados = filtrados;
 
-            const recorteAtivo = termo || filtroTipo !== 'Todos' || filtroCC !== 'Todos';
+            const recorteAtivo = termo || empSet || tipoSet || ccSet;
             if (hint) hint.textContent = recorteAtivo ? `${filtrados.length} resultado(s)` : '';
 
             if (!filtrados.length) {
@@ -2993,29 +3583,39 @@
                 master.indeterminate = marcadosVisiveis > 0 && marcadosVisiveis < totalVisivel;
             }
             const totalSel = _fornMSelecao.size;
-            // Contadores (delete + cc-massa).
+            // Contadores (delete + cc-massa + badge geral). Os menu items são
+            // sempre visíveis no dropdown — só o trigger "Ações em Lote" liga/
+            // desliga conforme a seleção. Frente 1 (auditoria 2026-05-20).
             const contadorDel = document.getElementById('forn-master-sel-count');
             const contadorCC  = document.getElementById('forn-master-cc-massa-count');
+            const badgeAcoes  = document.getElementById('fornm-sel-badge');
             if (contadorDel) contadorDel.textContent = totalSel;
             if (contadorCC)  contadorCC.textContent  = totalSel;
-            // Visibilidade dos botões bulk (delete + cc-massa). Cross-pages:
-            // a seleção persiste em _fornMSelecao (Set), então os botões refletem
-            // a soma total — mesmo registros em páginas/filtros não-visíveis.
-            const toggleBulk = (id, show) => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                if (show) { el.classList.remove('hidden'); el.classList.add('inline-flex'); }
-                else      { el.classList.add('hidden');     el.classList.remove('inline-flex'); }
-            };
-            toggleBulk('forn-master-btn-deletar', totalSel > 0);
-            toggleBulk('forn-master-btn-cc-massa', totalSel > 0);
+            if (badgeAcoes) {
+                badgeAcoes.textContent = String(totalSel);
+                badgeAcoes.classList.toggle('hidden', totalSel === 0);
+            }
+            // Trigger "Ações em Lote" — habilita só com seleção. Borda primária
+            // sutil quando ativo. Quando desabilitado, mantém disabled:opacity-40.
+            const trigger = document.getElementById('fornm-trigger-acoes');
+            if (trigger) {
+                trigger.disabled = totalSel === 0;
+                if (totalSel > 0) {
+                    trigger.style.border = '1px solid rgba(170,209,47,0.55)';
+                } else {
+                    trigger.style.border = '1px solid rgba(170,209,47,0.0)';
+                    // Se o usuário fechou a tela com o menu aberto, garante fechado.
+                    const menu = document.querySelector('[data-fornm-menu="acoes"]');
+                    if (menu) menu.classList.add('hidden');
+                }
+            }
         }
 
         // ── Wiring de UI ──────────────────────────────────────────────────
         document.getElementById('forn-master-busca').addEventListener('input', () => { _fornMPage = 1; fornMRender(); });
-        document.getElementById('forn-master-filtro-tipo').addEventListener('change', () => { _fornMPage = 1; fornMRender(); });
-        // Reset de página obrigatório ao filtrar por CC (auditoria 2026-05-18).
-        document.getElementById('forn-master-filtro-cc').addEventListener('change', () => { _fornMPage = 1; fornMRender(); });
+        // Os filtros de Tipo/CC migraram para o modal "Filtros Avançados"
+        // (Frente 1 — 2026-05-20). Os listeners do botão Aplicar daquele
+        // modal já chamam fornMRender + _fornmAtualizarChipFiltros.
         document.getElementById('forn-master-pag-prev').addEventListener('click', () => {
             if (_fornMPage <= 1) return; _fornMPage -= 1; fornMRender();
         });
@@ -3071,9 +3671,36 @@
             // pelo listener live de /AreasContasPagar — mudanças naquela coleção
             // refletem aqui em tempo real via _fornMRepopularSelectCC().
             _fornMRepopularSelectCC(reg.centro_custo);
+            // Frente 1 (2026-05-21) — Código de Benefício da Folha.
+            // Preenche e mostra o campo se o tipo for PJ.
+            const inpCB = document.getElementById('forn-master-edit-codigo-beneficio');
+            if (inpCB) inpCB.value = String(reg.codigo_beneficio_folha || '');
+            _fornMToggleCampoBeneficio('edit', String(reg.tipo || ''));
             _fornMEditId = docId;
             fornMAbrirModal('modal-forn-master-editar');
         }
+
+        // Frente 1 (2026-05-21) — Toggle do campo "Código de Benefício da Folha".
+        // Escopo "edit" | "novo". Quando o tipo selecionado é PJ, mostra o wrap
+        // e marca como required (pra HTML5 + checagem programática no save).
+        function _fornMToggleCampoBeneficio(scope, tipo) {
+            const ehPJ = String(tipo || '').trim() === 'Fornecedor Interno - PJ';
+            const wrapId = scope === 'edit' ? 'forn-master-edit-cb-wrap' : 'forn-novo-cb-wrap';
+            const inpId  = scope === 'edit' ? 'forn-master-edit-codigo-beneficio' : 'forn-novo-codigo-beneficio';
+            const wrap = document.getElementById(wrapId);
+            const inp  = document.getElementById(inpId);
+            if (!wrap || !inp) return;
+            wrap.classList.toggle('hidden', !ehPJ);
+            if (ehPJ) inp.setAttribute('required', 'required');
+            else      inp.removeAttribute('required');
+        }
+        // Listeners do select de tipo — tanto no modal edit quanto no manual.
+        document.getElementById('forn-master-edit-tipo').addEventListener('change', (e) => {
+            _fornMToggleCampoBeneficio('edit', e.target.value);
+        });
+        document.getElementById('forn-novo-tipo').addEventListener('change', (e) => {
+            _fornMToggleCampoBeneficio('novo', e.target.value);
+        });
 
         // Re-popula o <select> de Centro de Custo preservando o valor selecionado.
         // Chamado em 2 momentos:
@@ -3117,8 +3744,16 @@
             const nome    = String(document.getElementById('forn-master-edit-nome').value || '').trim().toUpperCase();
             const tipo    = String(document.getElementById('forn-master-edit-tipo').value || '').trim();
             const cc      = String(document.getElementById('forn-master-edit-cc').value || '').trim();
+            // Frente 1 (2026-05-21) — Código de Benefício da Folha. Obrigatório
+            // QUANDO tipo === "Fornecedor Interno - PJ"; ignorado nos demais
+            // tipos (campo é hidden e sem required nos outros casos).
+            const codigoBeneficio = String(document.getElementById('forn-master-edit-codigo-beneficio').value || '').trim().toUpperCase();
             if (!nome) { fornMToast('Nome do fornecedor é obrigatório.', 'warning', true); return; }
             if (!tipo) { fornMToast('Selecione o tipo de fornecedor.', 'warning', true); return; }
+            if (tipo === 'Fornecedor Interno - PJ' && !codigoBeneficio) {
+                fornMToast('Para "Fornecedor Interno - PJ" o "Código de Benefício da Folha" é obrigatório.', 'warning', true);
+                return;
+            }
             const btn = document.getElementById('btn-salvar-forn-master-editar');
             const ico = document.getElementById('forn-master-save-icon');
             btn.disabled = true;
@@ -3132,7 +3767,9 @@
                 // for liberada a perfis intermediários no futuro.
                 if (fornMIsAdmin()) {
                     const regAntes = _fornMRegistros.find(r => r._id === _fornMEditId) || null;
-                    const ccAntigo = regAntes?.centro_custo || null;
+                    const ccAntigo      = regAntes?.centro_custo || null;
+                    const empresaAntiga = String(regAntes?.empresa || '').trim();
+                    const tipoAntigo    = String(regAntes?.tipo    || '').trim();
                     const ccNovo = cc || null;
                     await updateDoc(doc(db, FORNM_COLECAO, _fornMEditId), {
                         empresa, nome, tipo,
@@ -3140,16 +3777,33 @@
                         // PJ → Custo de Folha sabe que precisa cair no fallback de
                         // lookup. String vazia poderia confundir o filtro do CC.
                         centro_custo: ccNovo,
+                        // Frente 1 (2026-05-21) — chave mestre para Benefícios PJ.
+                        // Persistido sempre como string normalizada (UPPER).
+                        // Quando tipo não é PJ, mantemos o valor antigo (se já
+                        // foi PJ antes e mudou de tipo) — não apagamos do banco
+                        // pra não perder o histórico de cruzamento.
+                        codigo_beneficio_folha: codigoBeneficio || null,
                         updated_at: serverTimestamp(),
                         updated_by: usuarioLogadoNome,
                     });
-                    // Cascata de CC (V6 Item 4): só dispara quando o CC mudou.
-                    // Loga e mostra no toast a quantidade real de faturas atualizadas.
+                    // Cascata para ContasAPagar (Frente 3 — 2026-05-20). Dispara
+                    // só para os campos que mudaram. Os 3 alvos: centro_custo
+                    // (legado V6 Item 4), empresa (cascata fiel ao nome) e
+                    // tipo_entidade (campo da fatura ≠ "tipo" do fornecedor).
                     let cascataMsg = '';
+                    const codFornEdit = regAntes?.codigo ?? _fornMEditId;
                     if (ccAntigo !== ccNovo) {
-                        const codFornEdit = regAntes?.codigo ?? _fornMEditId;
-                        const aplicados = await cpCascataCentroCusto(codFornEdit, ccNovo);
-                        if (aplicados > 0) cascataMsg = ` ${aplicados} fatura(s) atualizada(s) em cascata.`;
+                        const apl = await cpCascataCampoFornecedor(codFornEdit, 'centro_custo', ccNovo);
+                        if (apl > 0) cascataMsg += ` ${apl} fatura(s) atualizada(s) em cascata (CC).`;
+                    }
+                    if (empresaAntiga !== empresa) {
+                        const apl = await cpCascataCampoFornecedor(codFornEdit, 'empresa', empresa || null);
+                        if (apl > 0) cascataMsg += ` ${apl} fatura(s) atualizada(s) em cascata (Empresa).`;
+                    }
+                    if (tipoAntigo !== tipo) {
+                        // Mapeamento de nome: Fornecedor.tipo → ContasAPagar.tipo_entidade.
+                        const apl = await cpCascataCampoFornecedor(codFornEdit, 'tipo_entidade', tipo || null);
+                        if (apl > 0) cascataMsg += ` ${apl} fatura(s) atualizada(s) em cascata (Tipo).`;
                     }
                     fornMToast('Fornecedor atualizado.' + cascataMsg, 'check_circle');
                 } else {
@@ -3160,13 +3814,14 @@
                         nome:    regAtual.nome || '',
                         tipo:    regAtual.tipo || '',
                         centro_custo: regAtual.centro_custo || null,
+                        codigo_beneficio_folha: regAtual.codigo_beneficio_folha || '',
                     } : null;
                     await fornMCriarSolicitacao({
                         tipo_operacao: 'UPDATE',
                         colecao_alvo: FORNM_COLECAO,
                         doc_id_alvo: _fornMEditId,
                         dados_antigos: antes,
-                        dados_novos: { empresa, nome, tipo, centro_custo: cc || null },
+                        dados_novos: { empresa, nome, tipo, centro_custo: cc || null, codigo_beneficio_folha: codigoBeneficio || null },
                         resumo: regAtual
                             ? `Editar ${regAtual.nome} (#${regAtual.codigo})`
                             : `Editar fornecedor #${_fornMEditId}`,
@@ -3214,30 +3869,46 @@
         // Implementação: query where('codigo_fornecedor','==',cod) → writeBatch
         // em chunks. Best-effort (loga erro mas não barra o save principal).
         async function cpCascataCentroCusto(codigoFornecedor, novoCC) {
+            // Mantido por compat (delegação) — o motor genérico cobre o caso.
+            return cpCascataCampoFornecedor(codigoFornecedor, 'centro_custo', novoCC);
+        }
+
+        // ── Cascata genérica: Fornecedor → ContasAPagar (Frente 3 — 2026-05-20) ──
+        // Estende o padrão original do CC pra QUALQUER campo cascateável.
+        // Hoje usado por: centro_custo, empresa, tipo_entidade. Permite
+        // propagar a edição do Fornecedor pra toda a vida operacional das
+        // faturas vinculadas — sem isso, dashboards e auditorias divergem.
+        // `campo` é o NOME do campo em ContasAPagar (alvo); o caller é quem
+        // sabe a tradução (Fornecedor.tipo → ContasAPagar.tipo_entidade).
+        async function cpCascataCampoFornecedor(codigoFornecedor, campo, novoValor) {
             if (codigoFornecedor == null || codigoFornecedor === '') return 0;
+            if (!campo) return 0;
             try {
-                // Normalização do código pra match com a coleção ContasAPagar.
-                // O ETL grava `codigo_fornecedor` como Number quando possível;
-                // tentamos AMBAS formas pra cobrir bases legadas.
                 const codNum = Number(codigoFornecedor);
                 const codStr = String(codigoFornecedor);
-                const ccFinal = novoCC == null ? null : (String(novoCC).trim() || null);
+                // Normaliza vazio → null pro centro_custo (compat com schema
+                // legado do Custo de Folha); demais campos aceitam string vazia.
+                let valorFinal;
+                if (novoValor == null) {
+                    valorFinal = null;
+                } else {
+                    const s = String(novoValor).trim();
+                    valorFinal = (campo === 'centro_custo') ? (s || null) : s;
+                }
 
                 const queries = [
                     query(collection(db, 'ContasAPagar'), where('codigo_fornecedor', '==', codNum)),
                 ];
-                // Se o código não foi conversível ou tem zeros à esquerda, busca
-                // também por string. Branches independentes — Firestore não tem OR.
+                // Firestore não tem OR — branches independentes pra cobrir
+                // bases legadas que gravaram codigo_fornecedor como string.
                 if (codStr !== String(codNum)) {
                     queries.push(query(collection(db, 'ContasAPagar'), where('codigo_fornecedor', '==', codStr)));
                 }
-
                 const idsAtingidos = new Set();
                 for (const q of queries) {
                     const snap = await getDocs(q);
                     snap.forEach(d => idsAtingidos.add(d.id));
                 }
-
                 const ids = [...idsAtingidos];
                 if (!ids.length) return 0;
 
@@ -3248,20 +3919,19 @@
                     const b = writeBatch(db);
                     for (const id of fatia) {
                         b.update(doc(db, 'ContasAPagar', id), {
-                            centro_custo: ccFinal,
+                            [campo]: valorFinal,
                             updated_at: serverTimestamp(),
                             updated_by: usuarioLogadoNome,
-                            cascata_origem: `fornecedor#${codStr}`,
+                            cascata_origem: `fornecedor#${codStr}#${campo}`,
                         });
                     }
                     await b.commit();
                     aplicados += fatia.length;
-                    // Yield pro browser — main thread fluida em bases grandes.
                     await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
                 }
                 return aplicados;
             } catch (err) {
-                console.warn('[Cascata CC] falhou (best-effort):', err?.code || err?.message);
+                console.warn(`[Cascata ${campo}] falhou (best-effort):`, err?.code || err?.message);
                 return 0;
             }
         }
@@ -3277,6 +3947,188 @@
                 criado_em: serverTimestamp(),
             });
         }
+
+        // ── Dropdowns Premium (Frente 1 — 2026-05-20) ─────────────────────
+        // Toggle dos 3 menus flutuantes na toolbar do Banco de Fornecedores.
+        // Apenas um pode estar aberto por vez; clique fora fecha. Clicar em
+        // um item do menu primeiro executa a ação (handlers existentes) e
+        // depois fecha o menu — listener delegado no document captura ambos.
+        function _fornmFecharTodosDropdowns(excecaoSlug) {
+            document.querySelectorAll('[data-fornm-menu]').forEach(menu => {
+                if (menu.getAttribute('data-fornm-menu') === excecaoSlug) return;
+                menu.classList.add('hidden');
+            });
+        }
+        document.querySelectorAll('[data-fornm-trigger]').forEach(trig => {
+            trig.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (trig.disabled) return;
+                const slug = trig.getAttribute('data-fornm-trigger');
+                const menu = document.querySelector(`[data-fornm-menu="${slug}"]`);
+                if (!menu) return;
+                const jaAberto = !menu.classList.contains('hidden');
+                _fornmFecharTodosDropdowns();
+                if (!jaAberto) menu.classList.remove('hidden');
+            });
+        });
+        // Clique em qualquer item de menu fecha o dropdown depois (microtask).
+        document.querySelectorAll('[data-fornm-menu] button').forEach(item => {
+            item.addEventListener('click', () => {
+                setTimeout(() => _fornmFecharTodosDropdowns(), 0);
+            });
+        });
+        // Clique fora ou Esc — fecha tudo.
+        document.addEventListener('click', (e) => {
+            // Mantém aberto se o clique foi dentro de qualquer wrapper de dropdown.
+            if (e.target.closest('[data-fornm-dropdown]')) return;
+            _fornmFecharTodosDropdowns();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') _fornmFecharTodosDropdowns();
+        });
+
+        // ── Alteração em Massa Genérica (Empresa / Tipo) — Frente 1 ───────
+        // _fornMCampoMassa guarda o campo alvo do modal genérico. Os 2
+        // handlers dos novos itens do menu Ações em Lote disparam abrirModal
+        // configurando o campo e o sub-painel correto.
+        let _fornMCampoMassa = null; // 'empresa' | 'tipo'
+        // Listener live de Base_Empresas — alimenta o dropdown do modal
+        // genérico de massa (apenas o caso "Empresa"). Snapshot leve, sem
+        // dependência do bootstrap principal — falha silenciosa.
+        let _fornMEmpresasDisponiveis = [];
+        onSnapshot(collection(db, 'Base_Empresas'), (snap) => {
+            const lista = [];
+            snap.forEach(d => {
+                const data = d.data() || {};
+                const nome = String(data.nome_fantasia || data.nome || d.id || '').trim();
+                if (nome) lista.push(nome);
+            });
+            lista.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            _fornMEmpresasDisponiveis = lista;
+            _fornMRepopularSelectEmpresaMassa();
+        }, (err) => console.warn('[Base_Empresas/FornM] listener falhou:', err?.code || err?.message));
+
+        function _fornMRepopularSelectEmpresaMassa() {
+            const sel = document.getElementById('fornm-massa-select-empresa');
+            if (!sel) return;
+            const v = sel.value;
+            const lista = _fornMEmpresasDisponiveis || [];
+            sel.innerHTML = '<option value="">Selecione a empresa…</option>' +
+                lista.map(n => `<option value="${escapeHTMLm(n)}">${escapeHTMLm(n)}</option>`).join('');
+            if (v && lista.includes(v)) sel.value = v;
+        }
+
+        function fornMAbrirMassaGenerico(campo) {
+            const n = _fornMSelecao.size;
+            if (!n) return;
+            _fornMCampoMassa = campo;
+            const tit = document.getElementById('fornm-massa-titulo');
+            const ico = document.getElementById('fornm-massa-icon');
+            const alvo = document.getElementById('fornm-massa-alvo');
+            if (alvo) alvo.textContent = String(n);
+            if (campo === 'empresa') {
+                if (tit) tit.textContent = 'Alterar Empresa em Massa';
+                if (ico) ico.textContent = 'domain';
+                document.getElementById('fornm-massa-painel-empresa').classList.remove('hidden');
+                document.getElementById('fornm-massa-painel-tipo').classList.add('hidden');
+                _fornMRepopularSelectEmpresaMassa();
+                document.getElementById('fornm-massa-select-empresa').value = '';
+            } else if (campo === 'tipo') {
+                if (tit) tit.textContent = 'Alterar Tipo em Massa';
+                if (ico) ico.textContent = 'category';
+                document.getElementById('fornm-massa-painel-empresa').classList.add('hidden');
+                document.getElementById('fornm-massa-painel-tipo').classList.remove('hidden');
+                document.getElementById('fornm-massa-select-tipo').value = '';
+            } else {
+                return;
+            }
+            fornMAbrirModal('modal-alterar-genrico-massa');
+        }
+        document.getElementById('forn-master-btn-empresa-massa').addEventListener('click', () => fornMAbrirMassaGenerico('empresa'));
+        document.getElementById('forn-master-btn-tipo-massa').addEventListener('click', () => fornMAbrirMassaGenerico('tipo'));
+        document.getElementById('btn-fechar-fornm-massa').addEventListener('click', () => fornMFecharModal('modal-alterar-genrico-massa'));
+        document.getElementById('btn-cancelar-fornm-massa').addEventListener('click', () => fornMFecharModal('modal-alterar-genrico-massa'));
+
+        async function fornMAplicarMassaGenerico() {
+            const ids = [..._fornMSelecao];
+            if (!ids.length || !_fornMCampoMassa) return;
+            let valor = '';
+            if (_fornMCampoMassa === 'empresa') {
+                valor = String(document.getElementById('fornm-massa-select-empresa').value || '').trim();
+            } else if (_fornMCampoMassa === 'tipo') {
+                valor = String(document.getElementById('fornm-massa-select-tipo').value || '').trim();
+            }
+            if (!valor) {
+                fornMToast(`Selecione um valor para ${_fornMCampoMassa === 'empresa' ? 'a empresa' : 'o tipo'}.`, 'warning', true);
+                return;
+            }
+            const btn = document.getElementById('btn-confirmar-fornm-massa');
+            btn.disabled = true;
+            try {
+                if (fornMIsAdmin()) {
+                    // writeBatch + cascata para ContasAPagar. Empresa cascateia
+                    // pra mesmo campo `empresa`; Tipo cascateia pra `tipo_entidade`.
+                    let aplicados = 0;
+                    let cascataTotal = 0;
+                    const campoFatura = _fornMCampoMassa === 'tipo' ? 'tipo_entidade' : 'empresa';
+                    for (let i = 0; i < ids.length; i += FORNM_CHUNK) {
+                        const fatia = ids.slice(i, i + FORNM_CHUNK);
+                        const batch = writeBatch(db);
+                        for (const id of fatia) {
+                            batch.update(doc(db, FORNM_COLECAO, id), {
+                                [_fornMCampoMassa]: valor,
+                                updated_at: serverTimestamp(),
+                                updated_by: usuarioLogadoNome,
+                            });
+                        }
+                        await batch.commit();
+                        aplicados += fatia.length;
+                        // Cascata por fornecedor — uma chamada por código.
+                        for (const id of fatia) {
+                            const reg = _fornMRegistros.find(r => r._id === id);
+                            const cod = reg?.codigo ?? id;
+                            const apl = await cpCascataCampoFornecedor(cod, campoFatura, valor);
+                            cascataTotal += (apl || 0);
+                        }
+                        // Yield ao browser entre macro-chunks.
+                        await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+                    }
+                    const labelCampo = _fornMCampoMassa === 'empresa' ? 'empresa' : 'tipo';
+                    fornMToast(`${aplicados} fornecedor(es) atualizado(s) (${labelCampo}). ${cascataTotal} fatura(s) em cascata.`, 'check_circle');
+                } else {
+                    // Esteira: 1 UPDATE por fornecedor com snapshot antes/depois.
+                    let pendentes = 0;
+                    for (const id of ids) {
+                        const reg = _fornMRegistros.find(r => r._id === id);
+                        const antesObj = reg ? { [_fornMCampoMassa]: (reg[_fornMCampoMassa] || '') } : null;
+                        await fornMCriarSolicitacao({
+                            tipo_operacao: 'UPDATE',
+                            colecao_alvo: FORNM_COLECAO,
+                            doc_id_alvo: id,
+                            dados_antigos: antesObj,
+                            dados_novos: { [_fornMCampoMassa]: valor },
+                            resumo: reg
+                                ? `Alterar ${_fornMCampoMassa} de "${reg.nome}" (#${reg.codigo}) → "${valor}"`
+                                : `Alterar ${_fornMCampoMassa} (#${id}) → "${valor}"`,
+                        });
+                        pendentes++;
+                    }
+                    fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
+                }
+                _fornMSelecao.clear();
+                if (typeof fornMRender === 'function') fornMRender();
+                fornMFecharModal('modal-alterar-genrico-massa');
+            } catch (err) {
+                console.error('[FornM massa genérico] falhou:', err);
+                const motivo = err?.code === 'permission-denied'
+                    ? 'Acesso negado pelo Firestore.'
+                    : (err?.message || 'erro desconhecido');
+                fornMToast('Falha ao aplicar alteração em massa: ' + motivo, 'error', true);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        document.getElementById('btn-confirmar-fornm-massa').addEventListener('click', () => fornMAplicarMassaGenerico());
 
         // ── Excluir em massa ──────────────────────────────────────────────
         document.getElementById('forn-master-btn-deletar').addEventListener('click', () => {
@@ -3464,23 +4316,15 @@
         }
 
         // Helper único chamado pelo listener de AreasContasPagar — mantém os
-        // 2 selects (filtro-cc + cadastro-manual + cc-massa) sincronizados.
+        // selects auxiliares sincronizados. O filtro de CC da toolbar virou
+        // o novo modal "Filtros Avançados" (Frente 1 — 2026-05-20) e é
+        // re-populado via _fornmRepopularFiltrosModal a cada mudança de cache.
         function _fornMRepopularSelectsCCsAuxiliares() {
-            // Filtro de CC na toolbar — preserva o valor selecionado.
-            const selFiltro = document.getElementById('forn-master-filtro-cc');
-            if (selFiltro) {
-                const atual = selFiltro.value;
-                selFiltro.innerHTML =
-                    '<option value="Todos">Todos os CCs</option>' +
-                    '<option value="__SEM_CC__" class="text-amber-700 font-bold">[ SEM CENTRO DE CUSTO / NÃO ALOCADO ]</option>';
-                for (const nome of (_areasContasPagarNomes || [])) {
-                    const opt = document.createElement('option');
-                    opt.value = nome; opt.textContent = nome;
-                    selFiltro.appendChild(opt);
-                }
-                // Restaura se ainda existir; senão volta pra "Todos".
-                const opcoes = [...selFiltro.options].map(o => o.value);
-                selFiltro.value = opcoes.includes(atual) ? atual : 'Todos';
+            // Re-popula o modal "Filtros Avançados" também — área pode ter
+            // sido adicionada/renomeada em AreasContasPagar e precisa aparecer
+            // na lista do CC sem precisar de refresh manual.
+            if (typeof _fornmRepopularFiltrosModal === 'function') {
+                _fornmRepopularFiltrosModal();
             }
             fornMPopularSelectCCMassa();
             fornMPopularSelectCCNovo();
@@ -3493,6 +4337,10 @@
             document.getElementById('forn-novo-nome').value    = '';
             document.getElementById('forn-novo-tipo').value    = '';
             document.getElementById('forn-novo-cc').value      = '';
+            // Frente 1 (2026-05-21) — reseta campo + esconde o wrap CB.
+            const inpCBNovo = document.getElementById('forn-novo-codigo-beneficio');
+            if (inpCBNovo) inpCBNovo.value = '';
+            _fornMToggleCampoBeneficio('novo', '');
             document.getElementById('forn-novo-codigo-hint').textContent = 'Único — não pode existir na base.';
             document.getElementById('forn-novo-codigo-hint').className = 'text-[10px] text-slate-400 mt-1';
             fornMPopularSelectCCNovo();
@@ -3527,9 +4375,15 @@
             const nome    = String(document.getElementById('forn-novo-nome').value || '').trim().toUpperCase();
             const tipo    = String(document.getElementById('forn-novo-tipo').value || '').trim();
             const cc      = String(document.getElementById('forn-novo-cc').value || '').trim();
+            // Frente 1 (2026-05-21) — Código de Benefício da Folha.
+            const codigoBeneficio = String(document.getElementById('forn-novo-codigo-beneficio').value || '').trim().toUpperCase();
             if (!codigo) { fornMToast('Código numérico é obrigatório.', 'warning', true); return; }
             if (!nome)   { fornMToast('Nome do fornecedor é obrigatório.', 'warning', true); return; }
             if (!tipo)   { fornMToast('Selecione o tipo de fornecedor.', 'warning', true); return; }
+            if (tipo === 'Fornecedor Interno - PJ' && !codigoBeneficio) {
+                fornMToast('Para "Fornecedor Interno - PJ" o "Código de Benefício da Folha" é obrigatório.', 'warning', true);
+                return;
+            }
             const docId = String(codigo);
             const btn = document.getElementById('btn-salvar-cadastro-manual');
             const ico = document.getElementById('forn-novo-save-icon');
@@ -3548,6 +4402,7 @@
                     await setDoc(doc(db, FORNM_COLECAO, docId), {
                         codigo, nome, empresa, tipo,
                         centro_custo: cc || null,
+                        codigo_beneficio_folha: codigoBeneficio || null,
                         updated_at: serverTimestamp(),
                         created_at: serverTimestamp(),
                         criado_por: usuarioLogadoNome,
@@ -3559,7 +4414,7 @@
                         colecao_alvo: FORNM_COLECAO,
                         doc_id_alvo: docId,
                         dados_antigos: null,
-                        dados_novos: { codigo, nome, empresa, tipo, centro_custo: cc || null },
+                        dados_novos: { codigo, nome, empresa, tipo, centro_custo: cc || null, codigo_beneficio_folha: codigoBeneficio || null },
                         resumo: `Cadastrar ${nome} (#${codigo})`,
                     });
                     fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
