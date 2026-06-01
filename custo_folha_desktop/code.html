@@ -1290,13 +1290,43 @@
                         const valor = Number(data.valor_total) || 0;
                         if (valor > 0) {
                             mapPJ.set(chavePJ, (mapPJ.get(chavePJ) || 0) + valor);
-                            const vt = Number(data.valor_vt) || 0;
-                            const vr = Number(data.valor_vr) || 0;
-                            const prev = mapFull.get(chavePJ) || { valor_vt: 0, valor_vr: 0, valor_total: 0 };
+                            // Auditoria 2026-05-28 (Abertura Analítica do Export):
+                            // capturamos também `valor_va` (Vale Alimentação) e
+                            // `valor_med` (Assistência Médica) pra que o motor
+                            // de exportação consiga abrir VT / VR / AM em colunas
+                            // dedicadas ao invés de jogar tudo em "Outros".
+                            // Auditoria 2026-05-28 (Quebra Analítica de Descontos):
+                            // capturamos também os descontos (`desconto_*`) e o
+                            // total de descontos pra que o export PJ possa abrir
+                            // (-) Descto VT/VR/AM/Outros simétrico aos proventos.
+                            const vt  = Number(data.valor_vt)  || 0;
+                            const vr  = Number(data.valor_vr)  || 0;
+                            const va  = Number(data.valor_va)  || 0;
+                            const med = Number(data.valor_med) || 0;
+                            const odo = Number(data.valor_odonto) || 0;
+                            const dvt  = Number(data.desconto_vt)   || 0;
+                            const dvr  = Number(data.desconto_vr)   || 0;
+                            const dva  = Number(data.desconto_va)   || 0;
+                            const dmed = Number(data.desconto_med)  || 0;
+                            const dodo = Number(data.desconto_odonto) || 0;
+                            const dtot = Number(data.total_descontos) || 0;
+                            const prev = mapFull.get(chavePJ) || {
+                                valor_vt: 0, valor_vr: 0, valor_va: 0, valor_med: 0, valor_odonto: 0, valor_total: 0,
+                                desconto_vt: 0, desconto_vr: 0, desconto_va: 0, desconto_med: 0, desconto_odonto: 0, total_descontos: 0,
+                            };
                             mapFull.set(chavePJ, {
-                                valor_vt:    prev.valor_vt + vt,
-                                valor_vr:    prev.valor_vr + vr,
-                                valor_total: prev.valor_total + valor,
+                                valor_vt:        prev.valor_vt        + vt,
+                                valor_vr:        prev.valor_vr        + vr,
+                                valor_va:        prev.valor_va        + va,
+                                valor_med:       prev.valor_med       + med,
+                                valor_odonto:    (prev.valor_odonto || 0) + odo,
+                                valor_total:     prev.valor_total     + valor,
+                                desconto_vt:     prev.desconto_vt     + dvt,
+                                desconto_vr:     prev.desconto_vr     + dvr,
+                                desconto_va:     prev.desconto_va     + dva,
+                                desconto_med:    prev.desconto_med    + dmed,
+                                desconto_odonto: (prev.desconto_odonto || 0) + dodo,
+                                total_descontos: prev.total_descontos + dtot,
                             });
                         }
                     }
@@ -1310,11 +1340,13 @@
                         vr_pago:               Number(data.valor_vr  || 0),
                         va_pago:               Number(data.valor_va  || 0),
                         med_pago:              Number(data.valor_med || 0),
+                        odonto_pago:           Number(data.valor_odonto || 0),
                         total_proventos_benef: Number(data.valor_total || 0),
                         desconto_vt:           Number(data.desconto_vt  || 0),
                         desconto_vr:           Number(data.desconto_vr  || 0),
                         desconto_va:           Number(data.desconto_va  || 0),
                         desconto_med:          Number(data.desconto_med || 0),
+                        desconto_odonto:       Number(data.desconto_odonto || 0),
                         total_descontos_benef: Number(data.total_descontos || 0),
                     });
                 });
@@ -1427,6 +1459,13 @@
     const _FOLHA_COD_VR  = '277';
     const _FOLHA_COD_VA  = '284';
     const _FOLHA_COD_MED = '279';
+    // Auditoria 2026-06-01 (Fix Odonto Zerado): o RH emite o ODONTOLÓGICO PAGO
+    // sob o código 281 ("Assis. Odontológica ( Valor Pago )") e o desconto de
+    // coparticipação sob 775 ("Descto de Assist. Odontológica"). O parser legado
+    // ignorava ambos — derrubando R$531,20 de provento e R$66,40 de desconto
+    // (totais RAFUL abril/2026) já na leitura do TXT. Agora capturados como
+    // par próprio, espelhando o tratamento VT/VR/VA/MED.
+    const _FOLHA_COD_ODONTO = '281';
     // Auditoria 2026-05-26 (Granularidade): descontos isolados por código.
     // Espelha exatamente o gerenciador_contas_pagar — cada código → propriedade
     // individual; total_descontos é derivado da soma dos 4 ao fechar o registro.
@@ -1434,6 +1473,7 @@
     const _FOLHA_COD_DESC_VR  = '773';
     const _FOLHA_COD_DESC_VA  = '776';
     const _FOLHA_COD_DESC_MED = '774';
+    const _FOLHA_COD_DESC_ODONTO = '775';
 
     function _folhaBenefParsearTXT(texto) {
         const linhas = String(texto || '').split(/\r?\n/);
@@ -1451,7 +1491,8 @@
             atual.total_descontos = (atual.desconto_vt || 0)
                 + (atual.desconto_vr || 0)
                 + (atual.desconto_va || 0)
-                + (atual.desconto_med || 0);
+                + (atual.desconto_med || 0)
+                + (atual.desconto_odonto || 0);
             registros.push(atual);
             atual = null;
         }
@@ -1520,11 +1561,13 @@
                     vr_pago: 0,
                     va_pago: 0,
                     med_pago: 0,
+                    odonto_pago: 0, // cód 281 — Assis. Odontológica (Valor Pago)
                     // Descontos individuais por código (auditoria 2026-05-26).
                     desconto_vt: 0,
                     desconto_vr: 0,
                     desconto_va: 0,
                     desconto_med: 0,
+                    desconto_odonto: 0, // cód 775 — Descto de Assist. Odontológica
                     total_descontos: 0, // derivado no fechar()
                     valor_liquido: 0,
                 };
@@ -1565,6 +1608,7 @@
                 else if (codE === _FOLHA_COD_VR)  atual.vr_pago  += valE;
                 else if (codE === _FOLHA_COD_VA)  atual.va_pago  += valE;
                 else if (codE === _FOLHA_COD_MED) atual.med_pago += valE;
+                else if (codE === _FOLHA_COD_ODONTO) atual.odonto_pago += valE;
                 // Edge case (auditoria): se a coluna esquerda vier vazia mas
                 // a direita tiver um código de DESCONTO (linhas tipo
                 // "                          || 771   Devolução de VR  570,00"),
@@ -1576,6 +1620,7 @@
                 else if (codE === _FOLHA_COD_DESC_VR  || codE === '771') atual.desconto_vr  += valE;
                 else if (codE === _FOLHA_COD_DESC_VA)                    atual.desconto_va  += valE;
                 else if (codE === _FOLHA_COD_DESC_MED)                   atual.desconto_med += valE;
+                else if (codE === _FOLHA_COD_DESC_ODONTO)                atual.desconto_odonto += valE;
             }
 
             // (5b) Coluna DIREITA — descontos isolados por código.
@@ -1590,6 +1635,7 @@
                 else if (codD === _FOLHA_COD_DESC_VR  || codD === '771') atual.desconto_vr  += valD;
                 else if (codD === _FOLHA_COD_DESC_VA)                    atual.desconto_va  += valD;
                 else if (codD === _FOLHA_COD_DESC_MED)                   atual.desconto_med += valD;
+                else if (codD === _FOLHA_COD_DESC_ODONTO)                atual.desconto_odonto += valD;
             }
         }
         if (atual) fechar(null);
@@ -1655,7 +1701,7 @@
                     if (ccForn) { centro_custo = ccForn; usouFallback = true; }
                 }
                 if (!forn) orfaos++; else if (usouFallback) usaramFallbackCC++;
-                const valor_total = reg.vt_pago + reg.vr_pago + reg.va_pago + reg.med_pago;
+                const valor_total = reg.vt_pago + reg.vr_pago + reg.va_pago + reg.med_pago + reg.odonto_pago;
                 docsParaGravar.push({
                     competencia: competenciaFinal,
                     fil_codigo: reg.fil_codigo,
@@ -1669,11 +1715,13 @@
                     valor_vr:        Number(reg.vr_pago)  || 0,
                     valor_va:        Number(reg.va_pago)  || 0,
                     valor_med:       Number(reg.med_pago) || 0,
+                    valor_odonto:    Number(reg.odonto_pago) || 0,
                     // Descontos isolados por código (auditoria 2026-05-26 — granularidade).
                     desconto_vt:     Number(reg.desconto_vt)  || 0,
                     desconto_vr:     Number(reg.desconto_vr)  || 0,
                     desconto_va:     Number(reg.desconto_va)  || 0,
                     desconto_med:    Number(reg.desconto_med) || 0,
+                    desconto_odonto: Number(reg.desconto_odonto) || 0,
                     total_descontos: Number(reg.total_descontos) || 0,
                     valor_liquido:   Number(reg.valor_liquido)   || 0,
                     valor_total:     Number(valor_total)         || 0,
@@ -2533,6 +2581,10 @@
             reg.Bnf_VR  = Number(benefTXT.vr_pago)  || 0;
             reg.Bnf_VA  = Number(benefTXT.va_pago)  || 0;
             reg.Bnf_MED = Number(benefTXT.med_pago) || 0;
+            // Auditoria 2026-06-01 (Fix Odonto): cód 281 (Assis. Odontológica
+            // Pago) entra como provento `Bnf_Odonto`; calcularTotais soma no
+            // bucket "beneficios" via prefixo Bnf_*.
+            reg.Bnf_Odonto = Number(benefTXT.odonto_pago) || 0;
             // Auditoria 2026-05-27 (TXT como Fonte de Verdade Absoluta):
             // injeta também os DESCONTOS de coparticipação sob prefixo
             // `BnfDesc_*`. calcularTotais lê esse prefixo e bloqueia
@@ -2542,6 +2594,10 @@
             reg.BnfDesc_VR  = Number(benefTXT.desconto_vr)  || 0;
             reg.BnfDesc_VA  = Number(benefTXT.desconto_va)  || 0;
             reg.BnfDesc_MED = Number(benefTXT.desconto_med) || 0;
+            // cód 775 (Descto de Assist. Odontológica) — coparticipação.
+            // Como BnfDesc_*, calcularTotais lê e o guard `usarSomenteTXT`
+            // suprime o desconto odonto do Excel pra não dobrar.
+            reg.BnfDesc_Odonto = Number(benefTXT.desconto_odonto) || 0;
             reg._has_benef_txt = true;
         } else {
             // Fallback de segurança — campos definidos como 0 pra não deixar
@@ -2550,6 +2606,7 @@
             reg.Bnf_VR  = reg.Bnf_VR  || 0;
             reg.Bnf_VA  = reg.Bnf_VA  || 0;
             reg.Bnf_MED = reg.Bnf_MED || 0;
+            reg.Bnf_Odonto = reg.Bnf_Odonto || 0;
         }
         return reg;
     }
@@ -4019,6 +4076,64 @@
     // Resolve Salário Base / Vencimentos / Descontos / Benefícios decompostos
     // para cada registro, respeitando o tipo. PJ usa _valor_fatura/lookup; CLT
     // usa calcularTotais. Auditoria 2026-05-26 Frente 3.
+    // Auditoria 2026-05-28 (Abertura Analítica do Export): a função abaixo
+    // decompõe os benefícios de um registro CLT/Diretor em colunas dedicadas
+    // VT / VR / AM, deixando "Outros" como resíduo. Une duas fontes:
+    //   (a) TXT analítico via prefixo Bnf_VT/VR/VA/MED (preferencial quando
+    //       `_has_benef_txt === true` — mesma lógica de `calcularTotais`).
+    //   (b) Excel canônico via SET_BNF_PAGO (fallback quando não há TXT).
+    // VR e VA são consolidados na mesma coluna ("Vale Refeição/Alimentação")
+    // por solicitação explícita do usuário (Roteiro 2026-05-28).
+    function _decomporBeneficiosCLT(reg, totalBeneficios) {
+        const tot = Number(totalBeneficios) || 0;
+        if (reg && reg._has_benef_txt === true) {
+            const vt = Number(reg.Bnf_VT)  || 0;
+            const vr = (Number(reg.Bnf_VR) || 0) + (Number(reg.Bnf_VA) || 0);
+            const am = Number(reg.Bnf_MED) || 0;
+            const outros = Math.max(0, tot - vt - vr - am);
+            return { vt, vr, am, outros };
+        }
+        // Sem TXT: lê os slugs canônicos do ETL Excel.
+        let vt = 0, vr = 0, am = 0;
+        for (const k of Object.keys(reg || {})) {
+            const raw = reg[k];
+            if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
+            if (k === 'VALE_TRANSPORTE_Valor')    { vt += raw; continue; }
+            if (k === 'VALE_REFEICAO_Valor')      { vr += raw; continue; }
+            if (k === 'VALE_ALIMENTACAO_Valor')   { vr += raw; continue; }
+            if (k === 'ASSISTENCIA_MEDICA_Valor') { am += raw; continue; }
+        }
+        const outros = Math.max(0, tot - vt - vr - am);
+        return { vt, vr, am, outros };
+    }
+
+    // Auditoria 2026-05-28 (Quebra Analítica de Descontos): espelha
+    // `_decomporBeneficiosCLT` no lado das deduções. Lê os prefixos
+    // BnfDesc_* do TXT analítico (fonte canônica quando `_has_benef_txt`)
+    // ou os slugs DESCTO_DE_* do Excel canônico. "outros" carrega o
+    // resíduo (ex.: coparticipação odontológica) pra manter a soma
+    // horizontal alinhada com `descontosBnf` do calcularTotais.
+    function _decomporDescontosCLT(reg, totalDescontos) {
+        const tot = Number(totalDescontos) || 0;
+        if (reg && reg._has_benef_txt === true) {
+            const vt = Number(reg.BnfDesc_VT)  || 0;
+            const vr = (Number(reg.BnfDesc_VR) || 0) + (Number(reg.BnfDesc_VA) || 0);
+            const am = Number(reg.BnfDesc_MED) || 0;
+            const outros = Math.max(0, tot - vt - vr - am);
+            return { vt, vr, am, outros };
+        }
+        let vt = 0, vr = 0, am = 0;
+        for (const k of Object.keys(reg || {})) {
+            const raw = reg[k];
+            if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
+            if (k === 'DESCTO_DE_VALE_TRANSPORTE_Valor')    { vt += raw; continue; }
+            if (k === 'DESCTO_DE_VALE_REFEICAO_Valor')      { vr += raw; continue; }
+            if (k === 'DESCTO_DE_ASSISTENCIA_MEDICA_Valor') { am += raw; continue; }
+        }
+        const outros = Math.max(0, tot - vt - vr - am);
+        return { vt, vr, am, outros };
+    }
+
     function _decomporRegistroParaExport(r) {
         if (r?.is_pj) {
             const codForn = String(r._codigo_fornecedor || '').trim();
@@ -4026,35 +4141,55 @@
             const chave = (codForn && compRef) ? `${compRef}_${codForn}` : '';
             const full = chave ? (_cacheBeneficiosPJFull.get(chave) || null) : null;
             const valor_vt = full ? Number(full.valor_vt) || 0 : 0;
-            const valor_vr = full ? Number(full.valor_vr) || 0 : 0;
+            // VR + VA consolidados (Vale Refeição/Alimentação).
+            const valor_vr = full ? ((Number(full.valor_vr) || 0) + (Number(full.valor_va) || 0)) : 0;
+            const valor_am = full ? Number(full.valor_med) || 0 : 0;
             const valor_total_benef = full ? Number(full.valor_total) || 0 : Number(r._valor_beneficios) || 0;
-            const valor_outros = Math.max(0, valor_total_benef - valor_vt - valor_vr);
+            const valor_outros = Math.max(0, valor_total_benef - valor_vt - valor_vr - valor_am);
+            // Descontos PJ (coparticipação) — vindos do cache enriquecido.
+            const desc_vt = full ? Number(full.desconto_vt) || 0 : 0;
+            const desc_vr = full ? ((Number(full.desconto_vr) || 0) + (Number(full.desconto_va) || 0)) : 0;
+            const desc_am = full ? Number(full.desconto_med) || 0 : 0;
+            const desc_total = full ? Number(full.total_descontos) || 0 : 0;
+            const desc_outros = Math.max(0, desc_total - desc_vt - desc_vr - desc_am);
             const fatura = Number(r._valor_fatura) || 0;
             return {
-                salario_base: fatura,           // valor nominal da PJ (fatura)
-                proventos:    fatura,           // proventos = mesma fatura (não há decomposição)
-                descontos:    0,                // PJ não tem descontos em folha
-                bnf_vt:       valor_vt,
-                bnf_vr:       valor_vr,
-                bnf_outros:   valor_outros,
-                liquido:      fatura,           // Líquido a Receber = valor da fatura (PJ não tem retenções aqui)
-                custo_total:  fatura + valor_total_benef, // Custo Total = fatura + benefícios
+                salario_base:     fatura,           // valor nominal da PJ (fatura)
+                outros_proventos: 0,                // PJ não tem outros vencimentos
+                bnf_vt:           valor_vt,
+                bnf_vr:           valor_vr,
+                bnf_am:           valor_am,
+                bnf_outros:       valor_outros,
+                desc_vt:          desc_vt,
+                desc_vr:          desc_vr,
+                desc_am:          desc_am,
+                desc_outros:      desc_outros,
+                liquido:          fatura,           // Líquido a Receber = valor da fatura (PJ não tem retenções aqui)
+                custo_total:      fatura + valor_total_benef - desc_total, // Custo Total = fatura + benefícios líquidos
             };
         }
-        // CLT / Diretor — reaproveita calcularTotais para paridade absoluta.
+        // CLT / Diretor — reaproveita calcularTotais para paridade absoluta no
+        // total, e decompõe via _decomporBeneficiosCLT / _decomporDescontosCLT
+        // para abrir as colunas de proventos e deduções.
         const t = calcularTotais(r);
+        const decBnf = _decomporBeneficiosCLT(r, t.beneficios);
+        const decDesc = _decomporDescontosCLT(r, t.descontosBnf);
+        const salario = Number(t.salarioBruto) || 0;
+        const vencimentos = Number(t.vencimentos) || 0;
         return {
-            salario_base: t.salarioBruto || 0,
-            proventos:    t.vencimentos || 0,
-            descontos:    t.descontosBnf || 0,
-            // Folha "pura" não tem decomposição VT/VR/Outros no schema legado —
-            // o bucket "beneficios" agrega tudo que o ETL classificou como Bnf_*.
-            // Reportamos no campo "Outros" para preservar o valor total agregado.
-            bnf_vt:       0,
-            bnf_vr:       0,
-            bnf_outros:   t.beneficios || 0,
-            liquido:      Math.max(0, (t.vencimentos || 0) - (t.descontosBnf || 0)),
-            custo_total:  t.total || 0,
+            salario_base:     salario,
+            // Outros vencimentos (horas extras, comissão, etc.) = vencimentos - salário.
+            outros_proventos: Math.max(0, vencimentos - salario),
+            bnf_vt:           decBnf.vt,
+            bnf_vr:           decBnf.vr,
+            bnf_am:           decBnf.am,
+            bnf_outros:       decBnf.outros,
+            desc_vt:          decDesc.vt,
+            desc_vr:          decDesc.vr,
+            desc_am:          decDesc.am,
+            desc_outros:      decDesc.outros,
+            liquido:          Math.max(0, vencimentos - (Number(t.descontosBnf) || 0)),
+            custo_total:      t.total || 0,
         };
     }
 
@@ -4113,6 +4248,132 @@
         }
     }
 
+    // ── Pré-scan dinâmico de verbas (Abertura Analítica Absoluta) ───────────
+    // Auditoria 2026-06-01 (Extinção do "Outros" — diretriz Controladoria):
+    // o export Completo deixa de usar buckets fixos com resíduo "Outros" e passa
+    // a VARRER todas as rubricas financeiras presentes nos registros, gerando UMA
+    // coluna por verba (INSS, FGTS, Salário, descontos…). Reaproveita o MESMO
+    // classificador do Modal Olho / calcularTotais — fonte da verdade contábil —
+    // pra decidir grupo, sinal e a supressão TXT × Excel. Nada é consolidado nem
+    // escondido: cada centavo aparece sob o nome real da sua rubrica.
+    const _GRUPOS_VERBA_EXPORT = [
+        { id: 'vencimentos',     prefixo: '(+) ' },
+        { id: 'encargos',        prefixo: '(+) Encargo · ' },
+        { id: 'beneficios',      prefixo: '(+) Benef · ' },
+        { id: 'descontos_bnf',   prefixo: '(-) Desc.Benef · ' },
+        { id: 'descontos_folha', prefixo: '(i) Retido · ' },
+        { id: 'outros_valores',  prefixo: '(~) ' },
+    ];
+    // Rótulos de negócio para os prefixos analíticos do TXT (Bnf_/BnfDesc_).
+    const _MAPA_ROTULO_BNF = { VT: 'Vale Transporte', VR: 'Vale Refeição', VA: 'Vale Alimentação', MED: 'Assist. Médica', AM: 'Assist. Médica', ODONTO: 'Assist. Odontológica' };
+    function _rotuloVerbaExport(k) {
+        const mB = /^Bnf_(.+)$/.exec(k);     if (mB) return _MAPA_ROTULO_BNF[mB[1].toUpperCase()] || rotuloBonitoChave(k);
+        const mD = /^BnfDesc_(.+)$/.exec(k); if (mD) return _MAPA_ROTULO_BNF[mD[1].toUpperCase()] || rotuloBonitoChave(k);
+        return rotuloBonitoChave(k);
+    }
+    // Classifica UMA chave de UM registro espelhando EXATAMENTE calcularTotais.
+    // Retorna { grupo, sinal, escopo } ou null se a chave não é rubrica financeira
+    // (ruído, identificação, data, quantidade, flag interna ou campo admin excluído).
+    function _verbaDoRegistroExport(reg, k, raw) {
+        if (typeof raw !== 'number' || !Number.isFinite(raw)) return null;
+        const ks = String(k);
+        if (ks.startsWith('_')) return null;                          // flags internas (_valor_fatura, _has_benef_txt…)
+        if (/^TOTAL/i.test(ks)) return null;                          // somatórios, não rubrica
+        if (IDENT_KEYS.has(k) || META_KEYS.has(k)) return null;       // identificação / metadados
+        if (/matricula|gestor|tipo_contrato|codigo/i.test(ks)) return null; // admin excluído por diretriz
+        if (ehChaveSuprimidaNoOlho(k)) return null;                   // ruído (HORARIO/PIS/PASEP/NIT…)
+        if (ehChaveData(k)) return null;                              // datas e prazos
+        if (ehChaveQtdeIdx(k)) return null;                           // quantidades / percentuais / _Qtde
+        if (k === 'salario_cadastral' || k === '_salario_cadastral_raw') return null;
+        if (k === 'total_beneficios_pago' || k === 'total_beneficios_desconto' || k === 'total_beneficios_liquido') return null;
+        // Auditoria 2026-06-01 (Espelho do Motor de Importação — fix DESCTO ODONTO zerado):
+        // NÃO há supressão TXT × Excel aqui. Diferente de calcularTotais (que suprime
+        // o Excel canônico pra não DOBRAR a SOMA), na exportação analítica cada verba é
+        // uma COLUNA própria — não existe soma a proteger. A supressão antiga zerava
+        // colunas legítimas (ex.: DESCTO_DE_ASSIST_ODONTOLOGICA_Valor, que não tem
+        // equivalente TXT) para todo funcionário com _has_benef_txt. Espelhamos o motor
+        // de IMPORTAÇÃO: toda rubrica que a leitura armazenou no registro vira coluna com
+        // seu valor bruto. Os totais (Líquido / Custo Total) seguem vindo do motor
+        // autoritativo _decomporRegistroParaExport, que mantém a própria consolidação.
+        // Precedência idêntica a calcularTotais (não reordenar).
+        if (isDescFolhaInfo(k))       return { grupo: 'descontos_folha', sinal: -1, escopo: 'folha' };
+        if (isEncargo(k))             return { grupo: 'encargos',        sinal: +1, escopo: 'folha' };
+        if (k.startsWith('Bnf_'))     return { grupo: 'beneficios',      sinal: +1, escopo: 'beneficios' };
+        if (k.startsWith('BnfDesc_')) return { grupo: 'descontos_bnf',   sinal: -1, escopo: 'beneficios' };
+        if (SET_BNF_PAGO.has(k))      return { grupo: 'beneficios',      sinal: +1, escopo: 'beneficios' };
+        if (isBnfDesc(k))             return { grupo: 'descontos_bnf',   sinal: -1, escopo: 'beneficios' };
+        if (isVencimento(k))          return { grupo: 'vencimentos',     sinal: +1, escopo: 'folha' };
+        // Dinheiro não mapeado → coluna NOMEADA própria (nunca um "Outros" agregado).
+        return { grupo: 'outros_valores', sinal: +1, escopo: 'folha' };
+    }
+
+    // ── Higienização de rubrica (Hot-fix de Sanitização — 2026-06-01) ───────
+    // Purifica o nome da verba pra um match contábil imune a acento, caixa,
+    // espaço (inclusive trailing space que o ETL legado deixa nas chaves),
+    // ponto, ponto-mediano '·', barra, traço e o sufixo técnico _Valor/_Qtde.
+    // É a MESMA função aplicada dos DOIS lados (pré-scan de cabeçalho E mapa de
+    // valores por funcionário), então a chave canônica sempre se reencontra.
+    function normalizarRubrica(texto) {
+        return String(texto || '')
+            .trim()                                  // tira o trailing space que o ETL legado deixa na chave
+            .replace(/[ _](Valor|Qtde)$/i, '')      // descarta o sufixo técnico do ETL ("X_Valor"/"X Valor")
+            .toUpperCase()
+            .normalize('NFD')                        // decompõe acentos em base + marca combinante
+            .replace(/[^A-Z0-9]/g, '');             // remove marcas combinantes, . / · espaços traços _ etc.
+    }
+
+    // Parser conservador de valor de verba. Aceita número OU string numérica
+    // (inclusive pt-BR "1.234,56" e "R$ 1.234,56"). Diretriz de segurança: NUNCA
+    // transforma string vazia / não-numérica em 0 — devolve null (verba AUSENTE),
+    // preservando centavos e evitando zeros fabricados.
+    function _numeroVerba(raw) {
+        if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+        if (typeof raw === 'string') {
+            const s = raw.trim();
+            if (s === '') return null;                              // vazio nunca vira 0
+            let t = s.replace(/[R$\s ]/g, '');
+            if (/,/.test(t)) {
+                // Vírgula presente → decimal pt-BR. Pontos são separador de milhar.
+                t = t.replace(/\./g, '').replace(',', '.');
+            } else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) {
+                // Só pontos, agrupados de 3 em 3 → milhar pt-BR ("1.000" = 1000).
+                // Blinda contra o erro 1000× de tratar "1.000" como 1,0.
+                t = t.replace(/\./g, '');
+            }
+            // Senão, o ponto é separador decimal (en) — Number() parseia direto.
+            const n = Number(t);
+            return Number.isFinite(n) ? n : null;
+        }
+        return null;
+    }
+
+    // Indexa as verbas financeiras de UM registro por CHAVE SANITIZADA.
+    // Reaproveita _verbaDoRegistroExport (classificação + supressão TXT×Excel) e
+    // _numeroVerba (parse robusto). Identidade = grupo + rubrica normalizada;
+    // variantes legadas da MESMA rubrica (espaço/acento/caixa) somam no mesmo
+    // bucket. Retorna Map("grupo::normKey" -> { normKey, grupo, sinal, escopo,
+    // valor, rawKey, label }).
+    function _indexarVerbasRegistro(reg) {
+        const idx = new Map();
+        if (!reg) return idx;
+        for (const k of Object.keys(reg)) {
+            const valor = _numeroVerba(reg[k]);
+            if (valor === null) continue;                          // ausente/não-numérico — nunca 0
+            const v = _verbaDoRegistroExport(reg, k, valor);
+            if (!v) continue;
+            const normKey = normalizarRubrica(k);
+            if (!normKey) continue;
+            const chave = v.grupo + '::' + normKey;
+            const ja = idx.get(chave);
+            if (ja) { ja.valor += valor; }                         // soma variantes da mesma rubrica
+            else idx.set(chave, {
+                normKey, grupo: v.grupo, sinal: v.sinal, escopo: v.escopo,
+                valor, rawKey: k, label: _rotuloVerbaExport(k),
+            });
+        }
+        return idx;
+    }
+
     // ── Motor único de exportação (Frente 3) ────────────────────────────────
     // Recebe `config = { profundidade: 'resumida'|'completa', escopo: { folha, beneficios } }`.
     // Resumida → delega para gerarExcelDeRegistros (cabeçalho gerencial legado).
@@ -4139,64 +4400,95 @@
             return gerarExcelDeRegistros(registros, contexto);
         }
 
-        // ── Completa (analítica) ──────────────────────────────────────────────
-        // Constrói linha por linha respeitando a ordem do spec.
-        const linhas = [];
+        // ── Completa (analítica DINÂMICA) ─────────────────────────────────────
+        // Auditoria 2026-06-01 (Extinção do "Outros" — Abertura Analítica Absoluta):
+        // arquitetura reescrita em 3 passos. NÃO há mais colunas fixas nem buckets
+        // residuais "Outros" — uma coluna por rubrica real encontrada na base.
+        // Colunas administrativas (Código/Matrícula, Tipo Contrato, Gestor) seguem
+        // excluídas (filtradas em _verbaDoRegistroExport e ausentes da identificação).
+
+        // PASSO 1 — PRÉ-SCAN com CHAVES SANITIZADAS: varre todos os registros,
+        // indexa cada um por rubrica normalizada (normalizarRubrica) e descobre
+        // dinamicamente as colunas. A identidade da coluna é "grupo::normKey", NÃO
+        // a string crua — assim variantes com espaço/acento/·/caixa convergem na
+        // MESMA coluna em vez de gerar colunas-fantasma zeradas.
+        // O índice de cada registro é cacheado pra reuso no PASSO 3.
+        const indicePorRegistro = [];          // alinhado a `registros` por posição
+        const colunasMap = new Map();          // "grupo::normKey" -> { grupo, sinal, normKey, label }
         for (const r of registros) {
-            const d = _decomporRegistroParaExport(r);
-            const tipoContrato = _resolverTipoContrato(r);
-            const cc = String(r?.centro_custo || '').trim();
-            linhas.push({
-                'Empresa/Filial': r?.empresa_atribuida || '—',
-                'Competência': _competenciaDeRegistroBR(r),
-                'Código/Matrícula': r?.matricula || r?._codigo_beneficio_folha || r?._codigo_fornecedor || '—',
-                'Nome do Colaborador': r?.nome || '—',
-                'Tipo Contrato': tipoContrato,
-                'Centro de Custo': cc || '—',
-                'Gestor Responsável': _areaGestorMap.get(cc) || '—',
-
-                // Colunas de Folha (zeradas se desmarcado no escopo).
-                'Salário Base / Valor Nominal': incluirFolha ? Number(d.salario_base) || 0 : 0,
-                '(+) Proventos / Vencimentos':  incluirFolha ? Number(d.proventos)    || 0 : 0,
-                '(-) Descontos em Folha':       incluirFolha ? -(Number(d.descontos)  || 0) : 0,
-
-                // Colunas de Benefícios (zeradas se desmarcado).
-                '(+) Benefício VT':       incluirBenef ? Number(d.bnf_vt)     || 0 : 0,
-                '(+) Benefício VR':       incluirBenef ? Number(d.bnf_vr)     || 0 : 0,
-                '(+) Outros Benefícios':  incluirBenef ? Number(d.bnf_outros) || 0 : 0,
-
-                // Totais consolidados — sempre presentes (auditoria).
-                '(=) Líquido a Receber':  Number(d.liquido)     || 0,
-                '(=) Custo Total para a Holding': Number(d.custo_total) || 0,
-            });
+            const idx = _indexarVerbasRegistro(r);
+            indicePorRegistro.push(idx);
+            for (const [chave, e] of idx) {
+                if (e.escopo === 'folha' && !incluirFolha) continue;      // respeita escopo Folha
+                if (e.escopo === 'beneficios' && !incluirBenef) continue; // respeita escopo Benefícios
+                if (!colunasMap.has(chave)) {
+                    colunasMap.set(chave, { grupo: e.grupo, sinal: e.sinal, normKey: e.normKey, label: e.label });
+                }
+            }
         }
+
+        // PASSO 2 — CABEÇALHO DINÂMICO: converte o mapa de verbas em colunas físicas,
+        // bloco a bloco (Proventos → Encargos → Benefícios → Descontos → Retidos →
+        // Outros Valores), ordenadas por rótulo. Cada coluna carrega sua `chave`
+        // sanitizada — a MESMA usada no PASSO 3 pra puxar o valor. Garante
+        // unicidade do header (json_to_sheet usa a string como chave do objeto-linha).
+        const colunas = []; // { header, chave, grupo, sinal }
+        const headersUsados = new Set();
+        for (const g of _GRUPOS_VERBA_EXPORT) {
+            const entradas = Array.from(colunasMap.entries())
+                .filter(([, meta]) => meta.grupo === g.id)
+                .map(([chave, meta]) => ({ chave, sinal: meta.sinal, normKey: meta.normKey, label: meta.label }))
+                .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+            for (const e of entradas) {
+                let header = g.prefixo + e.label;
+                if (headersUsados.has(header)) {
+                    header = `${g.prefixo}${e.label} [${e.normKey}]`;
+                    let n = 2;
+                    while (headersUsados.has(header)) header = `${g.prefixo}${e.label} [${e.normKey} ${n++}]`;
+                }
+                headersUsados.add(header);
+                colunas.push({ header, chave: e.chave, grupo: g.id, sinal: e.sinal });
+            }
+        }
+
+        // PASSO 3 — ALIMENTAÇÃO CONSOLIDADA: uma linha por funcionário; o valor de
+        // cada coluna vem do índice SANITIZADO do próprio registro (mesma chave
+        // canônica do cabeçalho → match perfeito, imune a acento/espaço/·). 0 só
+        // quando o funcionário realmente não possui a verba. Totais (Líquido /
+        // Custo Total) continuam do motor autoritativo _decomporRegistroParaExport.
+        const linhas = [];
+        registros.forEach((r, i) => {
+            const idx = indicePorRegistro[i] || new Map();
+            const d = _decomporRegistroParaExport(r);
+            const linha = {
+                'Empresa/Filial':      r?.empresa_atribuida || '—',
+                'Competência':         _competenciaDeRegistroBR(r),
+                'Nome do Colaborador': r?.nome || '—',
+                'Centro de Custo':     String(r?.centro_custo || '').trim() || '—',
+            };
+            for (const col of colunas) {
+                const e = idx.get(col.chave);                 // lookup por chave sanitizada
+                linha[col.header] = e ? (col.sinal * e.valor) : 0;
+            }
+            linha['(=) Líquido a Receber']          = Number(d.liquido)     || 0;
+            linha['(=) Custo Total para a Holding'] = Number(d.custo_total) || 0;
+            linhas.push(linha);
+        });
 
         const ws = window.XLSX.utils.json_to_sheet(linhas, { skipHeader: false });
 
-        // Largura mínima das colunas pra leitura ergonômica.
-        ws['!cols'] = [
-            { wch: 22 }, // Empresa/Filial
-            { wch: 12 }, // Competência
-            { wch: 18 }, // Código/Matrícula
-            { wch: 32 }, // Nome
-            { wch: 14 }, // Tipo
-            { wch: 24 }, // CC
-            { wch: 24 }, // Gestor
-            { wch: 18 }, // Salário Base
-            { wch: 18 }, // Proventos
-            { wch: 18 }, // Descontos
-            { wch: 14 }, // VT
-            { wch: 14 }, // VR
-            { wch: 16 }, // Outros Benefícios
-            { wch: 18 }, // Líquido
-            { wch: 20 }, // Custo Total
-        ];
-        // Formato BRL nas colunas financeiras (índices 7..14).
+        // Larguras: 4 colunas de identificação + N verbas dinâmicas + 2 totais.
+        const cols = [{ wch: 22 }, { wch: 12 }, { wch: 32 }, { wch: 24 }];
+        colunas.forEach(() => cols.push({ wch: 18 }));
+        cols.push({ wch: 18 }, { wch: 22 });
+        ws['!cols'] = cols;
+
+        // Formato BRL em todas as colunas numéricas (índice 4 → fim).
         const fmtBRL_excel = '"R$ "#,##0.00;[Red]-"R$ "#,##0.00';
-        const colsNum = [7, 8, 9, 10, 11, 12, 13, 14];
-        for (let r = 1; r <= linhas.length; r++) {
-            for (const c of colsNum) {
-                const addr = window.XLSX.utils.encode_cell({ r, c });
+        const totalColsNum = colunas.length + 2;
+        for (let rr = 1; rr <= linhas.length; rr++) {
+            for (let c = 4; c < 4 + totalColsNum; c++) {
+                const addr = window.XLSX.utils.encode_cell({ r: rr, c });
                 const cell = ws[addr];
                 if (!cell) continue;
                 cell.t = 'n';
@@ -4230,12 +4522,14 @@
 
     // ── Abre o novo modal de escopo, sincronizando estado dos controles ─────
     function abrirModalExportarFolhaOpcoes() {
-        // Estado inicial: Resumida selecionada, Escopo desabilitado.
-        const radResumida = document.querySelector('input[name="export-profundidade"][value="resumida"]');
-        if (radResumida) radResumida.checked = true;
+        // Estado inicial: Completa selecionada (espelho analítico absoluto é o
+        // produto padrão — diretriz Controladoria 2026-06-01), Escopo habilitado
+        // com Folha + Benefícios marcados.
+        const radCompleta = document.querySelector('input[name="export-profundidade"][value="completa"]');
+        if (radCompleta) radCompleta.checked = true;
         document.getElementById('export-escopo-folha').checked = true;
         document.getElementById('export-escopo-beneficios').checked = true;
-        _aplicarEstadoEscopo('resumida');
+        _aplicarEstadoEscopo('completa');
         _setExportFolhaOpcoesLoading(false);
         abrirModal('modal-exportar-folha-opcoes');
     }

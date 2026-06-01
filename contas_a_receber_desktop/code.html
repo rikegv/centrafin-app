@@ -450,8 +450,20 @@
         </table>
       </div>
       <div class="px-6 py-5 flex items-center justify-between border-t border-surface-container">
-        <span id="footer-count" class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Aguardando
-          dados...</span>
+        <div class="flex items-center gap-4">
+          <span id="footer-count" class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Aguardando
+            dados...</span>
+          <label class="flex items-center gap-2 text-xs font-medium text-on-surface-variant">
+            <span class="hidden sm:inline uppercase tracking-wider">Exibir</span>
+            <select id="select-itens-pagina" class="bg-surface-container border border-surface-container-high rounded-lg px-2 py-1 text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="0">Todos</option>
+            </select>
+          </label>
+        </div>
         <div id="paginacao-controles" class="flex items-center gap-2"></div>
       </div>
     </div>
@@ -1366,7 +1378,9 @@
 
     let todasAsNotas = [];
     let paginaAtual = 1;
-    const itensPorPagina = 10;
+    // Limite de linhas por página. Mutável via #select-itens-pagina (10/25/50/100/Todos).
+    // Default 50 pra viabilizar limpezas em lote de grande volume. 0 = exibe todos.
+    let itensPorPagina = 50;
     let idParaExcluir = null;
     let idParaEditar = null;
     const formatadorMoeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -2897,10 +2911,12 @@
       window.docsFiltradosAtual = docsFiltrados;
 
       const totalItens = docsFiltrados.length;
-      const totalPaginas = Math.ceil(totalItens / itensPorPagina) || 1;
+      // itensPorPagina === 0 => "Todos": uma única página com tudo.
+      const tamanhoPagina = itensPorPagina > 0 ? itensPorPagina : (totalItens || 1);
+      const totalPaginas = Math.ceil(totalItens / tamanhoPagina) || 1;
       if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
-      const inicio = (paginaAtual - 1) * itensPorPagina;
-      const fim = inicio + itensPorPagina;
+      const inicio = (paginaAtual - 1) * tamanhoPagina;
+      const fim = inicio + tamanhoPagina;
       const docsPagina = docsFiltrados.slice(inicio, fim);
 
       elTabelaCorpo.innerHTML = "";
@@ -3036,6 +3052,17 @@
       btnProx.innerHTML = '<span class="material-symbols-outlined text-base">chevron_right</span>';
       btnProx.onclick = () => { if (paginaAtual < total) { paginaAtual++; aplicarFiltros(); } };
       container.appendChild(btnProx);
+    }
+
+    // Seletor de itens por página (10/25/50/100/Todos). Volta pra página 1 e re-renderiza.
+    const selectItensPagina = document.getElementById('select-itens-pagina');
+    if (selectItensPagina) {
+      selectItensPagina.value = String(itensPorPagina);
+      selectItensPagina.addEventListener('change', () => {
+        itensPorPagina = parseInt(selectItensPagina.value, 10) || 0;
+        paginaAtual = 1;
+        aplicarFiltros();
+      });
     }
 
     function atualizarMetrics(docs) {

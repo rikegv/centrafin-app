@@ -646,14 +646,32 @@
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Competência</label>
-                <select id="cp-filtro-competencia" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todas as competências"
-                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
-                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as competências</option>
-                </select>
+        <!-- Período de Vencimento — seção dedicada (auditoria 2026-05-29 V3).
+             Reincorporado ao modal Filtrar Base como SEÇÃO PRÓPRIA FULL-WIDTH
+             (acima do grid lg:grid-cols-3), não como 1 célula do grid. Isso
+             dá conforto aos 2 inputs date e centraliza toda configuração de
+             recorte num único ponto. Inputs são transientes; fonte canônica
+             é _cpPeriodoComitado, comitada apenas no "Aplicar". -->
+        <div class="mb-5 p-4 rounded-xl bg-slate-50/70 border border-slate-100">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="material-symbols-outlined text-primary text-base">calendar_month</span>
+                <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Período de Vencimento</span>
+                <span class="text-[10px] text-slate-400 italic ml-1">opcional — deixe em branco para "sem limite"</span>
             </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">De (Data Inicial)</label>
+                    <input id="cp-filtro-periodo-ini" type="date"
+                           class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner" />
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Até (Data Final)</label>
+                    <input id="cp-filtro-periodo-fim" type="date"
+                           class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner" />
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
                 <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Status</label>
                 <select id="cp-filtro-status" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todos os status"
@@ -776,7 +794,7 @@
                 </div>
                 <h4 class="font-headline text-sm font-extrabold text-secondary">Importar Relatório Analítico de Benefícios (TXT)</h4>
                 <p class="text-[11px] text-slate-500 font-medium mt-1">Arquivo <strong>.txt</strong> · Parser por máquina de estados (Competência · Centro de Custo · Funcionário).</p>
-                <p class="text-[10px] text-slate-400 italic mt-2">Decompõe códigos 276/277/284/279 (VT/VR/VA/Médico) e descontos 672/773/774/776. Sem CC no TXT, usa o canônico do cadastro prévio.</p>
+                <p class="text-[10px] text-slate-400 italic mt-2">Decompõe códigos 276/277/284/279/281 (VT/VR/VA/Médico/Odonto) e descontos 672/773/774/776/775. Sem CC no TXT, usa o canônico do cadastro prévio.</p>
             </button>
             <button id="card-importar-txt" type="button"
                 class="text-left p-5 rounded-xl border border-slate-200 hover:border-primary hover:bg-primary/5 active:scale-[0.98] transition-all group">
@@ -1145,23 +1163,20 @@
     // <option>s em blocos de 500 via requestIdleCallback. Em série pra evitar
     // 4 cascatas paralelas que competem pelo mesmo idle time do browser.
     function _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresas, onDone) {
-        const compsOrd = [...comps].sort((a, b) => {
-            const ka = a.slice(3) + a.slice(0, 2);
-            const kb = b.slice(3) + b.slice(0, 2);
-            return kb.localeCompare(ka);
-        });
+        // Auditoria 2026-05-29: parâmetro `comps` mantido por compatibilidade
+        // com chamadores existentes, mas ignorado — Competência virou range
+        // de datas (Período) e não precisa mais ser populado dinamicamente.
+        void comps;
         const favsOrd = [...favs].sort((a, b) => a.localeCompare(b, 'pt-BR'));
         const despOrd = [...desp].sort((a, b) => a.localeCompare(b, 'pt-BR'));
         const ccsOrd  = [...ccs].sort((a, b) => a.localeCompare(b, 'pt-BR'));
         const empsOrd = [...(empresas || [])].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-        _popularSelectMultiChunked('cp-filtro-competencia', compsOrd, 'Todas as competências', () => {
-            _popularSelectMultiChunked('cp-filtro-favorecido', favsOrd, 'Todos os Favorecidos', () => {
-                _popularSelectMultiChunked('cp-filtro-despesa', despOrd, 'Todas as Despesas', () => {
-                    _popularSelectMultiChunked('cp-filtro-cc', ccsOrd, 'Todos os Centros', () => {
-                        _popularSelectMultiChunked('cp-filtro-empresa', empsOrd, 'Todas as Empresas', () => {
-                            if (typeof onDone === 'function') onDone();
-                        });
+        _popularSelectMultiChunked('cp-filtro-favorecido', favsOrd, 'Todos os Favorecidos', () => {
+            _popularSelectMultiChunked('cp-filtro-despesa', despOrd, 'Todas as Despesas', () => {
+                _popularSelectMultiChunked('cp-filtro-cc', ccsOrd, 'Todos os Centros', () => {
+                    _popularSelectMultiChunked('cp-filtro-empresa', empsOrd, 'Todas as Empresas', () => {
+                        if (typeof onDone === 'function') onDone();
                     });
                 });
             });
@@ -1288,7 +1303,14 @@
             try {
                 const estado = {
                     busca: _cpTermoBusca || '',
-                    competencia:   getMultiValues(document.getElementById('cp-filtro-competencia')),
+                    // Auditoria 2026-05-29 V2: Período lido da fonte canônica
+                    // `_cpPeriodoComitado` (não dos inputs DOM, que são
+                    // transientes do modal). Estado antigo `competencia: []`
+                    // em sessionStorage é silenciosamente ignorado.
+                    periodo: {
+                        ini: _cpPeriodoComitado.ini || '',
+                        fim: _cpPeriodoComitado.fim || '',
+                    },
                     status:        getMultiValues(document.getElementById('cp-filtro-status')),
                     favorecido:    getMultiValues(document.getElementById('cp-filtro-favorecido')),
                     despesa:       getMultiValues(document.getElementById('cp-filtro-despesa')),
@@ -1330,11 +1352,25 @@
                 if (_btnLimparBuscaCP) _btnLimparBuscaCP.classList.remove('hidden');
             }
         }
+        // Período (Vencimento) — V3: restaura `_cpPeriodoComitado` (fonte
+        // canônica) e sincroniza os inputs do modal Filtrar Base, caso já
+        // estejam no DOM. Estado antigo `est.competencia` é ignorado.
+        if (est.periodo && typeof est.periodo === 'object') {
+            // Aceita só strings ISO "YYYY-MM-DD"; resto cai em '' (sem filtro).
+            const isISO = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+            _cpPeriodoComitado = {
+                ini: isISO(est.periodo.ini) ? est.periodo.ini : '',
+                fim: isISO(est.periodo.fim) ? est.periodo.fim : '',
+            };
+            const inpIni = document.getElementById('cp-filtro-periodo-ini');
+            const inpFim = document.getElementById('cp-filtro-periodo-fim');
+            if (inpIni) inpIni.value = _cpPeriodoComitado.ini;
+            if (inpFim) inpFim.value = _cpPeriodoComitado.fim;
+        }
         // Multi-selects: setMultiValues lida com fantasmas (valores que
         // foram salvos antes de existirem na base atual — `_popularSelect­
         // MultiChunked` os mantém como "(sem dados)" pra não perder seleção).
         const mapeamento = [
-            ['cp-filtro-competencia',   est.competencia],
             ['cp-filtro-status',        est.status],
             ['cp-filtro-favorecido',    est.favorecido],
             ['cp-filtro-despesa',       est.despesa],
@@ -1410,8 +1446,48 @@
         'Cliente': new Set(['Cliente']),
     };
 
+    // ── Período (Vencimento) — fonte canônica do filtro ─────────────────────
+    // Auditoria 2026-05-29 V2: refator do UI movendo os inputs date pra um
+    // modal dedicado (#modal-cp-periodo). A leitura DOS INPUTS deixou de ser
+    // confiável (eles podem estar transientemente errados durante a edição
+    // do modal). Trocamos pela variável de módulo `_cpPeriodoComitado`,
+    // que é a única fonte da verdade do range aplicado.
+    //   - Aplicar Filtro (no modal) → copia inputs → _cpPeriodoComitado
+    //   - Cancelar/X/overlay → não tocam em _cpPeriodoComitado
+    //   - Abrir modal → copia _cpPeriodoComitado → inputs (estado limpo)
+    let _cpPeriodoComitado = { ini: '', fim: '' };
+
+    // Formata range ISO → label brasileira pra UI (botão gatilho + chip).
+    // Reusada pelo botão da topbar e pelo chip de filtros ativos.
+    function _cpFmtPeriodoBR(ini, fim) {
+        if (!ini && !fim) return null;
+        const br = (s) => s ? `${s.slice(8,10)}/${s.slice(5,7)}/${s.slice(0,4)}` : '';
+        if (ini && fim) {
+            // Espelha o swap silencioso da lógica de filtro pra UX consistente.
+            return ini <= fim ? `${br(ini)} → ${br(fim)}` : `${br(fim)} → ${br(ini)}`;
+        }
+        return ini ? `desde ${br(ini)}` : `até ${br(fim)}`;
+    }
+
+    // V3 (2026-05-29): Botão gatilho da topbar removido. O Período voltou
+    // pro modal "Filtrar Base" como seção dedicada full-width. Função
+    // `_cpAtualizarLabelGatilho` foi descontinuada; o feedback visual do
+    // recorte ativo fica no chip de filtros (#cp-chip-filtros) via helper
+    // compartilhado `_cpFmtPeriodoBR`.
+
     function aplicarFiltrosCP(registros) {
-        const compRefs   = getMultiValues(document.getElementById('cp-filtro-competencia'));
+        // Período (Vencimento) — V2: lê da fonte canônica `_cpPeriodoComitado`
+        // em vez dos inputs DOM (inputs ficam no modal e podem estar
+        // transientemente errados durante a edição). Comparação lexicográfica
+        // com `r.data_vencimento` (formato ISO "YYYY-MM-DD") é cronológica.
+        // Saneamento: se usuário inverte ini > fim, faz swap silencioso.
+        let periodoIni = _cpPeriodoComitado.ini || '';
+        let periodoFim = _cpPeriodoComitado.fim || '';
+        if (periodoIni && periodoFim && periodoIni > periodoFim) {
+            [periodoIni, periodoFim] = [periodoFim, periodoIni];
+        }
+        const usaPeriodo = !!(periodoIni || periodoFim);
+
         const statusArr  = getMultiValues(document.getElementById('cp-filtro-status'));
         const favsArr    = getMultiValues(document.getElementById('cp-filtro-favorecido'));
         const despArr    = getMultiValues(document.getElementById('cp-filtro-despesa'));
@@ -1420,7 +1496,6 @@
         const ccArr      = getMultiValues(document.getElementById('cp-filtro-cc'));
         const classArr   = getMultiValues(document.getElementById('cp-filtro-classificacao'));
 
-        const compSet  = !isMultiAll(compRefs)  ? new Set(compRefs)  : null;
         const statusSet = !isMultiAll(statusArr) ? new Set(statusArr) : null;
         const favSet   = !isMultiAll(favsArr)   ? new Set(favsArr)   : null;
         const despSet  = !isMultiAll(despArr)   ? new Set(despArr)   : null;
@@ -1448,7 +1523,12 @@
         // Busca rápida textual (auditoria 2026-05-18 V6 — Item 1).
         const termo = _cpTermoBusca;
         return registros.filter(r => {
-            if (compSet && !compSet.has(fmtCompetenciaBR(r))) return false;
+            if (usaPeriodo) {
+                const venc = String(r.data_vencimento || '');
+                if (!venc) return false;
+                if (periodoIni && venc < periodoIni) return false;
+                if (periodoFim && venc > periodoFim) return false;
+            }
             if (statusSet && !statusSet.has(statusVisual(r, hoje))) return false;
             if (favSet && !favSet.has(r.entidade || '')) return false;
             if (despSet && !despSet.has(r.categoria || '')) return false;
@@ -1692,8 +1772,12 @@
     function atualizarChipFiltros() {
         const chip = document.getElementById('cp-chip-filtros');
         const btnLimpar = document.getElementById('btn-limpar-filtros-cp');
+        // Período (Vencimento) — V2: lê da fonte canônica `_cpPeriodoComitado`
+        // via helper compartilhado `_cpFmtPeriodoBR` (reusado pelo label do
+        // botão gatilho da topbar). Garantia: chip e gatilho mostram o mesmo
+        // texto, sem divergência possível.
+        const periodoLabel = _cpFmtPeriodoBR(_cpPeriodoComitado.ini, _cpPeriodoComitado.fim);
         const dims = [
-            ['Comp', getMultiValues(document.getElementById('cp-filtro-competencia'))],
             ['Status', getMultiValues(document.getElementById('cp-filtro-status'))],
             ['Favorecido', getMultiValues(document.getElementById('cp-filtro-favorecido'))],
             ['Despesa', getMultiValues(document.getElementById('cp-filtro-despesa'))],
@@ -1703,6 +1787,7 @@
             ['Classif.', getMultiValues(document.getElementById('cp-filtro-classificacao'))],
         ];
         const partes = [];
+        if (periodoLabel) partes.push(`Período: ${periodoLabel}`);
         for (const [label, arr] of dims) {
             if (isMultiAll(arr)) continue;
             partes.push(arr.length === 1 ? `${label}: ${arr[0]}` : `${label}: ${arr.length}`);
@@ -1724,11 +1809,18 @@
     document.getElementById('btn-fechar-filtros-cp').addEventListener('click', () => fecharModal('modal-filtros-cp'));
 
     function limparTodosFiltros() {
-        ['cp-filtro-competencia','cp-filtro-status','cp-filtro-favorecido',
+        ['cp-filtro-status','cp-filtro-favorecido',
          'cp-filtro-despesa','cp-filtro-empresa','cp-filtro-tipo',
          'cp-filtro-cc','cp-filtro-classificacao'].forEach(id => {
             setMultiValues(document.getElementById(id), ['Todos']);
         });
+        // Período (Vencimento) — V3: zerar a fonte canônica E os inputs do
+        // modal Filtrar Base (se montados). Sem label de gatilho na topbar.
+        _cpPeriodoComitado = { ini: '', fim: '' };
+        const _inpPerIni = document.getElementById('cp-filtro-periodo-ini');
+        const _inpPerFim = document.getElementById('cp-filtro-periodo-fim');
+        if (_inpPerIni) _inpPerIni.value = '';
+        if (_inpPerFim) _inpPerFim.value = '';
         // Frente 1 (sticky filtros): "limpar" também zera a busca textual —
         // estado inicial canônico. Limpa o sessionStorage explicitamente pra
         // não restaurar nada no próximo F5.
@@ -1746,11 +1838,41 @@
         limparTodosFiltros();
     });
     document.getElementById('btn-filtros-cp-aplicar').addEventListener('click', () => {
+        // V3 (2026-05-29): commit do Período. Lê os inputs date e grava na
+        // fonte canônica `_cpPeriodoComitado` ANTES de renderTudo() — assim
+        // aplicarFiltrosCP() já enxerga o novo range no mesmo ciclo.
+        const _inpIni = document.getElementById('cp-filtro-periodo-ini');
+        const _inpFim = document.getElementById('cp-filtro-periodo-fim');
+        _cpPeriodoComitado = {
+            ini: String(_inpIni?.value || ''),
+            fim: String(_inpFim?.value || ''),
+        };
         _cpPage = 1; // mudança explícita de recorte → volta pra pág 1.
         renderTudo();
         _cpSalvarEstadoFiltros(); // sticky filtros (Frente 1)
         fecharModal('modal-filtros-cp');
     });
+
+    // Período (Vencimento) V3 — auditoria 2026-05-29. Reincorporado ao modal
+    // "Filtrar Base" como seção dedicada full-width. Fluxo:
+    //   - Abrir modal (btn-abrir-filtros-cp) → copia _cpPeriodoComitado → inputs
+    //   - Aplicar (btn-filtros-cp-aplicar)  → inputs → _cpPeriodoComitado + render
+    //   - Limpar (btn-filtros-cp-limpar)    → limparTodosFiltros() zera tudo
+    //   - Fechar sem Aplicar (X/overlay/btn-fechar) → inputs ficam stale,
+    //     mas próxima abertura reescreve com _cpPeriodoComitado (sem efeito real)
+    // A leitura no Aplicar é injetada via wrapping do handler já existente,
+    // que está logo abaixo (btn-filtros-cp-aplicar).
+    const _cpBtnAbrirFiltros = document.getElementById('btn-abrir-filtros-cp');
+    if (_cpBtnAbrirFiltros) {
+        _cpBtnAbrirFiltros.addEventListener('click', () => {
+            // Sincroniza inputs com o estado comitado ao abrir o modal —
+            // descarta edições anteriores não aplicadas.
+            const inpIni = document.getElementById('cp-filtro-periodo-ini');
+            const inpFim = document.getElementById('cp-filtro-periodo-fim');
+            if (inpIni) inpIni.value = _cpPeriodoComitado.ini || '';
+            if (inpFim) inpFim.value = _cpPeriodoComitado.fim || '';
+        });
+    }
 
     // ── Paginação CP — handlers (auditoria 2026-05-18, V5 ganhou First/Last) ─
     document.getElementById('cp-pag-first').addEventListener('click', () => {
@@ -2062,7 +2184,13 @@
     // ignorado (descrição/separadores variáveis entre versões do ERP).
     const RE_CP_CLIENTE = /Codigo\s*\/\s*No0*(\d+).*?iente\s*:\s*(.+?)\s*$/i;
     const RE_CP_DATA   = /(\d{2}\/\d{2}\/(?:\d{4}|\d{2}))/;
-    const RE_CP_VALOR  = /(\-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\-?\d+[.,]\d{2})/g;
+    // Auditoria 2026-05-29 (estornos): regex expandida pra capturar 3 formas
+    // de valor negativo que aparecem em TXTs do ERP:
+    //   1. Sinal prefixo:  -100,50    (já suportado)
+    //   2. Sinal sufixo:   100,50-    (convenção legado de mainframe)
+    //   3. Parênteses:     (100,50)   (notação contábil)
+    // O sinal é normalizado em cpParseValorBR; aqui só ampliamos a captura.
+    const RE_CP_VALOR  = /(\(?-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}\)?-?|\(?-?\d+[.,]\d{2}\)?-?)/g;
     const RE_CP_SITUACAO = /\b(Baixad[oa]|Pago|Aberto|Aberta|Pendente|Cancelad[oa]|Liquidad[oa]|Vencid[oa]|Provisionad[oa])\b/i;
     const RE_CP_IGNORAR = /^\s*(Pag\s*:|P[áa]g\s*\.|=+|-{3,}|TOTAL|Total\s+(geral|do)|SUB\s*-?\s*TOTAL|Subtotal)/i;
     // Auditoria 2026-05-20 (Frente 6 — Titulo/Ord): o ERP coloca o nº do
@@ -2076,6 +2204,24 @@
         if (s == null) return 0;
         let str = String(s).trim();
         if (!str) return 0;
+        // Auditoria 2026-05-29 (estornos): detectar o sinal ANTES da
+        // normalização decimal, porque os marcadores podem ser parênteses
+        // contábeis "(100,50)" ou sufixo legado "100,50-". Sem isso,
+        // parseFloat lia o número como positivo e os estornos somavam
+        // ao Total Geral em vez de deduzir.
+        let negativo = false;
+        if (str.startsWith('(') && str.endsWith(')')) {
+            negativo = true;
+            str = str.slice(1, -1).trim();
+        }
+        if (str.endsWith('-')) {
+            negativo = true;
+            str = str.slice(0, -1).trim();
+        }
+        if (str.startsWith('-')) {
+            negativo = !negativo; // (-X) ou -X- ainda é negativo; -- é positivo
+            str = str.slice(1).trim();
+        }
         const ultPonto = str.lastIndexOf('.');
         const ultVirg  = str.lastIndexOf(',');
         if (ultPonto !== -1 && ultVirg !== -1) {
@@ -2085,7 +2231,8 @@
             str = str.replace(',', '.');
         }
         const n = parseFloat(str);
-        return isFinite(n) ? n : 0;
+        if (!isFinite(n)) return 0;
+        return negativo ? -Math.abs(n) : n;
     }
     function cpDataBRtoISO(dataBR) {
         const partes = String(dataBR || '').split('/');
@@ -2163,6 +2310,17 @@
             // descartadas pela regra "TRANSFERÊNCIA DE CONTA CORRENT" — não
             // são faturas reais e não devem entrar no banco / inflar KPIs.
             transferenciasIgnoradas: 0,
+            // Telemetria de Estornos/Negativos (2026-05-29 governança).
+            // Conta lançamentos com valor < 0 detectados e descartados na
+            // origem por regra de negócio: o ecossistema só aceita
+            // movimentações positivas. Estornos/notas de crédito devem ser
+            // tratados em conciliação manual, não importados.
+            negativosIgnorados: 0,
+            // Exceção contábil mandatória (2026-05-29 V3): FGTS A RECOLHER
+            // CLIENTES vem legitimamente negativo no TXT e DEVE ser gravado
+            // com sinal preservado pra abater o saldo do favorecido.
+            // Contador dedicado pra dar visibilidade gerencial dessa exceção.
+            negativosFgtsAceitos: 0,
         };
         const cabecalhosUnicos = new Set();
 
@@ -2249,10 +2407,44 @@
                 continue; // descarte limpo — linha morre na memória
             }
 
-            // Lançamento exige código do cabeçalho + valor > 0.
-            // (Lançamentos antes do primeiro cabeçalho são contados em `semCabecalho`.)
+            // Auditoria 2026-05-29 (governança contábil V2):
+            // Regra de negócio rígida — o ecossistema só aceita movimentações
+            // com valor POSITIVO. Estornos, notas de crédito e descontos
+            // (valores negativos) são detectados pelo parser melhorado mas
+            // descartados na origem antes da gravação — devem ser tratados
+            // em conciliação manual, não importados. O contador dedicado
+            // `negativosIgnorados` aparece no toast final pra dar visibilidade
+            // gerencial de quantos casos foram bloqueados.
+            //
+            // Por que detectar e descartar (em vez de só "rejeitar < 0")?
+            // O parser identifica (X), X- e -X antes desta trava. Sem a
+            // detecção, esses formatos seriam lidos como POSITIVO fantasma
+            // e inflariam o Total Geral em vez de serem corretamente
+            // bloqueados aqui.
             if (codigoAtual == null) { stats.semCabecalho++; continue; }
-            if (!(valor > 0)) { stats.ignoradas++; continue; }
+            if (!isFinite(valor) || valor === 0) { stats.ignoradas++; continue; }
+            // Bypass de negativos (2026-05-29 — exceção contábil mandatória):
+            // FGTS A RECOLHER - CLIENTES legitimamente vem negativo no TXT
+            // do ERP — é dedução real do saldo do favorecido (caso de
+            // referência: -R$ 278,82 que deve abater os R$ 887,32 brutos
+            // → R$ 608,50 líquido). Outras verbas continuam barradas.
+            //
+            // Normalização defensiva: remove hífens (com ou sem espaço) e
+            // colapsa espaços múltiplos antes do .includes() — blinda contra
+            // variações do ERP ("FGTS A RECOLHER-CLIENTES" / "FGTS A
+            // RECOLHER  -  CLIENTES" / etc). Acentos e case já foram tratados
+            // em `despesaUpper` mais acima.
+            if (valor < 0) {
+                const despesaNorm = despesaUpper.replace(/[-–—]/g, ' ').replace(/\s+/g, ' ').trim();
+                if (!despesaNorm.includes('FGTS A RECOLHER CLIENTES')) {
+                    stats.negativosIgnorados++;
+                    continue;
+                }
+                stats.negativosFgtsAceitos++;
+                // Cai no lancamentos.push() abaixo com o valor negativo
+                // intacto — atualizarKPIs() faz `total += v` algébrico e
+                // o sub-card por status deduz automaticamente.
+            }
 
             lancamentos.push({
                 codigo: codigoAtual,
@@ -3048,6 +3240,22 @@
             if (transferencias > 0) {
                 partes.push(`⚠️ ${transferencias} registro(s) de Transferência Interna identificados e descartados para não inflar os KPIs`);
             }
+            // Estornos/Negativos — telemetria de governança contábil (2026-05-29).
+            // Sinaliza quantos lançamentos negativos foram bloqueados na
+            // origem pela regra de negócio "só positivos". A diretoria sabe
+            // o volume sem precisar abrir o console.
+            const negativos = _cpEtlState?.stats?.negativosIgnorados || 0;
+            if (negativos > 0) {
+                partes.push(`🛡️ ${negativos} lançamento(s) negativo(s) ignorado(s) por segurança (conciliar manualmente)`);
+            }
+            // Exceção contábil mandatória (2026-05-29 V3). FGTS A RECOLHER
+            // CLIENTES é a única verba autorizada a entrar com sinal
+            // negativo — dedução real do saldo do favorecido. Sinaliza
+            // explicitamente pra diretoria pra distinguir do bloqueio acima.
+            const fgts = _cpEtlState?.stats?.negativosFgtsAceitos || 0;
+            if (fgts > 0) {
+                partes.push(`📉 ${fgts} dedução(ões) de FGTS A RECOLHER (CLIENTES) aplicada(s)`);
+            }
             mostrarToast(partes.join(' · '), 'check_circle');
         } catch (err) {
             console.error('[GerenciadorCP] gravação falhou:', err);
@@ -3278,6 +3486,10 @@
     const COD_VR  = '277';
     const COD_VA  = '284';
     const COD_MED = '279';
+    // Auditoria 2026-06-01 (Fix Odonto Zerado): 281 = Assis. Odontológica
+    // (Valor Pago) provento; 775 = Descto de Assist. Odontológica. Espelha a
+    // correção do Custo de Folha — antes ambos eram descartados.
+    const COD_ODONTO = '281';
     // Auditoria 2026-05-26 (Granularidade): descontos isolados por código.
     // Cada código → propriedade dedicada. Antes era Set agregando em
     // total_descontos — agora total_descontos é DERIVADO da soma dos 4.
@@ -3285,6 +3497,7 @@
     const COD_DESC_VR  = '773';
     const COD_DESC_VA  = '776';
     const COD_DESC_MED = '774';
+    const COD_DESC_ODONTO = '775';
 
     // State Machine: itera as linhas mantendo o contexto acumulado.
     function _benefParsearTXT(texto) {
@@ -3304,7 +3517,8 @@
             atual.total_descontos = (atual.desconto_vt || 0)
                 + (atual.desconto_vr || 0)
                 + (atual.desconto_va || 0)
-                + (atual.desconto_med || 0);
+                + (atual.desconto_med || 0)
+                + (atual.desconto_odonto || 0);
             registros.push(atual);
             atual = null;
         }
@@ -3356,11 +3570,13 @@
                     vr_pago: 0,
                     va_pago: 0,
                     med_pago: 0,
+                    odonto_pago: 0, // cód 281 — Assis. Odontológica (Valor Pago)
                     // Descontos individuais por código (auditoria 2026-05-26).
                     desconto_vt: 0,
                     desconto_vr: 0,
                     desconto_va: 0,
                     desconto_med: 0,
+                    desconto_odonto: 0, // cód 775 — Descto de Assist. Odontológica
                     total_descontos: 0, // derivado no close (soma dos 4 acima)
                     valor_liquido: 0,
                 };
@@ -3402,12 +3618,14 @@
                 else if (codE === COD_VR)  atual.vr_pago  += valE;
                 else if (codE === COD_VA)  atual.va_pago  += valE;
                 else if (codE === COD_MED) atual.med_pago += valE;
+                else if (codE === COD_ODONTO) atual.odonto_pago += valE;
                 // Edge case: linhas raras onde o desconto aparece sozinho na
                 // coluna esquerda (sem provento na mesma linha).
                 else if (codE === COD_DESC_VT)  atual.desconto_vt  += valE;
                 else if (codE === COD_DESC_VR)  atual.desconto_vr  += valE;
                 else if (codE === COD_DESC_VA)  atual.desconto_va  += valE;
                 else if (codE === COD_DESC_MED) atual.desconto_med += valE;
+                else if (codE === COD_DESC_ODONTO) atual.desconto_odonto += valE;
             }
 
             // (5b) Coluna DIREITA — descontos isolados por código.
@@ -3420,6 +3638,7 @@
                 else if (codD === COD_DESC_VR)  atual.desconto_vr  += valD;
                 else if (codD === COD_DESC_VA)  atual.desconto_va  += valD;
                 else if (codD === COD_DESC_MED) atual.desconto_med += valD;
+                else if (codD === COD_DESC_ODONTO) atual.desconto_odonto += valD;
             }
             // Demais códigos: ignorados (preserva escopo restrito ao TXT analítico).
         }
@@ -3487,7 +3706,7 @@
                 }
 
                 // Valor total bruto (compatível com export.outros = total-vt-vr).
-                const valor_total = reg.vt_pago + reg.vr_pago + reg.va_pago + reg.med_pago;
+                const valor_total = reg.vt_pago + reg.vr_pago + reg.va_pago + reg.med_pago + reg.odonto_pago;
 
                 docsParaGravar.push({
                     competencia: competenciaFinal,
@@ -3502,11 +3721,13 @@
                     valor_vr:        Number(reg.vr_pago)  || 0,
                     valor_va:        Number(reg.va_pago)  || 0,
                     valor_med:       Number(reg.med_pago) || 0,
+                    valor_odonto:    Number(reg.odonto_pago) || 0,
                     // Descontos isolados por código (auditoria 2026-05-26 — granularidade).
                     desconto_vt:     Number(reg.desconto_vt)  || 0,
                     desconto_vr:     Number(reg.desconto_vr)  || 0,
                     desconto_va:     Number(reg.desconto_va)  || 0,
                     desconto_med:    Number(reg.desconto_med) || 0,
+                    desconto_odonto: Number(reg.desconto_odonto) || 0,
                     total_descontos: Number(reg.total_descontos) || 0,
                     valor_liquido:   Number(reg.valor_liquido)   || 0,
                     valor_total:     Number(valor_total)         || 0,
