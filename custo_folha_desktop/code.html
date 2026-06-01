@@ -317,10 +317,10 @@
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm font-bold text-secondary">Importar Relatório de Benefícios (TXT)</p>
-                                <p id="label-file-importar-beneficios-txt" class="text-[11px] text-slate-500 mt-0.5 font-medium truncate">Clique para selecionar (.txt)</p>
+                                <p id="label-file-importar-beneficios-txt" class="text-[11px] text-slate-500 mt-0.5 font-medium truncate">Clique para selecionar (.txt) — vários meses de uma vez</p>
                             </div>
                         </div>
-                        <input id="file-importar-beneficios-txt" type="file" accept=".txt" class="hidden" />
+                        <input id="file-importar-beneficios-txt" type="file" accept=".txt" multiple class="hidden" />
                     </label>
                 </div>
 
@@ -4849,9 +4849,13 @@
     });
 
     inputBeneficiosTxt.addEventListener('change', () => {
-        const f = inputBeneficiosTxt.files?.[0];
-        labelBeneficiosTxt.textContent = f ? f.name : 'Clique para selecionar (.txt)';
-        labelBeneficiosTxt.closest('.dropzone').classList.toggle('has-file', !!f);
+        // Auditoria 2026-06-01 (Lote): seleção múltipla de TXT — reimportar
+        // várias competências numa tacada. Mostra contagem quando há mais de 1.
+        const fs = Array.from(inputBeneficiosTxt.files || []);
+        labelBeneficiosTxt.textContent = !fs.length
+            ? 'Clique para selecionar (.txt) — vários meses de uma vez'
+            : (fs.length === 1 ? fs[0].name : `${fs.length} arquivos selecionados`);
+        labelBeneficiosTxt.closest('.dropzone').classList.toggle('has-file', !!fs.length);
     });
 
     // ── MODAIS ───────────────────────────────────────────────────────────────
@@ -5239,10 +5243,11 @@
         const competenciaMes = inputCompetencia.value; // "YYYY-MM"
         const empresa = selectEmpresa.value.trim();
         const fileFolha = inputFolha.files?.[0];
-        const fileBeneficios = inputBeneficiosTxt.files?.[0];
+        // Auditoria 2026-06-01 (Lote): o canal TXT aceita MÚLTIPLOS arquivos.
+        const filesBeneficios = Array.from(inputBeneficiosTxt.files || []);
 
         // Pelo menos UM arquivo é obrigatório — Folha Excel OU Benefícios TXT.
-        if (!fileFolha && !fileBeneficios) {
+        if (!fileFolha && !filesBeneficios.length) {
             return mostrarErro('Por favor, selecione pelo menos um arquivo para processar (Folha Excel ou Benefícios TXT).');
         }
 
@@ -5320,21 +5325,38 @@
             }
         }
 
-        // ─── EXECUÇÃO 2: RELATÓRIO ANALÍTICO DE BENEFÍCIOS (TXT) ─────────────
-        if (fileBeneficios) {
-            setLoading(true, 'Processando Relatório Analítico de Benefícios (TXT)...');
-            try {
-                // Flag isSubmitContext=true: a função NÃO fecha modal, NÃO mostra
-                // toast e RETHROW em caso de erro — o submit é quem orquestra.
-                const resumoBnf = await folhaParsearTxtBeneficios(fileBeneficios, true);
-                const detalhe = resumoBnf && Array.isArray(resumoBnf.partes)
-                    ? resumoBnf.partes.join(' · ')
-                    : 'Relatório de Benefícios TXT integrado com sucesso';
-                partesFeedback.push(detalhe);
-            } catch (err) {
-                console.error('[Pipeline Benefícios] Falhou:', err);
+        // ─── EXECUÇÃO 2: RELATÓRIO(S) ANALÍTICO(S) DE BENEFÍCIOS (TXT) ───────
+        // Auditoria 2026-06-01 (Lote): processa N arquivos sequencialmente —
+        // o usuário reimporta todas as competências numa única operação. Cada
+        // arquivo roda a mesma máquina idempotente (UPSERT por
+        // competência+matrícula, não duplica). Erro isolado num arquivo NÃO
+        // aborta o lote: coletamos e reportamos no final.
+        if (filesBeneficios.length) {
+            let okCount = 0;
+            const errosLote = [];
+            for (let i = 0; i < filesBeneficios.length; i++) {
+                const fb = filesBeneficios[i];
+                setLoading(true, `Processando Benefícios TXT (${i + 1}/${filesBeneficios.length}): ${fb.name}…`);
+                try {
+                    // isSubmitContext=true: não fecha modal, não toasta, RETHROW.
+                    const resumoBnf = await folhaParsearTxtBeneficios(fb, true);
+                    const detalhe = resumoBnf && Array.isArray(resumoBnf.partes)
+                        ? `${fb.name}: ${resumoBnf.partes.join(' · ')}`
+                        : `${fb.name}: integrado`;
+                    partesFeedback.push(detalhe);
+                    okCount++;
+                } catch (err) {
+                    console.error(`[Pipeline Benefícios] ${fb.name} falhou:`, err);
+                    errosLote.push(`${fb.name}: ${err.message || err}`);
+                }
+            }
+            // Todos falharam → aborta. Parcial → segue e sinaliza no feedback.
+            if (!okCount) {
                 setLoading(false);
-                return mostrarErro('Falha no processamento dos Benefícios TXT: ' + (err.message || err));
+                return mostrarErro('Falha no processamento dos Benefícios TXT:\n' + errosLote.join('\n'));
+            }
+            if (errosLote.length) {
+                partesFeedback.push(`⚠️ ${errosLote.length} arquivo(s) com erro — ${errosLote.join(' | ')}`);
             }
         }
 
@@ -5344,8 +5366,11 @@
         // Limpeza de todos os inputs/labels dos DOIS cards.
         inputFolha.value = '';
         inputBeneficiosTxt.value = '';
+        // Re-habilita o input TXT (em submit context a função o desabilita e
+        // não reverte — fix do estado travado após import via pipeline/lote).
+        inputBeneficiosTxt.disabled = false;
         labelFolha.textContent = 'Clique para selecionar (.xlsx, .xls, .csv)';
-        labelBeneficiosTxt.textContent = 'Clique para selecionar (.txt)';
+        labelBeneficiosTxt.textContent = 'Clique para selecionar (.txt) — vários meses de uma vez';
         document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('has-file'));
 
         // Sincroniza filtros da tabela com o que acabou de ser gravado — só
