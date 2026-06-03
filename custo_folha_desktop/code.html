@@ -165,20 +165,6 @@
                         <input id="input-busca" type="text" placeholder="Buscar por nome, CPF, centro de custo ou empresa…"
                                class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
                     </div>
-                    <!-- Filtrar por Funcionário (auditoria 2026-05-20) — multi-select
-                         com checkbox + busca interna sticky. Diretoria pediu para
-                         comparar 2-3 PJs/CLTs lado a lado: agora o filtro aceita
-                         qualquer subconjunto de colaboradores. Vazio = todos. -->
-                    <div class="min-w-[240px] max-w-[280px]">
-                        <select id="filtro-funcionario" multiple size="6"
-                                data-checkbox-multi
-                                data-cb-portal
-                                data-placeholder="Todos os Funcionários"
-                                title="Filtrar por um ou mais funcionários (CLT ou PJ)"
-                                class="hidden">
-                            <option value="Todos">Todos os Funcionários</option>
-                        </select>
-                    </div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button id="btn-abrir-filtros" type="button" class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold transition-colors">
@@ -366,7 +352,7 @@
             </div>
             <div class="flex-1">
                 <h3 class="font-headline text-base font-bold text-secondary">Filtros Avançados</h3>
-                <p class="text-[11px] text-slate-400 font-medium">Competência + empresa.</p>
+                <p class="text-[11px] text-slate-400 font-medium">Competência · empresa · centro · funcionário.</p>
             </div>
             <button id="btn-fechar-filtros" type="button" class="text-slate-400 hover:text-slate-700 transition-colors">
                 <span class="material-symbols-outlined">close</span>
@@ -401,6 +387,23 @@
                     <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Centros</option>
                 </select>
                 <p class="text-[10px] text-slate-400 font-medium mt-1.5">Alimentado automaticamente pelas importações.</p>
+            </div>
+            <!-- Funcionário (auditoria 2026-05-28 — Unificação de Filtros):
+                 movido da topbar pra cá. ID preservado pra não quebrar a
+                 pipeline de busca/filter já implementada. Aplica só no
+                 clique do botão "Aplicar" — toggles não disparam render. -->
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+                    Funcionário
+                </label>
+                <select id="filtro-funcionario" multiple size="6"
+                        data-checkbox-multi
+                        data-placeholder="Todos os Funcionários"
+                        title="Filtrar por um ou mais funcionários (CLT ou PJ)"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium bg-white shadow-inner focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Funcionários</option>
+                </select>
+                <p class="text-[10px] text-slate-400 font-medium mt-1.5">Selecione um ou mais para comparar lado a lado.</p>
             </div>
         </div>
         <div class="mt-8 flex gap-3">
@@ -1427,6 +1430,15 @@
     function _folhaBenefNormFilCodigo(s) {
         return String(s == null ? '' : s).trim().toUpperCase();
     }
+    // Chave canônica de match (auditoria 2026-06-03 — Bug Vínculo Órfão).
+    // Espelha _benefChaveMatch do gerenciador_contas_pagar: descarta filial/
+    // hífen + zeros à esquerda pra casar "000-000084" (cadastro) com "000084"
+    // (TXT). Usada SÓ no lookup do Fornecedor; fil_codigo/docId seguem crus.
+    function _folhaBenefChaveMatch(s) {
+        const raw = String(s == null ? '' : s).trim();
+        const seg = raw.includes('-') ? raw.split('-').pop() : raw;
+        return seg.replace(/\D/g, '').replace(/^0+/, '') || '';
+    }
     function _folhaBenefParseValorBR(v) {
         if (v == null || v === '') return 0;
         if (typeof v === 'number') return v;
@@ -1682,7 +1694,7 @@
             const mapaCB = new Map();
             snapForn.forEach(d => {
                 const data = d.data() || {};
-                const cb = _folhaBenefNormFilCodigo(data.codigo_beneficio_folha);
+                const cb = _folhaBenefChaveMatch(data.codigo_beneficio_folha);
                 if (cb) mapaCB.set(cb, { _id: d.id, ...data });
             });
 
@@ -1692,7 +1704,7 @@
             let usaramFallbackCC = 0;
             for (const reg of registros) {
                 if (!reg.fil_codigo) continue;
-                const forn = mapaCB.get(reg.fil_codigo) || null;
+                const forn = mapaCB.get(_folhaBenefChaveMatch(reg.fil_codigo)) || null;
                 const ccTXT = String(reg.centro_custo_txt || '').trim();
                 let centro_custo = ccTXT;
                 let usouFallback = false;
@@ -1937,6 +1949,7 @@
     const LS_COMP = 'centrafin.custofolha.competencia';
     const LS_EMP  = 'centrafin.custofolha.empresa';
     const LS_CC   = 'centrafin.custofolha.centrocusto';
+    const LS_FUNC = 'centrafin.custofolha.funcionario';
 
     // ── HELPERS MULTI-SELECT (padrão CRF — auditoria 2026-05-14) ─────────────
     // Convenção: o sentinela "Todos" significa "nenhum filtro ativo". Quando
@@ -2732,10 +2745,15 @@
     // Une os nomes únicos do cache atual (CLT + PJ), ordena A-Z (pt-BR),
     // e preserva a seleção corrente. Funcionários removidos do cache são
     // descartados do array selecionado; se sobrar nada, cai em ['Todos'].
+    //
+    // Auditoria 2026-05-28 (Unificação de Filtros): o select agora vive
+    // DENTRO do modal-filtros. A fonte da verdade é `filtroFuncionarios`
+    // (estado commitado), não o select — toggles do usuário no modal só
+    // afetam a UI até clicar em "Aplicar". Aqui sincronizamos as <option>
+    // disponíveis e mantemos a UI alinhada com o commit em memória.
     function popularFiltroFuncionario() {
         const sel = document.getElementById('filtro-funcionario');
         if (!sel) return;
-        const previo = getMultiValues(sel);
         const nomes = new Set();
         for (const r of cacheRegistros) {
             const n = String(r?.nome || '').trim();
@@ -2746,9 +2764,9 @@
             '<option value="Todos" class="font-bold border-b pb-1 mb-1">Todos os Funcionários</option>' +
             ordenados.map(n => `<option value="${escapeHTML(n)}">${escapeHTML(n)}</option>`).join('');
         if (sel.innerHTML !== novoHtml) sel.innerHTML = novoHtml;
-        // Mantém só os nomes que ainda existem no cache; se sobrar vazio,
-        // volta a sentinela "Todos" — o estado em memória segue o select.
-        const sobrev = previo.filter(v => v === 'Todos' || ordenados.includes(v));
+        // Source of truth: `filtroFuncionarios` (estado commitado). Filtra
+        // nomes que deixaram de existir no cache; sobra zero → 'Todos'.
+        const sobrev = filtroFuncionarios.filter(v => v === 'Todos' || ordenados.includes(v));
         const proximo = sobrev.length ? sobrev : ['Todos'];
         setMultiValues(sel, proximo);
         filtroFuncionarios = proximo;
@@ -2916,7 +2934,8 @@
         const allComp = isMultiAll(compRefs);
         const allEmp  = isMultiAll(empresas);
         const allCc   = isMultiAll(ccs);
-        if (allComp && allEmp && allCc) {
+        const allFunc = isMultiAll(filtroFuncionarios);
+        if (allComp && allEmp && allCc && allFunc) {
             chipFiltrosAtivos.classList.add('hidden');
             chipFiltrosAtivos.classList.remove('flex');
             chipFiltrosAtivos.innerHTML = '';
@@ -2941,6 +2960,12 @@
                 ? ccs[0]
                 : `${ccs.length} centros`;
             partes.push(mkChip('account_tree', escapeHTML(lbl)));
+        }
+        if (!allFunc) {
+            const lbl = filtroFuncionarios.length === 1
+                ? filtroFuncionarios[0]
+                : `${filtroFuncionarios.length} funcionários`;
+            partes.push(mkChip('person', escapeHTML(lbl)));
         }
         chipFiltrosAtivos.innerHTML = `<span class="text-slate-400">Filtros ativos:</span> ${partes.join(' ')}`;
         chipFiltrosAtivos.classList.remove('hidden');
@@ -3069,6 +3094,7 @@
         const compSalvos = lerFiltroSalvo(LS_COMP);
         const empSalvas  = lerFiltroSalvo(LS_EMP);
         const ccSalvos   = lerFiltroSalvo(LS_CC);
+        const funcSalvos = lerFiltroSalvo(LS_FUNC);
 
         // Popula o select de competência ANTES de tentar restaurar a seleção —
         // depende da query async de disponíveis. Se falhar, o select fica vazio
@@ -3085,9 +3111,14 @@
             filtroCcValores = ['Todos'];
         }
 
+        // Auditoria 2026-05-28: rehidrata filtroFuncionarios do LS. O <select>
+        // será sincronizado em popularFiltroFuncionario quando o cache chegar
+        // (depende dos nomes disponíveis em cacheRegistros).
+        filtroFuncionarios = funcSalvos.length ? funcSalvos : ['Todos'];
+
         const aplicar = () => {
             if (empSalvas.length) setMultiValues(filtroEmpresa, empSalvas);
-            if (compSalvos.length || empSalvas.length || ccSalvos.length) {
+            if (compSalvos.length || empSalvas.length || ccSalvos.length || funcSalvos.length) {
                 atualizarChipFiltros();
             }
             carregarDadosTabela();
@@ -3106,19 +3137,13 @@
             renderHistorico();
         }, 180);
     });
-    // ── Filtro multi-critério por Funcionário (auditoria 2026-05-20) ───────
-    // O multi-select dispara `change` no <select> escondido a cada toggle de
-    // checkbox (ver assets/checkbox_multi.js). Lê o estado canônico, atualiza
-    // memória e re-renderiza. Zera a busca por texto quando há filtro ativo
-    // pra evitar contradição visual entre dois recortes concorrentes.
-    document.getElementById('filtro-funcionario').addEventListener('change', (e) => {
-        filtroFuncionarios = getMultiValues(e.target);
-        if (!isMultiAll(filtroFuncionarios) && termoBusca) {
-            termoBusca = '';
-            inputBusca.value = '';
-        }
-        renderHistorico();
-    });
+    // ── Filtro de Funcionário (auditoria 2026-05-28 — Unificação) ──────────
+    // O <select> agora vive dentro do modal-filtros. Toggles no checkbox
+    // multi NÃO disparam re-render; o commit acontece exclusivamente no
+    // botão "Aplicar" do modal (`btn-filtros-aplicar`), que lê o select,
+    // grava em `filtroFuncionarios`, persiste no LS e re-renderiza.
+    // Listener de `change` removido por design — ver pipeline em
+    // `btn-filtros-aplicar.onclick`.
 
     // ── Chips de competências disponíveis (estado vazio) ─────────────────────
     // Auditoria 2026-05-14: filtros são multi-select; clicar num chip aplica
@@ -4610,7 +4635,16 @@
     document.getElementById('modal-importar-overlay').onclick = () => fecharModal('modal-importar');
 
     // ── MODAL FILTROS AVANÇADOS ──────────────────────────────────────────────
-    document.getElementById('btn-abrir-filtros').onclick = () => abrirModal('modal-filtros');
+    // Auditoria 2026-05-28 (Unificação): o select de funcionário agora vive
+    // aqui dentro. Ao abrir o modal, sincronizamos a UI do select com o
+    // estado commitado (`filtroFuncionarios`) — toggles do usuário ficam
+    // pendentes até o clique em "Aplicar"; cancelar/fechar descarta tudo
+    // sem alterar a busca anterior.
+    document.getElementById('btn-abrir-filtros').onclick = () => {
+        const selFunc = document.getElementById('filtro-funcionario');
+        if (selFunc) setMultiValues(selFunc, filtroFuncionarios);
+        abrirModal('modal-filtros');
+    };
     document.getElementById('btn-fechar-filtros').onclick = () => fecharModal('modal-filtros');
     document.getElementById('modal-filtros-overlay').onclick = () => fecharModal('modal-filtros');
 
@@ -4618,6 +4652,7 @@
         const compRefs = getMultiValues(filtroCompetencia);
         const empresas = getMultiValues(filtroEmpresa);
         const ccs      = getMultiValues(filtroCc);
+        const funcs    = getMultiValues(document.getElementById('filtro-funcionario'));
 
         // LS: salva apenas quando há filtro real (não-"Todos"). Formato JSON.
         if (isMultiAll(compRefs)) localStorage.removeItem(LS_COMP);
@@ -4626,9 +4661,20 @@
         else localStorage.setItem(LS_EMP, JSON.stringify(empresas));
         if (isMultiAll(ccs)) localStorage.removeItem(LS_CC);
         else localStorage.setItem(LS_CC, JSON.stringify(ccs));
+        if (isMultiAll(funcs)) localStorage.removeItem(LS_FUNC);
+        else localStorage.setItem(LS_FUNC, JSON.stringify(funcs));
 
-        // CC é client-side: atualiza o array em memória pra `aplicarBusca`.
-        filtroCcValores = isMultiAll(ccs) ? ['Todos'] : ccs;
+        // CC e Funcionário são client-side: atualiza estado em memória.
+        filtroCcValores    = isMultiAll(ccs)   ? ['Todos'] : ccs;
+        filtroFuncionarios = isMultiAll(funcs) ? ['Todos'] : funcs;
+
+        // Auditoria 2026-05-28: quando há filtro ativo de funcionário,
+        // zera a busca por texto pra evitar contradição visual entre dois
+        // recortes concorrentes (comportamento herdado do listener antigo).
+        if (!isMultiAll(filtroFuncionarios) && termoBusca) {
+            termoBusca = '';
+            inputBusca.value = '';
+        }
 
         atualizarChipFiltros();
         carregarDadosTabela(); // re-render acontece dentro (mesmo se a query não mudou)
@@ -4643,7 +4689,8 @@
         const algumAtivo =
             !isMultiAll(getMultiValues(filtroCompetencia)) ||
             !isMultiAll(getMultiValues(filtroEmpresa)) ||
-            !isMultiAll(filtroCcValores);
+            !isMultiAll(filtroCcValores) ||
+            !isMultiAll(filtroFuncionarios);
         if (algumAtivo) {
             btn.classList.remove('hidden');
             btn.classList.add('flex');
@@ -4660,10 +4707,14 @@
         setMultiValues(filtroCompetencia, ['Todos']);
         setMultiValues(filtroEmpresa, ['Todos']);
         setMultiValues(filtroCc, ['Todos']);
+        const selFunc = document.getElementById('filtro-funcionario');
+        if (selFunc) setMultiValues(selFunc, ['Todos']);
         filtroCcValores = ['Todos'];
+        filtroFuncionarios = ['Todos'];
         localStorage.removeItem(LS_COMP);
         localStorage.removeItem(LS_EMP);
         localStorage.removeItem(LS_CC);
+        localStorage.removeItem(LS_FUNC);
         atualizarChipFiltros();
         carregarDadosTabela();
         verificarVisibilidadeBotaoLimpar();

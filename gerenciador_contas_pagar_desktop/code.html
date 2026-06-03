@@ -287,10 +287,13 @@
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 border-b border-slate-100 text-[10px]">
                         <tr>
-                            <!-- Checkbox master (auditoria 2026-05-18 V5 — Item 3).
-                                 Marca/desmarca todas as linhas VISÍVEIS (página atual). -->
+                            <!-- Checkbox master (auditoria 2026-05-29 — Bulk Total).
+                                 Marca/desmarca TODOS os lançamentos do filtro
+                                 ativo (todas as páginas), não só os visíveis.
+                                 Necessário pra cenários como apagar 3.111
+                                 registros de um recorte sem paginar manual. -->
                             <th class="px-4 py-3 text-center w-10">
-                                <input type="checkbox" id="cp-selecionar-todos" class="rounded border-slate-300 text-primary focus:ring-primary/30" title="Selecionar todos (na página)">
+                                <input type="checkbox" id="cp-selecionar-todos" class="rounded border-slate-300 text-primary focus:ring-primary/30" title="Selecionar todos os lançamentos do filtro atual (todas as páginas)">
                             </th>
                             <th class="px-4 py-3 text-center font-bold text-on-surface-variant uppercase tracking-widest w-28">Status</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-28">Vencimento</th>
@@ -753,6 +756,48 @@
 
 <!-- Inputs file ocultos. -->
 <input id="file-cp-txt" type="file" accept=".txt" class="hidden" />
+
+<!-- MODAL: Duplicidade de Lote (auditoria 2026-05-29 — escudo contra
+     re-importação). Fingerprint: SHA-256 do conteúdo do TXT, persistido em
+     cada doc como `arquivo_hash`. Antes do writeBatch, query leve consulta
+     `where arquivo_hash == hash limit 1`; se encontra, este modal interrompe
+     o fluxo e devolve a decisão (substituir/manter/cancelar) via Promise
+     gerenciada por _cpAbrirModalDuplicidade. -->
+<div id="modal-cp-duplicidade" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-cp-duplic-overlay"></div>
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 p-7 transform scale-95 transition-transform duration-300 relative border border-slate-100">
+        <div class="flex items-start gap-3 mb-5">
+            <div class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 shadow-inner animate-pulse">
+                <span class="material-symbols-outlined text-amber-600 text-2xl">running_with_errors</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="font-headline text-lg font-extrabold text-secondary tracking-tight">Atenção: Base já importada!</h3>
+                <p class="text-[11px] text-slate-500 font-medium mt-0.5">Detectamos que os dados deste arquivo já constam no sistema.</p>
+            </div>
+        </div>
+        <div class="rounded-xl bg-amber-50/60 border border-amber-200 px-4 py-3 mb-5 text-[12px] text-amber-900 leading-relaxed">
+            Encontramos <span id="cp-duplic-count" class="font-extrabold">0</span> registro(s) na base com a mesma assinatura (SHA-256) deste arquivo
+            <span id="cp-duplic-arquivo" class="font-mono text-[10px] text-amber-700 block mt-1 truncate">—</span>
+            <span class="block mt-2">Escolha como prosseguir:</span>
+        </div>
+        <div class="space-y-2">
+            <button id="btn-cp-duplic-substituir" type="button"
+                class="w-full flex items-center justify-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-red-600/20 hover:brightness-110 active:scale-95 transition-all">
+                <span class="material-symbols-outlined text-base">restart_alt</span>
+                Substituir Lote (apagar antigos e gravar novos)
+            </button>
+            <button id="btn-cp-duplic-manter" type="button"
+                class="w-full flex items-center justify-center gap-2 px-5 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-secondary rounded-xl text-xs font-bold transition-all">
+                <span class="material-symbols-outlined text-base text-slate-500">layers</span>
+                Manter Ambos (forçar duplicidade)
+            </button>
+            <button id="btn-cp-duplic-cancelar" type="button"
+                class="w-full px-5 py-3 text-slate-500 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all">
+                Cancelar Importação
+            </button>
+        </div>
+    </div>
+</div>
 <!-- file-fornecedores-xlsx removido (auditoria 2026-05-18): governança migrada pra master.html -->
 <!-- file-despesas-xlsx removido (auditoria 2026-05-21): card de Despesas
      migrou pra Benefícios PJ. CP_Base_Despesas continua sendo alimentado
@@ -885,7 +930,10 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import {
         getFirestore, collection, addDoc, doc, getDoc, getDocs, onSnapshot,
-        writeBatch, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy
+        writeBatch, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy,
+        // Auditoria 2026-05-29: validador de duplicidade de lote precisa de
+        // where/limit pra consultar `arquivo_hash` antes do writeBatch.
+        where, limit
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { renderSidebar } from "../sidebar.js";
@@ -996,8 +1044,12 @@
             }
             renderSidebar(dadosUser.perfil, menusUser);
             document.body.classList.add('auth-ok');
-            // Inscreve os snapshots: Áreas (CC) + ContasAPagar (tabela + KPIs).
+            // Inscreve os snapshots: Áreas (CC) + Fornecedores→Empresa
+            // (mapa pra enriquecer reg.empresa em tempo real) + ContasAPagar
+            // (tabela + KPIs). Fornecedores ANTES de ContasAPagar pra
+            // maximizar a chance do map já estar populado no 1º snap.
             inscreverAreas();
+            inscreverFornecedoresEmpresa();
             inscreverContasPagar();
             // Auditoria 2026-05-18: a Esteira de Aprovação saiu deste módulo
             // (vive em aprovacoes_desktop). A visibilidade admin-only continua
@@ -1101,6 +1153,54 @@
         try { sel.dispatchEvent(new Event('cb-multi-sync')); } catch (_) {}
     }
 
+    // ── Cache de Fornecedores → Empresa (auditoria 2026-05-28) ─────────────
+    // O ETL de /ContasAPagar grava `codigo_fornecedor` mas NÃO denormaliza o
+    // `empresa` do lançamento — esse campo só existe na ficha do Fornecedor
+    // (/Fornecedores.empresa). Sem esse cruzamento, `reg.empresa` chega vazio
+    // em quase todos os lançamentos e o filtro "Empresa" do modal ficava
+    // estático ("Todas as Empresas" sozinha).
+    //
+    // Listener leve em /Fornecedores monta Map<codigoStr → empresaUpper> e
+    // dispara re-snapshot do cache em memória quando atualiza, pra que o
+    // dropdown Empresa do modal seja repopulado dinamicamente.
+    let _cpFornecedoresEmpresaMap = new Map(); // codigoStr → empresa (UPPER)
+    let _cpFornecedoresCarregados = false;
+    let _cpUltimoSnapRefresh = null; // closure pra re-rodar enrich+populator
+
+    function inscreverFornecedoresEmpresa() {
+        onSnapshot(collection(db, COLECAO_FORN), (snap) => {
+            const nova = new Map();
+            snap.forEach(d => {
+                const data = d.data() || {};
+                const emp = String(data.empresa || '').trim().toUpperCase();
+                if (!emp) return;
+                // Chave canônica: codigo (preferencial) | id do doc (fallback).
+                const cod = (data.codigo != null) ? String(data.codigo).trim() : '';
+                const id  = String(d.id || '').trim();
+                if (cod) nova.set(cod, emp);
+                if (id && id !== cod) nova.set(id, emp);
+            });
+            _cpFornecedoresEmpresaMap = nova;
+            _cpFornecedoresCarregados = true;
+            // Se o snapshot de ContasAPagar já chegou antes, re-enriquece o
+            // cache em memória e re-renderiza + repopula dropdowns. Caso
+            // contrário, o próximo snapshot principal já leva o map pronto.
+            if (typeof _cpUltimoSnapRefresh === 'function') _cpUltimoSnapRefresh();
+        }, (err) => console.warn('[Fornecedores→Empresa] listener falhou:', err?.code || err?.message));
+    }
+
+    // Resolve a empresa de um lançamento aplicando a cascata oficial:
+    //   1) reg.empresa (string explícita do doc, se já estiver gravada);
+    //   2) lookup em _cpFornecedoresEmpresaMap pelo codigo_fornecedor.
+    function _cpResolverEmpresaDoReg(reg) {
+        const direta = String(reg?.empresa || '').trim();
+        if (direta) return direta.toUpperCase();
+        const cod = reg?.codigo_fornecedor;
+        if (cod == null) return '';
+        const chave = String(cod).trim();
+        return _cpFornecedoresEmpresaMap.get(chave) || '';
+    }
+
     // ── Snapshot principal ─────────────────────────────────────────────────
     // Frente 2 (auditoria 2026-05-20): pipeline de PASSO ÚNICO. Antes havia
     // 2 loops sequenciais pesados em bases com 10k+ docs — um pra montar
@@ -1115,19 +1215,25 @@
             // Frente 1 (2026-05-20): extrai também `empresa` (string vazia
             // tolerada — vira `__SEM_EMPRESA__` no filtro) — base do novo
             // dropdown "Empresa" no modal "Filtrar Base".
+            // Auditoria 2026-05-28: enriquecimento via lookup em
+            // /Fornecedores.empresa pelo `codigo_fornecedor`, já que o ETL
+            // não grava `empresa` na fatura. Resultado escrito de volta em
+            // `reg.empresa` (string em UPPER) — pipeline de filtro/render
+            // segue lendo `r.empresa` sem mudança.
             const regs = [];
             const comps = new Set(), favs = new Set(), desp = new Set(),
                   ccs = new Set(), empresas = new Set();
             snap.forEach(d => {
                 const reg = { _id: d.id, ...d.data() };
+                const empResolvida = _cpResolverEmpresaDoReg(reg);
+                if (empResolvida) reg.empresa = empResolvida;
                 regs.push(reg);
                 const comp = fmtCompetenciaBR(reg);
                 if (comp) comps.add(comp);
                 if (reg.entidade)     favs.add(reg.entidade);
                 if (reg.categoria)    desp.add(reg.categoria);
                 if (reg.centro_custo) ccs.add(reg.centro_custo);
-                const emp = String(reg.empresa || '').trim();
-                if (emp) empresas.add(emp);
+                if (empResolvida) empresas.add(empResolvida);
             });
             cacheRegistros = regs;
             // Renderiza JÁ — os filtros atuais (ou os restaurados via
@@ -1146,6 +1252,23 @@
                     renderTudo();
                 }
             });
+            // Auditoria 2026-05-28: deixa registrada a função que re-roda
+            // o enrich + populator usando a cópia mais recente do snapshot.
+            // Quando o listener de /Fornecedores atualizar o map, ele chama
+            // esta closure pra repopular o dropdown Empresa sem precisar
+            // esperar uma nova mutação no ContasAPagar.
+            _cpUltimoSnapRefresh = () => {
+                const empresasReenriq = new Set();
+                for (const r of cacheRegistros) {
+                    const e = _cpResolverEmpresaDoReg(r);
+                    if (e) {
+                        r.empresa = e;
+                        empresasReenriq.add(e);
+                    }
+                }
+                _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresasReenriq, () => {});
+                renderTudo();
+            };
         }, (err) => {
             console.error('[ContasAPagar] listener falhou:', err);
             cacheRegistros = [];
@@ -1900,22 +2023,29 @@
         renderTabela(_cpUltimosFiltrados);
     });
 
-    // ── Seleção múltipla + Bulk delete (auditoria 2026-05-18 V5 — Item 3) ────
-    // Set persiste entre re-renders + páginas (igual ao padrão Fornecedores).
-    // Master checkbox marca apenas as linhas VISÍVEIS (página atual) pra
-    // evitar "selecionar 5000 sem perceber".
+    // ── Seleção múltipla + Bulk delete ──────────────────────────────────────
+    // Auditoria 2026-05-18 V5 (Item 3): Set persiste entre re-renders + páginas.
+    // Auditoria 2026-05-29 (Bulk Total): o master checkbox agora marca TODOS
+    // os lançamentos do recorte filtrado (`_cpUltimosFiltrados`), não apenas
+    // os visíveis na página. Necessário pra apagar/alterar em lote 3.111
+    // registros de um filtro denso sem paginar 63x na mão.
     const _cpSelecao = new Set();
     function _cpAtualizarUIBulk() {
         // Sincroniza checkboxes visíveis com o Set após cada render.
         document.querySelectorAll('#cp-corpo .cp-row-checkbox').forEach(cb => {
             cb.checked = _cpSelecao.has(cb.getAttribute('data-id'));
         });
-        const visiveis = document.querySelectorAll('#cp-corpo .cp-row-checkbox');
-        const marcVis  = [...visiveis].filter(cb => cb.checked).length;
-        const master   = document.getElementById('cp-selecionar-todos');
+        // Estado do master agora é calculado contra o recorte filtrado total
+        // (não só a página). 0 = unchecked, parcial = indeterminate, todos = checked.
+        const totalFiltrados = Array.isArray(_cpUltimosFiltrados) ? _cpUltimosFiltrados.length : 0;
+        const idsFiltrados = new Set();
+        for (const r of (_cpUltimosFiltrados || [])) idsFiltrados.add(r._id);
+        let marcadosNoRecorte = 0;
+        for (const id of _cpSelecao) if (idsFiltrados.has(id)) marcadosNoRecorte++;
+        const master = document.getElementById('cp-selecionar-todos');
         if (master) {
-            master.checked = visiveis.length > 0 && marcVis === visiveis.length;
-            master.indeterminate = marcVis > 0 && marcVis < visiveis.length;
+            master.checked       = totalFiltrados > 0 && marcadosNoRecorte === totalFiltrados;
+            master.indeterminate = marcadosNoRecorte > 0 && marcadosNoRecorte < totalFiltrados;
         }
         const btnDel = document.getElementById('btn-cp-excluir-sel');
         const contador = document.getElementById('cp-sel-count');
@@ -1926,15 +2056,32 @@
             else           { btnDel.classList.add('hidden');     btnDel.classList.remove('inline-flex'); }
         }
     }
-    // Master checkbox no header — alterna as linhas da página atual.
+    // Master checkbox no header — marca TODOS os filtrados (todas as páginas).
+    // Auditoria 2026-05-29: comportamento expandido por solicitação operacional
+    // (apagar/alterar em massa um recorte denso sem navegar página a página).
     document.getElementById('cp-selecionar-todos').addEventListener('change', (e) => {
         const checked = e.target.checked;
-        document.querySelectorAll('#cp-corpo .cp-row-checkbox').forEach(cb => {
-            cb.checked = checked;
-            const id = cb.getAttribute('data-id');
-            if (checked) _cpSelecao.add(id);
-            else _cpSelecao.delete(id);
-        });
+        const filtrados = Array.isArray(_cpUltimosFiltrados) ? _cpUltimosFiltrados : [];
+        if (checked) {
+            for (const r of filtrados) {
+                if (r && r._id) _cpSelecao.add(r._id);
+            }
+            // Feedback visível quando o usuário acabou de marcar muito além do
+            // que está na tela (50 = PAGE_SIZE_CP). Sem isso, parece que só
+            // selecionou a página corrente.
+            if (filtrados.length > PAGE_SIZE_CP) {
+                mostrarToast(
+                    `${filtrados.length} lançamento(s) selecionado(s) — recorte completo do filtro atual.`,
+                    'check_circle'
+                );
+            }
+        } else {
+            // Desmarca apenas os IDs do recorte ativo (preserva seleções de
+            // outros recortes que o usuário possa ter feito antes).
+            for (const r of filtrados) {
+                if (r && r._id) _cpSelecao.delete(r._id);
+            }
+        }
         _cpAtualizarUIBulk();
     });
     // Per-row: delegação no tbody (pega checkboxes adicionados em re-renders).
@@ -2232,7 +2379,11 @@
         }
         const n = parseFloat(str);
         if (!isFinite(n)) return 0;
-        return negativo ? -Math.abs(n) : n;
+        // Auditoria 2026-05-29 V4 (Fim do Expurgo): o sign-stripping acima
+        // garante que `n` já é não-negativo (parseFloat sobre string sem
+        // sinal). Aplicação direta de `-n` preserva o sinal detectado sem
+        // o pleonasmo do Math.abs antigo.
+        return negativo ? -n : n;
     }
     function cpDataBRtoISO(dataBR) {
         const partes = String(dataBR || '').split('/');
@@ -2310,17 +2461,14 @@
             // descartadas pela regra "TRANSFERÊNCIA DE CONTA CORRENT" — não
             // são faturas reais e não devem entrar no banco / inflar KPIs.
             transferenciasIgnoradas: 0,
-            // Telemetria de Estornos/Negativos (2026-05-29 governança).
-            // Conta lançamentos com valor < 0 detectados e descartados na
-            // origem por regra de negócio: o ecossistema só aceita
-            // movimentações positivas. Estornos/notas de crédito devem ser
-            // tratados em conciliação manual, não importados.
-            negativosIgnorados: 0,
-            // Exceção contábil mandatória (2026-05-29 V3): FGTS A RECOLHER
-            // CLIENTES vem legitimamente negativo no TXT e DEVE ser gravado
-            // com sinal preservado pra abater o saldo do favorecido.
-            // Contador dedicado pra dar visibilidade gerencial dessa exceção.
-            negativosFgtsAceitos: 0,
+            // Telemetria de Deduções (2026-05-29 V4 — Fim do Expurgo).
+            // A regra antiga "só positivos com allowlist FGTS" foi REVOGADA
+            // por quebra de conformidade contábil (caso Brendon Costa Vital:
+            // -R$ 141,20 em Contribuições ao Sindicato descartadas indevidamente).
+            // Agora gravamos 100% dos valores negativos algébricamente. Este
+            // contador é apenas informativo — quantos lançamentos com sinal
+            // negativo entraram no batch (todos aceitos).
+            deducoesAplicadas: 0,
         };
         const cabecalhosUnicos = new Set();
 
@@ -2407,44 +2555,18 @@
                 continue; // descarte limpo — linha morre na memória
             }
 
-            // Auditoria 2026-05-29 (governança contábil V2):
-            // Regra de negócio rígida — o ecossistema só aceita movimentações
-            // com valor POSITIVO. Estornos, notas de crédito e descontos
-            // (valores negativos) são detectados pelo parser melhorado mas
-            // descartados na origem antes da gravação — devem ser tratados
-            // em conciliação manual, não importados. O contador dedicado
-            // `negativosIgnorados` aparece no toast final pra dar visibilidade
-            // gerencial de quantos casos foram bloqueados.
-            //
-            // Por que detectar e descartar (em vez de só "rejeitar < 0")?
-            // O parser identifica (X), X- e -X antes desta trava. Sem a
-            // detecção, esses formatos seriam lidos como POSITIVO fantasma
-            // e inflariam o Total Geral em vez de serem corretamente
-            // bloqueados aqui.
+            // Auditoria 2026-05-29 V4 (Fim do Expurgo — governança contábil):
+            // Revogada e EXTINTA a regra anterior que descartava lançamentos
+            // negativos com allowlist seletiva (FGTS). A trava causou quebra
+            // de conformidade de R$ 141,20 no caso Brendon Costa Vital
+            // (Contribuições ao Sindicato -R$ 141,20 descartadas indevidamente).
+            // Agora o parser aceita 100% dos valores negativos vindos do
+            // arquivo, preserva o sinal nativamente (Number) e deixa
+            // `atualizarKPIs()` aplicar a dedução algébrica pura
+            // (total += v) sobre Total Geral + 4 sub-cards de status.
             if (codigoAtual == null) { stats.semCabecalho++; continue; }
             if (!isFinite(valor) || valor === 0) { stats.ignoradas++; continue; }
-            // Bypass de negativos (2026-05-29 — exceção contábil mandatória):
-            // FGTS A RECOLHER - CLIENTES legitimamente vem negativo no TXT
-            // do ERP — é dedução real do saldo do favorecido (caso de
-            // referência: -R$ 278,82 que deve abater os R$ 887,32 brutos
-            // → R$ 608,50 líquido). Outras verbas continuam barradas.
-            //
-            // Normalização defensiva: remove hífens (com ou sem espaço) e
-            // colapsa espaços múltiplos antes do .includes() — blinda contra
-            // variações do ERP ("FGTS A RECOLHER-CLIENTES" / "FGTS A
-            // RECOLHER  -  CLIENTES" / etc). Acentos e case já foram tratados
-            // em `despesaUpper` mais acima.
-            if (valor < 0) {
-                const despesaNorm = despesaUpper.replace(/[-–—]/g, ' ').replace(/\s+/g, ' ').trim();
-                if (!despesaNorm.includes('FGTS A RECOLHER CLIENTES')) {
-                    stats.negativosIgnorados++;
-                    continue;
-                }
-                stats.negativosFgtsAceitos++;
-                // Cai no lancamentos.push() abaixo com o valor negativo
-                // intacto — atualizarKPIs() faz `total += v` algébrico e
-                // o sub-card por status deduz automaticamente.
-            }
+            if (valor < 0) stats.deducoesAplicadas++;
 
             lancamentos.push({
                 codigo: codigoAtual,
@@ -2577,6 +2699,11 @@
         await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
         try {
             const texto = await f.text();
+            // Escudo contra duplicidade (auditoria 2026-05-29). SHA-256 do
+            // conteúdo bruto, calculado UMA vez aqui — usado depois no
+            // writeBatch (como `arquivo_hash` em cada doc) e no validador
+            // pré-batch logo abaixo.
+            _cpEtlState.arquivoHash = await _cpHashSHA256(texto);
             const { lancamentos, stats } = cpParsearTXT(texto);
             console.log('[ETL GerenciadorCP] parser:', { ...stats });
             if (!lancamentos.length) {
@@ -2683,6 +2810,39 @@
             // para o sanesamento posterior em lote — `_cpFinalizarImportacao`
             // detecta as combinações inéditas e cuida da alimentação de
             // retaguarda.
+
+            // Escudo de duplicidade (auditoria 2026-05-29). Consulta leve
+            // pelo fingerprint SHA-256 antes do writeBatch. Se já há lote
+            // gravado com a mesma assinatura, abre modal e respeita a
+            // decisão do operador (substituir / manter / cancelar).
+            const _existeCount = await _cpContarDocsPorHash(_cpEtlState.arquivoHash);
+            if (_existeCount > 0) {
+                const decisao = await _cpAbrirModalDuplicidade({
+                    count: _existeCount,
+                    arquivo: _cpEtlState.arquivoNome,
+                });
+                if (decisao === 'cancelar') {
+                    mostrarToast('Importação cancelada — nada foi gravado.', 'warning', true);
+                    return; // finally limpa estado; outras chamadas de
+                            // _cpRegistrarUltimaImportacao não disparam.
+                }
+                if (decisao === 'substituir') {
+                    if (window._cpMostrarLoader) window._cpMostrarLoader(
+                        'Substituindo lote anterior…',
+                        'Removendo registros antigos antes de gravar a nova carga.'
+                    );
+                    const apagados = await _cpDeletarDocsPorHash(_cpEtlState.arquivoHash);
+                    console.log(`[GerenciadorCP][Duplicidade] ${apagados} doc(s) apagados antes de substituir.`);
+                    if (window._cpMostrarLoader) window._cpMostrarLoader(
+                        'Gravando nova carga…',
+                        `${apagados} registros antigos removidos · agora persistindo o novo lote.`
+                    );
+                }
+                // 'manter' segue direto pro _cpFinalizarImportacao sem deletar.
+                // Os 5/7 cards macros só recalculam depois do writeBatch via
+                // snapshot reativo — o aguardo da decisão é não-corruptivo.
+            }
+
             await _cpFinalizarImportacao();
             if (window._cpRegistrarUltimaImportacao) {
                 await window._cpRegistrarUltimaImportacao('TXT', lancamentos.length);
@@ -2987,6 +3147,106 @@
         return expandido;
     }
 
+    // ── Escudo contra duplicidade de lote (auditoria 2026-05-29) ──────────
+    // Estratégia: SHA-256 do conteúdo bruto do TXT vira `arquivo_hash` em
+    // cada doc gravado. Antes do writeBatch, consulta leve detecta a colisão
+    // e oferece 3 caminhos via modal modal-cp-duplicidade.
+    // - Compatibilidade: docs legados sem `arquivo_hash` simplesmente não
+    //   batem na query (where==), sem falso positivo.
+    // - Custo: 1 query leve (limit 1) por upload. Em duplicado, varredura
+    //   completa só ocorre se o usuário escolher "Substituir Lote".
+    async function _cpHashSHA256(texto) {
+        const enc = new TextEncoder();
+        const data = enc.encode(String(texto || ''));
+        const hashBuf = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hashBuf))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+    }
+
+    // Devolve a contagem aproximada de docs com este hash (limit 50 — pra
+    // mostrar no modal "X registros"; valores acima viram "50+"). Usa
+    // `getDocs` sem agregação porque count() exige índice composto e o
+    // limite de 50 já dá a sensibilidade gerencial necessária.
+    async function _cpContarDocsPorHash(hash) {
+        if (!hash) return 0;
+        try {
+            const q = query(
+                collection(db, COLECAO),
+                where('arquivo_hash', '==', hash),
+                limit(50)
+            );
+            const snap = await getDocs(q);
+            return snap.size;
+        } catch (err) {
+            console.warn('[GerenciadorCP] query hash falhou:', err?.code || err?.message);
+            return 0; // fail-open: na dúvida, deixa importar (não trava o operador)
+        }
+    }
+
+    // Apaga todos os docs com o mesmo hash em chunks de CHUNK_SIZE. Usado
+    // pelo caminho "Substituir Lote" — varredura completa (sem limit) +
+    // delete atômico em batches respeitando o limite de 500 ops/batch.
+    async function _cpDeletarDocsPorHash(hash) {
+        if (!hash) return 0;
+        const q = query(collection(db, COLECAO), where('arquivo_hash', '==', hash));
+        const snap = await getDocs(q);
+        const ids = snap.docs.map(d => d.id);
+        for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+            const fatia = ids.slice(i, i + CHUNK_SIZE);
+            const b = writeBatch(db);
+            for (const id of fatia) b.delete(doc(db, COLECAO, id));
+            await b.commit();
+        }
+        return ids.length;
+    }
+
+    // Apresenta o modal de duplicidade e devolve a decisão do usuário via
+    // Promise. Resolve com 'substituir' | 'manter' | 'cancelar'. Overlay/X
+    // contam como 'cancelar' por segurança (não-destrutivo por default).
+    function _cpAbrirModalDuplicidade({ count, arquivo }) {
+        return new Promise((resolve) => {
+            const m = document.getElementById('modal-cp-duplicidade');
+            if (!m) { resolve('cancelar'); return; }
+            // Preenche contexto: contagem e nome do arquivo.
+            const elCount = document.getElementById('cp-duplic-count');
+            if (elCount) elCount.textContent = (count >= 50 ? '50+' : String(count));
+            const elArq = document.getElementById('cp-duplic-arquivo');
+            if (elArq) elArq.textContent = arquivo || '—';
+            // Esconder o overlay de loading durante a decisão pra não competir
+            // visualmente com o modal (loader fica empilhado em cima).
+            if (window._cpEsconderLoader) window._cpEsconderLoader();
+            // Abrir modal.
+            m.classList.remove('opacity-0', 'pointer-events-none');
+            const card = m.querySelector('div.bg-white');
+            if (card) card.classList.remove('scale-95');
+
+            const btnSub = document.getElementById('btn-cp-duplic-substituir');
+            const btnMan = document.getElementById('btn-cp-duplic-manter');
+            const btnCan = document.getElementById('btn-cp-duplic-cancelar');
+            const overlay = document.getElementById('modal-cp-duplic-overlay');
+
+            const cleanup = (decisao) => {
+                // Fecha modal.
+                m.classList.add('opacity-0', 'pointer-events-none');
+                if (card) card.classList.add('scale-95');
+                // Desamarra listeners pra evitar leak entre uploads.
+                btnSub.removeEventListener('click', onSub);
+                btnMan.removeEventListener('click', onMan);
+                btnCan.removeEventListener('click', onCan);
+                overlay.removeEventListener('click', onCan);
+                resolve(decisao);
+            };
+            const onSub = () => cleanup('substituir');
+            const onMan = () => cleanup('manter');
+            const onCan = () => cleanup('cancelar');
+            btnSub.addEventListener('click', onSub);
+            btnMan.addEventListener('click', onMan);
+            btnCan.addEventListener('click', onCan);
+            overlay.addEventListener('click', onCan);
+        });
+    }
+
     // ── Gravação final em ContasAPagar ─────────────────────────────────────
     async function _cpFinalizarImportacao() {
         const expandido = _cpExpandirProjecaoFixo(_cpEtlState.lancamentos);
@@ -3082,6 +3342,10 @@
                         match_tipo: l._projetado ? 'projetado' : (l._despesaRule ? 'fuzzy' : 'quarentena'),
                         match_score: typeof l._despesaScore === 'number' ? l._despesaScore : null,
                         arquivo: _cpEtlState.arquivoNome,
+                        // Fingerprint SHA-256 do conteúdo do TXT (auditoria
+                        // 2026-05-29). Pivô da detecção de duplicidade. Nulo
+                        // em fluxos manuais; populado pelo ETL TXT.
+                        arquivo_hash: _cpEtlState.arquivoHash || null,
                         criado_por: usuarioLogadoNome,
                         created_at: serverTimestamp(),
                         updated_at: serverTimestamp(),
@@ -3240,21 +3504,14 @@
             if (transferencias > 0) {
                 partes.push(`⚠️ ${transferencias} registro(s) de Transferência Interna identificados e descartados para não inflar os KPIs`);
             }
-            // Estornos/Negativos — telemetria de governança contábil (2026-05-29).
-            // Sinaliza quantos lançamentos negativos foram bloqueados na
-            // origem pela regra de negócio "só positivos". A diretoria sabe
-            // o volume sem precisar abrir o console.
-            const negativos = _cpEtlState?.stats?.negativosIgnorados || 0;
-            if (negativos > 0) {
-                partes.push(`🛡️ ${negativos} lançamento(s) negativo(s) ignorado(s) por segurança (conciliar manualmente)`);
-            }
-            // Exceção contábil mandatória (2026-05-29 V3). FGTS A RECOLHER
-            // CLIENTES é a única verba autorizada a entrar com sinal
-            // negativo — dedução real do saldo do favorecido. Sinaliza
-            // explicitamente pra diretoria pra distinguir do bloqueio acima.
-            const fgts = _cpEtlState?.stats?.negativosFgtsAceitos || 0;
-            if (fgts > 0) {
-                partes.push(`📉 ${fgts} dedução(ões) de FGTS A RECOLHER (CLIENTES) aplicada(s)`);
+            // Deduções (Fim do Expurgo — 2026-05-29 V4). Trava seletiva
+            // revogada: TODOS os lançamentos negativos do arquivo entram no
+            // banco com sinal preservado e abatem algebricamente Total Geral
+            // + sub-cards. Telemetria positiva — quantas deduções a ERP
+            // emitiu nesse lote, sem distinguir verbas.
+            const deducoes = _cpEtlState?.stats?.deducoesAplicadas || 0;
+            if (deducoes > 0) {
+                partes.push(`📉 ${deducoes} dedução(ões) negativa(s) aplicada(s) algébricamente`);
             }
             mostrarToast(partes.join(' · '), 'check_circle');
         } catch (err) {
@@ -3405,9 +3662,24 @@
 
     function _benefNormFilCodigo(s) {
         // Mesma normalização aplicada na hora de salvar o codigo_beneficio_folha
-        // no master.html: UPPER + trim. Não removemos os zeros à esquerda nem
-        // o hífen — eles são parte da chave do RH (ex.: "000-000077").
+        // no master.html: UPPER + trim. Preservamos o valor cru (zeros/hífen)
+        // porque ele compõe o `fil_codigo` salvo e o docId determinístico.
         return String(s == null ? '' : s).trim().toUpperCase();
+    }
+    // ── CHAVE CANÔNICA DE MATCH (auditoria 2026-06-03 — Bug Vínculo Órfão) ───
+    // Diagnóstico provado em produção: 100% (1019/1019) dos benefícios gravavam
+    // fornecedor_id="ORFAO" porque a junção comparava formatos diferentes:
+    //   · TXT  → fil_codigo = "000084"      (matrícula pura do "Funcionario:")
+    //   · Cad. → codigo_beneficio_folha = "000-000084" (filial-matrícula c/ hífen)
+    // UPPER+trim nunca casava → benefício órfão → NUNCA entrava no mapPJ do
+    // Custo de Folha → custo unificado não somava. Esta função reduz AMBOS os
+    // lados a uma chave canônica: descarta o prefixo de filial (parte antes do
+    // último hífen), remove não-dígitos e zeros à esquerda → "84". Usada SÓ no
+    // lookup; o fil_codigo salvo e o docId continuam crus (idempotência intacta).
+    function _benefChaveMatch(s) {
+        const raw = String(s == null ? '' : s).trim();
+        const seg = raw.includes('-') ? raw.split('-').pop() : raw;
+        return seg.replace(/\D/g, '').replace(/^0+/, '') || '';
     }
     function _benefParseValorBR(v) {
         if (v == null || v === '') return 0;
@@ -3676,7 +3948,10 @@
             const mapaCB = new Map();
             snapForn.forEach(d => {
                 const data = d.data() || {};
-                const cb = _benefNormFilCodigo(data.codigo_beneficio_folha);
+                // Chave canônica (auditoria 2026-06-03): neutraliza filial/hífen
+                // e zeros à esquerda pra casar "000-000084" (cadastro) com a
+                // matrícula pura "000084" do TXT.
+                const cb = _benefChaveMatch(data.codigo_beneficio_folha);
                 if (cb) mapaCB.set(cb, { _id: d.id, ...data });
             });
 
@@ -3686,7 +3961,7 @@
             let usaramFallbackCC = 0;
             for (const reg of registros) {
                 if (!reg.fil_codigo) continue;
-                const forn = mapaCB.get(reg.fil_codigo) || null;
+                const forn = mapaCB.get(_benefChaveMatch(reg.fil_codigo)) || null;
                 const ccTXT = String(reg.centro_custo_txt || '').trim();
                 // Match: herda fornecedor_id + usa CC canônico do cadastro como
                 // fallback quando o TXT veio zerado.
