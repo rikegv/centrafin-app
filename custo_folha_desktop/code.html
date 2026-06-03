@@ -1318,6 +1318,12 @@
                                 desconto_vt: 0, desconto_vr: 0, desconto_va: 0, desconto_med: 0, desconto_odonto: 0, total_descontos: 0,
                             };
                             mapFull.set(chavePJ, {
+                                // Identidade (auditoria 2026-06-03) — usada pela
+                                // linha sintética de benefício; CC cai no fallback
+                                // do cadastro de Fornecedores se o TXT veio zerado.
+                                nome:            String(data.nome_fornecedor || prev.nome || '').trim(),
+                                centro_custo:    String(data.centro_custo || prev.centro_custo || '').trim(),
+                                fornecedor_id:   fid,
                                 valor_vt:        prev.valor_vt        + vt,
                                 valor_vr:        prev.valor_vr        + vr,
                                 valor_va:        prev.valor_va        + va,
@@ -1364,9 +1370,9 @@
                 //  (b) CLT — força re-subscribe da query da Folha pra que
                 //      enriquecerCltComBeneficios() rode sobre os refinados
                 //      antes de virar `_cacheFolha`.
-                if (Array.isArray(_cachePJRaw) && _cachePJRaw.length) {
-                    _cachePJ = _cachePJRaw.map(({ id, data }) => pjParaFolha(id, data));
-                }
+                // Auditoria 2026-06-03: rebuild inclui as linhas sintéticas de
+                // benefício (precisa rodar mesmo sem faturas em _cachePJRaw).
+                _pjRebuildCache();
                 if (Array.isArray(cacheRegistros) && cacheRegistros.length) {
                     ultimoFiltroKey = '';
                     carregarDadosTabela();
@@ -1857,7 +1863,7 @@
                     // não cabe aqui (loop). Usaremos o _cachePJRaw mantido pelo
                     // listener PJ.
                     if (Array.isArray(_cachePJRaw)) {
-                        _cachePJ = _cachePJRaw.map(({ id, data }) => pjParaFolha(id, data));
+                        _pjRebuildCache();
                         cacheRegistros = [..._cacheFolha, ..._aplicarFiltrosPJ(compRefs, empresas)];
                         renderHistorico();
                     }
@@ -1892,15 +1898,14 @@
                 // quantos foram retidos — fim da "caixa preta" anterior.
                 console.log('[Conector PJ] Documentos brutos retornados do Firestore:', snap.size);
 
-                const lista = [];
                 const raws = [];
                 snap.forEach(d => {
                     const data = d.data() || {};
                     raws.push({ id: d.id, data });
-                    lista.push(pjParaFolha(d.id, data));
                 });
-                _cachePJ = lista;
                 _cachePJRaw = raws;
+                // Auditoria 2026-06-03: monta faturas + linhas sintéticas de benefício.
+                _pjRebuildCache();
                 // Recompõe cacheRegistros mantendo a fatia Folha atual; respeita
                 // os filtros de competência/empresa correntes para os PJs.
                 const compRefs = getMultiValues(filtroCompetencia);
@@ -2515,16 +2520,14 @@
         // Competência canônica "YYYY-MM" — sem isso o filtro da tela rejeita
         // o PJ silenciosamente (ver _normalizarCompetenciaPJ).
         const compRef = _normalizarCompetenciaPJ(r?.competencia_ref, r?.data_vencimento);
-        // Frente 3 (2026-05-21) — Custo Unificado = Fatura + Benefícios PJ.
-        // Lookup pelo par (competência, fornecedor_id). fornecedor_id segue
-        // o padrão da coleção Fornecedores onde docId = String(codigo). Os
-        // benefícios entram somando ao SERVICOS_PRESTADOS_Valor — chave
-        // reconhecida por isVencimento + isSalarioBrutoKey, garantindo
-        // propagação automática aos 6 KPIs + gráfico + ranking sem código
-        // adicional nos agregadores existentes.
-        const chaveBenef = (compRef && codForn) ? `${compRef}_${codForn}` : '';
-        const valorBeneficios = chaveBenef ? (Number(_cacheBeneficiosPJ.get(chaveBenef)) || 0) : 0;
-        const valor = valorFatura + valorBeneficios;
+        // Auditoria 2026-06-03 (Bug Dupla Contagem de Benefício PJ): ANTES o
+        // benefício era somado em SERVICOS_PRESTADOS de CADA lançamento do PJ
+        // na competência — PJs com >1 título no mês (ex.: Nicolas, 2 títulos em
+        // 2026-01) contavam o benefício 2×, inflando o Custo Total; e ele ficava
+        // invisível na coluna "Benef. Pagos". AGORA a linha de fatura carrega SÓ
+        // a fatura; o benefício vira UMA linha sintética por (PJ × competência)
+        // via _pjBeneficiosSinteticos() — contado 1× e no balde Benefícios.
+        const valor = valorFatura;
         return {
             _id: 'pj_' + docId,
             is_pj: true,
@@ -2541,9 +2544,11 @@
             _cc_origem: ccLanc ? 'lancamento' : (ccForn ? 'fornecedor' : 'sem_cc'),
             // Auditoria: guarda o valor bruto da competência do CP pra debug.
             _competencia_raw: r?.competencia_ref || null,
-            // Auditoria Frente 3 — desmembrado para a UI de detalhes do PJ.
+            // _valor_fatura preservado p/ o motor de exportação (lê por linha).
+            // _valor_beneficios fica 0 na linha de fatura — o benefício vive na
+            // linha sintética (evita dupla contagem e o rótulo "não mapeado").
             _valor_fatura: valorFatura,
-            _valor_beneficios: valorBeneficios,
+            _valor_beneficios: 0,
             // Auditoria 2026-05-26 Frente 3 — exportação analítica: preserva
             // codigo_fornecedor (chave do PJ no /Fornecedores) e codigo_beneficio_folha
             // (chave da planilha do RH em CP_Beneficios_PJ) para cruzamento no Excel.
@@ -2552,6 +2557,79 @@
                 ? _cacheFornInfo.get(codForn).codigo_beneficio_folha
                 : '',
         };
+    }
+
+    // ── LINHAS SINTÉTICAS DE BENEFÍCIO PJ (auditoria 2026-06-03) ──────────────
+    // O benefício do PJ é por (PJ × competência), não por lançamento. Para
+    // contá-lo 1× e exibi-lo na coluna "Benef. Pagos" (em vez de embutido em
+    // Serviços Prestados), geramos UMA linha sintética por entrada do
+    // _cacheBeneficiosPJFull. A linha usa o prefixo Bnf_*/BnfDesc_* que o
+    // calcularTotais soma no balde Benefícios — mesma mecânica do CLT. Não tem
+    // SERVICOS_PRESTADOS (não polui Vencimentos/Salário Bruto) e respeita os
+    // filtros de competência/empresa/CC porque carrega esses campos.
+    function _pjBeneficiosSinteticos() {
+        const rows = [];
+        if (!(_cacheBeneficiosPJFull instanceof Map)) return rows;
+        for (const [chave, full] of _cacheBeneficiosPJFull.entries()) {
+            if (!full) continue;
+            // chave = "${comp}_${fid}"; comp tem '-' interno (2026-01), fid não
+            // tem '_' → split no ÚLTIMO '_' separa com segurança.
+            const sep = String(chave).lastIndexOf('_');
+            if (sep < 0) continue;
+            const comp = String(chave).slice(0, sep);
+            const fid  = String(chave).slice(sep + 1);
+            const bnfVt  = Number(full.valor_vt)     || 0;
+            const bnfVr  = Number(full.valor_vr)     || 0;
+            const bnfVa  = Number(full.valor_va)     || 0;
+            const bnfMed = Number(full.valor_med)    || 0;
+            const bnfOdo = Number(full.valor_odonto) || 0;
+            const totalBenef = bnfVt + bnfVr + bnfVa + bnfMed + bnfOdo;
+            const totalDesc  = (Number(full.desconto_vt) || 0) + (Number(full.desconto_vr) || 0)
+                + (Number(full.desconto_va) || 0) + (Number(full.desconto_med) || 0)
+                + (Number(full.desconto_odonto) || 0);
+            if (totalBenef <= 0 && totalDesc <= 0) continue;
+            // Identidade: prioriza o cache do cadastro (nome/CC canônicos);
+            // fallback no que veio gravado no próprio benefício.
+            const info = (_cacheFornInfo instanceof Map) ? _cacheFornInfo.get(fid) : null;
+            const nomeBase = (info && info.nome) || full.nome || `Fornecedor ${fid}`;
+            const cc = (info && info.centro_custo) || full.centro_custo || '';
+            rows.push({
+                _id: `pjbenef_${chave}`,
+                is_pj: true,
+                _is_pj_benef: true,            // marcador p/ export e debug
+                nome: `${nomeBase} · Benefícios`,
+                cpf: '',
+                empresa_atribuida: EMPRESA_PJ_SENTINELA,
+                centro_custo: cc,
+                competencia_ref: comp,
+                _has_benef_txt: true,
+                _codigo_fornecedor: fid,
+                _origem_doc: 'BeneficiosPJ',
+                // Proventos de benefício (Bnf_*) — calcularTotais soma no balde.
+                Bnf_VT:  bnfVt,
+                Bnf_VR:  bnfVr,
+                Bnf_VA:  bnfVa,
+                Bnf_MED: bnfMed,
+                Bnf_Odonto: bnfOdo,
+                // Descontos de coparticipação (BnfDesc_*).
+                BnfDesc_VT:  Number(full.desconto_vt)  || 0,
+                BnfDesc_VR:  Number(full.desconto_vr)  || 0,
+                BnfDesc_VA:  Number(full.desconto_va)  || 0,
+                BnfDesc_MED: Number(full.desconto_med) || 0,
+                BnfDesc_Odonto: Number(full.desconto_odonto) || 0,
+            });
+        }
+        return rows;
+    }
+
+    // Recompõe _cachePJ = (faturas via pjParaFolha) + (linhas sintéticas de
+    // benefício). Chamado por TODO listener que mexe em _cachePJRaw ou nos
+    // benefícios — garante que as duas frentes apareçam sempre juntas.
+    function _pjRebuildCache() {
+        const base = Array.isArray(_cachePJRaw)
+            ? _cachePJRaw.map(({ id, data }) => pjParaFolha(id, data))
+            : [];
+        _cachePJ = base.concat(_pjBeneficiosSinteticos());
     }
 
     // ── ENRIQUECIMENTO DE CLT COM BENEFÍCIOS DO TXT ──────────────────────────
@@ -3486,7 +3564,11 @@
     //                               número canônico já é renderizado em R$.
     //   _HAS_BENEF_TXT            — flag interna de roteamento, não é UI.
     //   PENDENTE_TRATAMENTO       — flag interna de retidos, não é UI.
-    const RGX_SUPRIMIDAS_NO_OLHO = /HORARIO|^PIS(?:_|$)|^PASEP(?:_|$)|^NIT(?:_|$)|DIAS_TRABALHADOS_VALOR|^CPF$|^_SALARIO_CADASTRAL_RAW$|^_HAS_BENEF_TXT$|^PENDENTE_TRATAMENTO$/;
+    // Auditoria 2026-06-03: _VALOR_FATURA e _VALOR_BENEFICIOS suprimidos do
+    // modal — eram exibidos como "outros valores não mapeados" (enganoso). A
+    // fatura já aparece em "Serviços Prestados"; o benefício virou linha própria
+    // no balde "Benefícios Pagos". Os campos seguem no registro p/ o export.
+    const RGX_SUPRIMIDAS_NO_OLHO = /HORARIO|^PIS(?:_|$)|^PASEP(?:_|$)|^NIT(?:_|$)|DIAS_TRABALHADOS_VALOR|^CPF$|^_SALARIO_CADASTRAL_RAW$|^_HAS_BENEF_TXT$|^PENDENTE_TRATAMENTO$|^_VALOR_FATURA$|^_VALOR_BENEFICIOS$/;
     function ehChaveSuprimidaNoOlho(k) {
         return RGX_SUPRIMIDAS_NO_OLHO.test(String(k).toUpperCase());
     }
@@ -4161,36 +4243,45 @@
 
     function _decomporRegistroParaExport(r) {
         if (r?.is_pj) {
-            const codForn = String(r._codigo_fornecedor || '').trim();
-            const compRef = String(r.competencia_ref || '').trim();
-            const chave = (codForn && compRef) ? `${compRef}_${codForn}` : '';
-            const full = chave ? (_cacheBeneficiosPJFull.get(chave) || null) : null;
-            const valor_vt = full ? Number(full.valor_vt) || 0 : 0;
-            // VR + VA consolidados (Vale Refeição/Alimentação).
-            const valor_vr = full ? ((Number(full.valor_vr) || 0) + (Number(full.valor_va) || 0)) : 0;
-            const valor_am = full ? Number(full.valor_med) || 0 : 0;
-            const valor_total_benef = full ? Number(full.valor_total) || 0 : Number(r._valor_beneficios) || 0;
-            const valor_outros = Math.max(0, valor_total_benef - valor_vt - valor_vr - valor_am);
-            // Descontos PJ (coparticipação) — vindos do cache enriquecido.
-            const desc_vt = full ? Number(full.desconto_vt) || 0 : 0;
-            const desc_vr = full ? ((Number(full.desconto_vr) || 0) + (Number(full.desconto_va) || 0)) : 0;
-            const desc_am = full ? Number(full.desconto_med) || 0 : 0;
-            const desc_total = full ? Number(full.total_descontos) || 0 : 0;
-            const desc_outros = Math.max(0, desc_total - desc_vt - desc_vr - desc_am);
-            const fatura = Number(r._valor_fatura) || 0;
+            // Linha sintética de benefício (auditoria 2026-06-03): decompõe os
+            // Bnf_*/BnfDesc_* da PRÓPRIA linha — não relê _cacheBeneficiosPJFull
+            // (era a fonte da dupla contagem, que somava o benefício em cada
+            // fatura do PJ). A linha de fatura exporta SÓ a fatura.
+            if (r._is_pj_benef === true) {
+                const valor_vt  = Number(r.Bnf_VT)  || 0;
+                const valor_vr  = (Number(r.Bnf_VR) || 0) + (Number(r.Bnf_VA) || 0);
+                const valor_am  = Number(r.Bnf_MED) || 0;
+                const valor_odo = Number(r.Bnf_Odonto) || 0;
+                const total_benef = valor_vt + valor_vr + valor_am + valor_odo;
+                const desc_vt  = Number(r.BnfDesc_VT)  || 0;
+                const desc_vr  = (Number(r.BnfDesc_VR) || 0) + (Number(r.BnfDesc_VA) || 0);
+                const desc_am  = Number(r.BnfDesc_MED) || 0;
+                const desc_odo = Number(r.BnfDesc_Odonto) || 0;
+                const desc_total = desc_vt + desc_vr + desc_am + desc_odo;
+                return {
+                    salario_base:     0,
+                    outros_proventos: 0,
+                    bnf_vt:           valor_vt,
+                    bnf_vr:           valor_vr,
+                    bnf_am:           valor_am,
+                    bnf_outros:       valor_odo,
+                    desc_vt:          desc_vt,
+                    desc_vr:          desc_vr,
+                    desc_am:          desc_am,
+                    desc_outros:      desc_odo,
+                    liquido:          0,
+                    custo_total:      total_benef - desc_total,
+                };
+            }
+            // Linha de fatura PJ — só a fatura; benefícios vivem na sintética.
+            const fatura = Number(r._valor_fatura) || Number(r.SERVICOS_PRESTADOS_Valor) || 0;
             return {
                 salario_base:     fatura,           // valor nominal da PJ (fatura)
-                outros_proventos: 0,                // PJ não tem outros vencimentos
-                bnf_vt:           valor_vt,
-                bnf_vr:           valor_vr,
-                bnf_am:           valor_am,
-                bnf_outros:       valor_outros,
-                desc_vt:          desc_vt,
-                desc_vr:          desc_vr,
-                desc_am:          desc_am,
-                desc_outros:      desc_outros,
-                liquido:          fatura,           // Líquido a Receber = valor da fatura (PJ não tem retenções aqui)
-                custo_total:      fatura + valor_total_benef - desc_total, // Custo Total = fatura + benefícios líquidos
+                outros_proventos: 0,
+                bnf_vt: 0, bnf_vr: 0, bnf_am: 0, bnf_outros: 0,
+                desc_vt: 0, desc_vr: 0, desc_am: 0, desc_outros: 0,
+                liquido:          fatura,           // Líquido a Receber = fatura
+                custo_total:      fatura,
             };
         }
         // CLT / Diretor — reaproveita calcularTotais para paridade absoluta no
