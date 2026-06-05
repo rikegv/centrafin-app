@@ -1519,14 +1519,15 @@
             if (!linha) continue;
 
             // (1) Competência — top do arquivo. Regex tolerante a posição.
-            // Auditoria 2026-05-27 (diag2): aceita "Benefício"/"Benefícios"
-            // com ou sem acento UTF-8 puro OU mojibake (BenefÃ­cio).
-            // Padrão: <palavra raiz Benef...> <espaços> <mês> <opc espaços>
-            // <"/"> <opc espaços> <ano 4 dígitos>. Tolerância: usa caractere-
-            // wildcard `.{0,4}` entre "Benef" e o mês — cobre "Benefício",
-            // "Beneficios", "Benefícios", abreviação "Benef.".
+            // Auditoria 2026-06-05 (Caso MARÇO — Mojibake do "ç"): a classe de
+            // letras quebrava em "Março" quando o "ç" vinha corrompido
+            // ("MarÃ§o"/"Mar?o" — fora da faixa de letras), abortando a detecção
+            // e caindo no fallback do mês atual (March foi parar em Junho).
+            // CORREÇÃO: captura o token do mês de forma FROUXA (`[^/]+?` — tudo
+            // que não for "/") e o `_folhaBenefMesParaMM` resolve pelos 3
+            // primeiros caracteres ASCII ("Mar"), imunes à corrupção do "ç".
             if (!competencia) {
-                const m = linha.match(/Benef[\w\.À-ſ]{0,6}\s+([A-Za-zÀ-ſ-ÿ]+)\s*\/\s*(\d{4})/i);
+                const m = linha.match(/Benef\S*\s+([^/]+?)\s*\/\s*(\d{4})/i);
                 if (m) {
                     const mm = _folhaBenefMesParaMM(m[1]);
                     if (mm) competencia = `${m[2]}-${mm}`;

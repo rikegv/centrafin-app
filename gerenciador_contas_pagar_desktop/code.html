@@ -3800,8 +3800,15 @@
             if (!linha) continue;
 
             // (1) Competência — só no topo, mas tolerante a aparecer em qualquer linha.
+            // Auditoria 2026-06-05 (Caso MARÇO — Mojibake do "ç"): o nome do mês
+            // captado por `\w+` quebrava em "Março" (vira "MarÃ§o"/"Mar�o" quando
+            // o RH emite Windows-1252 lido como UTF-8) → competência não detectada
+            // → fallback pro mês atual (March caiu em Junho). CORREÇÃO: captura o
+            // token do mês de forma FROUXA (`[^/]+?` — tudo que não for "/"), e o
+            // `_benefMesParaMM` resolve pelos 3 primeiros caracteres ASCII ("Mar"),
+            // que sobrevivem a qualquer corrupção do "ç".
             if (!competencia) {
-                const m = linha.match(/Beneficio\s+(\w+)\s*\/\s*(\d{4})/i);
+                const m = linha.match(/Benef\S*\s+([^/]+?)\s*\/\s*(\d{4})/i);
                 if (m) {
                     const mm = _benefMesParaMM(m[1]);
                     if (mm) competencia = `${m[2]}-${mm}`;
