@@ -1520,6 +1520,7 @@
         // refletem em tempo real no ranking e KPIs.
         inscreverFornecedoresCCDash();
         inscreverPJContasAPagar();
+        inscreverBeneficiosPJDash();   // auditoria 2026-06-05: liga benefício PJ ao dash
 
         // Carrega base e processa
         await carregarCustoFolha();
@@ -1573,10 +1574,12 @@
     //   • cpf  → "pj-<codigo_fornecedor>" (sentinela determinística)
     //   • funcao → "Prestador PJ" (rótulo amigável no ranking + composição
     //               por cargo).
-    let _cachePJDash = [];    // PJs mapeados, prontos pra mesclar no base.
+    let _cachePJDash = [];    // PJs consolidados (1 por PJ × competência).
     let _cacheFornCC = new Map(); // codigo_fornecedor → centro_custo (lookup).
+    let _cacheBeneficiosPJFullDash = new Map(); // "comp_fid" → decomposição benefício
     let _unsubPJDash = null;
     let _unsubFornCC = null;
+    let _unsubBenefPJDash = null;
 
     function _normalizarCompetenciaPJ(raw, fallbackVencimento) {
         const s = String(raw || '').trim();
@@ -1592,37 +1595,133 @@
         return '';
     }
 
-    function pjParaFolha(docId, r) {
-        const valor = Number(r?.valor_original) || 0;
-        const codForn = r?.codigo_fornecedor != null ? String(r.codigo_fornecedor) : docId;
-        // Centro de Custo: precedência (lançamento → Fornecedor → vazio).
-        const ccLanc  = String(r?.centro_custo || '').trim();
-        const ccForn  = (codForn && _cacheFornCC.get(codForn)) || '';
-        const cc      = ccLanc || ccForn || '';
-        const compRef = _normalizarCompetenciaPJ(r?.competencia_ref, r?.data_vencimento);
+    // ── CONSOLIDAÇÃO PJ — 1 LINHA POR (PJ × COMPETÊNCIA) (auditoria 2026-06-05) ─
+    // Espelha o custo_folha_desktop: cada PJ vira UMA entrada por competência
+    // que SOMA as faturas do mês + o benefício (via CP_Beneficios_PJ). O
+    // benefício entra como Bnf_* — o calcularTotais do dash já soma esse prefixo
+    // no balde Benefícios e no Custo Total, então KPIs/ranking/gráficos passam a
+    // refletir o benefício do PJ (que antes NUNCA aparecia aqui).
+    function _pjDashChave(compRef, codForn) { return `${compRef}_${codForn}`; }
+
+    function _pjDashBase(compRef, codForn, dataLanc) {
+        const ccLanc = String(dataLanc?.centro_custo || '').trim();
+        const ccForn = (codForn && _cacheFornCC.get(codForn)) || '';
+        const cc     = ccLanc || ccForn || '';
+        const nome   = (dataLanc && (dataLanc.entidade || dataLanc.favorecido)) || '—';
         return {
-            _id: 'pj_' + docId,
+            _id: `pj_${compRef}_${codForn}`,
             is_pj: true,
-            // ── Chaves redundantes pra todos os agregadores do dash ──
-            //   chaveColaborador() lê `cpf` + `funcao` → usamos sentinela única.
-            //   renderRankingColaboradores() lê `nome` + `cargo` + `cc` + `total`.
-            nome: r.entidade || r.favorecido || '—',
-            funcionario: r.entidade || r.favorecido || '—',  // espelho defensivo
+            // Chaves redundantes pros agregadores (chaveColaborador = cpf+funcao;
+            // ranking lê nome/cargo/cc/total).
+            nome,
+            funcionario: nome,
             cpf: `pj-${codForn}`,
             funcao: 'Prestador PJ',
             cargo: 'Prestador PJ',
             centro_custo: cc,
             empresa_atribuida: EMPRESA_PJ_SENTINELA,
             competencia_ref: compRef,
-            // Chave canônica que dispara isVencimento + isSalarioBase no dash
-            // (com o ajuste em SERVICOS_PRESTADOS feito hoje).
-            SERVICOS_PRESTADOS_Valor: valor,
-            // Metadados de auditoria — não somam (só dão pista no console).
-            _origem_cp_id: docId,
+            // Fatura (Serviços Prestados) — soma das notas; dispara isVencimento.
+            SERVICOS_PRESTADOS_Valor: 0,
+            // Benefícios (Bnf_*/BnfDesc_*) — somados no balde Benefícios.
+            Bnf_VT: 0, Bnf_VR: 0, Bnf_VA: 0, Bnf_MED: 0, Bnf_Odonto: 0,
+            BnfDesc_VT: 0, BnfDesc_VR: 0, BnfDesc_VA: 0, BnfDesc_MED: 0, BnfDesc_Odonto: 0,
             _origem_doc: 'ContasAPagar',
-            _cc_origem: ccLanc ? 'lancamento' : (ccForn ? 'fornecedor' : 'sem_cc'),
-            _competencia_raw: r?.competencia_ref || null,
+            _codigo_fornecedor: codForn,
+            _valor_fatura: 0,
+            _n_lancamentos: 0,
         };
+    }
+
+    // Reconstrói _cachePJDash consolidando faturas (_cachePJDashRaw) +
+    // benefícios (_cacheBeneficiosPJFullDash) por (PJ × competência).
+    function _pjDashRebuild() {
+        const grupos = new Map();
+        const raws = Array.isArray(_cachePJDashRaw) ? _cachePJDashRaw : [];
+        for (const { id, data } of raws) {
+            const codForn = data?.codigo_fornecedor != null ? String(data.codigo_fornecedor) : String(id);
+            const compRef = _normalizarCompetenciaPJ(data?.competencia_ref, data?.data_vencimento);
+            const chave = _pjDashChave(compRef, codForn);
+            let reg = grupos.get(chave);
+            if (!reg) { reg = _pjDashBase(compRef, codForn, data); grupos.set(chave, reg); }
+            const fatura = Number(data?.valor_original) || 0;
+            reg.SERVICOS_PRESTADOS_Valor += fatura;
+            reg._valor_fatura            += fatura;
+            reg._n_lancamentos           += 1;
+        }
+        if (_cacheBeneficiosPJFullDash instanceof Map) {
+            for (const [chave, full] of _cacheBeneficiosPJFullDash.entries()) {
+                if (!full) continue;
+                const sep = String(chave).lastIndexOf('_');
+                if (sep < 0) continue;
+                const comp = String(chave).slice(0, sep);
+                const fid  = String(chave).slice(sep + 1);
+                let reg = grupos.get(chave);
+                if (!reg) { reg = _pjDashBase(comp, fid, null); grupos.set(chave, reg); }
+                reg.Bnf_VT     = Number(full.valor_vt)     || 0;
+                reg.Bnf_VR     = Number(full.valor_vr)     || 0;
+                reg.Bnf_VA     = Number(full.valor_va)     || 0;
+                reg.Bnf_MED    = Number(full.valor_med)    || 0;
+                reg.Bnf_Odonto = Number(full.valor_odonto) || 0;
+                reg.BnfDesc_VT     = Number(full.desconto_vt)     || 0;
+                reg.BnfDesc_VR     = Number(full.desconto_vr)     || 0;
+                reg.BnfDesc_VA     = Number(full.desconto_va)     || 0;
+                reg.BnfDesc_MED    = Number(full.desconto_med)    || 0;
+                reg.BnfDesc_Odonto = Number(full.desconto_odonto) || 0;
+                if (!reg.centro_custo && full.centro_custo) reg.centro_custo = String(full.centro_custo).trim();
+                if ((!reg.nome || reg.nome === '—') && full.nome) {
+                    reg.nome = String(full.nome).trim();
+                    reg.funcionario = reg.nome;
+                }
+            }
+        }
+        _cachePJDash = Array.from(grupos.values());
+    }
+
+    // Listener de CP_Beneficios_PJ no dash (auditoria 2026-06-05) — antes
+    // INEXISTENTE; por isso o benefício do PJ nunca chegava ao Dashboard.
+    // Indexa por "comp_fid" (fornecedor_id), pulando ÓRFÃOS (não casam PJ).
+    function inscreverBeneficiosPJDash() {
+        if (_unsubBenefPJDash) { _unsubBenefPJDash(); _unsubBenefPJDash = null; }
+        try {
+            _unsubBenefPJDash = onSnapshot(collection(db, 'CP_Beneficios_PJ'), (snap) => {
+                const mapFull = new Map();
+                snap.forEach(d => {
+                    const data = d.data() || {};
+                    const comp = String(data.competencia || '').trim();
+                    const fid  = String(data.fornecedor_id || '').trim();
+                    if (!comp || !fid || fid === 'ORFAO') return;
+                    const chave = `${comp}_${fid}`;
+                    const prev = mapFull.get(chave) || {
+                        valor_vt: 0, valor_vr: 0, valor_va: 0, valor_med: 0, valor_odonto: 0,
+                        desconto_vt: 0, desconto_vr: 0, desconto_va: 0, desconto_med: 0, desconto_odonto: 0,
+                        nome: '', centro_custo: '',
+                    };
+                    mapFull.set(chave, {
+                        valor_vt:        prev.valor_vt        + (Number(data.valor_vt)  || 0),
+                        valor_vr:        prev.valor_vr        + (Number(data.valor_vr)  || 0),
+                        valor_va:        prev.valor_va        + (Number(data.valor_va)  || 0),
+                        valor_med:       prev.valor_med       + (Number(data.valor_med) || 0),
+                        valor_odonto:    prev.valor_odonto    + (Number(data.valor_odonto) || 0),
+                        desconto_vt:     prev.desconto_vt     + (Number(data.desconto_vt)  || 0),
+                        desconto_vr:     prev.desconto_vr     + (Number(data.desconto_vr)  || 0),
+                        desconto_va:     prev.desconto_va     + (Number(data.desconto_va)  || 0),
+                        desconto_med:    prev.desconto_med    + (Number(data.desconto_med) || 0),
+                        desconto_odonto: prev.desconto_odonto + (Number(data.desconto_odonto) || 0),
+                        nome:            String(data.nome_fornecedor || prev.nome || '').trim(),
+                        centro_custo:    String(data.centro_custo || prev.centro_custo || '').trim(),
+                    });
+                });
+                _cacheBeneficiosPJFullDash = mapFull;
+                _pjDashRebuild();
+                try { processarCustoFolha(); } catch (_) { /* no-op */ }
+            }, (err) => {
+                console.warn('[CustoFolhaDash][BenefPJ] listener falhou:', err?.code || err?.message);
+                _cacheBeneficiosPJFullDash = new Map();
+            });
+        } catch (err) {
+            console.warn('[CustoFolhaDash][BenefPJ] inscrição falhou:', err?.message);
+        }
     }
 
     function inscreverFornecedoresCCDash() {
@@ -1636,9 +1735,9 @@
                     if (cc) map.set(String(data.codigo != null ? data.codigo : d.id), cc);
                 });
                 _cacheFornCC = map;
-                // Se já temos PJs em cache, re-mapeia pra refletir CCs novos.
+                // Se já temos PJs em cache, reconsolida pra refletir CCs novos.
                 if (_cachePJDashRaw.length) {
-                    _cachePJDash = _cachePJDashRaw.map(({ id, data }) => pjParaFolha(id, data));
+                    _pjDashRebuild();
                     try { processarCustoFolha(); } catch (_) { /* no-op */ }
                 }
             }, (err) => console.warn('[CustoFolhaDash][Forn] listener falhou:', err?.code || err?.message));
@@ -1657,15 +1756,13 @@
             );
             _unsubPJDash = onSnapshot(qPJ, (snap) => {
                 console.log('[CustoFolhaDash][Conector PJ] Documentos brutos retornados do Firestore:', snap.size);
-                const lista = [];
                 const raws = [];
                 snap.forEach(d => {
                     const data = d.data() || {};
                     raws.push({ id: d.id, data });
-                    lista.push(pjParaFolha(d.id, data));
                 });
-                _cachePJDash = lista;
                 _cachePJDashRaw = raws;
+                _pjDashRebuild();   // consolida faturas + benefícios por (PJ × competência)
                 // Dispara o reprocessamento global (combinará Folha + PJ no
                 // `processarCustoFolha` via `window._custoFolhaBase`).
                 try { processarCustoFolha(); } catch (_) { /* no-op */ }

@@ -2507,129 +2507,101 @@
         return '';
     }
 
-    function pjParaFolha(docId, r) {
-        const valorFatura = Number(r?.valor_original) || 0;
-        // Centro de Custo (auditoria 2026-05-18 Fase 3 Conector). Preferência:
-        //   1. CC já gravado no lançamento (ETL com herança ativa).
-        //   2. CC cadastrado no Fornecedor (lookup pelo codigo_fornecedor).
-        //   3. String vazia (não bloqueia o lançamento, mas dificulta filtro).
-        const codForn = r?.codigo_fornecedor != null ? String(r.codigo_fornecedor) : '';
-        const ccLanc  = String(r?.centro_custo || '').trim();
-        const ccForn  = (codForn && _cacheFornCC.get(codForn)) || '';
-        const cc      = ccLanc || ccForn || '';
-        // Competência canônica "YYYY-MM" — sem isso o filtro da tela rejeita
-        // o PJ silenciosamente (ver _normalizarCompetenciaPJ).
-        const compRef = _normalizarCompetenciaPJ(r?.competencia_ref, r?.data_vencimento);
-        // Auditoria 2026-06-03 (Bug Dupla Contagem de Benefício PJ): ANTES o
-        // benefício era somado em SERVICOS_PRESTADOS de CADA lançamento do PJ
-        // na competência — PJs com >1 título no mês (ex.: Nicolas, 2 títulos em
-        // 2026-01) contavam o benefício 2×, inflando o Custo Total; e ele ficava
-        // invisível na coluna "Benef. Pagos". AGORA a linha de fatura carrega SÓ
-        // a fatura; o benefício vira UMA linha sintética por (PJ × competência)
-        // via _pjBeneficiosSinteticos() — contado 1× e no balde Benefícios.
-        const valor = valorFatura;
+    // ── CONSOLIDAÇÃO PJ — 1 LINHA POR (PJ × COMPETÊNCIA) (auditoria 2026-06-05) ─
+    // Mudança de rota a pedido do usuário: em vez de 1 linha por lançamento (+
+    // linha sintética de benefício), agora cada PJ vira UMA linha por
+    // competência que SOMA todas as faturas do mês + o benefício. Resolve de
+    // uma vez: (a) "duas linhas" pro mesmo PJ, (b) dupla contagem do benefício
+    // (era somado em cada fatura), (c) benefício visível na coluna Benef. Pagos
+    // (via prefixo Bnf_*, somado no balde Benefícios pelo calcularTotais).
+    // O detalhe por nota fica no Contas a Pagar e no rodapé do modal Olho.
+    function _pjChave(compRef, codForn) { return `${compRef}_${codForn}`; }
+
+    // Esqueleto do registro consolidado. `dataLanc` é o 1º lançamento do grupo
+    // (usado só pra nome/CC iniciais); pode ser null quando o PJ tem benefício
+    // mas nenhuma fatura na competência.
+    function _pjBaseConsolidada(compRef, codForn, dataLanc) {
+        const ccLanc = String(dataLanc?.centro_custo || '').trim();
+        const ccForn = (codForn && _cacheFornCC.get(codForn)) || '';
+        const info   = (_cacheFornInfo instanceof Map) ? _cacheFornInfo.get(codForn) : null;
+        const cc     = ccLanc || ccForn || (info && info.centro_custo) || '';
+        const nome   = (dataLanc && (dataLanc.entidade || dataLanc.favorecido))
+                       || (info && info.nome) || '—';
         return {
-            _id: 'pj_' + docId,
+            _id: `pj_${compRef}_${codForn}`,
             is_pj: true,
-            nome: r.entidade || r.favorecido || '—',
+            nome,
             cpf: '',
             empresa_atribuida: EMPRESA_PJ_SENTINELA,
             centro_custo: cc,
             competencia_ref: compRef,
-            // Chave canônica que dispara isVencimento + isSalarioBrutoKey.
-            SERVICOS_PRESTADOS_Valor: valor,
-            // Metadados para o modal de visualização — não somam.
-            _origem_cp_id: docId,
+            // Chave canônica que dispara isVencimento + isSalarioBrutoKey (fatura).
+            SERVICOS_PRESTADOS_Valor: 0,
+            // Benefícios (Bnf_*/BnfDesc_*) — preenchidos no merge; somam no balde.
+            Bnf_VT: 0, Bnf_VR: 0, Bnf_VA: 0, Bnf_MED: 0, Bnf_Odonto: 0,
+            BnfDesc_VT: 0, BnfDesc_VR: 0, BnfDesc_VA: 0, BnfDesc_MED: 0, BnfDesc_Odonto: 0,
+            // Metadados (não somam).
             _origem_doc: 'ContasAPagar',
-            _cc_origem: ccLanc ? 'lancamento' : (ccForn ? 'fornecedor' : 'sem_cc'),
-            // Auditoria: guarda o valor bruto da competência do CP pra debug.
-            _competencia_raw: r?.competencia_ref || null,
-            // _valor_fatura preservado p/ o motor de exportação (lê por linha).
-            // _valor_beneficios fica 0 na linha de fatura — o benefício vive na
-            // linha sintética (evita dupla contagem e o rótulo "não mapeado").
-            _valor_fatura: valorFatura,
-            _valor_beneficios: 0,
-            // Auditoria 2026-05-26 Frente 3 — exportação analítica: preserva
-            // codigo_fornecedor (chave do PJ no /Fornecedores) e codigo_beneficio_folha
-            // (chave da planilha do RH em CP_Beneficios_PJ) para cruzamento no Excel.
             _codigo_fornecedor: codForn,
-            _codigo_beneficio_folha: codForn && _cacheFornInfo.get(codForn)
-                ? _cacheFornInfo.get(codForn).codigo_beneficio_folha
-                : '',
+            _codigo_beneficio_folha: (info && info.codigo_beneficio_folha) || '',
+            _valor_fatura: 0,         // soma das faturas (export lê daqui)
+            _valor_beneficios: 0,     // soma dos proventos de benefício
+            _n_lancamentos: 0,        // qtde de notas consolidadas
+            _origem_cp_ids: [],       // ids das notas (debug / modal)
         };
     }
 
-    // ── LINHAS SINTÉTICAS DE BENEFÍCIO PJ (auditoria 2026-06-03) ──────────────
-    // O benefício do PJ é por (PJ × competência), não por lançamento. Para
-    // contá-lo 1× e exibi-lo na coluna "Benef. Pagos" (em vez de embutido em
-    // Serviços Prestados), geramos UMA linha sintética por entrada do
-    // _cacheBeneficiosPJFull. A linha usa o prefixo Bnf_*/BnfDesc_* que o
-    // calcularTotais soma no balde Benefícios — mesma mecânica do CLT. Não tem
-    // SERVICOS_PRESTADOS (não polui Vencimentos/Salário Bruto) e respeita os
-    // filtros de competência/empresa/CC porque carrega esses campos.
-    function _pjBeneficiosSinteticos() {
-        const rows = [];
-        if (!(_cacheBeneficiosPJFull instanceof Map)) return rows;
-        for (const [chave, full] of _cacheBeneficiosPJFull.entries()) {
-            if (!full) continue;
-            // chave = "${comp}_${fid}"; comp tem '-' interno (2026-01), fid não
-            // tem '_' → split no ÚLTIMO '_' separa com segurança.
-            const sep = String(chave).lastIndexOf('_');
-            if (sep < 0) continue;
-            const comp = String(chave).slice(0, sep);
-            const fid  = String(chave).slice(sep + 1);
-            const bnfVt  = Number(full.valor_vt)     || 0;
-            const bnfVr  = Number(full.valor_vr)     || 0;
-            const bnfVa  = Number(full.valor_va)     || 0;
-            const bnfMed = Number(full.valor_med)    || 0;
-            const bnfOdo = Number(full.valor_odonto) || 0;
-            const totalBenef = bnfVt + bnfVr + bnfVa + bnfMed + bnfOdo;
-            const totalDesc  = (Number(full.desconto_vt) || 0) + (Number(full.desconto_vr) || 0)
-                + (Number(full.desconto_va) || 0) + (Number(full.desconto_med) || 0)
-                + (Number(full.desconto_odonto) || 0);
-            if (totalBenef <= 0 && totalDesc <= 0) continue;
-            // Identidade: prioriza o cache do cadastro (nome/CC canônicos);
-            // fallback no que veio gravado no próprio benefício.
-            const info = (_cacheFornInfo instanceof Map) ? _cacheFornInfo.get(fid) : null;
-            const nomeBase = (info && info.nome) || full.nome || `Fornecedor ${fid}`;
-            const cc = (info && info.centro_custo) || full.centro_custo || '';
-            rows.push({
-                _id: `pjbenef_${chave}`,
-                is_pj: true,
-                _is_pj_benef: true,            // marcador p/ export e debug
-                nome: `${nomeBase} · Benefícios`,
-                cpf: '',
-                empresa_atribuida: EMPRESA_PJ_SENTINELA,
-                centro_custo: cc,
-                competencia_ref: comp,
-                _has_benef_txt: true,
-                _codigo_fornecedor: fid,
-                _origem_doc: 'BeneficiosPJ',
-                // Proventos de benefício (Bnf_*) — calcularTotais soma no balde.
-                Bnf_VT:  bnfVt,
-                Bnf_VR:  bnfVr,
-                Bnf_VA:  bnfVa,
-                Bnf_MED: bnfMed,
-                Bnf_Odonto: bnfOdo,
-                // Descontos de coparticipação (BnfDesc_*).
-                BnfDesc_VT:  Number(full.desconto_vt)  || 0,
-                BnfDesc_VR:  Number(full.desconto_vr)  || 0,
-                BnfDesc_VA:  Number(full.desconto_va)  || 0,
-                BnfDesc_MED: Number(full.desconto_med) || 0,
-                BnfDesc_Odonto: Number(full.desconto_odonto) || 0,
-            });
-        }
-        return rows;
-    }
-
-    // Recompõe _cachePJ = (faturas via pjParaFolha) + (linhas sintéticas de
-    // benefício). Chamado por TODO listener que mexe em _cachePJRaw ou nos
-    // benefícios — garante que as duas frentes apareçam sempre juntas.
+    // Recompõe _cachePJ consolidando faturas (_cachePJRaw) + benefícios
+    // (_cacheBeneficiosPJFull) por (PJ × competência). Chamado por TODO listener
+    // que mexe em _cachePJRaw, em Fornecedores (CC) ou nos benefícios.
     function _pjRebuildCache() {
-        const base = Array.isArray(_cachePJRaw)
-            ? _cachePJRaw.map(({ id, data }) => pjParaFolha(id, data))
-            : [];
-        _cachePJ = base.concat(_pjBeneficiosSinteticos());
+        const grupos = new Map();
+
+        // 1) Faturas — soma valor_original por (compRef × codigo_fornecedor).
+        const raws = Array.isArray(_cachePJRaw) ? _cachePJRaw : [];
+        for (const { id, data } of raws) {
+            const codForn = data?.codigo_fornecedor != null ? String(data.codigo_fornecedor) : String(id);
+            const compRef = _normalizarCompetenciaPJ(data?.competencia_ref, data?.data_vencimento);
+            const chave = _pjChave(compRef, codForn);
+            let reg = grupos.get(chave);
+            if (!reg) { reg = _pjBaseConsolidada(compRef, codForn, data); grupos.set(chave, reg); }
+            const fatura = Number(data?.valor_original) || 0;
+            reg.SERVICOS_PRESTADOS_Valor += fatura;
+            reg._valor_fatura            += fatura;
+            reg._n_lancamentos           += 1;
+            reg._origem_cp_ids.push(id);
+        }
+
+        // 2) Benefícios — injeta 1× por grupo (cria grupo só-benefício se o PJ
+        //    não tiver fatura na competência, pra não perder o custo).
+        if (_cacheBeneficiosPJFull instanceof Map) {
+            for (const [chave, full] of _cacheBeneficiosPJFull.entries()) {
+                if (!full) continue;
+                const sep = String(chave).lastIndexOf('_');
+                if (sep < 0) continue;
+                const comp = String(chave).slice(0, sep);
+                const fid  = String(chave).slice(sep + 1);
+                let reg = grupos.get(chave);
+                if (!reg) { reg = _pjBaseConsolidada(comp, fid, null); grupos.set(chave, reg); }
+                reg.Bnf_VT     = Number(full.valor_vt)     || 0;
+                reg.Bnf_VR     = Number(full.valor_vr)     || 0;
+                reg.Bnf_VA     = Number(full.valor_va)     || 0;
+                reg.Bnf_MED    = Number(full.valor_med)    || 0;
+                reg.Bnf_Odonto = Number(full.valor_odonto) || 0;
+                reg.BnfDesc_VT     = Number(full.desconto_vt)     || 0;
+                reg.BnfDesc_VR     = Number(full.desconto_vr)     || 0;
+                reg.BnfDesc_VA     = Number(full.desconto_va)     || 0;
+                reg.BnfDesc_MED    = Number(full.desconto_med)    || 0;
+                reg.BnfDesc_Odonto = Number(full.desconto_odonto) || 0;
+                reg._has_benef_txt = true;
+                reg._valor_beneficios = reg.Bnf_VT + reg.Bnf_VR + reg.Bnf_VA + reg.Bnf_MED + reg.Bnf_Odonto;
+                // Fallbacks de identidade se o grupo nasceu só do benefício.
+                if (!reg.centro_custo && full.centro_custo) reg.centro_custo = String(full.centro_custo).trim();
+                if ((!reg.nome || reg.nome === '—') && full.nome) reg.nome = String(full.nome).trim();
+            }
+        }
+
+        _cachePJ = Array.from(grupos.values());
     }
 
     // ── ENRIQUECIMENTO DE CLT COM BENEFÍCIOS DO TXT ──────────────────────────
@@ -3568,7 +3540,7 @@
     // modal — eram exibidos como "outros valores não mapeados" (enganoso). A
     // fatura já aparece em "Serviços Prestados"; o benefício virou linha própria
     // no balde "Benefícios Pagos". Os campos seguem no registro p/ o export.
-    const RGX_SUPRIMIDAS_NO_OLHO = /HORARIO|^PIS(?:_|$)|^PASEP(?:_|$)|^NIT(?:_|$)|DIAS_TRABALHADOS_VALOR|^CPF$|^_SALARIO_CADASTRAL_RAW$|^_HAS_BENEF_TXT$|^PENDENTE_TRATAMENTO$|^_VALOR_FATURA$|^_VALOR_BENEFICIOS$/;
+    const RGX_SUPRIMIDAS_NO_OLHO = /HORARIO|^PIS(?:_|$)|^PASEP(?:_|$)|^NIT(?:_|$)|DIAS_TRABALHADOS_VALOR|^CPF$|^_SALARIO_CADASTRAL_RAW$|^_HAS_BENEF_TXT$|^PENDENTE_TRATAMENTO$|^_VALOR_FATURA$|^_VALOR_BENEFICIOS$|^_N_LANCAMENTOS$|^_ORIGEM_CP_IDS$/;
     function ehChaveSuprimidaNoOlho(k) {
         return RGX_SUPRIMIDAS_NO_OLHO.test(String(k).toUpperCase());
     }
@@ -4243,45 +4215,34 @@
 
     function _decomporRegistroParaExport(r) {
         if (r?.is_pj) {
-            // Linha sintética de benefício (auditoria 2026-06-03): decompõe os
-            // Bnf_*/BnfDesc_* da PRÓPRIA linha — não relê _cacheBeneficiosPJFull
-            // (era a fonte da dupla contagem, que somava o benefício em cada
-            // fatura do PJ). A linha de fatura exporta SÓ a fatura.
-            if (r._is_pj_benef === true) {
-                const valor_vt  = Number(r.Bnf_VT)  || 0;
-                const valor_vr  = (Number(r.Bnf_VR) || 0) + (Number(r.Bnf_VA) || 0);
-                const valor_am  = Number(r.Bnf_MED) || 0;
-                const valor_odo = Number(r.Bnf_Odonto) || 0;
-                const total_benef = valor_vt + valor_vr + valor_am + valor_odo;
-                const desc_vt  = Number(r.BnfDesc_VT)  || 0;
-                const desc_vr  = (Number(r.BnfDesc_VR) || 0) + (Number(r.BnfDesc_VA) || 0);
-                const desc_am  = Number(r.BnfDesc_MED) || 0;
-                const desc_odo = Number(r.BnfDesc_Odonto) || 0;
-                const desc_total = desc_vt + desc_vr + desc_am + desc_odo;
-                return {
-                    salario_base:     0,
-                    outros_proventos: 0,
-                    bnf_vt:           valor_vt,
-                    bnf_vr:           valor_vr,
-                    bnf_am:           valor_am,
-                    bnf_outros:       valor_odo,
-                    desc_vt:          desc_vt,
-                    desc_vr:          desc_vr,
-                    desc_am:          desc_am,
-                    desc_outros:      desc_odo,
-                    liquido:          0,
-                    custo_total:      total_benef - desc_total,
-                };
-            }
-            // Linha de fatura PJ — só a fatura; benefícios vivem na sintética.
-            const fatura = Number(r._valor_fatura) || Number(r.SERVICOS_PRESTADOS_Valor) || 0;
+            // Linha consolidada PJ (auditoria 2026-06-05): fatura (soma das notas
+            // do mês) + benefício (1×) na MESMA linha. Lê Bnf_*/BnfDesc_* da
+            // própria linha — não relê _cacheBeneficiosPJFull (evita dupla
+            // contagem). Custo Total = fatura + benefícios − descontos.
+            const fatura   = Number(r._valor_fatura) || Number(r.SERVICOS_PRESTADOS_Valor) || 0;
+            const valor_vt  = Number(r.Bnf_VT)  || 0;
+            const valor_vr  = (Number(r.Bnf_VR) || 0) + (Number(r.Bnf_VA) || 0);
+            const valor_am  = Number(r.Bnf_MED) || 0;
+            const valor_odo = Number(r.Bnf_Odonto) || 0;
+            const total_benef = valor_vt + valor_vr + valor_am + valor_odo;
+            const desc_vt  = Number(r.BnfDesc_VT)  || 0;
+            const desc_vr  = (Number(r.BnfDesc_VR) || 0) + (Number(r.BnfDesc_VA) || 0);
+            const desc_am  = Number(r.BnfDesc_MED) || 0;
+            const desc_odo = Number(r.BnfDesc_Odonto) || 0;
+            const desc_total = desc_vt + desc_vr + desc_am + desc_odo;
             return {
-                salario_base:     fatura,           // valor nominal da PJ (fatura)
+                salario_base:     fatura,           // soma das faturas da PJ no mês
                 outros_proventos: 0,
-                bnf_vt: 0, bnf_vr: 0, bnf_am: 0, bnf_outros: 0,
-                desc_vt: 0, desc_vr: 0, desc_am: 0, desc_outros: 0,
+                bnf_vt:           valor_vt,
+                bnf_vr:           valor_vr,
+                bnf_am:           valor_am,
+                bnf_outros:       valor_odo,
+                desc_vt:          desc_vt,
+                desc_vr:          desc_vr,
+                desc_am:          desc_am,
+                desc_outros:      desc_odo,
                 liquido:          fatura,           // Líquido a Receber = fatura
-                custo_total:      fatura,
+                custo_total:      fatura + total_benef - desc_total,
             };
         }
         // CLT / Diretor — reaproveita calcularTotais para paridade absoluta no
