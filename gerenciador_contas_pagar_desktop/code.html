@@ -2403,6 +2403,54 @@
         const m = String(yyyymmdd || '').match(/^(\d{4})-(\d{2})/);
         return m ? `${m[2]}/${m[1]}` : null;
     }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // REGRA CRONOLÓGICA DE COMPETÊNCIA — PJ INTERNO (auditoria 2026-06-05)
+    // ════════════════════════════════════════════════════════════════════════
+    // Diretoria: a NOTA DE SERVIÇO de PJ Interno tem descompasso competência×caixa
+    // — paga no mês N refere-se ao trabalho do mês N-1. Já os BENEFÍCIOS do mesmo
+    // PJ seguem o mês corrente do pagamento. `data_vencimento` (caixa) NUNCA é
+    // alterado — o aging/status do AP continua intacto (statusVisual usa caixa);
+    // só `competencia_ref` (competência de REGIME) é deslocado.
+    //
+    // IMPORTANTE: a competência é SEMPRE derivada do `data_vencimento` (caixa),
+    // nunca de um `competencia_ref` já existente → recálculo idempotente, sem
+    // risco de duplo-recuo em reimportação/backfill.
+
+    // Recua 1 mês de uma data ISO "YYYY-MM-DD" → competência "MM/YYYY".
+    // Janeiro (01) vira Dezembro (12) do ano anterior.
+    function cpRefMenosUmMes(yyyymmdd) {
+        const m = String(yyyymmdd || '').match(/^(\d{4})-(\d{2})/);
+        if (!m) return null;
+        let ano = parseInt(m[1], 10);
+        let mes = parseInt(m[2], 10) - 1;
+        if (mes < 1) { mes = 12; ano -= 1; }
+        return `${String(mes).padStart(2, '0')}/${ano}`;
+    }
+
+    // É PJ Interno? (tag de tipo de contrato herdada do /Fornecedores).
+    function cpEhPJInterno(tipoEntidade) {
+        return /PJ/.test(String(tipoEntidade || '').toUpperCase());
+    }
+
+    // Classifica a linha como BENEFÍCIO pela descrição/conta contábil.
+    // toUpperCase + NFD (remove acento) pra casar Refeição/Alimentação/Médica
+    // mesmo com mojibake ou acentuação variada.
+    function cpLinhaEhBeneficio(descricao) {
+        const s = String(descricao || '').toUpperCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '');
+        return /BENEF|ASSIST|MEDIC|ODONTO|\bVALE\b|ALIMENTAC|REFEIC/.test(s);
+    }
+
+    // Resolver canônico da competência de um lançamento.
+    //   PJ Interno + NOTA DE SERVIÇO (não-benefício) → recua 1 mês (caixa − 1).
+    //   Demais casos (CLT/externo, ou linha de benefício) → mês do pagamento.
+    function cpResolverCompetenciaRef(yyyymmdd, tipoEntidade, descricao) {
+        if (cpEhPJInterno(tipoEntidade) && !cpLinhaEhBeneficio(descricao)) {
+            return cpRefMenosUmMes(yyyymmdd);
+        }
+        return cpRefMMYYYY(yyyymmdd);
+    }
     function cpNormalizarSituacao(raw) {
         const s = String(raw || '').toLowerCase();
         if (s.startsWith('baix') || s.startsWith('pag') || s.startsWith('liquid')) return 'pago';
@@ -3299,7 +3347,9 @@
                     if (_statusFinal === 'pago' && _statusBase === 'pendente') _calibradosPago++;
                     batch.set(ref, {
                         data_vencimento: l.vencimentoISO,
-                        competencia_ref: cpRefMMYYYY(l.vencimentoISO),
+                        // Competência de REGIME (auditoria 2026-06-05): PJ Interno
+                        // serviço recua 1 mês; benefício/CLT/externo = mês do caixa.
+                        competencia_ref: cpResolverCompetenciaRef(l.vencimentoISO, l._tipo_entidade, l.despesa),
                         // Auditoria 2026-05-15: `entidade` agora vem da /Fornecedores
                         // (nome oficial); se ausente, cai pro nome do cabeçalho do TXT.
                         entidade: l._nomeOficial || l.entidade || null,
@@ -4330,7 +4380,8 @@
                 ...reg,
                 _id: undefined, // dispara addDoc com id auto
                 data_vencimento: novoVenc,
-                competencia_ref: cpRefMMYYYY(novoVenc),
+                // Regra cronológica (2026-06-05) — clone recorrente herda tipo/categoria do pai.
+                competencia_ref: cpResolverCompetenciaRef(novoVenc, reg.tipo_entidade, reg.categoria),
                 status: 'pendente',
                 is_recorrente: true,
                 origem: 'edit_projetado_recorrente',
@@ -4390,7 +4441,8 @@
                 entidade: favorecido || null,
                 centro_custo: cc || null,
                 data_vencimento: venc,
-                competencia_ref: cpRefMMYYYY(venc),
+                // Regra cronológica (2026-06-05) — usa tipo/categoria do registro original.
+                competencia_ref: cpResolverCompetenciaRef(venc, regOriginal?.tipo_entidade, regOriginal?.categoria),
                 valor_original: valor,
                 is_recorrente: recorrente,
                 updated_at: serverTimestamp(),
