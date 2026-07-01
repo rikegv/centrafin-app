@@ -5,6 +5,27 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-01 - Merge F0 em main (fabrica em producao)
+
+Branch feature/instalar-fabrica-f0 mesclado em main via fast-forward e push para origin.
+Fluxo completo da fabrica exercitado pela primeira vez:
+
+- Testador-auditor: revisou os 18 arquivos do branch, rodou checks de sintaxe e segredos
+  (ambos limpos), confirmou que firestore.rules NAO foi alterado (emulador dispensado),
+  verificou ausencia de segredos nos commits. Flag READY_instalar-fabrica-f0 criada.
+- Deployer: confirmou flag, merge --ff-only (3 commits, 1040 linhas), check de segredos
+  pre-push limpo, git push origin main sem --force. Range 8bdf875..f6e0cd0.
+- Nenhum firebase deploy necessario (sem mudanca em rules/hosting).
+
+Commits agora em main:
+- 47cc83a feat: instala fabrica de agentes no CentraFin (F0-01)
+- 48d9b82 feat: completa Fase F0 (F0-02 a F0-07)
+- f6e0cd0 docs: registra correcao de protocolo
+
+Fase F0 encerrada. Fabrica operacional em main. Proximo: F1 (primeira tarefa cirurgica).
+
+---
+
 ## 2026-07-01 - F0 fechado (substrato seguro completo)
 
 Fabrica instalada e testada de ponta a ponta no branch feature/instalar-fabrica-f0,
