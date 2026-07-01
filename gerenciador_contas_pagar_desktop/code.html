@@ -342,6 +342,16 @@
                     </button>
                 </div>
             </div>
+            <!-- Carregar Mais (auditoria 2026-06-18): a tela abre só com o mês
+                 corrente (carga leve). Este botão estende a janela para o mês
+                 anterior sob demanda; para um período específico use os Filtros
+                 Avançados → Período. -->
+            <div id="cp-carregar-mais-bar" class="hidden items-center justify-between gap-3 px-6 py-3 border-t border-slate-100 bg-white">
+                <span id="cp-janela-info" class="text-[11px] font-medium text-slate-500">Exibindo: mês corrente</span>
+                <button id="cp-btn-carregar-mais" type="button" class="inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold text-secondary bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 active:scale-95 transition-all">
+                    <span class="material-symbols-outlined text-[14px]">expand_more</span> Carregar mês anterior
+                </button>
+            </div>
             <div id="cp-vazio" class="px-8 py-16 text-center">
                 <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-4">
                     <span class="material-symbols-outlined text-3xl text-slate-300">inbox</span>
@@ -1094,6 +1104,69 @@
 
     let cacheRegistros = [];
 
+    // ── JANELA DE CARGA SERVER-SIDE (auditoria 2026-06-18) ──────────────────
+    // Antes: onSnapshot SEM limite carregava TODA a base histórica de uma vez
+    // (10k+ docs) → travava o browser. Agora a query é LIMITADA por uma janela
+    // de `data_vencimento` (range + orderBy no MESMO campo, sem índice composto).
+    // Default = mês corrente (abre instantâneo e leve). "Carregar Mais" estende
+    // a janela para meses anteriores sob demanda; os Filtros Avançados (Período)
+    // disparam uma nova janela server-side. As demais dimensões (status,
+    // favorecido, CC, etc.) seguem filtrando client-side sobre a janela em cache.
+    // Mantemos onSnapshot (tempo real) — toda escrita (import/edição/exclusão)
+    // continua auto-refrescando sem reload manual.
+    let _cpUnsubscribe = null;     // unsubscribe do listener ativo (troca de janela)
+    let _cpJanelaIni = '';         // 'YYYY-MM-DD' inclusive — '' = sem limite inferior
+    let _cpJanelaFim = '';         // 'YYYY-MM-DD' inclusive — '' = sem limite superior
+
+    const _MESES_PT_CP = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    function _cpMesCorrenteRange() {
+        const d = new Date();
+        const y = d.getFullYear(), m = d.getMonth();
+        const ini = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+        const ultimo = new Date(y, m + 1, 0).getDate();
+        const fim = `${y}-${String(m + 1).padStart(2, '0')}-${String(ultimo).padStart(2, '0')}`;
+        return { ini, fim };
+    }
+    // Recua o limite inferior (ini) em N meses, preservando o fim atual.
+    function _cpRecuarIniUmMes() {
+        const base = _cpJanelaIni || _cpMesCorrenteRange().ini;
+        const m = base.match(/^(\d{4})-(\d{2})-/);
+        if (!m) return base;
+        let ano = parseInt(m[1], 10), mes = parseInt(m[2], 10) - 1; // mês 0-index do ini atual
+        mes -= 1; // um mês antes
+        if (mes < 0) { mes = 11; ano -= 1; }
+        return `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+    }
+    function _cpFmtJanelaLabel() {
+        if (!_cpJanelaIni && !_cpJanelaFim) return 'Exibindo: toda a base';
+        const fmt = (iso) => {
+            const m = String(iso || '').match(/^(\d{4})-(\d{2})/);
+            return m ? `${_MESES_PT_CP[parseInt(m[2], 10) - 1]}/${m[1]}` : '—';
+        };
+        if (_cpJanelaIni && _cpJanelaFim) {
+            const a = fmt(_cpJanelaIni), b = fmt(_cpJanelaFim);
+            return a === b ? `Exibindo: ${a}` : `Exibindo: ${a} → ${b}`;
+        }
+        if (_cpJanelaIni) return `Exibindo: a partir de ${fmt(_cpJanelaIni)}`;
+        return `Exibindo: até ${fmt(_cpJanelaFim)}`;
+    }
+    function _cpAtualizarUICarregarMais() {
+        const bar  = document.getElementById('cp-carregar-mais-bar');
+        const info = document.getElementById('cp-janela-info');
+        const btn  = document.getElementById('cp-btn-carregar-mais');
+        if (info) info.textContent = `${_cpFmtJanelaLabel()} · ${cacheRegistros.length} lançamento(s) em cache`;
+        if (bar)  { bar.classList.remove('hidden'); bar.classList.add('flex'); }
+        // Sem limite inferior = já está em "toda a base"; não há mais o que recuar.
+        if (btn)  btn.classList.toggle('hidden', !_cpJanelaIni);
+    }
+
+    // (Re)assina o listener para a janela atual. Desinscreve o anterior pra não
+    // vazar listeners ao trocar de janela (Carregar Mais / Filtros / Limpar).
+    function _cpAtivarJanela() {
+        if (typeof _cpUnsubscribe === 'function') { try { _cpUnsubscribe(); } catch (_) {} _cpUnsubscribe = null; }
+        _cpSubscribeJanela();
+    }
+
     // Formatadores BRL e datas pt-BR.
     const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     function fmtDataBR(yyyymmdd) {
@@ -1209,8 +1282,22 @@
     // e a inserção das <option>s vai pra chunks (requestIdleCallback) que
     // cedem o controle ao paint entre lotes — main thread não engasga.
     function inscreverContasPagar() {
-        const q = query(collection(db, COLECAO), orderBy('data_vencimento', 'desc'));
-        onSnapshot(q, (snap) => {
+        // Default na inicialização: mês corrente — carga leve, abre instantâneo.
+        // Outros períodos só via "Carregar Mais" ou Filtros Avançados (Período).
+        const mc = _cpMesCorrenteRange();
+        _cpJanelaIni = mc.ini;
+        _cpJanelaFim = mc.fim;
+        _cpAtivarJanela();
+    }
+
+    // Assina o onSnapshot LIMITADO à janela [_cpJanelaIni, _cpJanelaFim].
+    // Range + orderBy no mesmo campo `data_vencimento` (sem índice composto).
+    function _cpSubscribeJanela() {
+        const constraints = [orderBy('data_vencimento', 'desc')];
+        if (_cpJanelaIni) constraints.push(where('data_vencimento', '>=', _cpJanelaIni));
+        if (_cpJanelaFim) constraints.push(where('data_vencimento', '<=', _cpJanelaFim));
+        const q = query(collection(db, COLECAO), ...constraints);
+        _cpUnsubscribe = onSnapshot(q, (snap) => {
             // ─── Single-pass: regs + Sets de filtros num único loop ───
             // Frente 1 (2026-05-20): extrai também `empresa` (string vazia
             // tolerada — vira `__SEM_EMPRESA__` no filtro) — base do novo
@@ -1241,6 +1328,7 @@
             // qual <option> está renderizada nos dropdowns. A paginação
             // estrita de 50 (PAGE_SIZE_CP) limita o DOM ao recorte visível.
             renderTudo();
+            _cpAtualizarUICarregarMais();
             // Popula os dropdowns em chunks assíncronos. Quando o primeiro
             // snapshot termina de preencher as <option>s, restaura o estado
             // de filtros do sessionStorage UMA ÚNICA VEZ — depois é só
@@ -1273,6 +1361,7 @@
             console.error('[ContasAPagar] listener falhou:', err);
             cacheRegistros = [];
             renderTudo();
+            _cpAtualizarUICarregarMais();
         });
     }
     // Nota auditoria 2026-05-18: o relógio "Última atualização" foi
@@ -1951,6 +2040,11 @@
         _cpTermoBusca = '';
         if (_btnLimparBuscaCP) _btnLimparBuscaCP.classList.add('hidden');
         _cpLimparEstadoFiltrosSS();
+        // Janela server-side volta ao default (mês corrente) ao limpar tudo.
+        const _mc = _cpMesCorrenteRange();
+        _cpJanelaIni = _mc.ini;
+        _cpJanelaFim = _mc.fim;
+        _cpAtivarJanela();
         _cpPage = 1; // mudança explícita de recorte → volta pra pág 1.
         renderTudo();
     }
@@ -1970,6 +2064,19 @@
             ini: String(_inpIni?.value || ''),
             fim: String(_inpFim?.value || ''),
         };
+        // Janela server-side (auditoria 2026-06-18): Período definido dispara uma
+        // nova consulta server-side para ESSE intervalo; Período vazio volta ao
+        // default (mês corrente). Demais dimensões seguem client-side sobre a
+        // janela carregada.
+        if (_cpPeriodoComitado.ini || _cpPeriodoComitado.fim) {
+            _cpJanelaIni = _cpPeriodoComitado.ini;
+            _cpJanelaFim = _cpPeriodoComitado.fim;
+        } else {
+            const mc = _cpMesCorrenteRange();
+            _cpJanelaIni = mc.ini;
+            _cpJanelaFim = mc.fim;
+        }
+        _cpAtivarJanela(); // re-assina o listener com a nova janela
         _cpPage = 1; // mudança explícita de recorte → volta pra pág 1.
         renderTudo();
         _cpSalvarEstadoFiltros(); // sticky filtros (Frente 1)
@@ -1995,6 +2102,19 @@
             if (inpIni) inpIni.value = _cpPeriodoComitado.ini || '';
             if (inpFim) inpFim.value = _cpPeriodoComitado.fim || '';
         });
+    }
+
+    // ── Carregar Mais (auditoria 2026-06-18): estende a janela 1 mês p/ trás ─
+    {
+        const _btnCarregarMais = document.getElementById('cp-btn-carregar-mais');
+        if (_btnCarregarMais) {
+            _btnCarregarMais.addEventListener('click', () => {
+                // Recua o limite inferior em 1 mês e mantém o teto atual.
+                // Se não havia teto (já era "toda a base"), nada a fazer.
+                _cpJanelaIni = _cpRecuarIniUmMes();
+                _cpAtivarJanela(); // re-assina o listener com a janela ampliada
+            });
+        }
     }
 
     // ── Paginação CP — handlers (auditoria 2026-05-18, V5 ganhou First/Last) ─

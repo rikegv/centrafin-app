@@ -243,6 +243,10 @@
               class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
               <span class="material-symbols-outlined text-[16px]">lock_clock</span> Fechamento
             </button>
+            <button id="btn-consolidado" onclick="window.alternarVisao('consolidado')"
+              class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
+              <span class="material-symbols-outlined text-[16px]">summarize</span> Consolidado
+            </button>
           </div>
           <div class="flex items-center gap-4">
             <div id="aviso-filtro-ativo"
@@ -720,6 +724,63 @@
               </span>
             </div>
             <div id="fech-emissoes-real-table" class="overflow-x-auto max-h-[460px] overflow-y-auto custom-scroll"></div>
+          </div>
+        </div>
+
+        <!-- ─── VISÃO CONSOLIDADO (SOULAN + NEAT) — auditoria 2026-06-18 ───────────
+             Painel executivo "clean slate": unifica em tempo real as métricas das
+             visões SOULAN ({SOULAN CONSULTORIA, SOULAN ADM, ESTÁGIO}) e NEAT.
+             KPIs e gráficos próprios (independentes do motor das outras abas). -->
+        <div id="visao-consolidado" class="hidden animate-fade-in mt-6">
+          <div class="bg-slate-100/70 border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h2 class="text-lg font-extrabold text-slate-700 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-slate-500">summarize</span>
+                  Consolidado · SOULAN + NEAT
+                </h2>
+                <p class="text-xs text-slate-500 font-medium mt-1">Métricas unificadas das duas operações — atualização em tempo real.</p>
+              </div>
+              <span class="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-slate-500 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Tempo real
+              </span>
+            </div>
+
+            <!-- KPIs consolidados -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                <p class="text-slate-400 font-semibold text-[11px] uppercase tracking-wider mb-2">Faturamento Bruto</p>
+                <h3 class="text-2xl font-extrabold text-slate-800" id="kpi-cons-bruto">R$ 0,00</h3>
+              </div>
+              <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                <p class="text-slate-400 font-semibold text-[11px] uppercase tracking-wider mb-2">Faturamento Líquido</p>
+                <h3 class="text-2xl font-extrabold text-sky-700" id="kpi-cons-liquido">R$ 0,00</h3>
+              </div>
+              <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                <p class="text-slate-400 font-semibold text-[11px] uppercase tracking-wider mb-2">Faturamento Realizado</p>
+                <h3 class="text-2xl font-extrabold text-emerald-600" id="kpi-cons-realizado">R$ 0,00</h3>
+              </div>
+              <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                <p class="text-slate-400 font-semibold text-[11px] uppercase tracking-wider mb-2">Faturamento Atrasado</p>
+                <h3 class="text-2xl font-extrabold text-rose-600" id="kpi-cons-atrasado">R$ 0,00</h3>
+              </div>
+            </div>
+
+            <!-- Gráficos comparativos -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 min-w-0">
+                <h3 class="text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-slate-400 text-[18px]">bar_chart</span> Bruto vs Realizado por Empresa
+                </h3>
+                <div id="chart-consolidado-empresa" class="w-full h-[320px]"></div>
+              </div>
+              <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 min-w-0">
+                <h3 class="text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-slate-400 text-[18px]">stacked_bar_chart</span> Bruto vs Realizado por Serviço
+                </h3>
+                <div id="chart-consolidado-servico" class="w-full h-[320px]"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1310,12 +1371,14 @@
       document.getElementById('visao-contas-receber').classList.toggle('hidden', visao !== 'contasreceber');
       document.getElementById('visao-emissoes').classList.toggle('hidden', visao !== 'emissoes');
       document.getElementById('visao-fechamento').classList.toggle('hidden', visao !== 'fechamento');
+      document.getElementById('visao-consolidado').classList.toggle('hidden', visao !== 'consolidado');
       const configs = {
         'soulan': { isImage: true, icon: '../assets/soulan.png', text: 'Visão SOULAN' },
         'thomas': { isImage: true, icon: '../assets/thomas.png', text: 'Visão THOMAS' },
         'contasreceber': { isImage: false, icon: 'payments', text: 'Contas a Receber' },
         'emissoes': { isImage: false, icon: 'receipt_long', text: 'Emissões Diárias' },
-        'fechamento': { isImage: false, icon: 'lock_clock', text: 'Fechamento' }
+        'fechamento': { isImage: false, icon: 'lock_clock', text: 'Fechamento' },
+        'consolidado': { isImage: false, icon: 'summarize', text: 'Consolidado' }
       };
       Object.keys(configs).forEach(b => {
         const btnEl = document.getElementById('btn-' + b);
@@ -1347,7 +1410,7 @@
       idsOcultarPorAba.forEach(id => {
           const el = document.getElementById(id);
           if (el) {
-              el.style.display = (visao === 'emissoes' || visao === 'fechamento' || visao === 'contasreceber') ? 'none' : 'block';
+              el.style.display = (visao === 'emissoes' || visao === 'fechamento' || visao === 'contasreceber' || visao === 'consolidado') ? 'none' : 'block';
           }
       });
 
@@ -1358,6 +1421,13 @@
         } catch (e) { console.warn('[ContasReceber] erro ao atualizar ao trocar aba:', e); }
       }
 
+      // Consolidado (SOULAN+NEAT): recalcula KPIs/gráficos próprios ao abrir.
+      if (visao === 'consolidado') {
+        try {
+          window.processarConsolidado(window._ultimoArrayProcessado || window.dadosGlobaisFirestore);
+        } catch (e) { console.warn('[Consolidado] erro ao atualizar ao trocar aba:', e); }
+      }
+
       // Atualiza visão dos KPIs ao trocar aba Soulan/Thomas
       if (visao === 'soulan' || visao === 'thomas') {
         window.visaoKpiFaturamento = visao;
@@ -1365,6 +1435,120 @@
           window._ultimoArrayProcessado || window.dadosGlobaisFirestore,
           window._ultimaAbaProcessada || 'todas'
         );
+      }
+    };
+
+    // ── VISÃO CONSOLIDADO (SOULAN + NEAT) — auditoria 2026-06-18 ──────────────
+    // Map/Reduce próprio: inclui só os lançamentos cujas empresas pertencem às
+    // visões SOULAN ({SOULAN CONSULTORIA, SOULAN ADM, ESTÁGIO}) ou NEAT, e soma
+    // KPIs (Bruto/Líquido/Realizado/Atrasado) + alimenta dois gráficos
+    // comparativos (Bruto×Realizado por Empresa e por Serviço). Reusa os MESMOS
+    // motores das outras abas (calcEmpresaExcel, obterStatusReal,
+    // obterFaturamentoRealMaster, obterValorLiquidoMaster) para paridade total.
+    // Independente do motor principal — não interfere em nenhum cálculo ativo.
+    let _chartConsEmpresa = null;
+    let _chartConsServico = null;
+    const _CONS_EMPRESAS_SOULAN = new Set(['SOULAN CONSULTORIA', 'SOULAN ADM', 'ESTÁGIO']);
+
+    function _consEmpresaMae(empresa) {
+      if (empresa === 'NEAT') return 'NEAT';
+      if (_CONS_EMPRESAS_SOULAN.has(empresa)) return 'SOULAN';
+      return null; // fora do escopo consolidado
+    }
+
+    function _initChartsConsolidado() {
+      if (typeof ApexCharts === 'undefined') return;
+      const baseBar = {
+        chart: { type: 'bar', height: 320, fontFamily: 'inherit', toolbar: { show: false }, animations: { enabled: true } },
+        plotOptions: { bar: { horizontal: false, columnWidth: '58%', borderRadius: 6 } },
+        dataLabels: { enabled: false },
+        legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px', fontWeight: 700, labels: { colors: '#475569' }, markers: { width: 9, height: 9, radius: 3 } },
+        grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
+        colors: ['#64748b', '#10b981'], // slate-500 (Bruto) · emerald-500 (Realizado)
+        yaxis: { labels: { style: { colors: '#94a3b8', fontSize: '10px' }, formatter: (v) => (window.formatMil ? window.formatMil(v) : v) } },
+        tooltip: { y: { formatter: (v) => window.formatMoedaFull(v) } },
+        noData: { text: 'Sem dados no escopo SOULAN + NEAT', style: { color: '#94a3b8', fontSize: '13px' } },
+      };
+      if (!_chartConsEmpresa) {
+        _chartConsEmpresa = new ApexCharts(document.querySelector('#chart-consolidado-empresa'), {
+          ...baseBar, series: [],
+          xaxis: { categories: [], labels: { style: { colors: '#475569', fontSize: '11px', fontWeight: 700 } } }
+        });
+        _chartConsEmpresa.render();
+      }
+      if (!_chartConsServico) {
+        _chartConsServico = new ApexCharts(document.querySelector('#chart-consolidado-servico'), {
+          ...baseBar, series: [],
+          xaxis: { categories: [], labels: { rotate: -35, hideOverlappingLabels: true, trim: true, style: { colors: '#475569', fontSize: '10px', fontWeight: 600 } } }
+        });
+        _chartConsServico.render();
+      }
+    }
+
+    window.processarConsolidado = function (arrayDeDados) {
+      try {
+        _initChartsConsolidado();
+        const dados = Array.isArray(arrayDeDados) ? arrayDeDados : (window.dadosGlobaisFirestore || []);
+        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+
+        let bruto = 0, liquido = 0, realizado = 0, atrasado = 0;
+        const porEmpresa = { 'SOULAN': { bruto: 0, real: 0 }, 'NEAT': { bruto: 0, real: 0 } };
+        const porServico = new Map(); // servicoNormalizado -> { bruto, real }
+
+        dados.forEach((data) => {
+          const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || '').toUpperCase().trim();
+          const empresa = String(window.calcEmpresaExcel(tipoServicoRaw) || '').toUpperCase().trim();
+          const mae = _consEmpresaMae(empresa);
+          if (!mae) return; // só SOULAN + NEAT entram no consolidado
+
+          const status = window.obterStatusReal(data, hoje);
+          if (status === 'Cancelada' || status === 'DESMEMBRADO') return; // espelha o motor das outras abas
+
+          const vFatura  = Number(window.extrairNum(data['valor_fatura'] || data['Valor Fatura'] || data['valor'])) || 0;
+          const vLiquido = window.obterValorLiquidoMaster(data);
+          const faturReal = window.obterFaturamentoRealMaster(data);
+
+          bruto += vFatura; liquido += vLiquido; realizado += faturReal;
+          if (status === 'VENCIDO') atrasado += faturReal;
+
+          porEmpresa[mae].bruto += vFatura;
+          porEmpresa[mae].real  += faturReal;
+
+          // Serviço normalizado (toUpperCase + trim) para agrupar serviços idênticos.
+          const serv = (String(window.calcServicoAgrupado(tipoServicoRaw) || 'OUTROS').toUpperCase().trim()) || 'OUTROS';
+          let s = porServico.get(serv);
+          if (!s) { s = { bruto: 0, real: 0 }; porServico.set(serv, s); }
+          s.bruto += vFatura; s.real += faturReal;
+        });
+
+        const setKpi = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = window.formatMoedaFull(v); };
+        setKpi('kpi-cons-bruto', bruto);
+        setKpi('kpi-cons-liquido', liquido);
+        setKpi('kpi-cons-realizado', realizado);
+        setKpi('kpi-cons-atrasado', atrasado);
+
+        if (_chartConsEmpresa) {
+          const cats = ['SOULAN', 'NEAT'];
+          _chartConsEmpresa.updateOptions({ xaxis: { categories: cats } }, false, false);
+          _chartConsEmpresa.updateSeries([
+            { name: 'Bruto',     data: cats.map(c => Math.round(porEmpresa[c].bruto)) },
+            { name: 'Realizado', data: cats.map(c => Math.round(porEmpresa[c].real)) },
+          ], true);
+        }
+
+        if (_chartConsServico) {
+          const pares = [...porServico.entries()]
+            .filter(([, v]) => v.bruto > 0 || v.real > 0)
+            .sort((a, b) => b[1].bruto - a[1].bruto);
+          const cats = pares.map(p => p[0]);
+          _chartConsServico.updateOptions({ xaxis: { categories: cats } }, false, false);
+          _chartConsServico.updateSeries([
+            { name: 'Bruto',     data: pares.map(p => Math.round(p[1].bruto)) },
+            { name: 'Realizado', data: pares.map(p => Math.round(p[1].real)) },
+          ], true);
+        }
+      } catch (e) {
+        console.warn('[Consolidado] erro no processamento:', e);
       }
     };
 
@@ -2496,6 +2680,12 @@
         // Roda em 'todas' e quando a aba está explicitamente ativa.
         if (abaEspecifica === 'todas' || abaEspecifica === 'contasreceber') {
           try { window.atualizarContasReceber(arrayDeDados); } catch (e) { console.warn('[ContasReceber]', e); }
+        }
+
+        // Aba "Consolidado": refresh em tempo real APENAS quando ativa — evita
+        // renderizar ApexCharts num container oculto (geraria chart de largura 0).
+        if (window.visaoAtivaFaturamento === 'consolidado') {
+          try { window.processarConsolidado(arrayDeDados); } catch (e) { console.warn('[Consolidado]', e); }
         }
 
         // Aba "Emissões Diárias": além dos charts existentes, renderiza as 2 matrizes

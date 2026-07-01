@@ -92,12 +92,20 @@ function parseDataLocal(raw) {
 // Empresa atribuída a partir do tipo de serviço (descrição do contrato).
 // REGRA: ASSESSMENT pertence à NEAT (Visão Thomas), não a SOULAN ADM.
 function calcularEmpresaAtribuida(tipoServico) {
-  const desc = String(tipoServico || "").toUpperCase();
+  // NFD strip + UPPER mata o bug de acento — auditoria 2026-06-19. Antes só
+  // fazia .toUpperCase(), então `"ESTÁGIO".includes("ESTAGIO")` era FALSE e a
+  // nota voltava com empresa "" (sumindo de toda visão — origem do vazamento
+  // dos ~R$141,59 em Soulan). Espelha o normalizador de `calcularFaturamentoReal`.
+  // IMPORTANTE: como o input vem sem acento, as keywords TAMBÉM são sem acento
+  // (ex.: "INTEGRACAO", não "INTEGRAÇÃO").
+  const desc = String(tipoServico || "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toUpperCase();
   if (desc.includes("TEMPORARIO")) return "SOULAN CONSULTORIA";
   if (desc.includes("ESTAGIO")) return "ESTÁGIO";
   const adm = ["TERCEIROS", "FOPAG", "CONSULTORIA", "RPO"];
   if (adm.some(k => desc.includes(k))) return "SOULAN ADM";
-  const neat = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRAÇÃO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
+  const neat = ["TREINAMENTO", "PROCESSAMENTO DE PPA", "SUBSCRIPTION", "HR METRICS", "INTEGRACAO", "UNIDADES", "DEVOLUTIVA", "HOTMART", "ASSESSMENT"];
   if (neat.some(k => desc.includes(k))) return "NEAT";
   return "";
 }
@@ -164,11 +172,17 @@ function obterStatusReal(data, hojeData) {
   if (typeof hojeData.setHours === 'function') hojeData.setHours(0, 0, 0, 0);
   const sRaw = String(data['status'] || data['Status'] || data['Situação'] || '').toUpperCase();
   const baixaRawStr = String(data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'] || '').toUpperCase();
+  // Blob de TODOS os campos de status + baixa. O `status` (app) pode estar defasado
+  // ("RECEBIDO") enquanto o `Status` (ERP) carrega a verdade ("Cancelada"); por isso
+  // varremos todos atrás de "CANC"/"DESMEMBR", e não só o primeiro campo não-vazio —
+  // senão o cancelamento vaza para os KPIs quando a baixa é uma data válida.
+  const statusBlob = [data['status'], data['Status'], data['Situação'], data['data_baixa'], data['Dt Baixa'], data['data_recebimento']]
+    .map(v => String(v == null ? '' : v).toUpperCase()).join(' | ');
 
-  if (sRaw.includes("CANC") || baixaRawStr.includes("CANC")) return "Cancelada";
+  if (statusBlob.includes("CANC")) return "Cancelada";
   // DESMEMBRADO: nota original que foi parcelada — sai de TODOS os KPIs (igual a Cancelada),
   // pois o faturamento real agora vive nas parcelas-filhas para evitar duplicidade.
-  if (sRaw.includes("DESMEMBR")) return "DESMEMBRADO";
+  if (statusBlob.includes("DESMEMBR")) return "DESMEMBRADO";
   if (sRaw.includes("PREJUÍZO") || sRaw.includes("PREJUIZO")) return "PREJUÍZO";
   if (sRaw.includes("PROTESTO")) return "PROTESTO";
   if (sRaw.includes("PAGO") || sRaw.includes("RECEBIDO") || sRaw.includes("BAIXADO")) return "RECEBIDO";

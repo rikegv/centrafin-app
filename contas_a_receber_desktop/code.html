@@ -1340,6 +1340,16 @@
           window.isSuperAdmin = dadosUser.perfil === 'super_admin';
           if (window.aplicarTogglesSuperAdmin) window.aplicarTogglesSuperAdmin();
           renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
+
+          // ── ESCOPO DE DADOS — FATURAMENTO É GLOBAL (auditoria 2026-06-15) ──────
+          // REGRA DE NEGÓCIO ABSOLUTA: a restrição por Centro de Custo
+          // (permissoes.filtros.centrosCusto) é EXCLUSIVA dos módulos de FOLHA
+          // (Gerenciador de Folha + Dashboard Custo de Folha). O Faturamento
+          // (Contas a Receber e Receitas do DRE) carrega 100% dos dados para
+          // QUALQUER usuário autenticado, mesmo que ele tenha CCs travados no
+          // perfil. Por isso NÃO lemos `permissoes.filtros.centrosCusto` aqui e
+          // NÃO existe `window._ccPermitidos` nesta tela — de propósito. Não
+          // reintroduza um filtro de CC neste módulo.
         } else {
           await signOut(auth);
           alert('Acesso Negado: Usuário não encontrado no sistema.');
@@ -2226,9 +2236,45 @@
       modalConfirmar.classList.add('opacity-0', 'pointer-events-none');
       modalConfirmarContent.classList.add('scale-95');
     });
+    // ── TRAVA CRONOLÓGICA DE IMPORTAÇÃO (< 01/2026) — auditoria 2026-06-18 ──────
+    // Apenas super_admin pode importar competência/emissão anterior a Jan/2026.
+    // Qualquer outro perfil (padrão/master) é bloqueado. A referência de cada
+    // linha é a EMISSÃO (`Dt Emissao`); na ausência dela, cai no VENCIMENTO.
+    // Retorna true se ALGUMA linha viola o limite (deve abortar o upload).
+    const LIMITE_IMPORT_YM = '2026-01';
+    function _crfDataYM(d) {
+      return (d && !isNaN(d.getTime()))
+        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        : null;
+    }
+    function crfImportViolaTravaCronologica(linhas) {
+      if (window.isSuperAdmin) return false; // super_admin tem passe livre
+      if (!Array.isArray(linhas)) return false;
+      return linhas.some(item => {
+        const dEmis = parseDataAuditoria(item['Dt Emissao'] || item['data_emissao']);
+        const dVenc = parseDataAuditoria(item['Dt Vecto'] || item['Dt Vecto  '] || item['vencimento']);
+        const ym = _crfDataYM(dEmis) || _crfDataYM(dVenc);
+        return ym !== null && ym < LIMITE_IMPORT_YM;
+      });
+    }
+    function crfBloquearBotaoProcessar() {
+      if (!btnProcessar) return;
+      btnProcessar.disabled = true;
+      btnProcessar.classList.add('bg-slate-100', 'text-slate-400', 'cursor-not-allowed', 'opacity-50');
+      btnProcessar.classList.remove('bg-primary', 'text-white', 'cursor-pointer');
+      btnProcessar.style.backgroundColor = '';
+    }
+    const MSG_TRAVA_CRONOLOGICA = '⚠️ Operação Negada: Usuários padrão/master não possuem permissão para importar dados anteriores a Janeiro/2026. Contate o SuperAdmin.';
+
     if (btnProcessar) {
       btnProcessar.addEventListener('click', () => {
         if (!dadosValidados || dadosValidados.length === 0) return;
+        // Trava cronológica: aborta imediatamente se houver dado < 01/2026.
+        if (crfImportViolaTravaCronologica(dadosValidados)) {
+          exibirFeedback(MSG_TRAVA_CRONOLOGICA, 'erro');
+          crfBloquearBotaoProcessar();
+          return;
+        }
         const elLinhas = document.getElementById('modal-confirmar-linhas');
         if (elLinhas) elLinhas.textContent = dadosValidados.length;
         if (modalConfirmar && modalConfirmarContent) {
@@ -2240,6 +2286,17 @@
 
     if (btnConfirmarIniciar) {
       btnConfirmarIniciar.addEventListener('click', async () => {
+        // Defesa em profundidade da trava cronológica — bloqueia a gravação
+        // mesmo que o fluxo chegue aqui sem passar pelo gate do botão Processar.
+        if (crfImportViolaTravaCronologica(dadosValidados)) {
+          if (modalConfirmar && modalConfirmarContent) {
+            modalConfirmar.classList.add('opacity-0', 'pointer-events-none');
+            modalConfirmarContent.classList.add('scale-95');
+          }
+          exibirFeedback(MSG_TRAVA_CRONOLOGICA, 'erro');
+          crfBloquearBotaoProcessar();
+          return;
+        }
         if (modalConfirmar && modalConfirmarContent) {
           modalConfirmar.classList.add('opacity-0', 'pointer-events-none');
           modalConfirmarContent.classList.add('scale-95');
@@ -2254,15 +2311,26 @@
           const querySnapshot = await getDocs(q);
           const mapExistentes = new Map();
 
+          // Chave de dedup robusta ao desmembramento — auditoria 2026-06-09.
+          // Bug de campo: parcelas chegam do ERP como "16983 1  " (whitespace
+          // interno + à direita). A chave antiga `${nf}_${cnpj}_${emissao}`
+          // trimava só DESTE lado e ainda amarrava a emissão (serial Excel),
+          // enquanto o lado da nova linha usava `docData.rps` CRU. "16983 1  "
+          // nunca casava com "16983 1" → cada reimport recriava a parcela como
+          // NOVA (addDoc, ID aleatório) → duplicidade. Trava definitiva:
+          //   - normChaveDoc colapsa TODO whitespace ("16983 1  " → "16983 1");
+          //   - CNPJ vira só-dígitos (imune a máscara . / -);
+          //   - emissão SAI da chave (correção de data não duplica mais).
+          // Identidade = nº documento (base + sufixo da parcela) + CNPJ cliente,
+          // aplicada SIMETRICAMENTE aqui e no check da nova linha (abaixo).
+          const normChaveDoc = (rps, cnpj) =>
+            `${String(rps ?? "").replace(/\s+/g, " ").trim().toUpperCase()}__${String(cnpj ?? "").replace(/\D/g, "")}`;
           querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const nf = String(data['nf'] || data['Nº NF'] || data['Nº NF-e'] || data['NF'] || "").trim();
-            const cnpj = String(data['cnpj'] || data['CNPJ Cliente'] || "").trim();
-            const emissaoRaw = data['data_emissao'] || data['Dt Emissao'] || "";
-            const emissao = formatarDataBR(emissaoRaw);
-            if (nf && cnpj) {
-              const chave = `${nf}_${cnpj}_${emissao}`;
-              mapExistentes.set(chave, { id: docSnap.id, ...data });
+            const nf = String(data['nf'] || data['Nº NF'] || data['Nº NF-e'] || data['NF'] || data['rps'] || "");
+            const cnpj = data['cnpj'] || data['CNPJ Cliente'] || "";
+            if (nf.replace(/\s+/g, " ").trim()) {
+              mapExistentes.set(normChaveDoc(nf, cnpj), { id: docSnap.id, ...data });
             }
           });
           const novosLancamentos = [];
@@ -2317,12 +2385,16 @@
               docData.tipo_divergencia = "";
             }
 
-            const nfExcel = docData.rps;
-            const cnpjExcel = String(docData['cnpj'] || docData['CNPJ Cliente'] || "").trim();
-            const emissaoExcel = formatarDataBR(docData['data_emissao'] || docData['Dt Emissao'] || "");
-            const chaveExcel = `${nfExcel}_${cnpjExcel}_${emissaoExcel}`;
+            // Mesma normalização SIMÉTRICA do mapExistentes (acima): colapsa o
+            // whitespace do nº documento e usa CNPJ só-dígitos. Casa "16983 1  "
+            // ↔ "16983 1" e blinda o desmembramento contra reimport — o match
+            // cai no fluxo de UPSERT (updateDoc no doc existente), nunca em
+            // addDoc com ID aleatório. CNPJ deixou de ser obrigatório p/ o
+            // check (parcela sem CNPJ ainda deduplica pelo nº documento).
+            const nfExcelNorm = String(docData.rps ?? "").replace(/\s+/g, " ").trim();
+            const chaveExcel = normChaveDoc(docData.rps, docData['cnpj'] || docData['CNPJ Cliente'] || "");
 
-            if (nfExcel && cnpjExcel && mapExistentes.has(chaveExcel)) {
+            if (nfExcelNorm && mapExistentes.has(chaveExcel)) {
               const existente = mapExistentes.get(chaveExcel);
               docData.idExistente = existente.id;
               docData.comercialAntigo = existente['Comissionado 01'] || existente['Vendedor'];
@@ -2507,7 +2579,11 @@
       const mes_referencia = document.getElementById('campo-mes-referencia').value;
       const status = document.getElementById('campo-status').value;
 
-      const empresa_atribuida = document.getElementById('campo-empresa-atribuida').value;
+      // Nota de Estágio (e demais empresas): grava `empresa_atribuida` SEMPRE
+      // normalizada (toUpperCase + trim). Antes o valor cru do <select> podia
+      // entrar com caixa/espaços divergentes e dessincronizar a leitura no grid
+      // (ex.: "ESTÁGIOS" não casava no filtro). Auditoria 2026-06-18.
+      const empresa_atribuida = String(document.getElementById('campo-empresa-atribuida').value || '').toUpperCase().trim();
       const observacoes = document.getElementById('campo-observacoes').value;
 
       btnSalvar.disabled = true;
@@ -2963,6 +3039,13 @@
           const faturReal = obterFaturamentoReal(data);
 
           const statusReal = obterStatusReal(data, hoje);
+          // Canceladas/Desmembradas já saem de TODOS os KPIs (atualizarMetrics dá return).
+          // Aqui zeramos também os valores EXIBIDOS no grid para não passar impressão de
+          // valor vivo numa linha morta — o selo vermelho de status permanece.
+          let vFaturaDisp = vFatura, vLiquidoDisp = vLiquido, faturRealDisp = faturReal;
+          if (statusReal === "Cancelada" || statusReal === "DESMEMBRADO") {
+            vFaturaDisp = 0; vLiquidoDisp = 0; faturRealDisp = 0;
+          }
           let statusClass = "bg-primary-container/20 text-on-primary-fixed-variant";
           if (statusReal === "Cancelada") statusClass = "bg-red-100 text-red-700 px-3 py-1 rounded-full text-[10px] font-extrabold shadow-sm tracking-wider";
           if (statusReal === "RECEBIDO") statusClass = "bg-tertiary-container/20 text-on-tertiary-container";
@@ -2986,9 +3069,9 @@
             <td class="${cellClass}">${emissao}</td>
             <td class="${cellClass}">${vencimento}</td>
             <td class="${cellClass} font-bold">${baixa}</td>
-            <td class="${cellClass} text-right">${formatadorMoeda.format(vFatura)}</td>
-            <td class="${cellClass} text-right text-cyan-600 font-bold bg-cyan-50/50">${formatadorMoeda.format(vLiquido)}</td>
-            <td class="${cellClass} text-right text-primary bg-primary/5">${formatadorMoeda.format(faturReal)}</td>
+            <td class="${cellClass} text-right">${formatadorMoeda.format(vFaturaDisp)}</td>
+            <td class="${cellClass} text-right text-cyan-600 font-bold bg-cyan-50/50">${formatadorMoeda.format(vLiquidoDisp)}</td>
+            <td class="${cellClass} text-right text-primary bg-primary/5">${formatadorMoeda.format(faturRealDisp)}</td>
             <td class="px-4 py-3 text-center border-r border-slate-100 shadow-[1px_0_0_rgba(0,0,0,0.02)]">
               <span class="px-2 py-0.5 ${statusClass} text-[9px] font-bold rounded-full uppercase">${statusReal}</span>
             </td>

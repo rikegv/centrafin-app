@@ -12,6 +12,7 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
 
     // Definição de estados ativos
     const isMasterActive = currentPath.includes('dashboard_master_desktop') ? activeClass : inactiveClass;
+    const isDREActive = currentPath.includes('dre_gerencial_desktop') ? activeClass : inactiveClass;
     const isFatActive = currentPath.includes('contas_a_receber_desktop') ? activeClass : inactiveClass;
     // Auditoria 2026-05-14: módulo legado contas_a_pagar_desktop foi exterminado
     // — só o novo Gerenciador Contas a Pagar tem entrada no menu agora.
@@ -82,6 +83,14 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
                 <a data-menu="metas" class="${isMetasActive} ${menuLinkClass}" href="${prefix}metas_desktop/code.html">
                     <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('metas_desktop') ? 'text-primary' : ''}">track_changes</span>
                     <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">Gestão das Metas</span>
+                </a>
+
+                <!-- DRE Gerencial — tela executiva que acopla Contas a Receber +
+                     Contas a Pagar num único Demonstrativo de Resultados. Acesso
+                     restrito a master/super_admin (guardião na própria página). -->
+                <a data-menu="dre_gerencial" class="${isDREActive} ${menuLinkClass} cursor-pointer" href="${prefix}dre_gerencial_desktop/code.html">
+                    <span class="material-symbols-outlined shrink-0 text-[20px] ${currentPath.includes('dre_gerencial_desktop') ? 'text-primary' : ''}">summarize</span>
+                    <span class="font-bold text-sm hidden group-hover:block whitespace-nowrap">DRE Gerencial</span>
                 </a>
 
                 <a data-menu="contas_receber" class="${isFatActive} ${menuLinkClass} cursor-pointer" href="${prefix}contas_a_receber_desktop/code.html">

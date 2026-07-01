@@ -15,10 +15,20 @@
       "**/*.py",
       "**/tmp_*.js",
       "**/clean_*.js",
+      "**/*.cjs",
+      "adc_tmp.json",
       "**/*.md",
       "package.json",
       "package-lock.json",
       "centrafin-app.code-workspace"
+    ],
+    "headers": [
+      {
+        "source": "**/*.html",
+        "headers": [
+          { "key": "Cache-Control", "value": "max-age=0, no-cache, no-store, must-revalidate" }
+        ]
+      }
     ]
   }
 }

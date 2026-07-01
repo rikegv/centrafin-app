@@ -158,6 +158,43 @@
                                     class="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-300"
                                     placeholder="joao@empresa.com.br">
                             </div>
+                            <!-- Provedor de autenticação (auditoria 2026-06-15) — Google vs
+                                 E-mail/Senha. Com Google LIGADO, a Senha Provisória some e
+                                 perde o `required`; o cadastro grava só o documento e a
+                                 credencial nasce no 1º Sign-In com popup do Google. -->
+                            <div class="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="material-symbols-outlined text-slate-400 text-xl">account_circle</span>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-bold text-slate-700">Autenticação via Conta Google</p>
+                                        <p class="text-[11px] text-slate-400 leading-tight">Login pelo Google — dispensa senha provisória.</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="checkbox" id="cad-google-auth" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                                </label>
+                            </div>
+                            <!-- Senha Provisória (auditoria 2026-06-12) — credencial inicial
+                                 de acesso. NUNCA é gravada no Firestore: vai direto para o
+                                 Firebase Auth via createUserWithEmailAndPassword (provisionada
+                                 numa instância secundária pra não derrubar a sessão do admin). -->
+                            <div id="bloco-senha-cad">
+                                <label
+                                    class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Senha
+                                    Provisória</label>
+                                <div class="relative">
+                                    <input type="password" id="cad-senha" required minlength="6" autocomplete="new-password"
+                                        class="w-full border border-slate-200 rounded-xl py-2.5 px-3 pr-10 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-300"
+                                        placeholder="Digite a senha inicial de acesso">
+                                    <button type="button" id="cad-toggle-senha" tabindex="-1"
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors p-1"
+                                        title="Mostrar/ocultar senha">
+                                        <span class="material-symbols-outlined text-lg" id="cad-icon-senha">visibility</span>
+                                    </button>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1">Mínimo de 6 caracteres. O colaborador usará esta senha no primeiro acesso e poderá alterá-la depois.</p>
+                            </div>
                             <div>
                                 <label
                                     class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Alocação
@@ -197,6 +234,16 @@
                             </div>
                             <span class="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full"
                                 id="contador-usuarios">0 usuários</span>
+                        </div>
+                        <!-- Busca reativa (auditoria 2026-06-15) — filtra client-side por
+                             nome OU e-mail, sem nova leitura no Firestore. -->
+                        <div class="px-6 py-3 border-b border-slate-100 bg-white">
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+                                <input type="text" id="busca-usuario" autocomplete="off"
+                                    class="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-300"
+                                    placeholder="Buscar usuário por nome ou e-mail...">
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
@@ -1504,9 +1551,9 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where, orderBy, limit, getDocs, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { renderSidebar } from "./sidebar.js";
 
         const firebaseConfig = { apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU", authDomain: "centra-fin.firebaseapp.com", projectId: "centra-fin", storageBucket: "centra-fin.firebasestorage.app", messagingSenderId: "666471089411", appId: "1:666471089411:web:4630f5b2ced70ceb981536" };
@@ -1514,6 +1561,45 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // ── PROVISIONAMENTO DE CREDENCIAIS (Firebase Auth) — auditoria 2026-06-12 ─
+        // createUserWithEmailAndPassword tem efeito colateral de AUTENTICAR a conta
+        // recém-criada na instância em que roda. Se usássemos `auth` (a sessão do
+        // admin logado), o Firebase trocaria a sessão para o novo usuário e
+        // derrubaria o admin. Por isso provisionamos numa instância SECUNDÁRIA e
+        // isolada do Firebase e a descartamos em seguida — a sessão do admin fica
+        // 100% intacta. Retorna o uid gerado pelo Auth. A senha NUNCA é persistida.
+        async function provisionarCredencialAuth(email, senha) {
+            const secApp = initializeApp(firebaseConfig, 'provisionador-usuarios');
+            try {
+                const secAuth = getAuth(secApp);
+                const cred = await createUserWithEmailAndPassword(secAuth, email, senha);
+                const uid = cred.user.uid;
+                // Encerra a sessão da instância secundária antes de descartá-la.
+                await signOut(secAuth).catch(() => {});
+                return uid;
+            } finally {
+                // Descarta a instância secundária sempre — mesmo em caso de erro —
+                // pra não deixar app órfão e permitir nova chamada limpa depois.
+                await deleteApp(secApp).catch(() => {});
+            }
+        }
+
+        // Tradução amigável dos códigos do Firebase Auth no fluxo de criação.
+        function traduzErroAuthCriacao(code) {
+            switch (code) {
+                case 'auth/email-already-in-use':
+                    return 'Já existe uma credencial de acesso para este e-mail no Firebase Auth. Use outro e-mail ou redefina a senha pelo painel de Auth.';
+                case 'auth/weak-password':
+                    return 'Senha muito fraca. Use no mínimo 6 caracteres.';
+                case 'auth/invalid-email':
+                    return 'O e-mail informado é inválido.';
+                case 'auth/operation-not-allowed':
+                    return 'Login por e-mail/senha não está habilitado no Firebase. Ative o método no console.';
+                default:
+                    return null;
+            }
+        }
 
         let usuarioLogadoNome = "Sistema";
         let usuarioLogadoPerfil = "";
@@ -2024,6 +2110,35 @@
         const btnSalvarUser = document.getElementById('btn-salvar-user');
         const msgCadastro = document.getElementById('msg-cadastro');
 
+        // Olhinho da Senha Provisória — alterna visibilidade sem perder o valor.
+        const cadToggleSenha = document.getElementById('cad-toggle-senha');
+        const cadInputSenha = document.getElementById('cad-senha');
+        const cadIconSenha = document.getElementById('cad-icon-senha');
+        if (cadToggleSenha && cadInputSenha && cadIconSenha) {
+            cadToggleSenha.addEventListener('click', () => {
+                const mostrando = cadInputSenha.type === 'text';
+                cadInputSenha.type = mostrando ? 'password' : 'text';
+                cadIconSenha.textContent = mostrando ? 'visibility' : 'visibility_off';
+            });
+        }
+
+        // ── Provedor de autenticação: Google × E-mail/Senha ───────────────────
+        // Com Google LIGADO o bloco de senha some, perde o `required` e o valor é
+        // limpo (não vaza senha de um fluxo pro outro). Estado inicial = OFF.
+        const cadGoogleAuth = document.getElementById('cad-google-auth');
+        const blocoSenhaCad = document.getElementById('bloco-senha-cad');
+        function sincronizarProvedorCad() {
+            const usaGoogle = !!(cadGoogleAuth && cadGoogleAuth.checked);
+            if (blocoSenhaCad) blocoSenhaCad.classList.toggle('hidden', usaGoogle);
+            if (cadInputSenha) {
+                cadInputSenha.required = !usaGoogle;
+                cadInputSenha.disabled = usaGoogle;
+                if (usaGoogle) cadInputSenha.value = '';
+            }
+        }
+        if (cadGoogleAuth) cadGoogleAuth.addEventListener('change', sincronizarProvedorCad);
+        sincronizarProvedorCad();
+
         // Renderiza a matriz nos dois lugares (criação + edição) e ata o toggle
         // Nível 1 → Nível 2. Executar AGORA, antes do primeiro abrirModalEdicao.
         document.getElementById('matriz-cad').innerHTML = gerarMatrizPermissoes('cad');
@@ -2057,6 +2172,13 @@
             const nome = document.getElementById('cad-nome').value.trim();
             const email = document.getElementById('cad-email').value.trim().toLowerCase();
             const perfil = document.getElementById('campo-perfil-usuario').value;
+            // Provedor de autenticação: 'google' (popup/redirect no 1º acesso) ou
+            // 'password' (credencial e-mail/senha provisionada agora no Auth).
+            const usaGoogle = !!(cadGoogleAuth && cadGoogleAuth.checked);
+            const provedor = usaGoogle ? 'google' : 'password';
+            // O login.html aplica .trim() na senha — espelhamos aqui para garantir
+            // que a credencial criada seja exatamente a que o usuário vai digitar.
+            const senhaProvisoria = document.getElementById('cad-senha').value.trim();
 
             // Matriz nova (objeto estruturado) + array legado derivado.
             const permissoes = lerMatriz('cad');
@@ -2077,6 +2199,14 @@
                 msgCadastro.classList.remove('hidden');
                 return;
             }
+            // Senha Provisória só é exigida no provedor 'password' (≥ 6 caracteres,
+            // mínimo do Firebase Auth). No provedor 'google' a senha é ignorada.
+            if (provedor === 'password' && (!senhaProvisoria || senhaProvisoria.length < 6)) {
+                msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
+                msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">error</span> Defina uma Senha Provisória com no mínimo 6 caracteres (ou ative "Autenticação via Conta Google").';
+                msgCadastro.classList.remove('hidden');
+                return;
+            }
 
             btnSalvarUser.disabled = true;
             btnSalvarUser.classList.add('opacity-50');
@@ -2093,9 +2223,27 @@
                     return;
                 }
 
+                // 1) Provisiona a credencial conforme o provedor:
+                //    • 'password' → cria no Firebase Auth ANTES do Firestore (em
+                //      instância secundária, preservando a sessão do admin). Se o
+                //      Auth falhar, abortamos sem deixar doc órfão em /Usuarios.
+                //    • 'google'   → NÃO cria credencial agora. A conta nasce no 1º
+                //      Sign-In com popup do Google; aqui gravamos só o documento.
+                let uid = null;
+                if (provedor === 'password') {
+                    uid = await provisionarCredencialAuth(email, senhaProvisoria);
+                }
+
+                // 2) Grava os METADADOS no Firestore (chave = e-mail, padrão do
+                //    sistema — login, monitor e edição resolvem por e-mail). O uid
+                //    do Auth fica como `auth_uid` (null no Google até o 1º login) e
+                //    `provedor` diz ao sistema como tratar o perfil. A senha NUNCA
+                //    é persistida aqui.
                 await setDoc(docRef, {
                     nome: nome,
                     email: email,
+                    auth_uid: uid,                    // vínculo com o Firebase Auth (null p/ Google)
+                    provedor: provedor,               // 'google' | 'password'
                     perfil: perfil,
                     permissoes,                       // novo formato granular
                     menus_permitidos: menusLegados,   // back-compat: páginas antigas continuam funcionando
@@ -2104,7 +2252,9 @@
                 });
 
                 msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-emerald-50 text-emerald-700 border border-emerald-200';
-                msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">check_circle</span> Usuário criado e alocado com sucesso!';
+                msgCadastro.innerHTML = provedor === 'google'
+                    ? '<span class="material-symbols-outlined text-base">check_circle</span> Usuário registrado para login via Google! Ele já pode entrar pelo botão "Continuar com o Google" na tela de acesso.'
+                    : '<span class="material-symbols-outlined text-base">check_circle</span> Usuário criado com sucesso! A credencial de acesso já está ativa — ele pode entrar com o e-mail e a senha provisória.';
                 msgCadastro.classList.remove('hidden');
                 formUser.reset();
                 // Reset da matriz: form.reset() limpa as checkboxes; precisamos
@@ -2112,16 +2262,24 @@
                 // quando Dashboard Geral está desmarcado).
                 escreverMatriz('cad', { menus: {}, modulosDashboard: {} });
                 escreverFiltroCC('cad', []);
+                // O reset desmarca o toggle Google — re-sincroniza o bloco de senha.
+                sincronizarProvedorCad();
                 const ccsCriados = permissoes.filtros.centrosCusto;
                 const detalheCC = ccsCriados.length > 0
                     ? ` Restrição CC: ${ccsCriados.join(', ')}.`
                     : '';
-                registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Cadastro de Usuários", `Criou o usuário ${email} com perfil ${perfil}.${detalheCC}`);
+                const detalheProvedor = provedor === 'google'
+                    ? 'login via Google (sem senha; credencial nasce no 1º acesso)'
+                    : `credencial e-mail/senha no Firebase Auth (uid ${uid})`;
+                registrarLogAutomático(usuarioLogadoNome, "INCLUSÃO", "Cadastro de Usuários", `Criou o usuário ${email} com perfil ${perfil} e provedor "${provedor}" — ${detalheProvedor}.${detalheCC}`);
             } catch (error) {
                 console.error("Erro ao criar usuário:", error);
                 msgCadastro.className = 'text-xs font-bold p-3 rounded-lg flex items-start gap-2 mt-4 bg-red-50 text-red-700 border border-red-200';
+                const msgAuth = traduzErroAuthCriacao(error?.code);
                 if (error.code === 'permission-denied') {
                     msgCadastro.innerHTML = '<span class="material-symbols-outlined text-base">error</span> Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.';
+                } else if (msgAuth) {
+                    msgCadastro.innerHTML = `<span class="material-symbols-outlined text-base">error</span> ${msgAuth}`;
                 } else {
                     msgCadastro.innerHTML = `<span class="material-symbols-outlined text-base">error</span> Erro ao criar usuário: ${error.message}`;
                 }
@@ -2136,40 +2294,103 @@
         const tabelaUsers = document.getElementById('tabela-usuarios');
         const badgeCount = document.getElementById('contador-usuarios');
 
-        onSnapshot(collection(db, "Usuarios"), (snapshot) => {
-            tabelaUsers.innerHTML = ""; let count = 0;
-            if (snapshot.empty) { tabelaUsers.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-sm">Nenhum usuário cadastrado.</td></tr>`; return; }
-            snapshot.forEach(docSnap => {
-                const data = docSnap.data(); count++;
-                const isSuperAdmin = data.perfil === 'super_admin'; const isAdmin = data.perfil === 'master'; const isAtivo = data.status !== 'inativo';
-                let badgePerfil;
-                if (isSuperAdmin) {
-                    badgePerfil = `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-red-200 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">shield</span> Super Admin</span>`;
-                } else if (isAdmin) {
-                    badgePerfil = `<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-purple-200 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">local_police</span> Master</span>`;
-                } else {
-                    badgePerfil = `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-slate-200">Comum</span>`;
-                }
-                const badgeStatus = isAtivo ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-100">ATIVO</span>` : `<span class="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-100">INATIVO</span>`;
-                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
+        // ── LISTAGEM + BUSCA REATIVA (auditoria 2026-06-15) ──────────────────
+        // O onSnapshot só atualiza o cache em memória; quem desenha é
+        // renderTabelaUsuarios(), que reaplica o filtro de busca a cada keystroke
+        // SEM novas leituras no Firestore.
+        const buscaUsuarioInput = document.getElementById('busca-usuario');
+        let _usuariosCache = [];
 
-                // TABELA: Adiciona botão de EDITAR (Premium)
+        function _badgePerfilUsuario(perfil) {
+            if (perfil === 'super_admin') return `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-red-200 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">shield</span> Super Admin</span>`;
+            if (perfil === 'master') return `<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-purple-200 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">local_police</span> Master</span>`;
+            return `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-slate-200">Comum</span>`;
+        }
+
+        function renderTabelaUsuarios() {
+            if (_usuariosCache.length === 0) {
+                tabelaUsers.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-sm">Nenhum usuário cadastrado.</td></tr>`;
+                badgeCount.textContent = `0 usuário(s)`;
+                return;
+            }
+            const termo = (buscaUsuarioInput?.value || '').trim().toLowerCase();
+            const lista = termo
+                ? _usuariosCache.filter(u =>
+                    String(u.nome || '').toLowerCase().includes(termo) ||
+                    String(u.email || '').toLowerCase().includes(termo))
+                : _usuariosCache;
+
+            tabelaUsers.innerHTML = "";
+            if (lista.length === 0) {
+                tabelaUsers.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-sm">Nenhum usuário encontrado para a busca.</td></tr>`;
+                badgeCount.textContent = `0 de ${_usuariosCache.length}`;
+                return;
+            }
+
+            lista.forEach(data => {
+                const isAtivo = data.status !== 'inativo';
+                const provedorUser = data.provedor || 'password';   // legado sem campo = password
+                const ehGoogle = provedorUser === 'google';
+                const badgeStatus = isAtivo
+                    ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-100">ATIVO</span>`
+                    : `<span class="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-100">INATIVO</span>`;
+                const chipProvedor = ehGoogle
+                    ? `<span class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-blue-100 uppercase"><span class="material-symbols-outlined text-[11px]">account_circle</span> Google</span>`
+                    : `<span class="inline-flex items-center gap-1 bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded text-[9px] font-bold border border-slate-200 uppercase"><span class="material-symbols-outlined text-[11px]">password</span> Senha</span>`;
+                // Reset de senha só faz sentido no provedor 'password' (Google não tem senha).
+                const btnReset = ehGoogle ? '' : `
+                        <button onclick="window.enviarResetSenha('${data.email}')" class="p-2 text-slate-400 hover:text-amber-500 transition-colors flex items-center" title="Enviar e-mail de redefinição de senha">
+                            <span class="material-symbols-outlined text-lg">key</span>
+                        </button>`;
+
+                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
                 tr.innerHTML = `
-                    <td class="px-6 py-4"><p class="font-bold text-slate-800 text-sm">${data.nome || 'Usuário'}</p><p class="text-[11px] text-slate-500">${data.email}</p></td>
-                    <td class="px-6 py-4">${badgePerfil}</td>
+                    <td class="px-6 py-4"><p class="font-bold text-slate-800 text-sm">${data.nome || 'Usuário'}</p><p class="text-[11px] text-slate-500">${data.email}</p><div class="mt-1">${chipProvedor}</div></td>
+                    <td class="px-6 py-4">${_badgePerfilUsuario(data.perfil)}</td>
                     <td class="px-6 py-4 text-center">${badgeStatus}</td>
                     <td class="px-6 py-4 text-right flex items-center justify-end gap-2">
-                        <button onclick="window.abrirModalEdicao('${docSnap.id}')" class="p-2 text-slate-400 hover:text-primary transition-colors flex items-center" title="Editar Permissões">
+                        ${btnReset}
+                        <button onclick="window.abrirModalEdicao('${data.id}')" class="p-2 text-slate-400 hover:text-primary transition-colors flex items-center" title="Editar Permissões">
                             <span class="material-symbols-outlined text-lg">edit</span>
                         </button>
-                        <button onclick="window.alternarStatusUser('${docSnap.id}', '${isAtivo}')" class="text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${isAtivo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'}" title="${isAtivo ? 'Bloquear Acesso' : 'Liberar Acesso'}">
+                        <button onclick="window.alternarStatusUser('${data.id}', '${isAtivo}')" class="text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${isAtivo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'}" title="${isAtivo ? 'Bloquear Acesso' : 'Liberar Acesso'}">
                             ${isAtivo ? 'Inativar' : 'Reativar'}
                         </button>
                     </td>`;
                 tabelaUsers.appendChild(tr);
             });
-            badgeCount.textContent = `${count} usuário(s)`;
+            badgeCount.textContent = termo
+                ? `${lista.length} de ${_usuariosCache.length}`
+                : `${lista.length} usuário(s)`;
+        }
+
+        if (buscaUsuarioInput) buscaUsuarioInput.addEventListener('input', renderTabelaUsuarios);
+
+        onSnapshot(collection(db, "Usuarios"), (snapshot) => {
+            _usuariosCache = [];
+            snapshot.forEach(docSnap => _usuariosCache.push({ id: docSnap.id, ...docSnap.data() }));
+            renderTabelaUsuarios();
         });
+
+        // ── RESET DE SENHA (provedor 'password') — auditoria 2026-06-15 ──────────
+        // Dispara o e-mail oficial de redefinição do Firebase Auth. Não expõe nem
+        // exige a senha atual — todo o fluxo de redefinição roda no Firebase.
+        window.enviarResetSenha = async (emailUser) => {
+            const alvo = String(emailUser || '').trim().toLowerCase();
+            if (!alvo) return;
+            try {
+                await sendPasswordResetEmail(auth, alvo);
+                fornMToast(`E-mail de redefinição de senha enviado com sucesso para ${alvo}`, 'check_circle');
+                registrarLogAutomático(usuarioLogadoNome, "RESET DE SENHA", "Cadastro de Usuários", `Disparou e-mail de redefinição de senha para ${alvo}.`);
+            } catch (err) {
+                console.error('[ResetSenha] Falha:', err?.code || err);
+                let msg = 'Não foi possível enviar o e-mail de redefinição.';
+                if (err?.code === 'auth/user-not-found') msg = `Não há credencial de senha no Firebase Auth para ${alvo} (usuário Google ou criado antes da ativação do Auth).`;
+                else if (err?.code === 'auth/invalid-email') msg = `E-mail inválido: ${alvo}.`;
+                else if (err?.code === 'auth/too-many-requests') msg = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+                fornMToast(msg, 'error', true);
+            }
+        };
 
         // --- LÓGICA DO MODAL DE EDIÇÃO RBAC ---
         const modalEdicao = document.getElementById('modal-edicao-usuario');

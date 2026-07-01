@@ -214,9 +214,62 @@
                     </p>
                     <h2 class="font-headline text-2xl md:text-3xl font-bold text-white">Faça seu login</h2>
                     <p class="text-white/45 text-xs mt-2 leading-relaxed">
-                        Use sua conta corporativa Google para entrar no painel financeiro.
+                        Entre com seu e-mail e senha corporativos ou use sua conta Google.
                     </p>
                 </header>
+
+                <!-- FORMULÁRIO E-MAIL/SENHA — auditoria 2026-06-10. Adicionado
+                     AO LADO do Google SSO (não o substitui). O submit reaproveita
+                     rotearAposLogin() para manter RBAC, bloqueio de conta inativa,
+                     presença e auditoria idênticos ao fluxo Google. -->
+                <form id="form-email" class="flex flex-col gap-4 mb-6" novalidate>
+                    <div>
+                        <label for="input-email"
+                            class="block text-white/60 text-[11px] font-bold uppercase tracking-[0.18em] mb-2">E-mail</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-[20px] pointer-events-none">mail</span>
+                            <input id="input-email" name="email" type="email" autocomplete="username" required
+                                placeholder="seu.email@empresa.com.br"
+                                class="w-full pl-11 pr-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white text-sm placeholder-white/25 outline-none transition-all focus:border-tertiary focus:bg-white/[0.08] focus:ring-2 focus:ring-tertiary/30 disabled:opacity-50" />
+                        </div>
+                    </div>
+                    <div>
+                        <label for="input-senha"
+                            class="block text-white/60 text-[11px] font-bold uppercase tracking-[0.18em] mb-2">Senha</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-[20px] pointer-events-none">lock</span>
+                            <input id="input-senha" name="password" type="password" autocomplete="current-password"
+                                required placeholder="••••••••"
+                                class="w-full pl-11 pr-12 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white text-sm placeholder-white/25 outline-none transition-all focus:border-tertiary focus:bg-white/[0.08] focus:ring-2 focus:ring-tertiary/30 disabled:opacity-50" />
+                            <button type="button" id="toggle-senha" tabindex="-1"
+                                aria-label="Mostrar ou ocultar senha"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-white/35 hover:text-tertiary hover:bg-white/5 transition-colors">
+                                <span class="material-symbols-outlined text-[20px]" id="icon-senha">visibility</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button id="btn-entrar" type="submit"
+                        class="w-full px-6 py-3.5 bg-tertiary hover:bg-tertiary/90 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.985] outline-none focus-visible:ring-2 focus-visible:ring-tertiary/60 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-tertiary/20">
+                        <svg id="spinner-entrar" class="hidden animate-spin h-4 w-4 text-white" viewBox="0 0 24 24"
+                            fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                stroke-width="4"></circle>
+                            <path class="opacity-90" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span id="label-entrar">Entrar</span>
+                    </button>
+                </form>
+
+                <!-- Divisor entre os dois métodos de acesso. -->
+                <div
+                    class="flex items-center gap-3 mb-6 text-white/25 text-[10px] uppercase tracking-[0.3em] font-bold">
+                    <span class="flex-1 h-px bg-white/10"></span>
+                    <span>ou continue com</span>
+                    <span class="flex-1 h-px bg-white/10"></span>
+                </div>
 
                 <button id="btn-google" type="button"
                     class="btn-google-glow w-full px-6 py-3.5 bg-white/95 hover:bg-white text-slate-800 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-3 active:scale-[0.985] outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
@@ -298,7 +351,8 @@
         // do cliente. Antes o Firebase usava browserLocalPersistence (default),
         // que sobrevivia ao reboot do browser.
         import {
-            getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+            getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword,
+            signOut, onAuthStateChanged,
             setPersistence, browserSessionPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -331,6 +385,54 @@
         const msgErro = document.getElementById('mensagem-erro');
         const txtErro = document.getElementById('texto-erro');
         const loadingState = document.getElementById('loading-state');
+        // Formulário e-mail/senha (auditoria 2026-06-10).
+        const formEmail = document.getElementById('form-email');
+        const inputEmail = document.getElementById('input-email');
+        const inputSenha = document.getElementById('input-senha');
+        const btnEntrar = document.getElementById('btn-entrar');
+        const spinnerEntrar = document.getElementById('spinner-entrar');
+        const labelEntrar = document.getElementById('label-entrar');
+        const toggleSenha = document.getElementById('toggle-senha');
+        const iconSenha = document.getElementById('icon-senha');
+
+        // Olhinho — alterna a visibilidade da senha sem perder o foco lógico.
+        toggleSenha.addEventListener('click', () => {
+            const mostrando = inputSenha.type === 'text';
+            inputSenha.type = mostrando ? 'password' : 'text';
+            iconSenha.textContent = mostrando ? 'visibility' : 'visibility_off';
+        });
+
+        // Bloqueia/desbloqueia TODA a área de acesso (form + Google) durante
+        // qualquer fluxo de autenticação — evita cliques múltiplos e estados
+        // inconsistentes entre os dois métodos.
+        function setFormBloqueado(bloq) {
+            btnEntrar.disabled = bloq;
+            btnGoogle.disabled = bloq;
+            inputEmail.disabled = bloq;
+            inputSenha.disabled = bloq;
+            toggleSenha.disabled = bloq;
+            spinnerEntrar.classList.toggle('hidden', !bloq);
+            labelEntrar.textContent = bloq ? 'Entrando…' : 'Entrar';
+            btnGoogle.classList.toggle('opacity-50', bloq);
+            btnGoogle.classList.toggle('cursor-not-allowed', bloq);
+        }
+
+        // Tradução amigável dos códigos do Firebase Auth (e-mail/senha).
+        function traduzErroLogin(code) {
+            switch (code) {
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                case 'auth/invalid-email':
+                    return 'E-mail ou senha incorretos.';
+                case 'auth/too-many-requests':
+                    return 'Acesso bloqueado temporariamente por excesso de tentativas. Tente mais tarde.';
+                case 'auth/operation-not-allowed':
+                    return 'Login por e-mail/senha não está habilitado. Contate o administrador.';
+                default:
+                    return 'Erro ao tentar realizar o login. Contate o administrador.';
+            }
+        }
 
         // ROTEADOR PÓS-LOGIN — auditoria 2026-04-28
         // Avalia a matriz `permissoes.menus` (ou faz fallback ao array legado
@@ -458,23 +560,45 @@
         onAuthStateChanged(auth, async (user) => {
             if (!user) return;
             try {
-                btnGoogle.disabled = true;
-                btnGoogle.classList.add('opacity-50', 'cursor-not-allowed');
+                setFormBloqueado(true);
                 loadingState.classList.remove('hidden');
                 await rotearAposLogin(user);
             } catch (err) {
                 console.error("[Auto-route] Falha ao rotear sessão existente:", err);
-                btnGoogle.disabled = false;
-                btnGoogle.classList.remove('opacity-50', 'cursor-not-allowed');
+                setFormBloqueado(false);
                 loadingState.classList.add('hidden');
+            }
+        });
+
+        // FLUXO E-MAIL/SENHA (auditoria 2026-06-10) — espelha o fluxo Google:
+        // após autenticar, delega a rotearAposLogin() para reusar RBAC, bloqueio
+        // de conta inativa, presença e auditoria. Erros traduzidos pra português.
+        formEmail.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = inputEmail.value.trim();
+            const senha = inputSenha.value.trim();
+            if (!email || !senha) {
+                showError('Informe e-mail e senha para continuar.');
+                return;
+            }
+            msgErro.classList.add('hidden');
+            msgErro.classList.remove('flex');
+            setFormBloqueado(true);
+            try {
+                // Sessão volátil também neste fluxo (idempotente, defesa em profundidade).
+                await setPersistence(auth, browserSessionPersistence);
+                const result = await signInWithEmailAndPassword(auth, email, senha);
+                await rotearAposLogin(result.user);
+            } catch (error) {
+                console.error('Erro na autenticação (e-mail/senha):', error?.code || error);
+                showError(traduzErroLogin(error?.code));
             }
         });
 
         btnGoogle.addEventListener('click', async () => {
             msgErro.classList.add('hidden');
             msgErro.classList.remove('flex');
-            btnGoogle.disabled = true;
-            btnGoogle.classList.add('opacity-50', 'cursor-not-allowed');
+            setFormBloqueado(true);
             loadingState.classList.remove('hidden');
             try {
                 // Garante que a sessão segue volátil também neste fluxo
@@ -487,8 +611,7 @@
                 if (error.code !== 'auth/popup-closed-by-user') {
                     showError(`Erro técnico: ${error.code}`);
                 }
-                btnGoogle.disabled = false;
-                btnGoogle.classList.remove('opacity-50', 'cursor-not-allowed');
+                setFormBloqueado(false);
                 loadingState.classList.add('hidden');
             }
         });
@@ -500,8 +623,8 @@
             msgErro.classList.remove('hidden');
             msgErro.classList.add('flex');
             loadingState.classList.add('hidden');
-            btnGoogle.disabled = false;
-            btnGoogle.classList.remove('opacity-50', 'cursor-not-allowed');
+            // Reabilita os DOIS métodos de acesso (form + Google).
+            setFormBloqueado(false);
         }
     </script>
 </body>

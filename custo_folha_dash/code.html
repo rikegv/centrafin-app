@@ -141,7 +141,11 @@
         <div class="flex items-center gap-4">
             <span class="material-symbols-outlined text-4xl text-brandOrange">receipt_long</span>
             <div class="flex flex-col">
-                <h1 class="text-3xl font-extrabold text-brandDarkBlue tracking-tight uppercase leading-none">Custo de Folha</h1>
+                <h1 class="text-3xl font-extrabold text-brandDarkBlue tracking-tight uppercase leading-none">Custo de Folha
+                    <!-- Selo de build (auditoria 2026-06-19): confirma qual versão do
+                         código está de fato rodando — diagnóstico anti-cache de browser. -->
+                    <span class="align-middle ml-2 inline-flex items-center px-2 py-0.5 rounded-md bg-brandGreen/15 text-brandDarkBlue text-[10px] font-bold tracking-normal normal-case">build 2026-06-19 · cc-superadmin</span>
+                </h1>
                 <p class="text-slate-500 text-sm max-w-3xl mt-1">
                     Visão consolidada de Vencimentos, Encargos, Benefícios e Custo Total por competência, empresa e centro de custo.
                 </p>
@@ -182,13 +186,25 @@
             </div>
           </div>
           <div class="relative z-10 mt-1.5">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Colaboradores</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] mb-1">Colaboradores (Headcount)</p>
             <div class="flex items-baseline gap-2 min-w-0">
               <h3 class="text-[clamp(1.4rem,1.85vw,2.1rem)] font-black text-brandAqua tracking-tight tabular-nums truncate leading-none" id="kpi-colaboradores">0</h3>
-              <span id="kpi-movimentacoes-contagem" class="text-[11px] font-medium text-slate-400 tabular-nums whitespace-nowrap truncate">(0 movimentações)</span>
+              <span id="kpi-movimentacoes-contagem" class="text-[11px] font-medium text-slate-400 tabular-nums whitespace-nowrap truncate">ativos</span>
+            </div>
+            <!-- Fluxo de Headcount: badges de Admissões (+) e Desligamentos (−).
+                 Cores semânticas suaves; clicáveis — abrem o modal de detalhe. -->
+            <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
+              <button type="button" id="badge-entradas" title="Admissões no período — clique para ver quem entrou"
+                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-brandGreen/10 border border-brandGreen/20 text-[10px] font-bold text-brandGreen tabular-nums hover:bg-brandGreen/20 active:scale-95 transition-all cursor-pointer">
+                <span class="material-symbols-outlined text-[12px]">login</span>+0 Admissões
+              </button>
+              <button type="button" id="badge-saidas" title="Desligamentos no período — clique para ver quem saiu"
+                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/20 text-[10px] font-bold text-amber-300 tabular-nums hover:bg-amber-400/20 active:scale-95 transition-all cursor-pointer">
+                <span class="material-symbols-outlined text-[12px]">logout</span>-0 Desligamentos
+              </button>
             </div>
           </div>
-          <!-- Ticker de Movimentações: rodapé do card, scroll horizontal contínuo. -->
+          <!-- Ticker de Fluxo: rodapé do card, eventos de admissão/desligamento. -->
           <div class="relative z-10 mt-2 -mx-3 -mb-2.5 px-3 py-1.5 bg-slate-900/40 border-t border-slate-700/40 ticker-mask overflow-hidden">
             <div id="ticker-movimentacoes" class="ticker-track text-[10px] font-semibold text-slate-300">
               <span class="px-2">Aguardando dados…</span>
@@ -328,11 +344,13 @@
         <div id="chart-custo-total-mensal" class="w-full h-[280px]"></div>
       </div>
 
-      <!-- ANÁLISES GRÁFICAS — LINHA 1 (Evolução + 2 donuts laterais empilhados) -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- ANÁLISES GRÁFICAS — LINHA 1 (Evolução + Custo por Empresa, ambos largura total).
+           Auditoria 2026-06-18: "Composição por Cargo" removido a pedido da diretoria;
+           "Custo por Empresa" expandido para w-full (leitura executiva ampla). -->
+      <div class="grid grid-cols-1 gap-6">
 
-        <!-- Evolução mensal (col-span-2) -->
-        <div class="lg:col-span-2 bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
+        <!-- Evolução mensal (largura total) -->
+        <div class="w-full bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
               <span class="material-symbols-outlined text-brandGreen">stacked_bar_chart</span> Evolução Mês a Mês
@@ -342,26 +360,14 @@
           <div id="chart-evolucao-custo" class="w-full h-[380px]"></div>
         </div>
 
-        <!-- Coluna lateral: dois donuts empilhados (Empresa + Cargo) -->
-        <div class="lg:col-span-1 grid grid-cols-1 gap-6 min-w-0">
-          <!-- Donut por empresa -->
-          <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-5 min-w-0">
-            <div class="flex items-center mb-3">
-              <h3 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                <span class="material-symbols-outlined text-brandOrange text-[18px]">donut_large</span> Custo por Empresa
-              </h3>
-            </div>
-            <div id="chart-empresa" class="w-full h-[170px] flex items-center justify-center"></div>
+        <!-- Donut por empresa — expandido para largura total -->
+        <div class="w-full bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
+          <div class="flex items-center mb-3">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <span class="material-symbols-outlined text-brandOrange text-[18px]">donut_large</span> Custo por Empresa
+            </h3>
           </div>
-          <!-- Donut composição por Cargo -->
-          <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-5 min-w-0">
-            <div class="flex items-center mb-3">
-              <h3 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                <span class="material-symbols-outlined text-brandAqua text-[18px]">workspaces</span> Composição por Cargo
-              </h3>
-            </div>
-            <div id="chart-composicao-cargo" class="w-full h-[170px] flex items-center justify-center"></div>
-          </div>
+          <div id="chart-empresa" class="w-full h-[380px]"></div>
         </div>
       </div>
 
@@ -400,11 +406,20 @@
 
         <!-- Evolução de Colaboradores (headcount mensal) -->
         <div class="bg-[#002443] border border-slate-700/50 rounded-2xl shadow-2xl shadow-[#002443]/50 p-6 min-w-0">
-          <div class="flex items-center mb-4">
+          <div class="flex items-start justify-between gap-3 mb-2">
             <h3 class="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
               <span class="material-symbols-outlined text-brandAqua">groups</span> Evolução de Colaboradores
             </h3>
+            <!-- Carimbo de build — confirma que o navegador está na versão nova
+                 (cache busting visual) ver [[feedback_verify_browser_cache]]. -->
+            <span class="text-[9px] font-mono text-slate-500 shrink-0 mt-1" title="Versão do motor de headcount">v2026-06-05-D</span>
           </div>
+          <!-- Diagnóstico forense permanente (cobertura de datas + amplitude da
+               série). Se a curva estiver chapada, este texto revela a causa:
+               0% de desligamento = base sem datas → curva não pode cair. -->
+          <p id="hc-diagnostico" class="text-[10px] font-medium text-slate-400 mb-3 tabular-nums leading-snug">
+            Aguardando processamento…
+          </p>
           <div id="chart-headcount" class="w-full h-[260px]"></div>
         </div>
       </div>
@@ -521,7 +536,8 @@
     </div>
   </div>
 
-  <!-- MODAL DE DETALHES DE MOVIMENTAÇÕES — populado em renderTickerMovimentacoes -->
+  <!-- MODAL DE DETALHES DE HEADCOUNT — populado em renderDetalheHeadcount
+       (entradas, saídas e, como detalhe secundário, movimentações de cargo) -->
   <div id="modal-movimentacoes" class="fixed inset-0 z-[70] flex items-center justify-center pointer-events-none opacity-0 transition-all duration-300">
     <div class="absolute inset-0 bg-brandDarkBlue/40 backdrop-blur-sm" onclick="window.toggleModal('modal-movimentacoes', false)"></div>
     <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 transform scale-95 transition-all duration-300 max-h-[85vh] flex flex-col">
@@ -529,11 +545,11 @@
         <div class="flex justify-between items-center px-8 py-6 border-b border-slate-100">
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-xl bg-brandAqua/10 flex items-center justify-center shrink-0">
-                    <span class="material-symbols-outlined text-brandAqua text-[22px]">swap_horiz</span>
+                    <span class="material-symbols-outlined text-brandAqua text-[22px]">groups</span>
                 </div>
                 <div class="min-w-0">
-                    <h3 class="text-lg font-extrabold text-brandDarkBlue truncate">Detalhes de Movimentações</h3>
-                    <p id="modal-movimentacoes-subtitulo" class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider truncate">— colaborador(es) com mudança de cargo</p>
+                    <h3 class="text-lg font-extrabold text-brandDarkBlue truncate">Movimentação de Headcount</h3>
+                    <p id="modal-movimentacoes-subtitulo" class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider truncate">— entradas, saídas e movimentações de cargo</p>
                 </div>
             </div>
             <button onclick="window.toggleModal('modal-movimentacoes', false)" class="text-slate-400 hover:text-brandDarkBlue hover:bg-slate-100 rounded-lg p-1.5 transition-all shrink-0">
@@ -577,9 +593,16 @@
       <div class="w-16 h-16 bg-brandAqua/10 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
         <span class="material-symbols-outlined text-4xl text-brandAqua">lightbulb</span>
       </div>
-      <h3 class="text-xl font-extrabold text-brandDarkBlue mb-2 tracking-tight">Lógica do Indicador</h3>
-      <p class="text-slate-500 text-[13px] mb-6 font-medium leading-relaxed">
-        Total de CPFs únicos processados no período. Movimentações indicam mudança de cargo ou salário em relação ao mês anterior.
+      <h3 class="text-xl font-extrabold text-brandDarkBlue mb-2 tracking-tight">Lógica do Headcount</h3>
+      <p class="text-slate-500 text-[13px] mb-4 font-medium leading-relaxed text-left">
+        <span class="font-extrabold text-brandDarkBlue">Headcount Ativo</span> = estoque de pessoal vivo ao <span class="font-bold">fim do período</span> analisado. Uma pessoa conta quando
+        <span class="font-bold">Admissão ≤ Fim do Período</span> e o desligamento está vazio (ou ocorre depois do fim).<br><br>
+        <span class="inline-flex items-center gap-1 text-brandGreen font-bold"><span class="material-symbols-outlined text-[14px]">login</span>Admissões</span>
+        e <span class="inline-flex items-center gap-1 text-amber-500 font-bold"><span class="material-symbols-outlined text-[14px]">logout</span>Desligamentos</span>
+        contam os eventos cuja data cai <span class="font-bold">dentro do intervalo</span> filtrado. Sem filtros, o período é a base consolidada inteira; com filtros de competência/empresa/CC, tudo é recalculado para o recorte.
+      </p>
+      <p id="info-headcount-diag" class="text-[11px] text-slate-400 font-medium leading-relaxed text-left bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 mb-6">
+        Aguardando processamento da base…
       </p>
       <button onclick="window.toggleModal('modal-info-colaboradores', false)"
               class="w-full py-3 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 active:scale-95 transition-all">
@@ -876,23 +899,64 @@
       return digitos.slice(0, 11);
     }
 
-    // Parser tolerante de data BR/ISO. Aceita "dd/mm/aaaa", "dd-mm-aaaa",
-    // "aaaa-mm-dd". Devolve null para vazio, "00/00/0000", strings não-data,
-    // ou qualquer combinação que o Date construa como NaN.
-    // Usado pela detecção cronológica antigo→novo no modal de Movimentações.
+    // Converte um SERIAL do Excel (dias desde 1899-12-30) em Date local.
+    // Faixa-guarda [10000, 80000] ≈ 1927–2119 — evita que quantidades/valores
+    // numéricos pequenos (ou salários) sejam confundidos com datas.
+    function excelSerialParaData(n) {
+      if (!isFinite(n) || n < 10000 || n > 80000) return null;
+      const d = new Date(Math.round((n - 25569) * 86400 * 1000)); // 25569 = 1899-12-30→1970-01-01
+      if (isNaN(d.getTime())) return null;
+      return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    }
+
+    // Parser tolerante de data. Aceita "dd/mm/aaaa", "dd-mm-aaaa", "aaaa-mm-dd",
+    // Firestore Timestamp ({toDate}/{seconds}), Date nativo e SERIAL do Excel
+    // (número OU string numérica). Auditoria 2026-06-05 (linha congelada no CC
+    // ADM): o RH exporta Admissão/Desligamento como CÉLULA DE DATA → o XLSX
+    // entrega serial numérico ("45678") e o parser antigo (só BR/ISO string)
+    // descartava tudo, zerando p.admissao/p.demissao e travando a curva.
     function parseDataBR(valor) {
-      if (valor === null || valor === undefined) return null;
+      if (valor === null || valor === undefined || valor === '') return null;
+
+      // Timestamp do Firestore / Date / {seconds}.
+      if (typeof valor === 'object') {
+        if (typeof valor.toDate === 'function') {
+          const d = valor.toDate();
+          return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        }
+        if (valor instanceof Date) return isNaN(valor.getTime()) ? null : valor;
+        if (typeof valor.seconds === 'number') {
+          const d = new Date(valor.seconds * 1000);
+          return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        }
+        return null;
+      }
+
+      // Número puro = serial do Excel.
+      if (typeof valor === 'number') return excelSerialParaData(valor);
+
       const s = String(valor).trim();
       if (!s) return null;
-      if (/^0+$/.test(s.replace(/\D/g, ''))) return null;       // "0", "00/00/0000"
       if (s === '--/--/----' || s === '—' || s === '-') return null;
 
-      // BR: dd/mm/aaaa ou dd-mm-aaaa
+      // Data com separador (/ - .) — DISAMBIGUAÇÃO M/D × D/M.
+      // Auditoria 2026-06-10 (BUGFIX headcount): a base CustosFolha grava datas
+      // em formato AMERICANO M/D/AA (ex.: "2/18/22" = 18/02/2022, "11/24/25" =
+      // 24/11/2025). O parser antigo assumia D/M, estourava o mês (mo=18/24…) e
+      // rolava a admissão para o FUTURO — jogando dezenas de pessoas para fora
+      // do estoque ativo. Regra: componente > 12 define o papel; quando ambos
+      // <= 12 (ambíguo), assume M/D, que é o formato real desta base. parseDataBR
+      // só alimenta admissão/demissão (obterDataAdmissao/Demissao) — escopo seguro.
       let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
       if (m) {
-        let [, d, mo, y] = m;
-        y = y.length === 2 ? (Number(y) >= 70 ? '19' + y : '20' + y) : y;
-        const dt = new Date(Number(y), Number(mo) - 1, Number(d));
+        let a = Number(m[1]), b = Number(m[2]), y = m[3];
+        y = y.length === 2 ? (Number(y) >= 70 ? 1900 + Number(y) : 2000 + Number(y)) : Number(y);
+        let dia, mes;
+        if (a > 12 && b <= 12) { dia = a; mes = b; }        // D/M explícito
+        else if (b > 12 && a <= 12) { mes = a; dia = b; }   // M/D explícito (US)
+        else if (a <= 12 && b <= 12) { mes = a; dia = b; }  // ambíguo → M/D (base é US)
+        else return null;                                    // ambos > 12 = inválido
+        const dt = new Date(y, mes - 1, dia);
         return isNaN(dt.getTime()) ? null : dt;
       }
       // ISO: aaaa-mm-dd (com ou sem hora)
@@ -901,7 +965,9 @@
         const dt = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
         return isNaN(dt.getTime()) ? null : dt;
       }
-      return null;
+      // String puramente numérica → serial do Excel exportado como texto.
+      if (/^\d{4,6}([.,]\d+)?$/.test(s)) return excelSerialParaData(Number(s.replace(',', '.')));
+      return null; // "0", "00/00/0000" e afins caem aqui
     }
 
     // Localiza data de demissão/desligamento no registro. Faz match por
@@ -910,18 +976,23 @@
     // parseNumeroBR antigo do ETL (parsed como inteiro, sem dia/mês legível).
     function obterDataDemissao(reg) {
       if (!reg) return null;
-      // Atalho: campo fixo do ETL (após auditoria 2026-04-28).
-      if (typeof reg.demissao === 'string') {
+      // Campo canônico do ETL — aceita QUALQUER tipo (string BR/ISO, serial
+      // Excel numérico, Timestamp). Auditoria 2026-06-05: antes exigia string
+      // e descartava o serial numérico que o XLSX produz para células de data.
+      if (reg.demissao != null && reg.demissao !== '') {
         const dt = parseDataBR(reg.demissao);
         if (dt) return dt;
       }
+      // Fallback fuzzy por substring — restrito a string/Timestamp p/ não
+      // confundir colunas numéricas de evento (ex.: "*_Valor") com datas.
       for (const k of Object.keys(reg)) {
         const KU = String(k).toUpperCase();
         if (!(KU.includes('DEMISSAO') || KU.includes('DESLIG') || KU.includes('RESCISAO'))) continue;
         const v = reg[k];
-        if (typeof v !== 'string') continue;
-        const dt = parseDataBR(v);
-        if (dt) return dt;
+        if (typeof v === 'string' || (v && typeof v.toDate === 'function')) {
+          const dt = parseDataBR(v);
+          if (dt) return dt;
+        }
       }
       return null;
     }
@@ -931,7 +1002,9 @@
     // alternativos (DT_ADMISSAO, DATA_ADMISSAO_*…).
     function obterDataAdmissao(reg) {
       if (!reg) return null;
-      if (typeof reg.admissao === 'string') {
+      // Campo canônico — qualquer tipo (string/serial Excel/Timestamp). Ver
+      // nota em obterDataDemissao (auditoria 2026-06-05).
+      if (reg.admissao != null && reg.admissao !== '') {
         const dt = parseDataBR(reg.admissao);
         if (dt) return dt;
       }
@@ -939,9 +1012,10 @@
         const KU = String(k).toUpperCase();
         if (!KU.includes('ADMISSAO')) continue;
         const v = reg[k];
-        if (typeof v !== 'string') continue;
-        const dt = parseDataBR(v);
-        if (dt) return dt;
+        if (typeof v === 'string' || (v && typeof v.toDate === 'function')) {
+          const dt = parseDataBR(v);
+          if (dt) return dt;
+        }
       }
       return null;
     }
@@ -1012,6 +1086,178 @@
       const [y, m] = ref.split('-');
       return `${MESES_ABREV[parseInt(m, 10) - 1]}/${y}`;
     }
+    // Formata um Date como dd/mm/aaaa (eventos de admissão/desligamento).
+    function formatarDataBR(d) {
+      if (!(d instanceof Date) || isNaN(d.getTime())) return '—';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      return `${dd}/${mm}/${d.getFullYear()}`;
+    }
+
+    // ==========================================================================
+    // MOTOR DE HEADCOUNT (ESTOQUE) + FLUXO (ENTRADAS / SAÍDAS)
+    // --------------------------------------------------------------------------
+    // Reengenharia 2026-06-05 (Diretoria): o KPI Colaboradores deixou de ser a
+    // contagem de presença na folha (cpf+cargo no recorte) e passou a ser o
+    // Headcount ATIVO — estoque de pessoal vivo ao FIM do período analisado —
+    // com o Fluxo de Admissões (+) e Desligamentos (−) ocorridos NO intervalo.
+    //
+    // Regra de ativo (pedida pela Diretoria):
+    //   Admissão <= Fim do Período  E  (Desligamento vazio OU Desligamento > Fim)
+    //
+    // Universo: pessoa física (CPF; fallback nome) — não cpf+cargo — para que
+    // promoções não inflem o headcount. Aplica os MESMOS seletores unificados do
+    // Modal de Filtro Avançado (empresa / centro de custo / funcionário), porém
+    // IGNORA o corte de competência ao montar o universo: o estoque precisa
+    // enxergar a pessoa em qualquer mês para resolver suas datas e inferir
+    // presença. O recorte temporal entra só na avaliação (Fim/Início do período).
+    function refParaInicioMes(ref) {
+      if (!/^\d{4}-\d{2}$/.test(String(ref || ''))) return null;
+      const [y, m] = String(ref).split('-').map(Number);
+      return new Date(y, m - 1, 1, 0, 0, 0, 0);
+    }
+    function refParaFimMes(ref) {
+      if (!/^\d{4}-\d{2}$/.test(String(ref || ''))) return null;
+      const [y, m] = String(ref).split('-').map(Number);
+      // Dia 0 do mês seguinte = último dia deste mês; 23:59:59 p/ inclusão.
+      return new Date(y, m, 0, 23, 59, 59, 999);
+    }
+
+    function computarHeadcountEFluxo(base, { empresasSet, ccsSet, funcionarioFiltro, mesInicial, mesFinal }) {
+      // 1) UNIVERSO — empresa/CC/funcionário aplicados; competência IGNORADA.
+      const pessoas = new Map(); // pessoaKey -> agregado da pessoa física
+      const mesesSet = new Set(); // todos os meses presentes na base filtrada
+      let minComp = null, maxComp = null;
+      for (const r of base) {
+        if (empresasSet.size && !empresasSet.has(_folhaEmpresaCanonica(r.empresa_atribuida))) continue;
+        if (ccsSet.size      && !ccsSet.has(String(r.centro_custo || '')))           continue;
+        if (funcionarioFiltro && String(r.nome || '').toLowerCase() !== funcionarioFiltro) continue;
+
+        const ref = String(r.competencia_ref || '');
+        const refOk = /^\d{4}-\d{2}$/.test(ref);
+        if (refOk) {
+          mesesSet.add(ref);
+          if (minComp === null || ref < minComp) minComp = ref;
+          if (maxComp === null || ref > maxComp) maxComp = ref;
+        }
+
+        // Identidade da PESSOA (não do contrato): CPF puro, fallback nome.
+        const cpfPuro = normalizarCPF(r.cpf);
+        const pessoaKey = cpfPuro
+          ? `cpf::${cpfPuro}`
+          : (String(r.nome || '').trim() ? `nome::${r.nome.trim().toLowerCase()}` : '');
+        if (!pessoaKey) continue;
+
+        let p = pessoas.get(pessoaKey);
+        if (!p) {
+          p = { nome: r.nome || '—', cc: '', empresa: '', cargo: '',
+                admissao: null, demissao: null, primeiraComp: '', ultimaComp: '' };
+          pessoas.set(pessoaKey, p);
+        }
+        if (r.nome)            p.nome    = r.nome;
+        if (r.centro_custo)    p.cc      = r.centro_custo;
+        if (r.empresa_atribuida) p.empresa = r.empresa_atribuida;
+        if (r.funcao)          p.cargo   = r.funcao;
+        if (refOk) {
+          if (!p.primeiraComp || ref < p.primeiraComp) p.primeiraComp = ref;
+          if (!p.ultimaComp   || ref > p.ultimaComp)   p.ultimaComp   = ref;
+        }
+        // Admissão: data REAL mais antiga (data de contratação é fixa, mas
+        // planilhas legadas repetem/divergem — fica a mais conservadora).
+        const dAdm = obterDataAdmissao(r);
+        if (dAdm && (!p.admissao || dAdm < p.admissao)) p.admissao = dAdm;
+        // Desligamento: data REAL mais recente (única que encerra o vínculo).
+        const dDem = obterDataDemissao(r);
+        if (dDem && (!p.demissao || dDem > p.demissao)) p.demissao = dDem;
+      }
+
+      // 2) LIMITES DO PERÍODO — sem filtro de competência = span do dataset
+      //    (a "fotografia consolidada atual"). Com filtro, o recorte selecionado.
+      const fimRef    = mesFinal   || maxComp;
+      const inicioRef = mesInicial || minComp;
+      const fimPeriodo    = fimRef    ? refParaFimMes(fimRef)       : null;
+      const inicioPeriodo = inicioRef ? refParaInicioMes(inicioRef) : null;
+
+      // 3) AVALIAÇÃO por pessoa.
+      const ativos = [], entradas = [], saidas = [];
+      let comAdmissao = 0, comDemissao = 0;
+      for (const [key, p] of pessoas) {
+        if (p.admissao) comAdmissao++;
+        if (p.demissao) comDemissao++;
+
+        // Admissão efetiva = data real OU 1º mês de presença na folha. O
+        // fallback evita que base legada sem campo admissão zere o headcount;
+        // Entradas/Saídas continuam usando SÓ datas reais (eventos de RH).
+        const admEfetiva = p.admissao || (p.primeiraComp ? refParaInicioMes(p.primeiraComp) : null);
+
+        // ── HEADCOUNT ATIVO no fim do período ───────────────────────────────
+        const presenteAteFim  = (admEfetiva && fimPeriodo) ? admEfetiva <= fimPeriodo : !!admEfetiva;
+        const desligadoAteFim = (p.demissao && fimPeriodo) ? p.demissao <= fimPeriodo : false;
+        if (presenteAteFim && !desligadoAteFim) {
+          ativos.push({ key, nome: p.nome, cc: p.cc, cargo: p.cargo, empresa: p.empresa,
+                        admissao: p.admissao, admEfetiva, inferida: !p.admissao });
+        }
+
+        // ── ENTRADAS (+): admissão REAL dentro do intervalo ─────────────────
+        if (p.admissao
+            && (!inicioPeriodo || p.admissao >= inicioPeriodo)
+            && (!fimPeriodo    || p.admissao <= fimPeriodo)) {
+          entradas.push({ key, nome: p.nome, cc: p.cc, cargo: p.cargo, data: p.admissao });
+        }
+        // ── SAÍDAS (−): desligamento REAL dentro do intervalo ───────────────
+        if (p.demissao
+            && (!inicioPeriodo || p.demissao >= inicioPeriodo)
+            && (!fimPeriodo    || p.demissao <= fimPeriodo)) {
+          saidas.push({ key, nome: p.nome, cc: p.cc, cargo: p.cargo, data: p.demissao });
+        }
+      }
+      // Cronológico (mais antigo → mais recente) p/ a lista do modal.
+      entradas.sort((a, b) => a.data - b.data);
+      saidas.sort((a, b) => a.data - b.data);
+
+      // KPI Card = MESMA função de corte usada por cada ponto do gráfico,
+      // avaliada no mês do filtro (fimRef). Garante Card === último ponto da
+      // linha (Controladoria: nenhuma divergência de ±1). `ativos` segue para
+      // a lista detalhada/telemetria, mas a contagem oficial vem da função única.
+      const headcountCard = headcountAtivoNoFimDoMes(fimRef, pessoas);
+
+      return {
+        headcount: headcountCard, ativos, entradas, saidas,
+        inicioRef, fimRef, inicioPeriodo, fimPeriodo,
+        totalPessoas: pessoas.size, comAdmissao, comDemissao,
+        pessoas, // universo (empresa/CC/funcionário aplicados) p/ a série mensal
+        mesesPresentes: [...mesesSet].sort(), // eixo X histórico do gráfico
+      };
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // FUNÇÃO DE CORTE ÚNICA — Headcount = ESTOQUE ACUMULADO HISTÓRICO.
+    // Auditoria 2026-06-05 (Controladoria): MESMA função para o KPI Card e para
+    // cada ponto do gráfico, garantindo Card === último ponto do gráfico (sem
+    // divergência de ±1). Lê o universo COMPLETO de pessoas (cadastro/histórico
+    // de toda a base, não só o lote do mês) e aplica o corte por DATA no último
+    // dia do mês `ref` ("YYYY-MM"):
+    //   REGRA 1: já entrou?   Data de Admissão <= último dia do mês.
+    //   REGRA 2: ainda não saiu?  Desligamento vazio  OU  Desligamento > último dia.
+    // (O filtro de Centro de Custo/Empresa já está embutido no `pessoas` — o
+    // universo é montado com esses filtros em computarHeadcountEFluxo. REGRA 3.)
+    // `admissao`/`demissao` são datas REAIS de RH; quando a admissão real não
+    // existe na base legada, usa-se a 1ª competência da folha como proxy de
+    // entrada — jamais a presença mensal como saída (estoque não "expira").
+    function headcountAtivoNoFimDoMes(ref, pessoas) {
+      if (!ref || !pessoas || !/^\d{4}-\d{2}$/.test(ref)) return 0;
+      const fimMes = refParaFimMes(ref); // último dia do mês analisado (ex.: 31/12/2025)
+      if (!fimMes) return 0;
+      let n = 0;
+      for (const p of pessoas.values()) {
+        const admEfetiva = p.admissao || (p.primeiraComp ? refParaInicioMes(p.primeiraComp) : null);
+        if (!admEfetiva) continue;
+        const jaEntrou = admEfetiva <= fimMes;                 // REGRA 1
+        const naoSaiu  = !p.demissao || p.demissao > fimMes;   // REGRA 2
+        if (jaEntrou && naoSaiu) n++;
+      }
+      return n;
+    }
 
     // Instâncias ApexCharts — criadas UMA VEZ em `inicializarGraficos()`,
     // depois só atualizadas via updateOptions/updateSeries em
@@ -1020,7 +1266,6 @@
     let chartCustoMensalInstance    = null;
     let chartEvolucaoInstance       = null;
     let chartEmpresaInstance        = null;
-    let chartCargoInstance          = null;
     let chartCcInstance             = null;
     let chartSalarioMedioInstance   = null;
     let chartVencimentoMedioInstance = null;
@@ -1060,11 +1305,16 @@
       const { apex, animations, palette } = themeGlobal;
       // Formatter sem threshold: mostra TODAS as fatias. `hideOverflowingLabels`
       // (no plotOptions.bar) protege contra labels estourando barras finas.
+      // Rótulos da Evolução mensal — auditoria 2026-06-19: barras DESEMPILHADAS
+      // (agrupadas), rótulo no TOPO de cada coluna em branco + sombra (legível
+      // sobre o card escuro), em R$. Antes ficavam escuros e centralizados,
+      // pensados para o empilhamento.
       const dataLabelsMes = {
         enabled: true,
         formatter: (v) => 'R$ ' + formatarValorGrafico(v),
-        style: { fontSize: '10px', fontWeight: 700, colors: ['#002443'] },
-        dropShadow: { enabled: false }
+        offsetY: -8,
+        style: { fontSize: '10px', fontWeight: 800, colors: ['#ffffff'] },
+        dropShadow: { enabled: true, top: 1, left: 0, blur: 2, color: '#000', opacity: 0.6 }
       };
 
       // 0) Custo Total Mensal (colunas simples) — com drill-down por mês
@@ -1098,12 +1348,16 @@
         chartCustoMensalInstance.render();
       }
 
-      // 1) Evolução mensal (stacked bar) — com dataLabels + drill-down por mês
+      // 1) Evolução mensal — auditoria 2026-06-19: DESEMPILHADO (colunas
+      // agrupadas side-by-side). Antes era stacked:true e a faixa de Benefícios
+      // ficava esmagada no topo, sem leitura. Agora cada série (Vencimentos,
+      // Encargos, Benefícios Pagos) tem sua própria coluna, eixo Y dinâmico
+      // (min 0 + forceNiceScale, SEM max fixo) e rótulo R$ no topo de cada barra.
       const elEvol = document.getElementById('chart-evolucao-custo');
       if (elEvol && !chartEvolucaoInstance) {
         chartEvolucaoInstance = new ApexCharts(elEvol, {
           chart: {
-            type: 'bar', stacked: true, height: 380, fontFamily: apex.fontFamily, foreColor: apex.foreColor,
+            type: 'bar', stacked: false, height: 380, fontFamily: apex.fontFamily, foreColor: apex.foreColor,
             toolbar: { show: false }, animations,
             events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownMes(ctx._refsOrdenadas?.[cfg.dataPointIndex]) }
           },
@@ -1114,16 +1368,16 @@
           ],
           plotOptions: {
             bar: {
-              borderRadius: 6, columnWidth: '55%',
-              borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last',
-              dataLabels: { hideOverflowingLabels: true, position: 'center' }
+              borderRadius: 4, columnWidth: '70%',
+              borderRadiusApplication: 'end',
+              dataLabels: { position: 'top' }
             }
           },
           colors: palette.evolucao,
           dataLabels: dataLabelsMes,
           legend: { position: 'top', horizontalAlign: 'right', labels: { colors: apex.foreColor }, markers: { width: 10, height: 10, radius: 3 }, fontSize: '11px', fontWeight: 700 },
           xaxis: { categories: [], labels: { style: { colors: apex.foreColor, fontSize: '11px', fontWeight: 700 } }, axisBorder: { color: 'rgba(191, 215, 234, 0.15)' }, axisTicks: { color: 'rgba(191, 215, 234, 0.15)' } },
-          yaxis: { labels: { formatter: (v) => 'R$ ' + formatarValorGrafico(v), style: { colors: apex.foreColor, fontSize: '10px' } } },
+          yaxis: { min: 0, forceNiceScale: true, labels: { formatter: (v) => 'R$ ' + formatarValorGrafico(v), style: { colors: apex.foreColor, fontSize: '10px' } } },
           grid: { borderColor: apex.gridBorder, strokeDashArray: 4 },
           tooltip: { theme: 'dark', shared: true, intersect: false, y: { formatter: (v) => formatarMoeda(v) } },
           noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
@@ -1217,81 +1471,58 @@
         chartHeadcountInstance.render();
       }
 
-      // 2) Custo por Empresa (donut compacto) — com drill-down por empresa
+      // 2) Custo por Empresa — auditoria 2026-06-19: convertido de donut para
+      // BARRAS VERTICAIS (colunas) ao ocupar a largura total. O donut ficava
+      // pequeno/achatado num card full-width; as colunas preenchem o espaço e
+      // herdam a MESMA altura (260) e proporção do "Evolução de Colaboradores"
+      // logo abaixo. Mesmo indicador, mesmos dados, mesmo drill-down por empresa.
+      // Eixo Y compacto (mil/mi) pra não estourar; rótulo no topo de cada barra.
       const elEmp = document.getElementById('chart-empresa');
+      const _fmtCompacto = (v) => {
+        const n = Number(v) || 0;
+        if (Math.abs(n) >= 1e6) return (n / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' mi';
+        if (Math.abs(n) >= 1e3) return (n / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' mil';
+        return String(Math.round(n));
+      };
       if (elEmp && !chartEmpresaInstance) {
         chartEmpresaInstance = new ApexCharts(elEmp, {
           chart: {
-            type: 'donut', height: 170, fontFamily: apex.fontFamily, foreColor: apex.foreColor, animations,
+            type: 'bar', height: 380, fontFamily: apex.fontFamily, foreColor: apex.foreColor,
+            toolbar: { show: false }, animations,
             events: { dataPointSelection: (e, ctx, cfg) => aplicarDrillDownEmpresa(ctx._labelsAtuais?.[cfg.dataPointIndex]) }
           },
-          series: [],
-          labels: [],
+          series: [{ name: 'Custo Total', data: [] }],
           colors: palette.donut,
-          stroke: { width: 2, colors: ['#002443'] },
-          legend: { position: 'right', labels: { colors: apex.foreColor }, fontSize: '10px', fontWeight: 700, markers: { width: 8, height: 8, radius: 2 }, itemMargin: { horizontal: 4, vertical: 1 } },
-          dataLabels: { enabled: true, formatter: (val) => val.toFixed(0) + '%', style: { fontSize: '10px', fontWeight: 700, colors: ['#002443'] }, dropShadow: { enabled: false } },
           plotOptions: {
-            pie: {
-              donut: {
-                size: '62%',
-                labels: {
-                  show: true,
-                  name: { color: apex.foreColor, fontSize: '9px', fontWeight: 700 },
-                  value: { color: '#ffffff', fontSize: '13px', fontWeight: 800, formatter: (v) => formatarMoeda(Number(v)) },
-                  total: { show: true, label: 'Custo Total', color: '#aad12f', fontSize: '9px', fontWeight: 700, formatter: (w) => formatarMoeda(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) }
-                }
-              }
+            bar: {
+              horizontal: false, columnWidth: '55%', borderRadius: 6,
+              distributed: true, dataLabels: { position: 'top' }
             }
           },
+          dataLabels: {
+            enabled: true,
+            formatter: (v) => _fmtCompacto(v),
+            offsetY: -20,
+            style: { fontSize: '10px', fontWeight: 800, colors: [apex.foreColor] },
+            dropShadow: { enabled: true, top: 1, left: 0, blur: 2, color: '#000', opacity: 0.5 }
+          },
+          xaxis: {
+            categories: [],
+            labels: { style: { colors: apex.foreColor, fontSize: '10px', fontWeight: 700 } },
+            axisBorder: { color: 'rgba(191, 215, 234, 0.15)' }, axisTicks: { color: 'rgba(191, 215, 234, 0.15)' }
+          },
+          yaxis: {
+            labels: { formatter: (v) => _fmtCompacto(v), style: { colors: apex.foreColor, fontSize: '9px' } },
+            forceNiceScale: true
+          },
+          grid: { borderColor: apex.gridBorder, strokeDashArray: 4 },
+          legend: { show: false },
           tooltip: { theme: 'dark', y: { formatter: (v) => formatarMoeda(v) } },
           noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
         });
         chartEmpresaInstance.render();
       }
 
-      // 2.1) Composição por Cargo (donut compacto) — quantidade de contratos por cargo.
-      // Sem drill-down (filtros existentes não suportam cargo). Tooltip mostra
-      // quantidade absoluta + percentual sobre o headcount total.
-      const elCargo = document.getElementById('chart-composicao-cargo');
-      if (elCargo && !chartCargoInstance) {
-        chartCargoInstance = new ApexCharts(elCargo, {
-          chart: {
-            type: 'donut', height: 170, fontFamily: apex.fontFamily, foreColor: apex.foreColor, animations,
-          },
-          series: [],
-          labels: [],
-          colors: palette.donut,
-          stroke: { width: 2, colors: ['#002443'] },
-          legend: { position: 'right', labels: { colors: apex.foreColor }, fontSize: '10px', fontWeight: 700, markers: { width: 8, height: 8, radius: 2 }, itemMargin: { horizontal: 4, vertical: 1 } },
-          dataLabels: { enabled: true, formatter: (val) => val.toFixed(0) + '%', style: { fontSize: '10px', fontWeight: 700, colors: ['#002443'] }, dropShadow: { enabled: false } },
-          plotOptions: {
-            pie: {
-              donut: {
-                size: '62%',
-                labels: {
-                  show: true,
-                  name: { color: apex.foreColor, fontSize: '9px', fontWeight: 700 },
-                  value: { color: '#ffffff', fontSize: '13px', fontWeight: 800, formatter: (v) => `${Number(v)} contrato${Number(v) === 1 ? '' : 's'}` },
-                  total: { show: true, label: 'Headcount', color: '#89d5c9', fontSize: '9px', fontWeight: 700, formatter: (w) => `${w.globals.seriesTotals.reduce((a, b) => a + b, 0)} contratos` }
-                }
-              }
-            }
-          },
-          tooltip: {
-            theme: 'dark',
-            y: {
-              formatter: (v, ctx) => {
-                const total = (ctx?.config?.series || []).reduce((a, b) => a + b, 0) || 1;
-                const pct = ((v / total) * 100).toFixed(1).replace('.', ',');
-                return `${v} contrato${v === 1 ? '' : 's'} · ${pct}%`;
-              }
-            }
-          },
-          noData: { text: 'Carregando dados…', style: { color: apex.foreColor, fontSize: '13px' } }
-        });
-        chartCargoInstance.render();
-      }
 
       // 3) Custo por Centro de Custo (barras horizontais) — com drill-down por CC.
       // height: '100%' junto com o container flex-1 faz o chart preencher toda
@@ -1492,8 +1723,16 @@
         const ccsRestritos = Array.isArray(dadosUser?.permissoes?.filtros?.centrosCusto)
           ? dadosUser.permissoes.filtros.centrosCusto
           : [];
-        window._ccPermitidos = ccsRestritos.length > 0 ? new Set(ccsRestritos) : null;
-        if (window._ccPermitidos && userProfile !== 'super_admin') {
+        // super_admin = VISÃO TOTAL: a restrição lateral de Centro de Custo NUNCA
+        // se aplica a ele (auditoria 2026-06-19). Bug encontrado: o doc do
+        // super_admin tinha uma lista legada de `centrosCusto` SEM "NEAT", então
+        // toda a operação NEAT (ex.: PJ R8 CONSULTORIA, CC=NEAT) era cortada
+        // ANTES da agregação — sumindo do gráfico, ranking e filtros. Demais
+        // perfis seguem restritos normalmente.
+        window._ccPermitidos = (userProfile !== 'super_admin' && ccsRestritos.length > 0)
+          ? new Set(ccsRestritos)
+          : null;
+        if (window._ccPermitidos) {
           console.log('[CustoFolhaDash] Filtro de CC aplicado:', [...window._ccPermitidos]);
         }
 
@@ -1533,35 +1772,76 @@
     // ==========================================
     // POPULAÇÃO DOS MULTI-SELECTS (listeners em tempo real)
     // ==========================================
+    // Auditoria 2026-06-09 (Escopo Visual de Filtros): mesma regra do CC para
+    // EMPRESA/FILIAL. A fonte NÃO é mais a Base_Empresas (todas as empresas do
+    // banco) — um usuário segmentado a um Centro de Custo deve ver apenas as
+    // empresas relacionadas ao seu escopo. Deriva do universo visível
+    // (`_custoFolhaBase` + PJ, já filtrados por permissão): map → trim → Set.
+    // Exclui o sentinela PJ ('PJ'), que não é uma empresa real.
+    function empresasVisiveisDash(baseDados) {
+      const dados = Array.isArray(baseDados)
+        ? baseDados
+        : [...(window._custoFolhaBase || []), ..._cachePJDash];
+      return [...new Set(
+        dados.map(r => _folhaEmpresaCanonica(r?.empresa_atribuida))
+             .filter(e => e && e !== EMPRESA_PJ_SENTINELA)
+      )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+    function aplicarFiltroEmpresaDash(baseDados) {
+      if (!msEmpresa) return;
+      const visiveis = empresasVisiveisDash(baseDados);
+      // Guarda anti-churn: só re-renderiza o painel se a lista mudou de fato.
+      const atual = msEmpresa.opcoes || [];
+      const igual = atual.length === visiveis.length && atual.every((v, i) => v === visiveis[i]);
+      if (!igual) msEmpresa.setOpcoes(visiveis);
+    }
+    // Mantido como gatilho de repopulação reativa — não injeta mais nomes da
+    // Base no filtro; re-deriva dos dados visíveis (anti-leak).
     function popularEmpresas() {
-      onSnapshot(collection(db, 'Base_Empresas'), (snap) => {
-        const lista = [];
-        snap.forEach(d => {
-          const data = d.data() || {};
-          const nome = (data.nome_fantasia || d.id || '').trim();
-          if (nome) lista.push(nome);
-        });
-        lista.sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        if (msEmpresa) msEmpresa.setOpcoes(lista);
-      }, (err) => console.warn('[Base_Empresas] listener falhou:', err?.code || err?.message));
+      onSnapshot(collection(db, 'Base_Empresas'), () => aplicarFiltroEmpresaDash(),
+        (err) => console.warn('[Base_Empresas] listener falhou:', err?.code || err?.message));
     }
 
+    // Auditoria 2026-06-09 (Escopo Visual de Filtros): o filtro lateral de Centro
+    // de Custo NÃO lê mais a Base_Centros_Custo (array estático com TODOS os CCs
+    // do banco). Aquele snapshot podia disparar ANTES de `window._ccPermitidos`
+    // ser resolvido (race), listando CCs fora do escopo. A fonte agora é
+    // EXCLUSIVAMENTE o universo de dados visíveis (`_custoFolhaBase` + PJ, ambos
+    // JÁ filtrados por permissão na ingestão): map → trim → descarta nulos → Set.
+    // Sem fonte estática não há race — na pior hipótese o seletor fica vazio,
+    // nunca lista "todos os CCs". Repopulado em processarCustoFolha (após o gate).
+    function ccsVisiveisParaFiltroDash(baseDados) {
+      const dados = Array.isArray(baseDados)
+        ? baseDados
+        : [...(window._custoFolhaBase || []), ..._cachePJDash];
+      const ccsDados = [...new Set(
+        dados.map(r => String(r?.centro_custo || '').trim()).filter(Boolean)
+      )];
+      // Interseção defensiva — redundante (a base já vem filtrada) mas garante
+      // que nenhum caminho futuro exponha um CC fora do escopo permitido.
+      const visiveis = window._ccPermitidos
+        ? ccsDados.filter(cc => window._ccPermitidos.has(cc))
+        : ccsDados;
+      return visiveis.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+    function aplicarFiltroCcDash(baseDados) {
+      if (!msCentroCusto) return;
+      const visiveis = ccsVisiveisParaFiltroDash(baseDados);
+      // Guarda anti-churn: só re-renderiza o painel se a lista mudou de fato.
+      const atual = msCentroCusto.opcoes || [];
+      const igual = atual.length === visiveis.length && atual.every((v, i) => v === visiveis[i]);
+      if (!igual) msCentroCusto.setOpcoes(visiveis);
+      // Item 2.2 do roteiro: acesso a 1 só CC → já vem selecionado por padrão,
+      // limpando a poluição visual (o seletor exibe unicamente esse CC).
+      if (window._ccPermitidos && visiveis.length === 1 && msCentroCusto.getValores().length === 0) {
+        msCentroCusto.setValores([visiveis[0]]);
+      }
+    }
+    // Mantido como gatilho de repopulação reativa. NÃO injeta mais nomes da
+    // Base no filtro — apenas re-deriva dos dados visíveis (anti-leak).
     function popularCentrosCusto() {
-      onSnapshot(collection(db, 'Base_Centros_Custo'), (snap) => {
-        const nomes = [];
-        snap.forEach(d => {
-          const nome = String((d.data() || {}).nome || '').trim();
-          if (nome) nomes.push(nome);
-        });
-        nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        // 3º nível de permissão: oculta do dropdown qualquer CC que o usuário
-        // não pode ver. Garante que o filtro lateral nunca apresente uma opção
-        // que vazaria dado restrito.
-        const visiveis = window._ccPermitidos
-          ? nomes.filter(n => window._ccPermitidos.has(n))
-          : nomes;
-        if (msCentroCusto) msCentroCusto.setOpcoes(visiveis);
-      }, (err) => console.warn('[Base_Centros_Custo] listener falhou:', err?.code || err?.message));
+      onSnapshot(collection(db, 'Base_Centros_Custo'), () => aplicarFiltroCcDash(),
+        (err) => console.warn('[Base_Centros_Custo] listener falhou:', err?.code || err?.message));
     }
 
     // ==========================================
@@ -1576,6 +1856,12 @@
     //               por cargo).
     let _cachePJDash = [];    // PJs consolidados (1 por PJ × competência).
     let _cacheFornCC = new Map(); // codigo_fornecedor → centro_custo (lookup).
+    // Vínculo relacional PJ → empresa (auditoria 2026-06-19): mapas derivados do
+    // Banco de Fornecedores (mesma fonte/critério do Contas a Pagar). A empresa
+    // do PJ vem do CADASTRO do fornecedor, não de heurística por centro de custo.
+    let _cacheFornEmpresa     = new Map(); // codigo/id    → empresa (cadastro)
+    let _cacheFornEmpresaPorDoc  = new Map(); // cnpj/cpf (dígitos) → empresa
+    let _cacheFornEmpresaPorNome = new Map(); // nome normalizado   → empresa
     let _cacheBeneficiosPJFullDash = new Map(); // "comp_fid" → decomposição benefício
     let _unsubPJDash = null;
     let _unsubFornCC = null;
@@ -1603,6 +1889,54 @@
     // refletir o benefício do PJ (que antes NUNCA aparecia aqui).
     function _pjDashChave(compRef, codForn) { return `${compRef}_${codForn}`; }
 
+    // Vínculo relacional PJ → empresa (auditoria 2026-06-19). SUBSTITUI o antigo
+    // De-Para estático por centro de custo. O sistema NÃO adivinha a empresa pelo
+    // nome do CC: consulta o Banco de Fornecedores (Contas a Pagar) pelo
+    // `codigo_fornecedor` (chave canônica, igual ao CP) e, como reforço, por
+    // CNPJ/CPF e por nome do profissional. A empresa vem do CADASTRO — ex.:
+    // "Campos Girassol" cadastrada como NEAT computa na barra da NEAT, qualquer
+    // que seja o centro de custo na folha. Sem vínculo no cadastro, cai na
+    // empresa já gravada no lançamento e, em último caso, na principal — nunca 'PJ'.
+    function _pjEmpresaPorFornecedor(codForn, dataLanc) {
+        const _norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+        const _digitos = (s) => String(s || '').replace(/\D/g, '');
+        let emp = '';
+        // 1) por código do fornecedor (chave relacional primária).
+        if (codForn != null && _cacheFornEmpresa.has(String(codForn))) {
+            emp = _cacheFornEmpresa.get(String(codForn));
+        }
+        // 2) por CNPJ/CPF do profissional.
+        if (!emp && dataLanc) {
+            const doc = _digitos(dataLanc.cnpj || dataLanc.cpf || dataLanc.cnpj_cpf || dataLanc.documento);
+            if (doc && _cacheFornEmpresaPorDoc.has(doc)) emp = _cacheFornEmpresaPorDoc.get(doc);
+        }
+        // 3) por nome do profissional (entidade/favorecido).
+        if (!emp && dataLanc) {
+            const nm = _norm(dataLanc.entidade || dataLanc.favorecido || dataLanc.nome);
+            if (nm && _cacheFornEmpresaPorNome.has(nm)) emp = _cacheFornEmpresaPorNome.get(nm);
+        }
+        // 4) fallback: empresa já no lançamento; senão principal. Nunca 'PJ'.
+        if (!emp && dataLanc && dataLanc.empresa) emp = String(dataLanc.empresa);
+        emp = _folhaEmpresaCanonica(emp); // higieniza (regra "3" exata + guarda anti-PJ)
+        return emp || 'SOULAN CONSULTORIA';
+    }
+
+    // Higienização CANÔNICA do nome da empresa (auditoria 2026-06-19) — regras
+    // duras da diretoria, aplicadas em filtro, dropdown e agregação do gráfico:
+    //  - EXCLUSIVAMENTE "SOULAN CONSULTORIA 3" funde na principal "SOULAN
+    //    CONSULTORIA". Igualdade EXATA (case/espaços normalizados) — "NEAT 3" ou
+    //    qualquer outra empresa com o dígito 3 NÃO é absorvida.
+    //  - 'PJ' é vínculo, não empresa: guarda final caso algum registro escape do
+    //    vínculo relacional — incorpora na principal, nunca vira barra própria.
+    function _folhaEmpresaCanonica(empresaRaw) {
+        let emp = String(empresaRaw || '').trim();
+        if (!emp) return emp;
+        const cmp = emp.toUpperCase().replace(/\s+/g, ' ').trim();
+        if (cmp === 'SOULAN CONSULTORIA 3') return 'SOULAN CONSULTORIA';
+        if (cmp === EMPRESA_PJ_SENTINELA) return 'SOULAN CONSULTORIA';
+        return emp;
+    }
+
     function _pjDashBase(compRef, codForn, dataLanc) {
         const ccLanc = String(dataLanc?.centro_custo || '').trim();
         const ccForn = (codForn && _cacheFornCC.get(codForn)) || '';
@@ -1619,7 +1953,7 @@
             funcao: 'Prestador PJ',
             cargo: 'Prestador PJ',
             centro_custo: cc,
-            empresa_atribuida: EMPRESA_PJ_SENTINELA,
+            empresa_atribuida: _pjEmpresaPorFornecedor(codForn, dataLanc),
             competencia_ref: compRef,
             // Fatura (Serviços Prestados) — soma das notas; dispara isVencimento.
             SERVICOS_PRESTADOS_Valor: 0,
@@ -1729,12 +2063,30 @@
         try {
             _unsubFornCC = onSnapshot(collection(db, 'Fornecedores'), (snap) => {
                 const map = new Map();
+                const mapEmp = new Map(), mapEmpDoc = new Map(), mapEmpNome = new Map();
+                const _norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+                const _digitos = (s) => String(s || '').replace(/\D/g, '');
                 snap.forEach(d => {
                     const data = d.data() || {};
-                    const cc = String(data.centro_custo || '').trim();
-                    if (cc) map.set(String(data.codigo != null ? data.codigo : d.id), cc);
+                    const codigo = String(data.codigo != null ? data.codigo : d.id);
+                    const idDoc  = String(d.id || '').trim();
+                    const cc  = String(data.centro_custo || '').trim();
+                    if (cc) map.set(codigo, cc);
+                    // Vínculo relacional empresa (cadastro do fornecedor).
+                    const emp = String(data.empresa || '').trim().toUpperCase();
+                    if (emp) {
+                        mapEmp.set(codigo, emp);
+                        if (idDoc && idDoc !== codigo) mapEmp.set(idDoc, emp);
+                        const doc = _digitos(data.cnpj || data.cpf || data.cnpj_cpf || data.documento);
+                        if (doc) mapEmpDoc.set(doc, emp);
+                        const nm = _norm(data.nome || data.nome_fantasia || data.razao_social || data.entidade);
+                        if (nm) mapEmpNome.set(nm, emp);
+                    }
                 });
                 _cacheFornCC = map;
+                _cacheFornEmpresa = mapEmp;
+                _cacheFornEmpresaPorDoc = mapEmpDoc;
+                _cacheFornEmpresaPorNome = mapEmpNome;
                 // Se já temos PJs em cache, reconsolida pra refletir CCs novos.
                 if (_cachePJDashRaw.length) {
                     _pjDashRebuild();
@@ -1839,6 +2191,12 @@
         : _cachePJDash;
       const base = [...(window._custoFolhaBase || []), ...pjFiltrados];
 
+      // Reativo (auditoria 2026-06-09): os filtros de CC e Empresa refletem apenas
+      // o que está presente no universo visível — rodam após o gate de permissão,
+      // então são imunes ao race dos snapshots de Base_*.
+      try { aplicarFiltroCcDash(base); } catch (_) {}
+      try { aplicarFiltroEmpresaDash(base); } catch (_) {}
+
       // Atualiza datalist do filtro de funcionário (V6 Item 2) com os nomes
       // unificados — feito sempre, antes do filtro de recorte ser aplicado.
       try { popularDatalistFuncionariosDash(); } catch (_) {}
@@ -1873,7 +2231,7 @@
         const ref = String(r.competencia_ref || '');
         if (mesInicial && ref < mesInicial) return false;
         if (mesFinal   && ref > mesFinal)   return false;
-        if (empresasSet.size && !empresasSet.has(String(r.empresa_atribuida || ''))) return false;
+        if (empresasSet.size && !empresasSet.has(_folhaEmpresaCanonica(r.empresa_atribuida))) return false;
         if (ccsSet.size      && !ccsSet.has(String(r.centro_custo || '')))           return false;
         // Funcionário: match exato por nome (case-insensitive). Permite o
         // usuário digitar parcial — se não bater exato, o filtro não corta
@@ -1939,8 +2297,10 @@
           if (chave) agg.colabs.add(chave);
         }
 
-        // Composição por Empresa / CC — usa Custo Total líquido (com descontos)
-        const empresaKey = String(r.empresa_atribuida || '').trim() || 'Sem empresa';
+        // Composição por Empresa / CC — usa Custo Total líquido (com descontos).
+        // Higieniza o nome (regra do "3" + guarda anti-'PJ') ANTES de somar na
+        // barra, para os valores caírem na empresa-mãe real.
+        const empresaKey = _folhaEmpresaCanonica(r.empresa_atribuida) || 'Sem empresa';
         porEmpresa.set(empresaKey, (porEmpresa.get(empresaKey) || 0) + t.total);
 
         const ccKey = String(r.centro_custo || '').trim() || 'Sem centro de custo';
@@ -2075,6 +2435,15 @@
       const custoBeneficios = totalBnfPago - totalBnfDesc;
       const custoTotal = totalVenc + totalEnc + custoBeneficios;
 
+      // ── HEADCOUNT ATIVO + FLUXO (reengenharia 2026-06-05) ──────────────────
+      // Calculado sobre `base` com os MESMOS seletores (empresa/CC/funcionário)
+      // do recorte, porém avaliando a regra de ativo/entradas/saídas pelas datas
+      // de admissão e desligamento. Roda em uma passada O(n) sobre a base já em
+      // memória — sem ida ao servidor, sem custo perceptível no carregamento.
+      const hc = computarHeadcountEFluxo(base, {
+        empresasSet, ccsSet, funcionarioFiltro, mesInicial, mesFinal,
+      });
+
       // Helper: setText + title nativo (fallback de hover quando o truncate
       // chegar a cortar em telas extremas).
       const setKPI = (id, valor) => {
@@ -2103,17 +2472,35 @@
       setKPI('kpi-beneficios-pagos', formatarMoeda(totalBnfPago));
       setKPI('kpi-descontos-beneficios', formatarMoeda(totalBnfDesc));
 
-      setKPI('kpi-colaboradores', colabsUnicos.size.toLocaleString('pt-BR'));
+      // KPI principal = Headcount Ativo (estoque vivo no fim do período).
+      setKPI('kpi-colaboradores', hc.headcount.toLocaleString('pt-BR'));
+
+      // Diagnóstico forense permanente na lâmpada (memory: diagnóstico na UI):
+      // cobertura das datas de RH na base — sinaliza quando Entradas/Saídas
+      // estão subnotificadas por planilha sem admissão/desligamento.
+      const elDiag = document.getElementById('info-headcount-diag');
+      if (elDiag) {
+        const tot = hc.totalPessoas || 0;
+        const pctAdm = tot ? Math.round((hc.comAdmissao / tot) * 100) : 0;
+        const pctDem = tot ? Math.round((hc.comDemissao / tot) * 100) : 0;
+        const periodoTxt = (hc.inicioRef && hc.fimRef)
+          ? `${competenciaBRfromRef(hc.inicioRef)} → ${competenciaBRfromRef(hc.fimRef)}`
+          : 'período atual';
+        elDiag.textContent = `Período avaliado: ${periodoTxt} · ${tot} pessoas no universo · `
+          + `${hc.comAdmissao} c/ data de admissão (${pctAdm}%) · ${hc.comDemissao} c/ desligamento (${pctDem}%).`;
+      }
 
       // Render dos gráficos/ranking (usam as agregações já calculadas)
       renderGraficoCustoTotalMensal(porComp);
       renderGraficoEvolucao(porComp);
       renderGraficoEmpresa(porEmpresa);
-      renderGraficoComposicaoCargo(porCargo);
       renderGraficoCentroCusto(porCc);
-      renderGraficosMedia(porComp);
+      renderGraficosMedia(porComp, hc);
       renderRankingColaboradores(porColab);
-      renderTickerMovimentacoes(movimentacoes);
+      // Card Colaboradores: número de headcount + badges de fluxo + ticker +
+      // modal. O motor de movimentação de cargo (`movimentacoes`) segue vivo,
+      // agora como detalhamento secundário dentro do modal.
+      renderCardHeadcount(hc, movimentacoes);
 
       // Debug: confirma que as agregações não estão vazias + lista as chaves
       // do Firestore que entraram no Salário Bruto (útil pra ajustar blindagens
@@ -2164,9 +2551,18 @@
       console.log('Chaves Únicas de Headcount:', _chavesOrdenadas);
       console.log('[CustoFolhaDash] Headcount auditoria:', {
         linhasProcessadas: registros.length,
-        colaboradoresUnicos: cpfsUnicos.size,
+        colaboradoresUnicos: cpfsUnicos.size,  // presença cpf+cargo (legado)
         registrosSemCpf,    // chave caiu em "sem-cpf_*" (planilha sem CPF)
         registrosSemCargo,  // chave caiu em "*_sem-cargo" (planilha sem funcao)
+      });
+      // ── Motor de Headcount Ativo + Fluxo (reengenharia 2026-06-05) ─────────
+      console.log('%c[CustoFolhaDash][Headcount/Fluxo] Estoque ativo + entradas/saídas:', 'font-weight:bold;color:#89d5c9', {
+        periodo: `${hc.inicioRef || '—'} → ${hc.fimRef || '—'}`,
+        headcountAtivo: hc.headcount,
+        admissoes: hc.entradas.length,
+        desligamentos: hc.saidas.length,
+        universoPessoas: hc.totalPessoas,
+        cobertura: `admissão ${hc.comAdmissao}/${hc.totalPessoas} · desligamento ${hc.comDemissao}/${hc.totalPessoas}`,
       });
       console.log('[CustoFolhaDash] Dados injetados nos gráficos:', {
         registrosFiltrados: registros.length,
@@ -2226,7 +2622,7 @@
     // Médias mensais (per capita) — cada chart divide o bucket financeiro do
     // mês pelo número de CPFs únicos daquele mês. Quando não há colaborador,
     // retorna 0 para não poluir com Infinity/NaN.
-    function renderGraficosMedia(porComp) {
+    function renderGraficosMedia(porComp, hcAtual) {
       const refsOrdenadas = [...porComp.keys()].sort();
       const categorias = refsOrdenadas.map(competenciaBRfromRef);
 
@@ -2260,12 +2656,48 @@
         chartCustoMedioInstance.updateSeries([{ name: 'Custo Médio', data: dataCusto }], true);
       }
 
-      // Headcount mensal — quantidade de colaboradores únicos por competência
+      // Headcount HISTÓRICO mensal — linha flutuante (auditoria 2026-06-05).
+      // Cada ponto é o estoque ATIVO ao fim DAQUELE mês (headcountAtivoNoFimDoMes),
+      // calculado mês a mês sobre o universo (empresa/CC/funcionário aplicados).
+      // O eixo X usa `hcAtual.mesesPresentes` (todo o histórico da base filtrada),
+      // NÃO `refsOrdenadas` — este último é recortado pelo filtro de competência
+      // global do topo e, antes, congelava a linha no mês selecionado. O Card
+      // superior continua estrito/congelado no filtro; só o gráfico é flutuante.
       if (chartHeadcountInstance) {
-        const dataColabs = refsOrdenadas.map(r => porComp.get(r).colabs.size);
-        chartHeadcountInstance._refsOrdenadas = refsOrdenadas;
-        chartHeadcountInstance.updateOptions({ xaxis: { categories: categorias } }, false, false);
+        const pessoasUniverso = (hcAtual && hcAtual.pessoas) ? hcAtual.pessoas : new Map();
+        const refsHistorico = (hcAtual && hcAtual.mesesPresentes && hcAtual.mesesPresentes.length)
+          ? hcAtual.mesesPresentes
+          : refsOrdenadas;
+        const categoriasHist = refsHistorico.map(competenciaBRfromRef);
+        const dataColabs = refsHistorico.map(r => headcountAtivoNoFimDoMes(r, pessoasUniverso));
+        chartHeadcountInstance._refsOrdenadas = refsHistorico;
+        chartHeadcountInstance.updateOptions({ xaxis: { categories: categoriasHist } }, false, false);
         chartHeadcountInstance.updateSeries([{ name: 'Colaboradores', data: dataColabs }], true);
+
+        // ── Diagnóstico forense permanente (memory: diagnóstico na UI) ──
+        // Revela POR QUE a curva é/não é dinâmica: cobertura de datas + amplitude.
+        const elDiag = document.getElementById('hc-diagnostico');
+        if (elDiag) {
+          const tot   = hcAtual ? (hcAtual.totalPessoas || 0) : 0;
+          const cAdm  = hcAtual ? (hcAtual.comAdmissao || 0) : 0;
+          const cDem  = hcAtual ? (hcAtual.comDemissao || 0) : 0;
+          const pAdm  = tot ? Math.round((cAdm / tot) * 100) : 0;
+          const pDem  = tot ? Math.round((cDem / tot) * 100) : 0;
+          const minV  = dataColabs.length ? Math.min(...dataColabs) : 0;
+          const maxV  = dataColabs.length ? Math.max(...dataColabs) : 0;
+          const estatico = dataColabs.length > 1 && minV === maxV;
+          const alerta = (cDem === 0)
+            ? ' ⚠ base sem datas de desligamento → a curva não pode cair (corrija no import da Folha).'
+            : (estatico ? ' ⚠ sem movimentações reais no período carregado.' : '');
+          elDiag.innerHTML =
+            `${tot} pessoas no recorte · admissão ${cAdm}/${tot} (${pAdm}%) · desligamento ${cDem}/${tot} (${pDem}%) · `
+            + `linha ${minV}–${maxV} em ${dataColabs.length} mes(es).${alerta}`;
+          elDiag.classList.toggle('text-amber-400', !!alerta);
+          elDiag.classList.toggle('text-slate-400', !alerta);
+        }
+        console.log('%c[Headcount/Histórico] série por mês:', 'color:#89d5c9;font-weight:bold',
+          refsHistorico.map((r, i) => `${r}=${dataColabs[i]}`).join('  '),
+          '| cobertura:', { totalPessoas: hcAtual?.totalPessoas, comAdmissao: hcAtual?.comAdmissao, comDemissao: hcAtual?.comDemissao });
       }
     }
 
@@ -2275,86 +2707,83 @@
       const labelsEmpresa = pares.map(p => p[0]);
       const seriesEmpresa = pares.map(p => Math.round(p[1]));
 
+      // Barras verticais: categorias no xaxis + 1 série "Custo Total".
       chartEmpresaInstance._labelsAtuais = labelsEmpresa;
-      chartEmpresaInstance.updateOptions({ labels: labelsEmpresa }, false, false);
-      chartEmpresaInstance.updateSeries(seriesEmpresa, true);
+      chartEmpresaInstance.updateOptions({ xaxis: { categories: labelsEmpresa } }, false, false);
+      chartEmpresaInstance.updateSeries([{ name: 'Custo Total', data: seriesEmpresa }], true);
     }
 
-    // Composição por Cargo — donut com a contagem de contratos únicos por
-    // string de cargo. Auditoria 2026-04-28: removido o bucket "Outros" que
-    // consolidava cargos com baixa contagem (gerava fatia fantasma sem
-    // contrapartida real no banco). Cada cargo é renderizado integralmente,
-    // independente do tamanho da fatia. ApexCharts não agrupa fatias pequenas
-    // por padrão em donut — sem opção `legend.tooltipHoverFormatter` ou
-    // `dataLabels.minSliceAngle` ativa, o controle fica 100% no nosso lado.
-    function renderGraficoComposicaoCargo(porCargo) {
-      if (!chartCargoInstance) return;
-      const pares = [...porCargo.entries()]
-        .map(([cargo, set]) => [cargo, set.size])
-        .filter(([, n]) => n > 0)
-        .sort((a, b) => b[1] - a[1]);
+    // "Composição por Cargo" removido (auditoria 2026-06-18, pedido da diretoria).
+    // O donut, sua instância ApexCharts e a função de render foram excluídos; o
+    // espaço foi cedido ao gráfico "Custo por Empresa" (agora largura total).
 
-      const labels = pares.map(p => p[0]);
-      const series = pares.map(p => p[1]);
-
-      chartCargoInstance.updateOptions({ labels }, false, false);
-      chartCargoInstance.updateSeries(series, true);
-    }
-
-    // Cache acessível pelo handler do modal — mantém a última lista de
-    // movimentações renderizada na tela (sincronizada com os filtros atuais).
+    // Caches acessíveis pelos handlers de modal/badges — guardam o último
+    // estado renderizado (sincronizado com os filtros atuais).
     let _movimentacoesCache = [];
+    let _headcountCache = null;
 
-    // Ticker de Movimentações — desenha lista deslizante no rodapé do card
-    // Colaboradores. Cada item mostra Nome, Cargo Antigo → Cargo Novo, e CC.
-    // O conteúdo é DUPLICADO no DOM p/ o keyframe @ticker-scroll (-50%) emendar
-    // sem flash. A duração é proporcional à largura medida — mantém a mesma
-    // velocidade aparente independente da quantidade de movimentações.
-    //
-    // Também atualiza o contador estático "(N movimentações)" e a lista do
-    // modal de detalhes para que ticker, contador e modal fiquem sincronizados
-    // sem múltiplas passes na mesma estrutura.
-    function renderTickerMovimentacoes(movimentacoes) {
+    // Card Colaboradores (Headcount) — orquestra número principal, badges de
+    // fluxo (+Admissões / −Desligamentos), ticker do rodapé e modal de
+    // detalhamento. O motor de movimentação de cargo (`movimentacoes`) entra
+    // como seção secundária do modal — continua vivo, só rebaixado de headline.
+    function renderCardHeadcount(hc, movimentacoes) {
+      _headcountCache = hc || { headcount: 0, entradas: [], saidas: [] };
       _movimentacoesCache = Array.isArray(movimentacoes) ? movimentacoes : [];
-      const el = document.getElementById('ticker-movimentacoes');
+      const ent = _headcountCache.entradas || [];
+      const sai = _headcountCache.saidas   || [];
 
-      // Contador estático ao lado do número grande de Colaboradores.
-      const elContagem = document.getElementById('kpi-movimentacoes-contagem');
-      if (elContagem) {
-        const n = _movimentacoesCache.length;
-        elContagem.textContent = `(${n} movimentaç${n === 1 ? 'ão' : 'ões'})`;
+      // Caption discreta ao lado do número: contexto do mês avaliado.
+      const elCap = document.getElementById('kpi-movimentacoes-contagem');
+      if (elCap) {
+        const fimTxt = _headcountCache.fimRef ? competenciaBRfromRef(_headcountCache.fimRef) : 'atual';
+        elCap.textContent = `ativos · ${fimTxt}`;
+        elCap.setAttribute('title', `Headcount ativo ao fim de ${fimTxt}`);
       }
 
-      // Lista do modal — atualizada em todo render p/ acompanhar filtros.
-      renderListaModalMovimentacoes(_movimentacoesCache);
+      // Badges de fluxo — cores semânticas (verde entradas, âmbar saídas).
+      const bE = document.getElementById('badge-entradas');
+      if (bE) bE.innerHTML = `<span class="material-symbols-outlined text-[12px]">login</span>+${ent.length} Admiss${ent.length === 1 ? 'ão' : 'ões'}`;
+      const bS = document.getElementById('badge-saidas');
+      if (bS) bS.innerHTML = `<span class="material-symbols-outlined text-[12px]">logout</span>-${sai.length} Desligamento${sai.length === 1 ? '' : 's'}`;
 
+      // Modal de detalhamento — lista cronológica de quem entrou/saiu.
+      renderDetalheHeadcount(_headcountCache, _movimentacoesCache);
+
+      // Ticker do rodapé — eventos de fluxo deslizando (mais recente primeiro).
+      const el = document.getElementById('ticker-movimentacoes');
       if (!el) return;
 
-      if (_movimentacoesCache.length === 0) {
-        el.innerHTML = '<span class="px-3">Nenhuma movimentação de cargo no período</span>';
+      const eventos = [
+        ...ent.map(e => ({ ...e, tipo: 'entrada' })),
+        ...sai.map(e => ({ ...e, tipo: 'saida'   })),
+      ].sort((a, b) => b.data - a.data);
+
+      if (eventos.length === 0) {
+        el.innerHTML = '<span class="px-3">Sem admissões ou desligamentos no período — headcount estável</span>';
         el.style.setProperty('--ticker-duration', '40s');
         return;
       }
 
-      const item = (m) => `
+      const item = (ev) => {
+        const entrada = ev.tipo === 'entrada';
+        const cor   = entrada ? 'text-brandGreen' : 'text-amber-300';
+        const seta  = entrada ? '↑ Admissão' : '↓ Desligamento';
+        return `
         <span class="px-4 inline-flex items-center gap-1.5 whitespace-nowrap">
-          <span class="text-brandAqua">🔄 Movimentação:</span>
-          <span class="text-white font-bold">${escapeHTML(m.nome)}</span>
-          <span class="text-slate-400">(</span>
-          <span class="text-slate-200">${escapeHTML(m.cargoAntigo)}</span>
-          <span class="text-brandGreen font-black">➔</span>
-          <span class="text-brandGreen font-bold">${escapeHTML(m.cargoNovo)}</span>
-          <span class="text-slate-400">)</span>
-          ${m.cc ? `<span class="text-slate-500">no CC</span><span class="text-slate-200">${escapeHTML(m.cc)}</span>` : ''}
+          <span class="${cor} font-black">${seta}:</span>
+          <span class="text-white font-bold">${escapeHTML(ev.nome)}</span>
+          ${ev.cargo ? `<span class="text-slate-500">·</span><span class="text-slate-200">${escapeHTML(ev.cargo)}</span>` : ''}
+          <span class="text-slate-500">·</span>
+          <span class="text-slate-300 tabular-nums">${formatarDataBR(ev.data)}</span>
         </span>
         <span class="text-slate-600 px-1">·</span>`;
+      };
 
-      const bloco = _movimentacoesCache.map(item).join('');
+      const bloco = eventos.map(item).join('');
       // Duplica para loop contínuo via translateX(-50%).
       el.innerHTML = bloco + bloco;
 
-      // Calcula duração no próximo frame, depois que o navegador resolveu o layout.
-      // Velocidade alvo: ~70 px/s. Mínimo 18s p/ não ficar borrado em poucos itens.
+      // Velocidade alvo ~70 px/s; mínimo 18s p/ não borrar com poucos itens.
       requestAnimationFrame(() => {
         const widthMetade = el.scrollWidth / 2;
         const dur = Math.max(18, Math.round(widthMetade / 70));
@@ -2362,44 +2791,62 @@
       });
     }
 
-    // Lista detalhada do modal de Movimentações. Usa o mesmo formato visual
-    // da lista de Empresas/CCs (cards claros sobre fundo branco), com badge
-    // de Centro de Custo e setinha de transição entre cargos.
-    function renderListaModalMovimentacoes(movimentacoes) {
+    // Detalhamento do modal — três blocos: Entradas (verde), Saídas (âmbar) e,
+    // como detalhe secundário, Movimentações de Cargo (o motor antigo). Mantém
+    // o visual de cards claros sobre fundo branco do design system do módulo.
+    function renderDetalheHeadcount(hc, movimentacoes) {
       const lista = document.getElementById('modal-movimentacoes-lista');
       const subtitulo = document.getElementById('modal-movimentacoes-subtitulo');
       if (!lista) return;
 
-      const n = movimentacoes.length;
+      const ent = (hc && hc.entradas) || [];
+      const sai = (hc && hc.saidas)   || [];
+      const mov = Array.isArray(movimentacoes) ? movimentacoes : [];
+      const periodoTxt = (hc && hc.inicioRef && hc.fimRef)
+        ? `${competenciaBRfromRef(hc.inicioRef)} → ${competenciaBRfromRef(hc.fimRef)}`
+        : 'período atual';
+
       if (subtitulo) {
-        subtitulo.textContent = n === 0
-          ? 'Nenhum colaborador com mudança de cargo'
-          : `${n} colaborador${n === 1 ? '' : 'es'} com mudança de cargo`;
+        subtitulo.textContent = `${(hc && hc.headcount) || 0} ativos · +${ent.length} entradas · -${sai.length} saídas · ${periodoTxt}`;
       }
 
-      if (n === 0) {
-        lista.innerHTML = `
-          <div class="flex flex-col items-center justify-center text-center py-14 px-6">
-            <div class="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-4">
-              <span class="material-symbols-outlined text-slate-300 text-[32px]">inbox</span>
+      // Card de pessoa (entrada/saída) — avatar, nome, cargo, CC, data + badge.
+      const pessoaCard = (p, tipo, idx) => {
+        const entrada = tipo === 'entrada';
+        const cor     = entrada ? 'brandGreen' : 'amber-500';
+        const icone   = entrada ? 'login' : 'logout';
+        const rotulo  = entrada ? 'Admissão' : 'Desligamento';
+        return `
+        <div class="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white transition-all">
+          <div class="shrink-0 w-10 h-10 rounded-full ${entrada ? 'bg-gradient-to-br from-brandGreen to-brandAqua' : 'bg-gradient-to-br from-amber-400 to-rose-400'} flex items-center justify-center text-white font-extrabold text-xs shadow-md mt-0.5">
+            ${escapeHTML(iniciaisDe(p.nome))}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-sm font-extrabold text-brandDarkBlue truncate" title="${escapeHTML(p.nome)}">${escapeHTML(p.nome)}</p>
+              <span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-${cor}/10 border border-${cor}/20 text-[10px] font-bold text-${cor} tabular-nums uppercase tracking-wider" title="Data de ${rotulo.toLowerCase()}">
+                <span class="material-symbols-outlined text-[12px]">${icone}</span>
+                ${rotulo} ${formatarDataBR(p.data)}
+              </span>
             </div>
-            <h4 class="text-sm font-extrabold text-brandDarkBlue mb-1">Nenhuma movimentação no período selecionado</h4>
-            <p class="text-xs text-slate-400 font-medium max-w-sm">Quando um colaborador aparecer com mais de um cargo no intervalo de competências filtrado, ele será listado aqui.</p>
-          </div>`;
-        return;
-      }
+            <div class="mt-1 flex items-center gap-1.5 text-[11px] font-semibold flex-wrap">
+              ${p.cargo ? `<span class="px-2 py-0.5 rounded-md bg-slate-200 text-slate-600">${escapeHTML(p.cargo)}</span>` : ''}
+              ${p.cc ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-brandLightBlue/10 text-brandLightBlue"><span class="material-symbols-outlined text-[13px]">corporate_fare</span>${escapeHTML(p.cc)}</span>` : ''}
+            </div>
+          </div>
+          <span class="shrink-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 tabular-nums mt-0.5">${idx + 1}</span>
+        </div>`;
+      };
 
-      lista.innerHTML = movimentacoes.map((m, idx) => {
-        // Delta salarial — só renderiza a linha quando há diferença detectada.
-        // Verde se subiu, vermelho-suave se caiu, cinza se manteve.
+      // Card de movimentação de cargo (motor antigo — detalhe secundário).
+      const cargoCard = (m, idx) => {
         const sa = Number(m.salarioAntigo) || 0;
         const sn = Number(m.salarioNovo)   || 0;
         const teveDiferenca = sa !== sn;
-        let corDelta = 'text-slate-500';
-        let iconeDelta = 'remove';
+        let corDelta = 'text-slate-500', iconeDelta = 'remove';
         if (teveDiferenca) {
           if (sn > sa) { corDelta = 'text-brandGreen'; iconeDelta = 'trending_up'; }
-          else         { corDelta = 'text-rose-400';  iconeDelta = 'trending_down'; }
+          else         { corDelta = 'text-rose-400';   iconeDelta = 'trending_down'; }
         }
         const linhaSalario = teveDiferenca
           ? `<div class="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold ${corDelta}">
@@ -2439,7 +2886,45 @@
           </div>` : ''}
           <span class="shrink-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 tabular-nums mt-0.5">${idx + 1}</span>
         </div>`;
-      }).join('');
+      };
+
+      // Cabeçalho de seção com contador e cor semântica.
+      const secao = (titulo, icone, corClasse, n, corpoHTML, vazioTxt) => `
+        <div class="space-y-3">
+          <div class="flex items-center gap-2 sticky top-0 bg-white/95 backdrop-blur py-1 z-10">
+            <span class="material-symbols-outlined ${corClasse} text-[18px]">${icone}</span>
+            <h4 class="text-xs font-black uppercase tracking-wider text-brandDarkBlue">${titulo}</h4>
+            <span class="ml-auto inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-slate-100 border border-slate-200 ${corClasse} text-[11px] font-black tabular-nums">${n}</span>
+          </div>
+          ${n === 0
+            ? `<p class="text-xs text-slate-400 font-medium px-1 pb-2">${vazioTxt}</p>`
+            : corpoHTML}
+        </div>`;
+
+      // Empty-state global: nada em nenhuma das três frentes.
+      if (ent.length === 0 && sai.length === 0 && mov.length === 0) {
+        lista.innerHTML = `
+          <div class="flex flex-col items-center justify-center text-center py-14 px-6">
+            <div class="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-4">
+              <span class="material-symbols-outlined text-slate-300 text-[32px]">groups</span>
+            </div>
+            <h4 class="text-sm font-extrabold text-brandDarkBlue mb-1">Headcount estável no período</h4>
+            <p class="text-xs text-slate-400 font-medium max-w-sm">Nenhuma admissão, desligamento ou movimentação de cargo registrada em ${periodoTxt}.</p>
+          </div>`;
+        return;
+      }
+
+      lista.innerHTML = [
+        secao('Admissões (Entradas)', 'login', 'text-brandGreen', ent.length,
+              `<div class="space-y-3">${ent.map((p, i) => pessoaCard(p, 'entrada', i)).join('')}</div>`,
+              'Nenhuma admissão com data dentro do período selecionado.'),
+        secao('Desligamentos (Saídas)', 'logout', 'text-amber-500', sai.length,
+              `<div class="space-y-3">${sai.map((p, i) => pessoaCard(p, 'saida', i)).join('')}</div>`,
+              'Nenhum desligamento com data dentro do período selecionado.'),
+        secao('Movimentações de Cargo', 'swap_horiz', 'text-brandAqua', mov.length,
+              `<div class="space-y-3">${mov.map((m, i) => cargoCard(m, i)).join('')}</div>`,
+              'Nenhuma mudança de cargo (promoção/transferência) detectada no período.'),
+      ].join('<div class="h-px bg-slate-100 my-5"></div>');
     }
 
     function renderGraficoCentroCusto(porCc) {
@@ -2583,13 +3068,18 @@
       });
     }
 
-    // Modal de Movimentações: o botão `+` no card Colaboradores abre o modal.
-    // A lista interna é mantida atualizada por renderTickerMovimentacoes a cada
-    // re-cálculo dos filtros — aqui só disparamos o toggleModal já existente.
+    // Modal de Headcount: o botão no card Colaboradores abre o modal. A lista
+    // interna é mantida atualizada por renderDetalheHeadcount a cada re-cálculo
+    // dos filtros — aqui só disparamos o toggleModal já existente.
     const _btnAbrirMov = document.getElementById('btn-abrir-movimentacoes');
     if (_btnAbrirMov) {
       _btnAbrirMov.addEventListener('click', () => window.toggleModal('modal-movimentacoes', true));
     }
+    // Badges de fluxo (+Admissões / −Desligamentos) também abrem o detalhamento.
+    ['badge-entradas', 'badge-saidas'].forEach((id) => {
+      const b = document.getElementById(id);
+      if (b) b.addEventListener('click', () => window.toggleModal('modal-movimentacoes', true));
+    });
 
     // Logout via sidebar
     document.addEventListener('click', async (e) => {

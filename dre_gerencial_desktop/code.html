@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-br">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>DRE Gerencial - CentraFin</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700;800&display=swap"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "surface-container-lowest": "#ffffff",
+            "on-error-container": "#93000a",
+            "error-container": "#ffdad6",
+            "surface": "#f8f9fb",
+            "background": "#f8f9fb",
+            "error": "#ba1a1a",
+            "on-surface": "#191c1e",
+            "surface-container": "#edeef0",
+            "surface-variant": "#e1e2e4",
+            "surface-container-high": "#e7e8ea",
+            "tertiary-container": "#00a2f4",
+            "secondary": "#002443",
+            "surface-dim": "#d9dadc",
+            "surface-container-highest": "#e1e2e4",
+            "tertiary": "#006398",
+            "secondary-container": "#003b6d",
+            "primary": "#aad12f",
+            "surface-container-low": "#f3f4f6",
+            "on-surface-variant": "#584237",
+            // Aliases de marca usados pela sidebar e cabeçalhos.
+            "brandDarkBlue": "#002443", "brandMidBlue": "#1a4895",
+            "brandLightBlue": "#59a4d8", "brandPaleBlue": "#bfd7ea",
+            "brandAqua": "#89d5c9", "brandGreen": "#aad12f", "brandOrange": "#ff8864"
+          },
+          fontFamily: {
+            "headline": ["Manrope"], "body": ["Inter"], "label": ["Inter"],
+            "mono": ["JetBrains Mono", "ui-monospace", "monospace"]
+          },
+          borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+        },
+      },
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block; line-height: 1; white-space: nowrap;
+    }
+    body { font-family: 'Inter', sans-serif; }
+    h1, h2, h3, .font-manrope { font-family: 'Manrope', sans-serif; }
+    .num { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+    .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: rgba(203,213,225,.25); }
+  </style>
+  <link rel="stylesheet" href="../theme.css?v=20260508a">
+  <script>
+    /* Boot inline ANTES do paint — evita flash branco. */
+    (function () {
+      try {
+        var saved = localStorage.getItem('centrafin-theme');
+        var html = document.documentElement;
+        html.classList.remove('light', 'dark');
+        html.classList.add(saved === 'dark' ? 'dark' : 'light');
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../theme_manager.js?v=20260508a" defer></script>
+</head>
+
+<body class="bg-surface-container-low text-on-surface flex min-h-screen">
+  <div id="sidebar-container"></div>
+
+  <main class="flex-1 ml-20 p-8">
+    <!-- Cabeçalho -->
+    <header class="flex flex-wrap items-end justify-between gap-4 mb-6 border-b border-slate-200 pb-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="material-symbols-outlined text-brandAqua text-3xl">summarize</span>
+          <h1 class="text-2xl font-extrabold text-brandDarkBlue">DRE Gerencial</h1>
+        </div>
+        <p class="text-slate-500 text-sm font-medium">Demonstração de Resultados consolidando Contas a Receber e Contas
+          a Pagar — regime de competência por mês.</p>
+      </div>
+      <!-- Seletor de período (competência Mês/Ano) -->
+      <div class="flex items-end gap-3">
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Competência</label>
+          <input type="month" id="dre-periodo"
+            class="bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-bold text-brandDarkBlue outline-none focus:ring-2 focus:ring-primary/30 transition-all num">
+        </div>
+        <button id="dre-mes-atual"
+          class="px-4 py-2.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-base">today</span> Mês atual
+        </button>
+      </div>
+    </header>
+
+    <!-- Faixa-resumo (Vendas Líquidas · Lucro Bruto · EBITDA) -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+      <div class="bg-surface-container-lowest p-4 rounded-2xl border border-surface-variant/30 shadow-sm">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-cyan-600">request_quote</span> Vendas Líquidas</p>
+        <h3 id="resumo-vendas-liquidas" class="num text-xl font-extrabold text-on-surface">R$ 0,00</h3>
+      </div>
+      <div class="bg-surface-container-lowest p-4 rounded-2xl border border-surface-variant/30 shadow-sm">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-brandMidBlue">trending_up</span> Lucro Bruto</p>
+        <h3 id="resumo-lucro-bruto" class="num text-xl font-extrabold text-on-surface">R$ 0,00</h3>
+      </div>
+      <div id="resumo-ebitda-card"
+        class="bg-brandDarkBlue p-4 rounded-2xl border border-brandGreen/30 shadow-lg shadow-brandDarkBlue/20 relative overflow-hidden">
+        <p class="text-[10px] font-bold text-brandAqua uppercase tracking-wider mb-1 flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px]">savings</span> Resultado Operacional (EBITDA)</p>
+        <h3 id="resumo-ebitda" class="num text-xl font-black text-white">R$ 0,00</h3>
+        <p id="resumo-ebitda-margem" class="text-[10px] font-bold text-brandPaleBlue mt-0.5">Margem 0,0%</p>
+      </div>
+    </section>
+
+    <!-- Abas por empresa -->
+    <div class="flex items-center gap-1.5 flex-wrap mb-0 border-b border-surface-variant/30" id="dre-tabs">
+      <button data-aba="CONSOLIDADO" class="dre-tab"></button>
+      <button data-aba="SOULAN" class="dre-tab"></button>
+      <button data-aba="SELLAN" class="dre-tab"></button>
+      <button data-aba="NEAT" class="dre-tab"></button>
+      <button data-aba="ESTAGIO" class="dre-tab"></button>
+    </div>
+
+    <!-- Tabela DRE -->
+    <div class="bg-surface-container-lowest rounded-b-2xl rounded-tr-2xl overflow-hidden shadow-sm border border-surface-variant/20 border-t-0">
+      <div class="overflow-x-auto custom-scroll">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-surface-container-low border-b border-surface-variant/20">
+            <tr>
+              <th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Estrutura do
+                Resultado</th>
+              <th class="px-6 py-3 text-right text-[10px] font-bold text-on-surface-variant uppercase tracking-widest w-64">
+                Valor (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="dre-corpo" class="divide-y divide-surface-container/70">
+            <tr><td colspan="2" class="px-6 py-16 text-center text-slate-400 text-sm font-medium">Carregando dados dos
+              dois motores…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-6 py-3 border-t border-surface-container flex flex-wrap items-center justify-between gap-2 bg-surface-container-low/40">
+        <span id="dre-rodape" class="text-[11px] font-medium text-on-surface-variant">—</span>
+        <span id="dre-diagnostico" class="text-[11px] font-medium text-amber-600"></span>
+      </div>
+    </div>
+
+    <!-- Nota metodológica -->
+    <p class="text-[11px] text-slate-400 mt-4 max-w-4xl leading-relaxed">
+      <span class="font-bold text-slate-500">Metodologia:</span>
+      Receitas amarradas pela <strong>data de emissão</strong> (todas as notas não-Canceladas).
+      Despesas amarradas pela <strong>competência de regime</strong> (<code>competencia_ref</code>), que já aplica o
+      recuo de 1 mês das notas de serviço de <strong>PJ Interno</strong> (benefícios permanecem no mês corrente).
+      <strong>Custos dos Serviços Prestados</strong> = fornecedores tipo <em>Cliente</em> (mão de obra de clientes);
+      <strong>Despesas G&amp;A</strong> = fornecedores Interno/Externo/PJ. Valores negativos são somados algebricamente
+      dentro da própria rubrica.
+    </p>
+  </main>
+
+  <style>
+    .dre-tab {
+      padding: 0.6rem 1.1rem; font-size: 0.78rem; font-weight: 800; letter-spacing: .02em;
+      color: #64748b; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem;
+      border: 1px solid transparent; border-bottom: none; margin-bottom: -1px;
+      transition: all .15s; cursor: pointer; white-space: nowrap;
+    }
+    .dre-tab:hover { color: #002443; background: rgba(255,255,255,.6); }
+    .dre-tab.ativa {
+      color: #002443; background: #ffffff;
+      border-color: rgba(225,226,228,.6); border-bottom-color: #ffffff;
+      box-shadow: 0 -2px 6px rgba(0,0,0,.03);
+    }
+  </style>
+
+  <!-- Fonte Única da Verdade — mesmas regras matemáticas do Faturamento/Master.
+       Disponibiliza obterStatusReal, obterFaturamentoReal, calcularEmpresaAtribuida,
+       parseMoedaCRF, extrairISOLocal etc. como globals dentro do módulo. -->
+  <script src="../core_rules.js?v=20260508a"></script>
+
+  <script type="module">
+    import { renderSidebar } from "../sidebar.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
+      authDomain: "centra-fin.firebaseapp.com",
+      projectId: "centra-fin",
+      storageBucket: "centra-fin.firebasestorage.app",
+      messagingSenderId: "666471089411",
+      appId: "1:666471089411:web:4630f5b2ced70ceb981536"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // ── Guardião de rota ──────────────────────────────────────────────────────
+    // DRE Gerencial é tela executiva: leitura cruzada de Lancamentos + ContasAPagar.
+    // As Rules liberam essas coleções para isAdmin (master/super_admin) sem exigir
+    // menu extra — então restringimos a página a esses perfis. Assim o deploy
+    // permanece hosting-only e nenhum usuário cai numa tela com permission-denied.
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "../login.html"; return; }
+      let snap = await getDoc(doc(db, "Usuarios", user.email.toLowerCase()));
+      if (!snap.exists()) snap = await getDoc(doc(db, "Usuarios", user.uid));
+      if (!snap.exists()) { await signOut(auth); window.location.href = "../login.html"; return; }
+      const u = snap.data();
+      if (u.status === 'inativo') { await signOut(auth); window.location.href = "../login.html"; return; }
+      const perfil = String(u.perfil || '').toLowerCase();
+      if (perfil !== 'super_admin' && perfil !== 'master') {
+        // Perfis operacionais não acessam o consolidado executivo.
+        window.location.href = "../login.html";
+        return;
+      }
+      window.isSuperAdmin = perfil === 'super_admin';
+      renderSidebar(u.perfil, u.menus_permitidos || []);
+    });
+
+    // ==========================================================================
+    // ESTADO EM MEMÓRIA (Map/Reduce — abas trocam sem novas chamadas ao Firestore)
+    // ==========================================================================
+    let receitas = [];                         // Lancamentos (tipo === 'receita')
+    let despesas = [];                          // ContasAPagar
+    let fornecedorEmpresaMap = new Map();       // codigo(String) -> empresa (UPPER)
+    let universoCustos = new Map();             // categoria -> displayName (bucket CUSTOS)
+    let universoGA = new Map();                 // categoria -> displayName (bucket G&A)
+    let dreCache = {};                          // abaKey -> objeto DRE calculado
+    let abaSel = 'CONSOLIDADO';
+
+    const ABAS = [
+      { key: 'CONSOLIDADO', label: 'Consolidado' },
+      { key: 'SOULAN', label: 'SOULAN' },
+      { key: 'SELLAN', label: 'SELLAN' },
+      { key: 'NEAT', label: 'NEAT' },
+      { key: 'ESTAGIO', label: 'Estágios' },
+    ];
+
+    const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const money = (v) => fmtBRL.format(Number(v) || 0);
+
+    // ── Período: <input month> "YYYY-MM" ⇄ competência "MM/YYYY" ───────────────
+    const inputPeriodo = document.getElementById('dre-periodo');
+    function periodoYYYYMM() { return inputPeriodo.value || ''; }
+    function periodoMMYYYY() {
+      const m = String(inputPeriodo.value || '').match(/^(\d{4})-(\d{2})$/);
+      return m ? `${m[2]}/${m[1]}` : '';
+    }
+    function labelCompetencia(yyyymm) {
+      const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      const m = String(yyyymm || '').match(/^(\d{4})-(\d{2})$/);
+      return m ? `${meses[parseInt(m[2], 10) - 1]}/${m[1]}` : '—';
+    }
+
+    // ==========================================================================
+    // REGRA DE COMPETÊNCIA — espelha cpResolverCompetenciaRef do Contas a Pagar.
+    // Usamos preferencialmente o campo gravado `competencia_ref`; o fallback
+    // recompõe a competência de regime a partir do vencimento, aplicando o MESMO
+    // recuo de 1 mês das notas de serviço de PJ Interno (benefício no mês corrente).
+    // ==========================================================================
+    function cpEhPJInterno(tipoEntidade) { return /PJ/.test(String(tipoEntidade || '').toUpperCase()); }
+    function cpLinhaEhBeneficio(descricao) {
+      const s = String(descricao || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      return /BENEF|ASSIST|MEDIC|ODONTO|\bVALE\b|ALIMENTAC|REFEIC/.test(s);
+    }
+    function refMMYYYY(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})/); return m ? `${m[2]}/${m[1]}` : null; }
+    function refMenosUmMes(iso) {
+      const m = String(iso || '').match(/^(\d{4})-(\d{2})/); if (!m) return null;
+      let ano = parseInt(m[1], 10), mes = parseInt(m[2], 10) - 1;
+      if (mes < 1) { mes = 12; ano -= 1; }
+      return `${String(mes).padStart(2, '0')}/${ano}`;
+    }
+    function competenciaDespesa(reg) {
+      if (reg.competencia_ref && /^\d{2}\/\d{4}$/.test(reg.competencia_ref)) return reg.competencia_ref;
+      const iso = extrairISOLocal(reg.data_vencimento || reg.data_pagamento || reg.data_baixa);
+      if (!iso) return null;
+      if (cpEhPJInterno(reg.tipo_entidade) && !cpLinhaEhBeneficio(reg.categoria)) return refMenosUmMes(iso);
+      return refMMYYYY(iso);
+    }
+    // Receita: competência = mês de EMISSÃO (sem regra PJ — é nota de saída).
+    function competenciaReceita(reg) {
+      return refMMYYYY(extrairISOLocal(reg.data_emissao || reg['Dt Emissao'] || reg.data_criacao));
+    }
+
+    // ── Empresa → aba canônica ────────────────────────────────────────────────
+    // Normaliza qualquer rótulo de empresa (SOULAN CONSULTORIA, SOULAN ADM,
+    // SELLAN, NEAT, ESTÁGIO…) para uma das 4 abas. Receita nunca gera SELLAN;
+    // SELLAN é alimentada apenas por despesas. CONSOLIDADO soma tudo, inclusive
+    // 'OUTRAS' (empresa em branco/não mapeada) — preserva a integridade do total.
+    function normalizarEmpresa(raw) {
+      const s = String(raw || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+      if (!s) return 'OUTRAS';
+      if (s.includes('SELLAN')) return 'SELLAN';
+      if (s.includes('SOULAN')) return 'SOULAN';
+      if (s.includes('NEAT')) return 'NEAT';
+      if (s.includes('ESTAG')) return 'ESTAGIO';
+      return 'OUTRAS';
+    }
+    function empresaReceita(reg) {
+      const direta = String(reg.empresa_atribuida || '').trim();
+      const desc = reg.descricao_contrato || reg['Descrição Do Contrato'] || reg.descricao || '';
+      return direta || calcularEmpresaAtribuida(desc);
+    }
+    // Cascata oficial do Contas a Pagar: reg.empresa explícita → lookup Fornecedores.
+    function empresaDespesa(reg) {
+      const direta = String(reg.empresa || '').trim();
+      if (direta) return direta;
+      const cod = reg.codigo_fornecedor;
+      if (cod == null) return '';
+      return fornecedorEmpresaMap.get(String(cod).trim()) || '';
+    }
+    function abaReceita(reg) { return normalizarEmpresa(empresaReceita(reg)); }
+    function abaDespesa(reg) { return normalizarEmpresa(empresaDespesa(reg)); }
+
+    // Bucket da despesa: 'Cliente' = Custo dos Serviços Prestados; resto = G&A.
+    function bucketDespesa(reg) {
+      return /CLIENTE/.test(String(reg.tipo_entidade || '').toUpperCase()) ? 'CUSTOS' : 'GA';
+    }
+    function cpStatusCancelado(reg) { return /^cancel/i.test(String(reg.status || '').trim()); }
+    function catDespesa(reg) { return (String(reg.categoria || '').trim()) || '(Sem categoria)'; }
+    function somaImpostosReceita(reg) {
+      const campos = ['Valor INSS', 'Valor IRRF', 'Valor PIS', 'Valor COFINS', 'Valor CSLL', 'Valor ISS'];
+      return campos.reduce((acc, k) => acc + parseMoedaCRF(reg[k]), 0);
+    }
+    function valorBrutoReceita(reg) {
+      // Mesma precedência (||) do Contas a Receber: string vazia/0 cai p/ o próximo fallback.
+      return parseMoedaCRF(reg.valor_fatura || reg['Valor Fatura'] || reg.valor);
+    }
+
+    // ==========================================================================
+    // UNIVERSO DE CATEGORIAS — coletado de TODA a base (não só do mês), p/ que a
+    // estrutura do relatório fique íntegra e comparável: toda 'Tipo de Despesa'
+    // já vista aparece como linha, mesmo zerada no mês selecionado.
+    // ==========================================================================
+    function recomputarUniverso() {
+      universoCustos = new Map();
+      universoGA = new Map();
+      for (const reg of despesas) {
+        if (cpStatusCancelado(reg)) continue;
+        const cat = catDespesa(reg);
+        if (bucketDespesa(reg) === 'CUSTOS') universoCustos.set(cat, cat);
+        else universoGA.set(cat, cat);
+      }
+    }
+
+    // ==========================================================================
+    // MOTOR DRE — calcula a estrutura completa de um escopo (aba) no período.
+    // ==========================================================================
+    const hojeRef = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+
+    function construirDRE(periodo, aba) {
+      const hoje = hojeRef();
+      const todas = aba === 'CONSOLIDADO';
+
+      // ── Receitas (topo) ──
+      let faturamentoBruto = 0, deducoes = 0, nRec = 0;
+      for (const r of receitas) {
+        // Paridade com o KPI do Contas a Receber: descarta Canceladas E notas-mãe
+        // DESMEMBRADAS (o faturamento real vive nas parcelas-filhas — evita dupla contagem).
+        const st = obterStatusReal(r, hoje);
+        if (st === 'Cancelada' || st === 'DESMEMBRADO') continue;
+        if (competenciaReceita(r) !== periodo) continue;
+        if (!todas && abaReceita(r) !== aba) continue;
+        faturamentoBruto += valorBrutoReceita(r);
+        deducoes += somaImpostosReceita(r);
+        nRec++;
+      }
+      const vendasLiquidas = faturamentoBruto - deducoes;
+
+      // ── Despesas (custos + G&A), somadas por categoria (algébrico) ──
+      const somaCustos = new Map(), somaGA = new Map();
+      let nDesp = 0, outrasEmpresa = 0;
+      for (const d of despesas) {
+        if (cpStatusCancelado(d)) continue;
+        if (competenciaDespesa(d) !== periodo) continue;
+        const empAba = abaDespesa(d);
+        if (!todas && empAba !== aba) continue;
+        if (todas && empAba === 'OUTRAS') outrasEmpresa++;
+        const cat = catDespesa(d);
+        const v = Number(d.valor_original != null ? d.valor_original : d.valor) || 0;
+        const alvo = bucketDespesa(d) === 'CUSTOS' ? somaCustos : somaGA;
+        alvo.set(cat, (alvo.get(cat) || 0) + v);
+        nDesp++;
+      }
+
+      // Linhas estáveis a partir do universo (preenche 0 quando ausente).
+      const montarLinhas = (universo, somaMap) =>
+        [...universo.keys()].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+          .map(cat => ({ cat, valor: somaMap.get(cat) || 0 }));
+
+      const custosLinhas = montarLinhas(universoCustos, somaCustos);
+      const gaLinhas = montarLinhas(universoGA, somaGA);
+      const totalCustos = custosLinhas.reduce((a, l) => a + l.valor, 0);
+      const totalGA = gaLinhas.reduce((a, l) => a + l.valor, 0);
+
+      const lucroBruto = vendasLiquidas - totalCustos;
+      const ebitda = lucroBruto - totalGA;
+
+      return {
+        periodo, aba, faturamentoBruto, deducoes, vendasLiquidas,
+        custosLinhas, totalCustos, lucroBruto, gaLinhas, totalGA, ebitda,
+        nRec, nDesp, outrasEmpresa,
+      };
+    }
+
+    function recomputarTudo() {
+      recomputarUniverso();
+      const periodo = periodoMMYYYY();
+      dreCache = {};
+      for (const a of ABAS) dreCache[a.key] = construirDRE(periodo, a.key);
+      render();
+    }
+
+    // ==========================================================================
+    // RENDER — padrão executivo: grupos colapsáveis (accordion), realces de
+    // resultado (bg + bold + bordas grossas), numerais monoespaçados e negativos
+    // elegantes (parênteses + âmbar) sinalizando abatimento da linha.
+    // ==========================================================================
+    // Estado dos accordions — persiste entre re-renders e troca de abas.
+    const gruposAbertos = { CUSTOS: false, GA: false };
+
+    function escapeHTML(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    // Valor de ABATIMENTO (dedução/custo/despesa). Mostra magnitude entre
+    // parênteses em âmbar; zero neutro; crédito líquido raro fica neutro.
+    function fmtAbate(magnitude) {
+      if (Math.abs(magnitude) < 0.005) return { txt: money(0), cor: 'text-slate-400' };
+      if (magnitude > 0) return { txt: `(${money(magnitude)})`, cor: 'text-amber-700' };
+      return { txt: money(Math.abs(magnitude)), cor: 'text-emerald-700' }; // estorno > custo
+    }
+    // Valor assinado livre (linha analítica / resultado). Negativo entre
+    // parênteses; cor âmbar p/ estorno, vermelho-suave p/ resultado negativo.
+    function fmtAssinado(v, negCor = 'text-amber-700') {
+      const neg = v < -0.005;
+      return { txt: neg ? `(${money(Math.abs(v))})` : money(v), cor: neg ? negCor : '' };
+    }
+
+    function linhaBruto(valor) {
+      return `<tr class="bg-surface-container-low border-b-2 border-surface-variant/50">
+        <td class="py-3 px-4 text-[12px] uppercase tracking-wide font-extrabold text-brandDarkBlue">Faturamento Bruto</td>
+        <td class="py-3 px-4 text-right font-mono text-[14px] font-extrabold text-brandDarkBlue">${money(valor)}</td>
+      </tr>`;
+    }
+    function linhaAbate(rotulo, magnitude) {
+      const { txt, cor } = fmtAbate(magnitude);
+      return `<tr class="hover:bg-surface-container-low/50 transition-colors">
+        <td class="py-3 px-4 text-[12px] uppercase tracking-wide font-semibold text-on-surface-variant">${rotulo}</td>
+        <td class="py-3 px-4 text-right font-mono text-[13px] font-bold ${cor}">${txt}</td>
+      </tr>`;
+    }
+    // Linha de RESULTADO — realce executivo (bg + bold + bordas grossas).
+    function linhaResultado(rotulo, valor, tom) {
+      const tons = {
+        cyan:  { bg: 'bg-cyan-50',  bd: 'border-cyan-200',  cor: 'text-cyan-800' },
+        slate: { bg: 'bg-slate-100', bd: 'border-slate-300', cor: 'text-brandMidBlue' },
+      }[tom] || { bg: 'bg-slate-100', bd: 'border-slate-300', cor: 'text-brandDarkBlue' };
+      const { txt } = fmtAssinado(valor, 'text-rose-700');
+      const cor = valor < -0.005 ? 'text-rose-700' : tons.cor;
+      return `<tr class="${tons.bg} border-y-2 ${tons.bd}">
+        <td class="py-3 px-4 text-[12px] uppercase tracking-wide font-extrabold text-brandDarkBlue">${rotulo}</td>
+        <td class="py-3 px-4 text-right font-mono text-[14px] font-extrabold ${cor}">${txt}</td>
+      </tr>`;
+    }
+    // Cabeçalho de grupo COLAPSÁVEL — chevron + nome + total (abatimento).
+    function grupoHeader(key, rotulo) {
+      const dre = dreCache[abaSel];
+      const total = key === 'CUSTOS' ? dre.totalCustos : dre.totalGA;
+      const aberto = gruposAbertos[key];
+      const chevron = aberto ? 'expand_more' : 'chevron_right';
+      const { txt, cor } = fmtAbate(total);
+      return `<tr data-dre-toggle="${key}"
+        class="bg-surface-container-low/70 hover:bg-surface-container cursor-pointer select-none transition-colors">
+        <td class="py-3 px-4 text-[12px] font-extrabold uppercase tracking-wider text-on-surface-variant">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[18px] text-slate-400" data-chevron="${key}">${chevron}</span>
+            (−) ${rotulo}
+          </span>
+        </td>
+        <td class="py-3 px-4 text-right font-mono text-[13px] font-bold ${cor}">${txt}</td>
+      </tr>`;
+    }
+    function linhaCategoria(key, cat, valor) {
+      const oculto = gruposAbertos[key] ? '' : 'hidden';
+      const { txt, cor } = fmtAssinado(valor, 'text-amber-700');
+      const corFinal = cor || 'text-slate-600';
+      return `<tr data-grupo="${key}" class="${oculto} hover:bg-surface-container-low/60 transition-colors">
+        <td class="py-2.5 px-4 pl-12 text-[11px] text-slate-600">
+          <span class="inline-flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-slate-300"></span>${escapeHTML(cat)}</span>
+        </td>
+        <td class="py-2.5 px-4 text-right font-mono text-[12px] ${corFinal}">${txt}</td>
+      </tr>`;
+    }
+    function linhaCategoriaVazia(key, msg) {
+      const oculto = gruposAbertos[key] ? '' : 'hidden';
+      return `<tr data-grupo="${key}" class="${oculto}">
+        <td colspan="2" class="py-2.5 px-4 pl-12 text-[11px] text-slate-300 italic">${msg}</td>
+      </tr>`;
+    }
+
+    function render() {
+      // Abas
+      document.querySelectorAll('.dre-tab').forEach(btn => {
+        const a = ABAS.find(x => x.key === btn.dataset.aba);
+        btn.textContent = a ? a.label : btn.dataset.aba;
+        btn.classList.toggle('ativa', btn.dataset.aba === abaSel);
+      });
+
+      const dre = dreCache[abaSel];
+      const corpo = document.getElementById('dre-corpo');
+      if (!dre) { corpo.innerHTML = `<tr><td colspan="2" class="py-16 px-4 text-center text-slate-400 text-sm">Sem dados.</td></tr>`; return; }
+
+      let html = '';
+      // ── Topo: Faturamento → (−) Deduções → (=) Vendas Líquidas ──
+      html += linhaBruto(dre.faturamentoBruto);
+      html += linhaAbate('(−) Total Deduções / Impostos', dre.deducoes);
+      html += linhaResultado('(=) Vendas Líquidas', dre.vendasLiquidas, 'cyan');
+
+      // ── Grupo colapsável: Custos dos Serviços Prestados ──
+      html += grupoHeader('CUSTOS', 'Custos dos Serviços Prestados');
+      html += dre.custosLinhas.length
+        ? dre.custosLinhas.map(l => linhaCategoria('CUSTOS', l.cat, l.valor)).join('')
+        : linhaCategoriaVazia('CUSTOS', 'Nenhum tipo de despesa classificado como Cliente.');
+      html += linhaResultado('(=) Lucro Bruto', dre.lucroBruto, 'slate');
+
+      // ── Grupo colapsável: Despesas Operacionais G&A ──
+      html += grupoHeader('GA', 'Despesas Operacionais G&A');
+      html += dre.gaLinhas.length
+        ? dre.gaLinhas.map(l => linhaCategoria('GA', l.cat, l.valor)).join('')
+        : linhaCategoriaVazia('GA', 'Nenhuma despesa operacional na base.');
+
+      // ── Resultado Operacional (EBITDA) — faixa executiva ──
+      const ebt = fmtAssinado(dre.ebitda, 'text-rose-300');
+      const ebitdaCor = dre.ebitda < -0.005 ? 'text-rose-300' : 'text-brandGreen';
+      html += `<tr class="bg-brandDarkBlue border-y-4 border-brandGreen/40">
+        <td class="py-4 px-4 text-[12px] uppercase tracking-widest font-black text-white">(=) Resultado Operacional Líquido · EBITDA Gerencial</td>
+        <td class="py-4 px-4 text-right font-mono text-[16px] font-black ${ebitdaCor}">${ebt.txt}</td>
+      </tr>`;
+
+      corpo.innerHTML = html;
+
+      // Faixa-resumo
+      document.getElementById('resumo-vendas-liquidas').textContent = money(dre.vendasLiquidas);
+      document.getElementById('resumo-lucro-bruto').textContent = money(dre.lucroBruto);
+      document.getElementById('resumo-ebitda').textContent = money(dre.ebitda);
+      const margem = dre.faturamentoBruto > 0 ? (dre.ebitda / dre.faturamentoBruto) * 100 : 0;
+      document.getElementById('resumo-ebitda-margem').textContent =
+        `Margem ${margem.toFixed(1).replace('.', ',')}% sobre o Faturamento Bruto`;
+
+      // Rodapé + diagnóstico
+      document.getElementById('dre-rodape').textContent =
+        `${labelCompetencia(periodoYYYYMM())} · ${dre.nRec} nota(s) de receita · ${dre.nDesp} lançamento(s) de despesa`;
+      const diag = document.getElementById('dre-diagnostico');
+      if (abaSel === 'CONSOLIDADO' && dre.outrasEmpresa > 0) {
+        diag.textContent = `⚠ ${dre.outrasEmpresa} despesa(s) sem empresa mapeada entram só no Consolidado.`;
+      } else { diag.textContent = ''; }
+    }
+
+    // ==========================================================================
+    // WIRE-UP — período, abas, mês atual
+    // ==========================================================================
+    (function initPeriodo() {
+      const d = new Date();
+      inputPeriodo.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    })();
+    inputPeriodo.addEventListener('change', recomputarTudo);
+    document.getElementById('dre-mes-atual').addEventListener('click', () => {
+      const d = new Date();
+      inputPeriodo.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      recomputarTudo();
+    });
+    document.querySelectorAll('.dre-tab').forEach(btn => {
+      // Rótulo inicial (antes da 1ª carga) p/ as abas não ficarem em branco.
+      const a = ABAS.find(x => x.key === btn.dataset.aba);
+      btn.textContent = a ? a.label : btn.dataset.aba;
+      btn.classList.toggle('ativa', btn.dataset.aba === abaSel);
+      btn.addEventListener('click', () => { abaSel = btn.dataset.aba; render(); });
+    });
+
+    // Accordion dos grupos — delegação no tbody (persiste entre re-renders).
+    // Toggle puro de `hidden` (performance instantânea, sem reflow pesado).
+    document.getElementById('dre-corpo').addEventListener('click', (e) => {
+      const alvo = e.target.closest('[data-dre-toggle]');
+      if (!alvo) return;
+      const key = alvo.getAttribute('data-dre-toggle');
+      gruposAbertos[key] = !gruposAbertos[key];
+      document.querySelectorAll(`#dre-corpo [data-grupo="${key}"]`)
+        .forEach(r => r.classList.toggle('hidden', !gruposAbertos[key]));
+      const chev = alvo.querySelector(`[data-chevron="${key}"]`);
+      if (chev) chev.textContent = gruposAbertos[key] ? 'expand_more' : 'chevron_right';
+    });
+
+    // ==========================================================================
+    // CARGA REATIVA — Fornecedores (mapa empresa) · ContasAPagar · Lancamentos.
+    // Cada snapshot reprocessa em memória; trocar de aba é instantâneo (cache).
+    // ==========================================================================
+    onSnapshot(collection(db, "Fornecedores"), (snap) => {
+      const m = new Map();
+      snap.forEach(docSnap => {
+        const f = docSnap.data();
+        const emp = String(f.empresa || '').trim().toUpperCase();
+        if (!emp) return;
+        // Chaveia por codigo (Number ou String) — espelha _cpFornecedoresEmpresaMap.
+        const cod = f.codigo != null ? String(f.codigo).trim() : String(docSnap.id).trim();
+        if (cod) m.set(cod, emp);
+      });
+      fornecedorEmpresaMap = m;
+      if (despesas.length || receitas.length) recomputarTudo();
+    }, (err) => console.warn('[DRE] Fornecedores listener:', err?.code || err?.message));
+
+    onSnapshot(collection(db, "ContasAPagar"), (snap) => {
+      const arr = [];
+      snap.forEach(docSnap => arr.push({ _id: docSnap.id, ...docSnap.data() }));
+      despesas = arr;
+      console.info('[DRE] ContasAPagar →', despesas.length, 'lançamentos');
+      recomputarTudo();
+    }, (err) => console.error('[DRE] ContasAPagar listener:', err?.code || err?.message));
+
+    // Receitas (Faturamento) são GLOBAIS por design — sem filtro de Centro de
+    // Custo (auditoria 2026-06-15). A restrição por CC é exclusiva da Folha; aqui
+    // todas as notas de receita entram no DRE para qualquer usuário autorizado.
+    onSnapshot(collection(db, "Lancamentos"), (snap) => {
+      const arr = [];
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.tipo === 'receita') arr.push({ id: docSnap.id, ...data });
+      });
+      receitas = arr;
+      console.info('[DRE] Lancamentos (receita) →', receitas.length, 'notas');
+      recomputarTudo();
+    }, (err) => console.error('[DRE] Lancamentos listener:', err?.code || err?.message));
+
+    // Logout via sidebar (delegação — o botão é injetado pelo renderSidebar).
+    document.addEventListener('click', async (e) => {
+      const logoutBtn = e.target.closest && e.target.closest('#btn-logout');
+      if (!logoutBtn) return;
+      e.preventDefault();
+      try { await signOut(auth); } catch (_) {}
+      window.location.href = "../login.html";
+    });
+  </script>
+</body>
+
+</html>

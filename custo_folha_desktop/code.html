@@ -2016,11 +2016,13 @@
         }
         if (valImport && lista.includes(valImport)) selectEmpresa.value = valImport;
 
-        // Filtros multi-select: preservam a seleção e injetam a sentinela "Todos"
-        // como primeira opção. Aplicado tanto ao filtro da tabela quanto ao do export.
-        popularMultiEmpresas(filtroEmpresa, 'Todas as Empresas', lista);
-        const exportEmpresa = document.getElementById('export-filtro-empresa');
-        if (exportEmpresa) popularMultiEmpresas(exportEmpresa, 'Todas as Empresas', lista);
+        // Auditoria 2026-06-09 (Escopo Visual de Filtros): os FILTROS de empresa
+        // (tabela + export) NÃO são mais populados pela Base aqui. Um usuário
+        // restrito a um Centro de Custo deve ver apenas as empresas relacionadas
+        // ao seu escopo — então a lista vem do universo de dados visíveis em
+        // `popularFiltroEmpresaDeDados()` (deriva de cacheRegistros, já filtrado
+        // por permissão). `selectEmpresa` (form Importar) segue da Base completa:
+        // é destino de escrita, gated a admin, não vaza dado de leitura.
 
         if (!empresasCarregadas) {
             empresasCarregadas = true;
@@ -2045,26 +2047,57 @@
         setMultiValues(sel, sobrev.length ? sobrev : ['Todos']);
     }
 
-    // ── POPULAR DROPDOWN DE CENTROS DE CUSTO (Base_Centros_Custo) ────────────
-    // A base é alimentada automaticamente pelo ETL (sincronizarCentrosDeCusto).
-    onSnapshot(collection(db, "Base_Centros_Custo"), (snap) => {
-        const nomes = [];
-        snap.forEach(d => {
-            const nome = String((d.data() || {}).nome || '').trim();
-            if (nome) nomes.push(nome);
-        });
-        nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        // 3º nível de permissão: oculta CCs não-autorizados do dropdown.
-        const visiveis = window._ccPermitidos
-            ? nomes.filter(n => window._ccPermitidos.has(n))
-            : nomes;
+    // Origem reativa do filtro de EMPRESA/FILIAL — auditoria 2026-06-09. Mesma
+    // regra do CC: extrai as empresas ÚNICAS do universo de dados visíveis
+    // (cacheRegistros, já filtrado por permissão de CC). Um usuário segmentado a
+    // um Centro de Custo passa a ver apenas as empresas relacionadas ao seu
+    // escopo — nunca a lista completa da Base. O sentinela PJ ('PJ') é excluído
+    // (não é uma empresa real; mantém paridade com a lista antiga da Base).
+    function popularFiltroEmpresaDeDados() {
+        if (!filtroEmpresa) return;
+        const empresas = [...new Set(
+            cacheRegistros.map(r => String(r?.empresa_atribuida || '').trim())
+                .filter(e => e && e !== EMPRESA_PJ_SENTINELA)
+        )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        popularMultiEmpresas(filtroEmpresa, 'Todas as Empresas', empresas);
+        const exportEmpresa = document.getElementById('export-filtro-empresa');
+        if (exportEmpresa) popularMultiEmpresas(exportEmpresa, 'Todas as Empresas', empresas);
+    }
 
-        popularMultiCc(filtroCc, 'Todos os Centros', visiveis, nomes);
+    // ── ORIGEM REATIVA DO FILTRO DE CENTRO DE CUSTO ──────────────────────────
+    // Auditoria 2026-06-09 (Escopo Visual de Filtros): o dropdown NÃO lê mais a
+    // Base_Centros_Custo (array estático com TODOS os CCs do banco). Aquele
+    // snapshot podia disparar ANTES de `window._ccPermitidos` ser resolvido no
+    // callback de auth → o seletor vazava CCs fora do escopo do usuário (o dado
+    // já era bloqueado, mas a opção aparecia). Agora a fonte é EXCLUSIVAMENTE o
+    // universo de dados que o usuário tem permissão de ver (`cacheRegistros`,
+    // já filtrado por permissão na ingestão): map → trim → descarta nulos → Set.
+    // Sem fonte estática, não há race: na pior hipótese o dropdown fica vazio —
+    // nunca "todos os CCs". Repopulado a cada render (_renderHistoricoSync).
+    function ccsVisiveisCc() {
+        const ccsDados = [...new Set(
+            cacheRegistros.map(r => String(r?.centro_custo || '').trim()).filter(Boolean)
+        )];
+        // Interseção defensiva — redundante (cacheRegistros já vem filtrado) mas
+        // garante que nenhum caminho futuro exponha um CC fora do escopo.
+        const visiveis = window._ccPermitidos
+            ? ccsDados.filter(cc => window._ccPermitidos.has(cc))
+            : ccsDados;
+        return visiveis.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+    function popularFiltroCcDeDados() {
+        if (!filtroCc) return;
+        const visiveis = ccsVisiveisCc();
+        popularMultiCc(filtroCc, 'Todos os Centros', visiveis, visiveis);
         const exportCc = document.getElementById('export-filtro-cc');
-        if (exportCc) popularMultiCc(exportCc, 'Todos os Centros', visiveis, nomes);
-    }, (err) => {
-        console.warn('[Base_Centros_Custo] listener falhou:', err?.code || err?.message);
-    });
+        if (exportCc) popularMultiCc(exportCc, 'Todos os Centros', visiveis, visiveis);
+        // Item 2.2 do roteiro: acesso a 1 só CC → já vem selecionado por padrão,
+        // limpando a poluição visual (o dropdown exibe unicamente esse CC).
+        if (window._ccPermitidos && visiveis.length === 1) {
+            const selAtual = getMultiValues(filtroCc).filter(v => v !== 'Todos');
+            if (!selAtual.length) setMultiValues(filtroCc, [visiveis[0]]);
+        }
+    }
 
     function popularMultiCc(sel, labelTodos, visiveis, todosNomes) {
         const previo = getMultiValues(sel);
@@ -2840,6 +2873,10 @@
         // de aplicar o filtro — assim novos PJs/CLTs entram na lista
         // automaticamente e funcionários removidos saem.
         popularFiltroFuncionario();
+        // Reativo: os filtros de CC e Empresa refletem só o que está presente no
+        // universo visível do usuário (anti-race dos snapshots de Base_*).
+        popularFiltroCcDeDados();
+        popularFiltroEmpresaDeDados();
         const registros = aplicarBusca(cacheRegistros);
         atualizarKPIs(registros);
         if (!registros.length) {
@@ -3819,6 +3856,71 @@
     // O `contexto` (empresa/competencia/cc) só é usado para compor o nome
     // do arquivo — não altera o conteúdo. Lança erro em vez de mostrar modal
     // pra o caller decidir o que fazer com a falha.
+    // ── Datas históricas para EXPORTAÇÃO (auditoria 2026-06-10) ──────────────
+    // Resolve e FORMATA (DD/MM/AAAA) a data de admissão/demissão SOMENTE para os
+    // arquivos baixados (a tabela da tela permanece intacta).
+    //
+    // BUGFIX 2026-06-10: a base CustosFolha grava datas em formato AMERICANO
+    // M/D/AA (ex.: "2/18/22" = 18/02/2022). O formatarData() genérico assumia
+    // D/M e devolvia "02/18/2022" (MM/DD) no arquivo. Aqui usamos um parser com
+    // disambiguação M/D × D/M (hint US, que é o formato desta base): componente
+    // > 12 define o papel; ambos <= 12 → M/D. Devolve '—' quando vazio (ativo).
+    function _parseDataHistoricaUS(v) {
+        if (v === null || v === undefined || v === '') return null;
+        // Timestamp / Date / serial Excel — reaproveita o formatarData robusto,
+        // que já trata esses tipos corretamente (ordem não-ambígua).
+        if (typeof v !== 'string') {
+            if (typeof v === 'object' && typeof v.toDate === 'function') return v.toDate();
+            if (typeof v === 'number') {
+                const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+                const ano = d.getUTCFullYear();
+                return (ano < 1990 || ano > 2099) ? null : new Date(ano, d.getUTCMonth(), d.getUTCDate());
+            }
+            return null;
+        }
+        const s = v.trim();
+        if (!s || s === '--/--/----' || s === '__/__/____' || s === '—' || s === '-') return null;
+        // ISO aaaa-mm-dd
+        let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (m) { const dt = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])); return isNaN(dt.getTime()) ? null : dt; }
+        // d/m/aa com disambiguação US
+        m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+        if (m) {
+            let a = Number(m[1]), b = Number(m[2]), y = m[3];
+            y = y.length === 2 ? (Number(y) >= 70 ? 1900 + Number(y) : 2000 + Number(y)) : Number(y);
+            let dia, mes;
+            if (a > 12 && b <= 12) { dia = a; mes = b; }
+            else if (b > 12 && a <= 12) { mes = a; dia = b; }
+            else if (a <= 12 && b <= 12) { mes = a; dia = b; } // ambíguo → M/D (base US)
+            else return null;
+            const dt = new Date(y, mes - 1, dia);
+            return isNaN(dt.getTime()) ? null : dt;
+        }
+        return null;
+    }
+
+    function _dataHistoricaExport(reg, tipo) {
+        if (!reg) return '—';
+        let bruto = tipo === 'admissao' ? reg.admissao : reg.demissao;
+        if (bruto === null || bruto === undefined || bruto === '') {
+            const alvos = tipo === 'admissao'
+                ? ['ADMISSAO']
+                : ['DEMISSAO', 'DESLIG', 'RESCISAO'];
+            for (const k of Object.keys(reg)) {
+                const KU = String(k).toUpperCase();
+                if (!alvos.some(a => KU.includes(a))) continue;
+                const v = reg[k];
+                // Restrito a string/Timestamp no fallback — evita confundir colunas
+                // numéricas de evento com datas (mesma defesa do Headcount).
+                if (typeof v === 'string' || (v && typeof v.toDate === 'function')) { bruto = v; break; }
+            }
+        }
+        const d = _parseDataHistoricaUS(bruto);
+        if (!(d instanceof Date) || isNaN(d.getTime())) return '—';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    }
+
     function gerarExcelDeRegistros(registros, contexto = {}) {
         if (typeof window === 'undefined' || !window.XLSX) {
             throw new Error('Biblioteca de exportação (SheetJS) não carregada.');
@@ -3827,8 +3929,11 @@
             throw new Error('Nenhum registro para exportar.');
         }
 
+        // Auditoria 2026-06-10: "Data de Admissão" e "Data de Demissão" injetadas
+        // logo após "Nome" — exclusivas do arquivo, deslocam as demais à direita.
         const cabecalho = [
-            'Competência', 'Nome', 'CPF', 'Empresa', 'Centro de Custo',
+            'Competência', 'Nome', 'Data de Admissão', 'Data de Demissão',
+            'CPF', 'Empresa', 'Centro de Custo',
             'Salário Bruto', 'Vencimentos', 'Encargos Sociais',
             'Benef. Pagos', 'Desc. Benef.', 'Custo Total',
         ];
@@ -3842,6 +3947,8 @@
             aoa.push([
                 comp,
                 r.nome || '',
+                _dataHistoricaExport(r, 'admissao'),
+                _dataHistoricaExport(r, 'demissao'),
                 fmtCPF(r.cpf),
                 r.empresa_atribuida || '',
                 r.centro_custo || '',
@@ -3860,6 +3967,8 @@
         ws['!cols'] = [
             { wch: 12 }, // Competência
             { wch: 36 }, // Nome
+            { wch: 14 }, // Data de Admissão
+            { wch: 14 }, // Data de Demissão
             { wch: 16 }, // CPF
             { wch: 22 }, // Empresa
             { wch: 22 }, // Centro de Custo
@@ -3871,9 +3980,11 @@
             { wch: 16 }, // Custo Total
         ];
 
-        // Formato BRL (pt-BR) nas colunas numéricas (F..K = índices 5..10).
+        // Formato BRL (pt-BR) nas colunas numéricas. Auditoria 2026-06-10: após
+        // inserir as 2 colunas de data depois de "Nome", os índices numéricos
+        // deslocaram +2 (antes F..K=5..10 → agora H..M=7..12).
         const fmtBRL_excel = '"R$ "#,##0.00;[Red]-"R$ "#,##0.00';
-        const colsNumericas = [5, 6, 7, 8, 9, 10];
+        const colsNumericas = [7, 8, 9, 10, 11, 12];
         for (let r = 1; r < aoa.length; r++) {
             for (const c of colsNumericas) {
                 const addr = window.XLSX.utils.encode_cell({ r, c });
@@ -4542,6 +4653,9 @@
                 'Empresa/Filial':      r?.empresa_atribuida || '—',
                 'Competência':         _competenciaDeRegistroBR(r),
                 'Nome do Colaborador': r?.nome || '—',
+                // Auditoria 2026-06-10: datas exclusivas do arquivo, logo após o Nome.
+                'Data de Admissão':    _dataHistoricaExport(r, 'admissao'),
+                'Data de Demissão':    _dataHistoricaExport(r, 'demissao'),
                 'Centro de Custo':     String(r?.centro_custo || '').trim() || '—',
             };
             for (const col of colunas) {
@@ -4555,17 +4669,20 @@
 
         const ws = window.XLSX.utils.json_to_sheet(linhas, { skipHeader: false });
 
-        // Larguras: 4 colunas de identificação + N verbas dinâmicas + 2 totais.
-        const cols = [{ wch: 22 }, { wch: 12 }, { wch: 32 }, { wch: 24 }];
+        // Larguras: 6 colunas de identificação (Empresa, Competência, Nome,
+        // Data Admissão, Data Demissão, Centro de Custo) + N verbas + 2 totais.
+        // Auditoria 2026-06-10: +2 colunas de data após o Nome.
+        const cols = [{ wch: 22 }, { wch: 12 }, { wch: 32 }, { wch: 14 }, { wch: 14 }, { wch: 24 }];
         colunas.forEach(() => cols.push({ wch: 18 }));
         cols.push({ wch: 18 }, { wch: 22 });
         ws['!cols'] = cols;
 
-        // Formato BRL em todas as colunas numéricas (índice 4 → fim).
+        // Formato BRL em todas as colunas numéricas (índice 6 → fim). Auditoria
+        // 2026-06-10: início deslocado de 4 → 6 por causa das 2 colunas de data.
         const fmtBRL_excel = '"R$ "#,##0.00;[Red]-"R$ "#,##0.00';
         const totalColsNum = colunas.length + 2;
         for (let rr = 1; rr <= linhas.length; rr++) {
-            for (let c = 4; c < 4 + totalColsNum; c++) {
+            for (let c = 6; c < 6 + totalColsNum; c++) {
                 const addr = window.XLSX.utils.encode_cell({ r: rr, c });
                 const cell = ws[addr];
                 if (!cell) continue;
