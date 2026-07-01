@@ -5,6 +5,27 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-01 - Licao: dependencia de dado vs dependencia de deploy
+
+Correcao de entendimento registrada pelo diretor. A dependencia bloqueante original da
+OS-FECHAMENTO-01 presumia que ela precisava aguardar o DEPLOY EM PRODUCAO da OS-CRF-01.
+Isso estava errado — a dependencia real era o DADO existir no Firestore, nao a TELA
+estar publicada. Como o arquiteto ja havia confirmado que os campos Comercial e Taxa ja
+existiam nos documentos reais (ETL ja gravava), a OS-FECHAMENTO-01 poderia ter sido
+implementada em paralelo, sem esperar deploy.
+
+Regra geral para mapeamento de dependencias entre OS:
+- "Depende do dado existir na fonte" (Firestore) != "depende da tela estar publicada"
+  (deploy). Sao coisas diferentes.
+- Dependencia de deploy so bloqueia de verdade se a nova OS depender de uma MUDANCA DE
+  COMPORTAMENTO da tela ja publicada (ex.: formulario que passa a gravar campo novo), nao
+  de LER um campo que ja existe.
+- Nas proximas OS, distinguir explicitamente essas duas categorias ao mapear dependencias.
+
+Nenhuma acao retroativa necessaria — apenas registro de aprendizado.
+
+---
+
 ## 2026-07-01 - OS-CRF-01 concluida (deploy em producao)
 
 Firebase deploy --only hosting executado com sucesso. OS-CRF-01 em producao em

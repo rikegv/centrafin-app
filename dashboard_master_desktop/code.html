@@ -793,7 +793,7 @@
 
             <div class="space-y-10">
               <div>
-                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Bruto
                   (Soulan) · por Comercial</h3>
                 <div
                   class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
@@ -819,13 +819,24 @@
 
               <div>
                 <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
-                  (Soulan) · por Serviço</h3>
+                  (Soulan) · por Comercial</h3>
                 <div
                   class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
-                  <!-- Tabela transposta: linhas=Serviço, colunas=Comerciais. Estrutura (thead+tbody)
-                       é regenerada dinamicamente em `renderTabelaPorServico` porque a lista de
-                       comerciais varia conforme o filtro. -->
-                  <table id="tabela-fech-soulan-servico" class="w-full text-left text-sm whitespace-nowrap">
+                  <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead
+                      class="sticky top-0 z-20 bg-[#002443] text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
+                      <tr>
+                        <th class="sticky left-0 z-30 bg-[#002443] px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
+                          Comercial</th>
+                        <th class="px-2 py-1.5 text-right">Consultoria</th>
+                        <th class="px-2 py-1.5 text-right">Estágio</th>
+                        <th class="px-2 py-1.5 text-right">Fopag</th>
+                        <th class="px-2 py-1.5 text-right">RPO</th>
+                        <th class="px-2 py-1.5 text-right">Temporário</th>
+                        <th class="px-2 py-1.5 text-right">Terceiros</th>
+                        <th class="px-2 py-1.5 text-right text-brandGreen bg-[#003459]">Total Geral</th>
+                      </tr>
+                    </thead>
                     <tbody id="tbody-fech-soulan-real"></tbody>
                   </table>
                 </div>
@@ -841,7 +852,7 @@
 
             <div class="space-y-10">
               <div>
-                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Bruto
                   (Thomas) · por Comercial</h3>
                 <div
                   class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
@@ -868,12 +879,52 @@
 
               <div>
                 <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento Real
-                  (Thomas) · por Serviço</h3>
+                  (Thomas) · por Comercial</h3>
                 <div
                   class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
-                  <!-- Tabela transposta: linhas=Serviço, colunas=Comerciais. -->
-                  <table id="tabela-fech-thomas-servico" class="w-full text-left text-sm whitespace-nowrap">
+                  <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead
+                      class="sticky top-0 z-20 bg-[#434f55] text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
+                      <tr>
+                        <th class="sticky left-0 z-30 bg-[#434f55] px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
+                          Comercial</th>
+                        <th class="px-2 py-1.5 text-right">Devolutiva</th>
+                        <th class="px-2 py-1.5 text-right">Integração</th>
+                        <th class="px-2 py-1.5 text-right">Subscription</th>
+                        <th class="px-2 py-1.5 text-right">Treinamento</th>
+                        <th class="px-2 py-1.5 text-right">Unidades</th>
+                        <th class="px-2 py-1.5 text-right">Hotmart</th>
+                        <th class="px-2 py-1.5 text-right">Assessment</th>
+                        <th class="px-2 py-1.5 text-right text-[#ffefe8] bg-[#ff5f15]">Total Geral</th>
+                      </tr>
+                    </thead>
                     <tbody id="tbody-fech-thomas-real"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 ml-1">Faturamento por Taxa
+                  (Thomas) · por Comercial</h3>
+                <div
+                  class="overflow-x-auto max-h-[500px] overflow-y-auto custom-scroll rounded-xl border border-slate-200 shadow-sm">
+                  <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead
+                      class="sticky top-0 z-20 bg-[#434f55] text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
+                      <tr>
+                        <th class="sticky left-0 z-30 bg-[#434f55] px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
+                          Comercial</th>
+                        <th class="px-2 py-1.5 text-right">Devolutiva</th>
+                        <th class="px-2 py-1.5 text-right">Integração</th>
+                        <th class="px-2 py-1.5 text-right">Subscription</th>
+                        <th class="px-2 py-1.5 text-right">Treinamento</th>
+                        <th class="px-2 py-1.5 text-right">Unidades</th>
+                        <th class="px-2 py-1.5 text-right">Hotmart</th>
+                        <th class="px-2 py-1.5 text-right">Assessment</th>
+                        <th class="px-2 py-1.5 text-right text-[#ffefe8] bg-[#ff5f15]">Total Geral</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-fech-thomas-taxa"></tbody>
                   </table>
                 </div>
               </div>
@@ -2560,13 +2611,11 @@
                   }
                 };
               }
-              // Comercial em Faturamento Real (espelha `obterFaturamentoReal` do core_rules.js).
-              // O campo `.bruto` foi convertido para somar faturReal — a tabela rotulada como
-              // "Bruto" agora exibe o Real, em paralelo ao breakdown `.real` por serviço.
+              // `.bruto` = Faturamento Bruto (vFatura), `.real` = Faturamento Real (faturReal).
               // Cancelados já saíram via early-return do forEach (mesma regra do CRF).
-              pivotSoulan[comercialText].bruto[servC] += faturReal;
+              pivotSoulan[comercialText].bruto[servC] += vFatura;
               pivotSoulan[comercialText].real[servC] += faturReal;
-              pivotSoulan[comercialText].bruto.TOTAL += faturReal;
+              pivotSoulan[comercialText].bruto.TOTAL += vFatura;
               pivotSoulan[comercialText].real.TOTAL += faturReal;
             }
           } else if (empresa === "NEAT") {
@@ -2586,14 +2635,17 @@
                   bruto: { DEVOLUTIVA: 0, "INTEGRAÇÃO": 0, SUBSCRIPTION: 0, TREINAMENTO: 0, UNIDADES: 0, HOTMART: 0, ASSESSMENT: 0, TOTAL: 0 },
                   real: {
                     DEVOLUTIVA: 0, "INTEGRAÇÃO": 0, SUBSCRIPTION: 0, TREINAMENTO: 0, UNIDADES: 0, HOTMART: 0, ASSESSMENT: 0, TOTAL: 0
-                  }
+                  },
+                  taxa: { DEVOLUTIVA: 0, "INTEGRAÇÃO": 0, SUBSCRIPTION: 0, TREINAMENTO: 0, UNIDADES: 0, HOTMART: 0, ASSESSMENT: 0, TOTAL: 0 }
                 };
               }
-              // Mesma regra que Soulan: Comercial em Faturamento Real para a Visão Thomas (NEAT).
-              pivotThomas[comercialText].bruto[servT] += faturReal;
+              // `.bruto` = Faturamento Bruto (vFatura), `.real` = Faturamento Real (faturReal), `.taxa` = Taxa (vTaxa).
+              pivotThomas[comercialText].bruto[servT] += vFatura;
               pivotThomas[comercialText].real[servT] += faturReal;
-              pivotThomas[comercialText].bruto.TOTAL += faturReal;
+              pivotThomas[comercialText].taxa[servT] += vTaxa;
+              pivotThomas[comercialText].bruto.TOTAL += vFatura;
               pivotThomas[comercialText].real.TOTAL += faturReal;
+              pivotThomas[comercialText].taxa.TOTAL += vTaxa;
             }
           }
         });
@@ -2927,83 +2979,19 @@
             TREINAMENTO: 'Treinamento', UNIDADES: 'Unidades', HOTMART: 'Hotmart', ASSESSMENT: 'Assessment'
           };
 
-          // ─── Tabela "Por Serviço" — TRANSPOSTA ─────────────────────────────────
-          // Linhas = SERVIÇOS (cols), Colunas = COMERCIAIS (chaves do pivotDict),
-          // Última coluna = Total Geral por serviço, Última linha = Total Geral por comercial.
-          // Mesmo `tipo='real'` (espelho de `obterFaturamentoReal` do core_rules.js).
-          const renderTabelaPorServico = (pivotDict, cols, tipo, isThomas) => {
-            const sortedComerciais = Object.keys(pivotDict).sort((a, b) => pivotDict[b][tipo].TOTAL - pivotDict[a][tipo].TOTAL);
-            const formatVal = (v) => (!v || v === 0)
-              ? `<span class="text-slate-300">-</span>`
-              : `<span class="text-slate-600 font-semibold">${window.formatMoedaFull(v)}</span>`;
-
-            const headBg = isThomas ? 'bg-[#434f55]' : 'bg-[#002443]';
-            const totalHeadBg = isThomas ? 'bg-[#ff5f15]' : 'bg-[#003459]';
-            const totalHeadText = isThomas ? 'text-[#ffefe8]' : 'text-brandGreen';
-            const footerBg = isThomas ? 'bg-[#ff5f15]' : 'bg-brandGreen/10';
-            const footerBorder = isThomas ? 'border-[#ffefe8]' : 'border-brandGreen';
-            const footerText = isThomas ? 'text-[#ffefe8]' : 'text-brandDarkBlue';
-            const footerCellBg = isThomas ? 'bg-[#ff5f15]' : 'bg-[#f0f9d9]';
-            const totalColBg = isThomas ? 'bg-[#ff5f15]' : 'bg-brandGreen/20';
-
-            // ── thead dinâmico (lista de comerciais varia com o filtro) ──
-            let thead = `<thead class="sticky top-0 z-20 ${headBg} text-brandPaleBlue text-[11px] uppercase tracking-widest font-extrabold">
-                <tr>
-                  <th class="sticky left-0 z-30 ${headBg} px-2 py-1.5 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Serviço</th>`;
-            sortedComerciais.forEach(com => {
-              thead += `<th class="px-2 py-1.5 text-right">${com}</th>`;
-            });
-            thead += `<th class="px-2 py-1.5 text-right ${totalHeadText} ${totalHeadBg}">Total Geral</th></tr></thead>`;
-
-            // ── tbody: uma linha por serviço ──
-            if (sortedComerciais.length === 0) {
-              return thead + `<tbody><tr><td colspan="${cols.length + 2}" class="text-center py-4 text-slate-400 text-xs italic">Nenhum dado encontrado para o período/filtros.</td></tr></tbody>`;
-            }
-
-            let tbody = '<tbody>';
-            const totaisPorComercial = {};
-            sortedComerciais.forEach(c => totaisPorComercial[c] = 0);
-            let grandTotal = 0;
-
-            cols.forEach(servico => {
-              const labelServico = labelsServicos[servico] || servico;
-              let totalServico = 0;
-              let row = `<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
-                  <td class="sticky left-0 z-10 bg-slate-200 group-hover:bg-slate-300 px-2 py-1.5 text-[11px] font-extrabold text-brandDarkBlue border-r-2 border-slate-300 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.05)]">${labelServico}</td>`;
-              sortedComerciais.forEach(com => {
-                const v = (pivotDict[com][tipo][servico]) || 0;
-                totalServico += v;
-                totaisPorComercial[com] += v;
-                row += `<td class="px-2 py-1.5 text-[11px] text-right whitespace-nowrap">${formatVal(v)}</td>`;
-              });
-              grandTotal += totalServico;
-              row += `<td class="px-2 py-1.5 text-[11px] text-right bg-slate-50 font-extrabold text-brandDarkBlue whitespace-nowrap">${formatVal(totalServico)}</td></tr>`;
-              tbody += row;
-            });
-
-            // Rodapé Total Geral por comercial
-            tbody += `<tr class="sticky bottom-0 z-20 ${footerBg} border-t-2 ${footerBorder} shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-                <td class="sticky left-0 z-10 ${footerCellBg} px-2 py-1.5 text-[11px] font-extrabold ${footerText} border-r-2 border-slate-300 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.05)]">TOTAL GERAL</td>`;
-            sortedComerciais.forEach(com => {
-              tbody += `<td class="px-2 py-1.5 text-[11px] text-right font-extrabold ${footerText} whitespace-nowrap">${formatVal(totaisPorComercial[com])}</td>`;
-            });
-            tbody += `<td class="px-2 py-1.5 text-[11px] text-right ${totalColBg} font-extrabold ${footerText} whitespace-nowrap">${formatVal(grandTotal)}</td></tr></tbody>`;
-
-            return thead + tbody;
-          };
-
-          // Tabelas "Por Comercial" (originais) — usam o renderTable matricial padrão.
+          // Tabelas Soulan: Bruto + Real (matrizes Comercial x Servico)
           const tbodySoulanBruto = document.getElementById('tbody-fech-soulan-bruto');
-          const tbodyThomasBruto = document.getElementById('tbody-fech-thomas-bruto');
+          const tbodySoulanReal = document.getElementById('tbody-fech-soulan-real');
           if (tbodySoulanBruto) tbodySoulanBruto.innerHTML = renderTable(pivotSoulan, colsSoulan, 'bruto');
-          if (tbodyThomasBruto) tbodyThomasBruto.innerHTML = renderTable(pivotThomas, colsThomas, 'bruto');
+          if (tbodySoulanReal) tbodySoulanReal.innerHTML = renderTable(pivotSoulan, colsSoulan, 'real');
 
-          // Tabelas "Por Serviço" — usam o renderTabelaPorServico (TRANSPOSTO).
-          // Reescreve o `<table>` inteiro (thead + tbody) porque o eixo X é dinâmico.
-          const tabelaSoulanServico = document.getElementById('tabela-fech-soulan-servico');
-          const tabelaThomasServico = document.getElementById('tabela-fech-thomas-servico');
-          if (tabelaSoulanServico) tabelaSoulanServico.innerHTML = renderTabelaPorServico(pivotSoulan, colsSoulan, 'real', false);
-          if (tabelaThomasServico) tabelaThomasServico.innerHTML = renderTabelaPorServico(pivotThomas, colsThomas, 'real', true);
+          // Tabelas Thomas: Bruto + Real + Taxa (matrizes Comercial x Servico)
+          const tbodyThomasBruto = document.getElementById('tbody-fech-thomas-bruto');
+          const tbodyThomasReal = document.getElementById('tbody-fech-thomas-real');
+          const tbodyThomasTaxa = document.getElementById('tbody-fech-thomas-taxa');
+          if (tbodyThomasBruto) tbodyThomasBruto.innerHTML = renderTable(pivotThomas, colsThomas, 'bruto');
+          if (tbodyThomasReal) tbodyThomasReal.innerHTML = renderTable(pivotThomas, colsThomas, 'real');
+          if (tbodyThomasTaxa) tbodyThomasTaxa.innerHTML = renderTable(pivotThomas, colsThomas, 'taxa');
 
           const kpiN = document.getElementById('kpi-fech-notas');
           const kpiB = document.getElementById('kpi-fech-bruto');
