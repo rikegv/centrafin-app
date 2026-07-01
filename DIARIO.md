@@ -5,6 +5,40 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-01 - Revogacao da regra do print obrigatorio
+
+Decisao do diretor: remover a obrigatoriedade de captura/armazenamento de screen.png no
+modulo para features com UI. A validacao visual do diretor continua como gate obrigatorio
+— a mudanca e apenas na forma de evidencia: aprovacao textual do diretor registrada no
+DIARIO.md e suficiente, sem necessidade de print anexado ao repositorio.
+
+Motivo: custo de armazenamento acumulado no Git e overhead de processamento de imagem
+nao se justificam frente ao ganho de auditoria. Trade-off pesado conscientemente pelo
+diretor.
+
+Alteracoes: CLAUDE.md secao "Validacao visual do diretor" (removida exigencia de
+screen.png) e Definition of Done (atualizado para refletir aprovacao textual).
+
+Aplicacao retroativa: OS-CRF-01 em andamento beneficiada — validacao visual do diretor
+ja dada nesta conversa e suficiente para prosseguir sem print.
+
+---
+
+## 2026-07-01 - OS-CRF-01: Validacao visual aprovada pelo diretor
+
+Diretor abriu o modulo Contas a Receber (Gerenciador CRF) no servidor local
+(localhost:5000) e validou visualmente a implementacao:
+- Colunas Comercial e Taxa nas posicoes corretas
+- Cabecalhos centralizados
+- Filtro avancado Comercial funcional
+- Campo editavel no modal de edicao
+- Detalhe (olho) com Comercial e Taxa
+
+Aprovacao registrada textualmente (conforme nova clausula — sem print obrigatorio).
+OS-CRF-01 liberada para merge/deploy.
+
+---
+
 ## 2026-07-01 - Merge F0 em main (fabrica em producao)
 
 Branch feature/instalar-fabrica-f0 mesclado em main via fast-forward e push para origin.

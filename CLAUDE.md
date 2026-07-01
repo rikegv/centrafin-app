@@ -107,14 +107,15 @@ Faturamento, Custo de Folha, DRE, Dashboards executivos e gestão de cadastros/a
    visualmente pelo diretor (se UI)**, deployada e registrada no DIARIO.md.
 6. Cada feature vive em seu branch `feature/<nome>`.
 
-### Validação visual do diretor + regra do print (features com UI) — cláusula formal
+### Validação visual do diretor (features com UI) — cláusula formal
 - Antes de criar a flag em qualquer feature com interface, o diretor abre a tela rodando
   (preview channel ou local) e valida. Verde do agente NÃO substitui validação visual.
 - A auditoria de tokens do designer (ver Time de agentes) é um gate TÉCNICO anterior —
   pega erro óbvio de CSS/tema antes de chegar ao diretor; não substitui o julgamento dele.
-- Toda entrega de UI traz um **print real** da tela (`screen.png` no módulo) provando o
-  estado. Nunca aceitar "pronto" sem print. Enquanto não há aprovação visual, a flag não
-  é criada.
+- A aprovação visual do diretor, registrada textualmente (mensagem do diretor confirmando
+  validação, capturada no DIARIO.md), é suficiente como evidência. Não é necessário anexar
+  captura de tela (`screen.png`) ao repositório. Enquanto não há aprovação visual, a flag
+  não é criada.
 
 ### Lei da decisão (proteção da arquitetura) — NÃO violar
 A fábrica opera com autonomia, MAS PARA e CONSULTA o diretor (via coordenador) antes de:
@@ -139,7 +140,7 @@ diretor é registrada no DIARIO.md.
 - **Teste de `firestore.rules` no emulador** cobrindo os casos da feature SEMPRE que
   regras forem tocadas (mínimo: admin escreve, `consulta` é bloqueado, `hasMenu` restringe
   coleção sensível). Sem isso, a flag não é criada.
-- Validação visual do diretor + print real (features com UI).
+- Validação visual do diretor (features com UI) — aprovação textual registrada no DIARIO.md.
 - Sem segredo real no código (apiKey público do Firebase não conta; chave de serviço /
   `.env` real, sim — proibido rastrear).
 - Regras de domínio da Parte A respeitadas (operações líquidas, competência, notas
