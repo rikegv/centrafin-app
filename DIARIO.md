@@ -5,6 +5,31 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-01 - OS-FECHAMENTO-01 concluida (deploy em producao)
+
+Matrizes Comercial x Servico no Dashboard Master > Fechamento publicadas em
+https://centra-fin.web.app. Firebase deploy --only hosting executado com sucesso.
+
+Resumo da feature entregue:
+- Bug critico corrigido: pivot .bruto agora acumula vFatura (antes usava faturReal,
+  fazendo Bruto e Real mostrarem o mesmo numero).
+- Soulan: 2 tabelas (Faturamento Bruto + Faturamento Real por Comercial).
+- Thomas: 3 tabelas (Faturamento Bruto + Real + Taxa por Comercial).
+- Tabelas transpostas "por Servico" removidas. Funcao renderTabelaPorServico removida.
+- Novo pivot .taxa para Thomas acumulando campo Taxa (OS-CRF-01).
+
+Correcao de processo aplicada durante esta OS: o testador-auditor criou a flag
+READY_os-fechamento-01 ANTES da validacao visual do diretor, violando o fluxo do
+CLAUDE.md. Flag removida e recriada somente apos aprovacao visual. Licao: o testador
+aprova tecnicamente, mas a flag so e criada DEPOIS da validacao visual do diretor
+(para features com UI). Ordem correta: testador aprova -> diretor valida visualmente
+-> flag criada -> deployer.
+
+Fluxo exercitado: arquiteto -> designer (spec) -> engenheiro-frontend -> designer
+(auditoria) -> testador-auditor -> validacao visual do diretor -> flag -> deployer.
+
+---
+
 ## 2026-07-01 - Licao: dependencia de dado vs dependencia de deploy
 
 Correcao de entendimento registrada pelo diretor. A dependencia bloqueante original da
