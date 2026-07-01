@@ -5,6 +5,28 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-01 - OS-CRF-01 concluida (deploy em producao)
+
+Firebase deploy --only hosting executado com sucesso. OS-CRF-01 em producao em
+https://centra-fin.web.app. 591 arquivos enviados, 135 novos uploads.
+
+Resumo da feature entregue:
+- Colunas Comercial e Taxa no Gerenciador CRF (Contas a Receber)
+- Comercial: exibe nome limpo do comissionado (campo Comissionado 01, sem prefixo numerico)
+- Taxa: valor monetario entre Faturamento Bruto e Valor Liquido
+- 19 colunas reordenadas, cabecalhos centralizados
+- Filtro avancado multi-select por Comercial
+- Campo Comercial editavel no modal de edicao
+- Comercial e Taxa no modal de detalhe e exportacao Excel
+
+Achado do arquiteto: os campos ja existiam nos 3.410 documentos do Firestore (ETL ja
+gravava). Nao foi necessario backfill nem reimportacao — tarefa foi puramente de UI.
+
+Fluxo completo exercitado: arquiteto -> designer (spec) -> engenheiro-frontend ->
+designer (auditoria) -> testador-auditor -> validacao visual do diretor -> deployer.
+
+---
+
 ## 2026-07-01 - Revogacao da regra do print obrigatorio
 
 Decisao do diretor: remover a obrigatoriedade de captura/armazenamento de screen.png no
