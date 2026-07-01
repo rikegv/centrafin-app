@@ -12,26 +12,30 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
 > Objetivo: tornar real a premissa "validar antes, deploy cirúrgico depois". Nenhuma
 > tarefa F0 toca o que está em produção; tudo é inerte ou roda em emulador local.
 
-- [ ] F0-01 — Instalar a fábrica no repo: copiar `.claude/agents/` (**8 agentes**, incluindo
+> **F0 FECHADO em 2026-07-01.** Todos os 7 itens implementados e testados na pratica
+> (trava de deploy provada bloqueando/liberando; emulador provado isolado; suite de
+> regras 4/4; check de sintaxe pego erro real; check de segredo pego caso real).
+
+- [x] F0-01 — Instalar a fábrica no repo: copiar `.claude/agents/` (**8 agentes**, incluindo
       `designer.md` redefinido — spec de diff antes / auditoria de tokens depois),
       `CLAUDE.md`, `DIARIO.md`, `TASKS.md`, e criar `design/specs/` (pasta de saída do
       designer). **PRESERVAR** `.claude/settings.json` e `settings.local.json` existentes
       (merge, nunca sobrescrever). Arquivos inertes — não tocam produção.
-- [ ] F0-02 — Reescrever a trava de deploy em **Node** (`scripts/gate-deploy.js`, sem
+- [x] F0-02 — Reescrever a trava de deploy em **Node** (`scripts/gate-deploy.js`, sem
       WSL/jq), ligada ao deployer via hook PreToolUse:Bash. Deve interceptar
       `firebase deploy` e `git push` e **bloquear** se não existir `.claude/state/READY_*`.
       Reforço extra: bloquear deploy que inclua `firestore:rules` se não houver flag de
       regra correspondente.
-- [ ] F0-03 — Subir **Firebase Emulator Suite** (Firestore + Rules) local. Documentar
+- [x] F0-03 — Subir **Firebase Emulator Suite** (Firestore + Rules) local. Documentar
       comando de start. Smoke test provando isolamento (emulador NÃO fala com `centra-fin`).
-- [ ] F0-04 — Suíte mínima de testes de `firestore.rules` no emulador, cobrindo casos reais:
+- [x] F0-04 — Suíte mínima de testes de `firestore.rules` no emulador, cobrindo casos reais:
       admin escreve; `consulta` é bloqueado na escrita; `hasMenu('contas_receber')` libera
       `Lancamentos` e sem o menu é negado. **Este é o portão de qualquer mudança de regra.**
-- [ ] F0-05 — Script de check de **sintaxe** dos módulos alterados (parse JS/HTML), usado
+- [x] F0-05 — Script de check de **sintaxe** dos módulos alterados (parse JS/HTML), usado
       pelo testador-auditor como parte do DoD.
-- [ ] F0-06 — Check **anti-segredo pré-push** (tripwire): aborta se `.env`/chave de serviço
+- [x] F0-06 — Check **anti-segredo pré-push** (tripwire): aborta se `.env`/chave de serviço
       rastreada. Confirmar cobertura do `.gitignore`. (Repo é público.)
-- [ ] F0-07 — Isolar os **scripts perigosos** (`clean_lancamentos.mjs`, `tmp_admin_clean.js`,
+- [x] F0-07 — Isolar os **scripts perigosos** (`clean_lancamentos.mjs`, `tmp_admin_clean.js`,
       `tmp_limpar_faturamento.js`, `tmp_varrer_limpar.js`, `populate.mjs`) em pasta marcada
       (ex.: `scripts-perigosos/`) com cabeçalho de aviso. Execução só com aprovação explícita
       do diretor e, de preferência, contra o emulador. Não altera comportamento de deploy

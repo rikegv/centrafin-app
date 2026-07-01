@@ -26,9 +26,22 @@
       {
         "source": "**/*.html",
         "headers": [
-          { "key": "Cache-Control", "value": "max-age=0, no-cache, no-store, must-revalidate" }
+          {
+            "key": "Cache-Control",
+            "value": "max-age=0, no-cache, no-store, must-revalidate"
+          }
         ]
       }
     ]
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
   }
 }
