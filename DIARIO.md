@@ -47,6 +47,40 @@ F1 = primeira tarefa cirurgica real exercitando o fluxo completo ponta a ponta.
 
 ---
 
+## 2026-07-01 - F0-D1 e F0-D2 fechados (zero pendencias no F0)
+
+- F0-D1: repositorio ja estava privado (diretor havia liberado temporariamente so para
+  leitura inicial da fabrica nesta sessao, depois fechou de volta). Confirmado via teste
+  de clone sem credenciais (falhou = privado).
+- F0-D2: credenciais do firebase login estavam expiradas (Authentication Error ao rodar
+  firebase projects:list). Resolvido com firebase login --reauth. Permissao de deploy
+  em centra-fin confirmada via firebase deploy --only hosting --dry-run (sucesso).
+
+Fase F0 encerrada sem nenhuma pendencia em aberto. Proxima etapa: F1 (primeira tarefa
+cirurgica real) ou merge do PR feature/instalar-fabrica-f0 -> main, a criterio do diretor.
+
+---
+
+## 2026-07-01 - Correcao de protocolo: devolucao da gestao ao coordenador
+
+O diretor apontou (corretamente) que toda a Fase F0 foi executada por mim (Claude, no
+chat, fora do Claude Code) escrevendo arquivos e codigo diretamente - papel que deveria
+ser do coordenador (e dos agentes sob ele), nao meu. Isso so foi aceitavel porque a
+fabrica ainda nao existia: nao havia coordenador para delegar. Agora que ela esta de pe,
+essa excecao acabou.
+
+A partir de agora: qualquer codigo, documento de memoria (CLAUDE.md/TASKS.md/DIARIO.md)
+ou artefato sob gestao da fabrica e trabalho do coordenador (via Claude Code), seguindo
+o fluxo normal de agentes. Eu (chat) volto ao papel de apoio fora da fabrica - discussao,
+planejamento, decisoes de arquitetura antes de existir tarefa - nao de execucao dentro
+dela.
+
+Licao para o coordenador registrar como propria: o DIARIO.md e a memoria viva do
+PROJETO gerida por VOCE (coordenador). Toda entrada daqui em diante deve ser escrita
+por voce mesmo, ao fechar cada tarefa - nao herdada de fora.
+
+---
+
 ## Decisoes de arquitetura (fechadas na fase de planejamento)
 
 1. Fabrica instalada no branch feature/instalar-fabrica-f0 (2026-07-01), 8 agentes
