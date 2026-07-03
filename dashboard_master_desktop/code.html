@@ -231,6 +231,10 @@
               class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
               <span class="material-symbols-outlined text-[16px]">psychology</span> Visão THOMAS
             </button>
+            <button id="btn-consolidado" onclick="window.alternarVisao('consolidado')"
+              class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
+              <span class="material-symbols-outlined text-[16px]">summarize</span> Consolidado
+            </button>
             <button id="btn-contasreceber" onclick="window.alternarVisao('contasreceber')"
               class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
               <span class="material-symbols-outlined text-[16px]">payments</span> Contas a Receber
@@ -242,10 +246,6 @@
             <button id="btn-fechamento" onclick="window.alternarVisao('fechamento')"
               class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
               <span class="material-symbols-outlined text-[16px]">lock_clock</span> Fechamento
-            </button>
-            <button id="btn-consolidado" onclick="window.alternarVisao('consolidado')"
-              class="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-brandDarkBlue px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 hover:-translate-y-0.5">
-              <span class="material-symbols-outlined text-[16px]">summarize</span> Consolidado
             </button>
           </div>
           <div class="flex items-center gap-4">
@@ -524,12 +524,12 @@
             </div>
           </div>
 
-          <!-- Tabela de Devedores (sem lift, scroll vertical) -->
+          <!-- Tabela Aging de Notas Vencidas (sem lift, scroll vertical) -->
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2">
                 <span class="material-symbols-outlined text-brandDarkBlue">leaderboard</span>
-                Devedores <span id="cr-devedores-count" class="text-[10px] font-bold text-slate-400 ml-1"></span>
+                Aging de Notas Vencidas <span id="cr-aging-count" class="text-[10px] font-bold text-slate-400 ml-1"></span>
               </h3>
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Clique no cabeçalho p/ ordenar</span>
             </div>
@@ -541,6 +541,14 @@
                     <th class="px-6 py-3 font-extrabold cursor-pointer select-none hover:text-brandDarkBlue transition-colors"
                         onclick="window.crToggleSort('cliente')" id="cr-th-cliente">
                       <span class="inline-flex items-center gap-1">Cliente <span id="cr-arrow-cliente" class="text-slate-300">↕</span></span>
+                    </th>
+                    <th class="px-6 py-3 font-extrabold cursor-pointer select-none hover:text-brandDarkBlue transition-colors"
+                        onclick="window.crToggleSort('nf')" id="cr-th-nf">
+                      <span class="inline-flex items-center gap-1">Nº NF <span id="cr-arrow-nf" class="text-slate-300">↕</span></span>
+                    </th>
+                    <th class="px-6 py-3 font-extrabold cursor-pointer select-none hover:text-brandDarkBlue transition-colors"
+                        onclick="window.crToggleSort('vencto')" id="cr-th-vencto">
+                      <span class="inline-flex items-center gap-1">Dt Vencto <span id="cr-arrow-vencto" class="text-slate-300">↕</span></span>
                     </th>
                     <th class="px-6 py-3 font-extrabold text-right cursor-pointer select-none hover:text-brandDarkBlue transition-colors"
                         onclick="window.crToggleSort('valor')" id="cr-th-valor">
@@ -764,6 +772,15 @@
                 <p class="text-slate-400 font-semibold text-[11px] uppercase tracking-wider mb-2">Faturamento Atrasado</p>
                 <h3 class="text-2xl font-extrabold text-rose-600" id="kpi-cons-atrasado">R$ 0,00</h3>
               </div>
+            </div>
+
+            <!-- Gráfico consolidado total (full-width) — TOPO -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 min-w-0 mb-6">
+              <h3 class="text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-slate-400 text-[18px]">insert_chart</span>
+                Bruto vs Realizado - Consolidado
+              </h3>
+              <div id="chart-consolidado-total" class="w-full h-[280px]"></div>
             </div>
 
             <!-- Gráficos comparativos -->
@@ -1067,6 +1084,16 @@
               <span class="material-symbols-outlined text-brandOrange">monitoring</span> Acompanhamento Mensal de Grupos
             </h3>
             <div id="chart-metas-mensal" class="w-full h-[350px]"></div>
+          </div>
+
+          <!-- Gráfico Mensal: Faturamento Bruto -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div class="absolute top-0 left-0 w-1.5 h-full bg-brandLightBlue"></div>
+            <h3 id="titulo-grafico-metas-mensal-bruto"
+              class="text-sm font-extrabold text-brandDarkBlue flex items-center gap-2 mb-6">
+              <span class="material-symbols-outlined text-brandLightBlue">monitoring</span> Acompanhamento Mensal: Faturamento Bruto
+            </h3>
+            <div id="chart-metas-mensal-bruto" class="w-full h-[350px]"></div>
           </div>
 
           <!-- Novo: Extrato de Performance Mensal (Card Independente Premium) -->
@@ -1499,6 +1526,7 @@
     // Independente do motor principal — não interfere em nenhum cálculo ativo.
     let _chartConsEmpresa = null;
     let _chartConsServico = null;
+    let _chartConsTotal = null;
     const _CONS_EMPRESAS_SOULAN = new Set(['SOULAN CONSULTORIA', 'SOULAN ADM', 'ESTÁGIO']);
 
     function _consEmpresaMae(empresa) {
@@ -1511,11 +1539,20 @@
       if (typeof ApexCharts === 'undefined') return;
       const baseBar = {
         chart: { type: 'bar', height: 320, fontFamily: 'inherit', toolbar: { show: false }, animations: { enabled: true } },
-        plotOptions: { bar: { horizontal: false, columnWidth: '58%', borderRadius: 6 } },
-        dataLabels: { enabled: false },
+        plotOptions: { bar: { horizontal: false, columnWidth: '58%', borderRadius: 6, dataLabels: { position: 'top' } } },
+        dataLabels: {
+          enabled: true,
+          formatter: function (val) {
+            if (!val || isNaN(val) || val === 0 || !isFinite(val)) return "";
+            return window.formatMil ? window.formatMil(val) : val;
+          },
+          offsetY: -10,
+          style: { fontSize: '10px', fontWeight: 700, colors: ['#475569'] },
+          background: { enabled: false },
+          dropShadow: { enabled: false }
+        },
         legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px', fontWeight: 700, labels: { colors: '#475569' }, markers: { width: 9, height: 9, radius: 3 } },
         grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
-        colors: ['#64748b', '#10b981'], // slate-500 (Bruto) · emerald-500 (Realizado)
         yaxis: { labels: { style: { colors: '#94a3b8', fontSize: '10px' }, formatter: (v) => (window.formatMil ? window.formatMil(v) : v) } },
         tooltip: { y: { formatter: (v) => window.formatMoedaFull(v) } },
         noData: { text: 'Sem dados no escopo SOULAN + NEAT', style: { color: '#94a3b8', fontSize: '13px' } },
@@ -1523,6 +1560,7 @@
       if (!_chartConsEmpresa) {
         _chartConsEmpresa = new ApexCharts(document.querySelector('#chart-consolidado-empresa'), {
           ...baseBar, series: [],
+          colors: ['#59a4d8', '#aad12f'],
           xaxis: { categories: [], labels: { style: { colors: '#475569', fontSize: '11px', fontWeight: 700 } } }
         });
         _chartConsEmpresa.render();
@@ -1530,9 +1568,19 @@
       if (!_chartConsServico) {
         _chartConsServico = new ApexCharts(document.querySelector('#chart-consolidado-servico'), {
           ...baseBar, series: [],
+          colors: ['#59a4d8', '#aad12f'],
+          dataLabels: { ...baseBar.dataLabels, style: { ...baseBar.dataLabels.style, fontSize: '9px' } },
           xaxis: { categories: [], labels: { rotate: -35, hideOverlappingLabels: true, trim: true, style: { colors: '#475569', fontSize: '10px', fontWeight: 600 } } }
         });
         _chartConsServico.render();
+      }
+      if (!_chartConsTotal) {
+        _chartConsTotal = new ApexCharts(document.querySelector('#chart-consolidado-total'), {
+          ...baseBar, chart: { ...baseBar.chart, height: 280 }, series: [],
+          colors: ['#59a4d8', '#ff5f15'],
+          xaxis: { categories: [], labels: { style: { colors: '#475569', fontSize: '11px', fontWeight: 700 } } }
+        });
+        _chartConsTotal.render();
       }
     }
 
@@ -1598,6 +1646,16 @@
             { name: 'Realizado', data: pares.map(p => Math.round(p[1].real)) },
           ], true);
         }
+
+        if (_chartConsTotal) {
+          const totalBruto = Math.round(porEmpresa['SOULAN'].bruto + porEmpresa['NEAT'].bruto);
+          const totalReal  = Math.round(porEmpresa['SOULAN'].real  + porEmpresa['NEAT'].real);
+          _chartConsTotal.updateOptions({ xaxis: { categories: ['TOTAL'] } }, false, false);
+          _chartConsTotal.updateSeries([
+            { name: 'Bruto',     data: [totalBruto] },
+            { name: 'Realizado', data: [totalReal] },
+          ], true);
+        }
       } catch (e) {
         console.warn('[Consolidado] erro no processamento:', e);
       }
@@ -1623,14 +1681,14 @@
         cur.dir = cur.dir === 'desc' ? 'asc' : 'desc';
       } else {
         cur.col = col;
-        cur.dir = (col === 'cliente') ? 'asc' : 'desc';
+        cur.dir = (col === 'cliente' || col === 'nf' || col === 'vencto') ? 'asc' : 'desc';
       }
       window._crRenderTabela();
       window._crAtualizarSetasTabela();
     };
 
     window._crAtualizarSetasTabela = function () {
-      ['cliente', 'valor', 'dias'].forEach(c => {
+      ['cliente', 'nf', 'vencto', 'valor', 'dias'].forEach(c => {
         const el = document.getElementById('cr-arrow-' + c);
         if (!el) return;
         if (window._crSort.col === c) {
@@ -1707,7 +1765,7 @@
       const ctx = window._crCtxRef || {};
       const filterByDia = (cf.dia !== null && cf.dia !== undefined) && (ctx.mesRef !== undefined);
 
-      const devedoresMap = {};
+      const listaNotas = [];
       (window._crBaseArray || []).forEach(data => {
         if (!data) return;
         const statusReal = window.obterStatusReal(data, hoje);
@@ -1715,8 +1773,7 @@
 
         if (filterByDia) {
           // Cross-filter dia: tabela exibe TODAS as notas vencendo naquele dia
-          // (A VENCER + VENCIDO + PROTESTO etc), aceitando que "Devedores" temporariamente
-          // vira "Notas vencendo no dia X". Sem dia: comportamento normal (só VENCIDO).
+          // (A VENCER + VENCIDO + PROTESTO etc). Sem dia: comportamento normal (só VENCIDO).
           const dVenc = window.parseDataLocal(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  '] || '');
           if (!dVenc) return;
           if (dVenc.getFullYear() !== ctx.anoRef || dVenc.getMonth() !== ctx.mesRef || dVenc.getDate() !== cf.dia) return;
@@ -1730,20 +1787,27 @@
         if (cf.empresa && cf.empresa !== empresa) return;
         if (cf.faixa && cf.faixa !== faixa) return;
         const faturReal = window.obterFaturamentoReal(data);
-        const cliente = String(data.cliente || data.Cliente || data['Razão Social'] || '—').trim() || '—';
-        if (!devedoresMap[cliente]) devedoresMap[cliente] = { valor: 0, diasMax: 0 };
-        devedoresMap[cliente].valor += faturReal;
-        if (dias !== null && dias > devedoresMap[cliente].diasMax) devedoresMap[cliente].diasMax = dias;
-      });
+        const cliente = String(data.cliente || data.Cliente || data['Razão Social'] || data['Razao Social'] || '—').trim() || '—';
+        const nf = String(data.rps || data['Nº NF'] || data['NF'] || data['Nº NF-e'] || '—').trim() || '—';
+        const dtVencRaw = data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  '] || '';
+        const dtVenc = window.parseDataLocal(dtVencRaw);
 
-      const lista = Object.entries(devedoresMap)
-        .map(([cli, info]) => ({ cliente: cli, valor: info.valor, dias: info.diasMax }));
+        listaNotas.push({
+          cliente: cliente,
+          nf: nf,
+          dtVenc: dtVenc,
+          valor: faturReal,
+          dias: dias
+        });
+      });
 
       const sortCol = window._crSort.col;
       const dir = window._crSort.dir;
-      lista.sort((a, b) => {
+      listaNotas.sort((a, b) => {
         let va, vb;
         if (sortCol === 'cliente') { va = a.cliente.toLowerCase(); vb = b.cliente.toLowerCase(); }
+        else if (sortCol === 'nf') { va = a.nf.toLowerCase(); vb = b.nf.toLowerCase(); }
+        else if (sortCol === 'vencto') { va = a.dtVenc ? a.dtVenc.getTime() : 0; vb = b.dtVenc ? b.dtVenc.getTime() : 0; }
         else if (sortCol === 'valor') { va = a.valor; vb = b.valor; }
         else { va = a.dias; vb = b.dias; }
         if (va < vb) return dir === 'asc' ? -1 : 1;
@@ -1751,20 +1815,31 @@
         return 0;
       });
 
-      const count = lista.length;
-      const elCount = document.getElementById('cr-devedores-count');
+      const count = listaNotas.length;
+      const elCount = document.getElementById('cr-aging-count');
       if (elCount) elCount.textContent = count > 0 ? `(${count})` : '';
 
-      if (lista.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 text-xs italic">Nenhum devedor no recorte atual.</td></tr>`;
+      if (listaNotas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 text-xs italic">Nenhuma nota em atraso no recorte atual.</td></tr>`;
         return;
       }
-      tbody.innerHTML = lista.map((d, i) => {
+
+      function fmtData(d) {
+        if (!d) return '—';
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const aaaa = d.getFullYear();
+        return dd + '/' + mm + '/' + aaaa;
+      }
+
+      tbody.innerHTML = listaNotas.map((d, i) => {
         const corDias = d.dias > 30 ? 'text-red-500' : d.dias > 15 ? 'text-amber-500' : 'text-slate-600';
         return `
           <tr class="hover:bg-slate-50 transition-colors">
-            <td class="px-6 py-3 text-slate-400 font-bold text-xs">${i + 1}</td>
+            <td class="px-6 py-3 text-slate-400 font-mono text-xs">${i + 1}</td>
             <td class="px-6 py-3 text-slate-700 font-bold text-sm">${d.cliente}</td>
+            <td class="px-6 py-3 text-slate-700 font-bold text-sm">${d.nf}</td>
+            <td class="px-6 py-3 text-slate-600 text-sm">${fmtData(d.dtVenc)}</td>
             <td class="px-6 py-3 text-right text-red-500 font-extrabold text-sm">${fmt(d.valor)}</td>
             <td class="px-6 py-3 text-right ${corDias} font-extrabold text-sm">${d.dias} dia${d.dias === 1 ? '' : 's'}</td>
           </tr>`;
@@ -3527,7 +3602,23 @@
           colors: ['#002443', '#aad12f'],
           series: [{ name: 'Meta Total', data: [0] }, { name: 'Faturamento Real', data: [0] }],
           xaxis: { categories: ['Total Acumulado'], labels: { show: false } },
-          dataLabels: { enabled: true, formatter: function (val) { return window.formatMoedaFull(val); }, style: { colors: ['#fff'] }, offsetX: -20 },
+          dataLabels: {
+            enabled: true,
+            formatter: function (val) { return window.formatMoedaFull(val); },
+            textAnchor: 'end',
+            offsetX: -5,
+            style: {
+              colors: [function (opts) {
+                var w = opts.w, value = opts.value, seriesIndex = opts.seriesIndex;
+                var max = Math.max.apply(null, w.globals.series.map(function(s) { return Math.max.apply(null, s); }));
+                var isDark = document.documentElement.classList.contains('dark');
+                // Barra pequena: rótulo se estende p/ esquerda além da barra → cor sobre fundo do card
+                if (max > 0 && value < max * 0.30) return isDark ? '#cbd5e1' : '#475569';
+                // Barra grande: rótulo dentro da barra
+                return seriesIndex === 0 ? '#FFFFFF' : '#475569';
+              }]
+            }
+          },
           tooltip: { shared: true, intersect: false, y: { formatter: function (val) { return window.formatMoedaFull(val); } } },
           legend: { position: 'top' }
         });
@@ -3544,7 +3635,21 @@
           colors: ['#002443', '#59a4d8'],
           series: [{ name: 'Meta Anual Bruta', data: [0] }, { name: 'Faturamento Bruto', data: [0] }],
           xaxis: { categories: ['Total Acumulado'], labels: { show: false } },
-          dataLabels: { enabled: true, formatter: function (val) { return window.formatMoedaFull(val); }, style: { colors: ['#fff'] }, offsetX: -20 },
+          dataLabels: {
+            enabled: true,
+            formatter: function (val) { return window.formatMoedaFull(val); },
+            textAnchor: 'end',
+            offsetX: -5,
+            style: {
+              colors: [function (opts) {
+                var w = opts.w, value = opts.value, seriesIndex = opts.seriesIndex;
+                var max = Math.max.apply(null, w.globals.series.map(function(s) { return Math.max.apply(null, s); }));
+                var isDark = document.documentElement.classList.contains('dark');
+                if (max > 0 && value < max * 0.30) return isDark ? '#cbd5e1' : '#475569';
+                return seriesIndex === 0 ? '#FFFFFF' : '#475569';
+              }]
+            }
+          },
           tooltip: { shared: true, intersect: false, y: { formatter: function (val) { return window.formatMoedaFull(val); } } },
           legend: { position: 'top' }
         });
@@ -3563,8 +3668,8 @@
           dataLabels: {
             enabled: true,
             formatter: function (val) { return window.formatMil(val); },
-            style: { fontSize: '9px', colors: ['#fff'] },
-            offsetY: 20
+            style: { fontSize: '9px', colors: ['#475569'] },
+            offsetY: -10
           },
           xaxis: { categories: [], labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 'bold' } } },
           yaxis: { labels: { show: false } },
@@ -3576,6 +3681,34 @@
           legend: { show: true, position: 'top', fontWeight: 'bold' }
         });
         window.chartMetasMensal.render();
+      }
+
+      // Gráfico Mensal: Faturamento Bruto (Item 1)
+      if (document.querySelector("#chart-metas-mensal-bruto")) {
+        window.chartMetasMensalBruto = new ApexCharts(document.querySelector("#chart-metas-mensal-bruto"), {
+          chart: { height: 350, type: 'bar', toolbar: { show: false } },
+          series: [
+            { name: 'Meta Mensal', type: 'column', data: [] },
+            { name: 'Faturamento Bruto', type: 'column', data: [] }
+          ],
+          plotOptions: { bar: { horizontal: false, columnWidth: '80%', borderRadius: 4, dataLabels: { position: 'top' } } },
+          colors: ['#aad12f', '#59a4d8'],
+          dataLabels: {
+            enabled: true,
+            formatter: function (val) { return window.formatMil(val); },
+            style: { fontSize: '9px', colors: ['#475569'] },
+            offsetY: -10
+          },
+          xaxis: { categories: [], labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 'bold' } } },
+          yaxis: { labels: { show: false } },
+          tooltip: {
+            shared: true,
+            intersect: false,
+            y: { formatter: function (val) { return window.formatMoedaFull(val); } }
+          },
+          legend: { show: true, position: 'top', fontWeight: 'bold' }
+        });
+        window.chartMetasMensalBruto.render();
       }
       window.inicializarBadgesMesesMetas();
     };
@@ -3687,9 +3820,12 @@
       let metaTotalPeriodo = 0;
       let realTotalPeriodo = 0;
       let brutoTotalPeriodo = 0;
+      let metaBrutaPeriodo = 0;
 
       let serieMetaMensal = Array(12).fill(0);
       let serieRealMensal = Array(12).fill(0);
+      let serieMetaMensalBruto = Array(12).fill(0);
+      let serieBrutoMensal = Array(12).fill(0);
       let categoriasX = [];
 
       // Calcular valores para todos os 12 meses (extrato) e acumulados do período (filtros)
@@ -3697,6 +3833,7 @@
         let somaRealMes = 0;
         let somaMetaMes = 0;
         let somaBrutoMes = 0;
+        let somaMetaBrutoMes = 0;
 
         Object.keys(faturamentoPorMesProduto).forEach(grupo => {
           // Para o cálculo dos meses individuais, não filtramos por grupo se estiver no Geral
@@ -3710,10 +3847,20 @@
           if (metaDoc && metaDoc.meses) {
             somaMetaMes += (metaDoc.meses[refMeses[mIdx]] || 0);
           }
+          // Meta bruta mensal: usa meses_bruto se existir, senao proporciona linearmente
+          if (metaDoc) {
+            if (metaDoc.meses_bruto && metaDoc.meses_bruto[refMeses[mIdx]] != null) {
+              somaMetaBrutoMes += Number(metaDoc.meses_bruto[refMeses[mIdx]] || 0);
+            } else {
+              somaMetaBrutoMes += Number(metaDoc.total_bruto || 0) / 12;
+            }
+          }
         });
 
         serieRealMensal[mIdx] = somaRealMes;
         serieMetaMensal[mIdx] = somaMetaMes;
+        serieBrutoMensal[mIdx] = somaBrutoMes;
+        serieMetaMensalBruto[mIdx] = somaMetaBrutoMes;
 
         // Se o mês estiver selecionado no filtro, adiciona ao gráfico e ao acumulado global
         if (mesesFiltro.includes(mIdx)) {
@@ -3721,6 +3868,7 @@
           realTotalPeriodo += somaRealMes;
           metaTotalPeriodo += somaMetaMes;
           brutoTotalPeriodo += somaBrutoMes;
+          metaBrutaPeriodo += somaMetaBrutoMes;
         }
       });
 
@@ -3738,6 +3886,20 @@
         ]);
       }
 
+      // Gráfico Mensal: Faturamento Bruto (Item 1)
+      if (window.chartMetasMensalBruto) {
+        const tituloBrutoEl = document.getElementById('titulo-grafico-metas-mensal-bruto');
+        if (tituloBrutoEl) {
+          tituloBrutoEl.innerHTML = `<span class="material-symbols-outlined text-brandLightBlue">monitoring</span> Acompanhamento Mensal: Faturamento Bruto${window.produtoFiltroMetas && window.produtoFiltroMetas !== 'GERAL' ? ' (' + window.produtoFiltroMetas + ')' : ''}`;
+        }
+
+        window.chartMetasMensalBruto.updateOptions({ xaxis: { categories: categoriasX } });
+        window.chartMetasMensalBruto.updateSeries([
+          { name: 'Meta Mensal', data: serieMetaMensalBruto.filter((_, i) => mesesFiltro.includes(i)) },
+          { name: 'Faturamento Bruto', data: serieBrutoMensal.filter((_, i) => mesesFiltro.includes(i)) }
+        ]);
+      }
+
       // 4. Extrato de Performance Mensal (Design Premium)
       const extratoContainer = document.getElementById('extrato-performance-meses');
       if (extratoContainer) {
@@ -3746,6 +3908,7 @@
         const anoAtual = hoje.getFullYear();
 
         extratoContainer.innerHTML = nomesMesesFull.map((mes, idx) => {
+          // OS-METAS-BINARIO-01: lógica binária GLOBAL (soma vs meta geral do mês)
           const atingiu = serieRealMensal[idx] >= serieMetaMensal[idx] && serieMetaMensal[idx] > 0;
           const semMeta = serieMetaMensal[idx] === 0;
           const estaNoFiltro = mesesFiltro.includes(idx);
@@ -3765,7 +3928,7 @@
             icon = "check_circle";
             iconColor = "text-brandGreen";
             statusTxt = "SALDO OK";
-            clickEv = `onclick="window.abrirModalMetaBatida(${idx}, ${anoFiltro})"`;
+            clickEv = `onclick="window.abrirModalDetalheMeta(${idx}, ${anoFiltro}, true)"`;
           } else if (semMeta) {
             cardClass = "bg-slate-50 border-slate-100 opacity-40";
             icon = "block";
@@ -3773,13 +3936,14 @@
             statusTxt = "-";
           } else {
             if (isPassado) {
-              cardClass = "bg-red-50 border-red-100";
-              icon = "cancel"; // Sinal negativo para passado não atingido
+              cardClass = "bg-red-50 border-red-100 cursor-pointer hover:bg-red-100/50";
+              icon = "cancel";
               iconColor = "text-red-500";
               statusTxt = "NÃO ATINGIDA";
+              clickEv = `onclick="window.abrirModalDetalheMeta(${idx}, ${anoFiltro}, false)"`;
             } else {
               cardClass = "bg-slate-50/80 border-slate-200";
-              icon = "error"; // Ícone de alerta/pendente para futuro/atual
+              icon = "error";
               iconColor = "text-slate-400";
               statusTxt = "PENDENTE";
             }
@@ -3807,17 +3971,18 @@
         ]);
       }
       // Chart Meta Anual Bruta vs Faturamento Bruto (lado esquerdo).
+      // Item 2: proporcionalidade — usa metaBrutaPeriodo (soma dos meses selecionados)
+      // em vez de metaAnualBrutaTotal fixo.
       if (window.chartMetaAnualBruto) {
         window.chartMetaAnualBruto.updateSeries([
-          { name: 'Meta Anual Bruta', data: [metaAnualBrutaTotal] },
+          { name: 'Meta Anual Bruta', data: [metaBrutaPeriodo] },
           { name: 'Faturamento Bruto', data: [brutoTotalPeriodo] }
         ]);
       }
 
       if (window.graficosGauges['GERAL']) {
         let percGeral = metaTotalPeriodo > 0 ? (realTotalPeriodo / metaTotalPeriodo) * 100 : 0;
-        if (percGeral > 100) percGeral = 100;
-        window.graficosGauges['GERAL'].updateSeries([percGeral]);
+        window.graficosGauges['GERAL'].updateSeries([Math.min(percGeral, 100)]);
 
         const lblGeral = document.getElementById('lbl-meta-geral');
         if (lblGeral) {
@@ -3847,7 +4012,6 @@
         });
 
         let perc = metaAcumulada > 0 ? (realAcumulado / metaAcumulada) * 100 : 0;
-        if (perc > 100) perc = 100;
         if (window.graficosGauges[grupo]) window.graficosGauges[grupo].updateSeries([perc]);
 
         let lblMap = { 'Consultoria & RPO': 'lbl-meta-cons-rpo', 'Estágio & Fopag': 'lbl-meta-est-fopag', 'THOMAS': 'lbl-meta-thomas', 'Temporário': 'lbl-meta-temporario', 'Terceirizados': 'lbl-meta-terceirizados' };
@@ -3881,12 +4045,13 @@
       let faturMes = { 'Consultoria & RPO': 0, 'Estágio & Fopag': 0, 'THOMAS': 0, 'Temporário': 0, 'Terceirizados': 0 };
 
       window.dadosGlobaisFirestore.forEach(data => {
-        // Status idêntico ao Gerenciador via `obterStatusReal`.
+        // Alinhado com processarDashMetas: exclui apenas Cancelada/DESMEMBRADO, âncora = emissão.
         const hojeModal = new Date(); hojeModal.setHours(0, 0, 0, 0);
-        if (window.obterStatusReal(data, hojeModal) !== 'RECEBIDO') return;
+        const statusModal = window.obterStatusReal(data, hojeModal);
+        if (statusModal === 'Cancelada' || statusModal === 'DESMEMBRADO') return;
 
-        const temBaixa = data['data_baixa'] || data['Dt Baixa'] || data['data_recebimento'];
-        let dRef = window.parseDataExt(temBaixa) || window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao']);
+        let dRef = window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao'])
+          || window.parseDataExt(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  ']);
         if (!dRef || dRef.getFullYear() != ano || dRef.getMonth() != mesIdx) return;
 
         const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
@@ -3934,7 +4099,13 @@
 
       const modal = document.getElementById('modal-detalhe-meta');
       const content = document.getElementById('modal-detalhe-meta-content');
-      document.getElementById('modal-detalhe-meta-titulo').innerText = `Detalhamento de Sucesso: ${nomesMesesFull[mesIdx]} / ${ano}`;
+
+      // Restaurar estilo verde (caso tenha sido alterado pelo modal de nao atingida/parcial)
+      const barElBatida = content.querySelector('.absolute.top-0');
+      if (barElBatida) { barElBatida.classList.remove('bg-red-500', 'bg-amber-500'); barElBatida.classList.add('bg-brandGreen'); }
+
+      const tituloElBatida = document.getElementById('modal-detalhe-meta-titulo');
+      tituloElBatida.innerHTML = `<span class="material-symbols-outlined text-brandGreen">verified</span> Detalhamento de Sucesso: ${nomesMesesFull[mesIdx]} / ${ano}`;
       document.getElementById('modal-detalhe-meta-lista').innerHTML = listHtml || `
             <div class="text-center py-10 opacity-50">
                 <span class="material-symbols-outlined text-4xl mb-2">info</span>
@@ -3949,7 +4120,209 @@
     window.fecharModalMetaBatida = function () {
       const m = document.getElementById('modal-detalhe-meta');
       const c = document.getElementById('modal-detalhe-meta-content');
+      // Restaurar estilo padrão (verde) ao fechar (parcial e nao-atingida mudam a barra)
+      const barEl = c.querySelector('.absolute.top-0');
+      if (barEl) { barEl.classList.remove('bg-red-500', 'bg-amber-500'); barEl.classList.add('bg-brandGreen'); }
       m.classList.add('opacity-0'); c.classList.add('scale-95'); setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
+    };
+
+    window.abrirModalMetaNaoAtingida = function (mesIdx, ano) {
+      // Item 5: Modal de detalhamento de produtos abaixo da meta
+      if (!window.dadosGlobaisFirestore || !window.dadosMetasGlobais) return;
+
+      const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+      const nomesMesesFull = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+      let faturMes = { 'Consultoria & RPO': 0, 'Estágio & Fopag': 0, 'THOMAS': 0, 'Temporário': 0, 'Terceirizados': 0 };
+
+      // MESMA lógica dos KPIs: exclui Cancelada/DESMEMBRADO, âncora = data_emissão
+      window.dadosGlobaisFirestore.forEach(data => {
+        const hojeModal = new Date(); hojeModal.setHours(0, 0, 0, 0);
+        const statusReal = window.obterStatusReal(data, hojeModal);
+        if (statusReal === 'Cancelada' || statusReal === 'DESMEMBRADO') return;
+
+        let dRef = window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao'])
+          || window.parseDataExt(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  ']);
+        if (!dRef || dRef.getFullYear() != ano || dRef.getMonth() != mesIdx) return;
+
+        const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
+        const empresaCalc = window.calcEmpresaExcel(tipoServicoRaw);
+        const empresa = String(empresaCalc || data['empresa_atribuida'] || '').toUpperCase().trim();
+
+        let grupoMeta = null;
+        if (tipoServicoRaw.includes("TEMPORA")) grupoMeta = 'Temporário';
+        else if (tipoServicoRaw.includes("TERCEIROS")) grupoMeta = 'Terceirizados';
+        else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) grupoMeta = 'Estágio & Fopag';
+        else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) grupoMeta = 'Consultoria & RPO';
+        else if (empresa === "NEAT") grupoMeta = 'THOMAS';
+
+        if (grupoMeta) faturMes[grupoMeta] += window.obterFaturamentoRealMaster(data);
+      });
+
+      let listHtml = "";
+      Object.keys(faturMes).forEach(produto => {
+        const real = faturMes[produto];
+        const metaDoc = window.dadosMetasGlobais.find(m => m.ano == ano && m.produto === produto);
+        const meta = metaDoc ? (metaDoc.meses[refMeses[mesIdx]] || 0) : 0;
+
+        if (meta > 0 && real < meta) {
+          const faltou = meta - real;
+          const percFalta = ((faltou / meta) * 100).toFixed(1);
+          listHtml += `
+                    <div class="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-100 shadow-sm animate-fade-in list-item-stagger">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center font-bold shadow-sm">
+                                <span class="material-symbols-outlined text-[20px]">trending_down</span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${produto}</p>
+                                <p class="text-red-600 font-extrabold text-sm">Faltou ${window.formatMoedaFull(faltou)}</p>
+                                <p class="text-red-400 text-[10px]">${percFalta}% abaixo da meta</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Realizado / Meta</p>
+                            <p class="text-sm font-extrabold text-brandDarkBlue">${window.formatMoedaFull(real)}</p>
+                            <p class="text-[10px] text-slate-400">de ${window.formatMoedaFull(meta)}</p>
+                        </div>
+                    </div>
+                `;
+        }
+      });
+
+      const modal = document.getElementById('modal-detalhe-meta');
+      const content = document.getElementById('modal-detalhe-meta-content');
+
+      // Mudar estilo do modal para vermelho
+      const barEl = content.querySelector('.absolute.top-0');
+      if (barEl) { barEl.classList.remove('bg-brandGreen'); barEl.classList.add('bg-red-500'); }
+
+      const tituloEl = document.getElementById('modal-detalhe-meta-titulo');
+      tituloEl.innerHTML = `<span class="material-symbols-outlined text-red-500">warning</span> Produtos Abaixo da Meta: ${nomesMesesFull[mesIdx]} / ${ano}`;
+
+      document.getElementById('modal-detalhe-meta-lista').innerHTML = listHtml || `
+            <div class="text-center py-10 opacity-50">
+                <span class="material-symbols-outlined text-4xl mb-2">info</span>
+                <p class="text-xs font-bold">Nenhum produto individual ficou abaixo da meta neste mês.</p>
+            </div>
+        `;
+
+      modal.classList.remove('hidden'); modal.classList.add('flex');
+      setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+    };
+
+    // ─── OS-METAS-BINARIO-01: Modal universal de detalhamento por produto ───
+    // Mostra TODOS os produtos com meta: verdes (bateram) e vermelhos (não bateram).
+    // Estilo do modal adapta-se ao status geral do mês (atingiu = verde, não = vermelho).
+    window.abrirModalDetalheMeta = function (mesIdx, ano, atingiu) {
+      if (!window.dadosGlobaisFirestore || !window.dadosMetasGlobais) return;
+
+      const refMeses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+      const nomesMesesFull = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+      let faturMes = { 'Consultoria & RPO': 0, 'Estágio & Fopag': 0, 'THOMAS': 0, 'Temporário': 0, 'Terceirizados': 0 };
+
+      // MESMA lógica dos modais existentes: exclui Cancelada/DESMEMBRADO, âncora = data_emissão
+      window.dadosGlobaisFirestore.forEach(data => {
+        const hojeModal = new Date(); hojeModal.setHours(0, 0, 0, 0);
+        const statusReal = window.obterStatusReal(data, hojeModal);
+        if (statusReal === 'Cancelada' || statusReal === 'DESMEMBRADO') return;
+
+        let dRef = window.parseDataExt(data['data_emissao'] || data['Dt Emissao'] || data['data_criacao'])
+          || window.parseDataExt(data['vencimento'] || data['Dt Vecto'] || data['Dt Vecto  ']);
+        if (!dRef || dRef.getFullYear() != ano || dRef.getMonth() != mesIdx) return;
+
+        const tipoServicoRaw = String(data['descricao_contrato'] || data['Descrição Do Contrato'] || data['tipo_servico'] || "").toUpperCase().trim();
+        const empresaCalc = window.calcEmpresaExcel(tipoServicoRaw);
+        const empresa = String(empresaCalc || data['empresa_atribuida'] || '').toUpperCase().trim();
+
+        let grupoMeta = null;
+        if (tipoServicoRaw.includes("TEMPORA")) grupoMeta = 'Temporário';
+        else if (tipoServicoRaw.includes("TERCEIROS")) grupoMeta = 'Terceirizados';
+        else if (tipoServicoRaw.includes("ESTAGIO") || tipoServicoRaw.includes("ESTÁGIO") || tipoServicoRaw.includes("FOPAG")) grupoMeta = 'Estágio & Fopag';
+        else if (tipoServicoRaw.includes("CONSULTORIA") || tipoServicoRaw.includes("RPO")) grupoMeta = 'Consultoria & RPO';
+        else if (empresa === "NEAT") grupoMeta = 'THOMAS';
+
+        if (grupoMeta) faturMes[grupoMeta] += window.obterFaturamentoRealMaster(data);
+      });
+
+      let listHtml = "";
+      Object.keys(faturMes).forEach(produto => {
+        const real = faturMes[produto];
+        const metaDoc = window.dadosMetasGlobais.find(m => m.ano == ano && m.produto === produto);
+        const meta = metaDoc ? (metaDoc.meses[refMeses[mesIdx]] || 0) : 0;
+
+        if (meta > 0 && real >= meta) {
+          // Card-item VERDE (produto que bateu a meta)
+          listHtml += `
+                    <div class="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-100 shadow-sm animate-fade-in list-item-stagger">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-brandGreen text-brandDarkBlue flex items-center justify-center font-bold shadow-sm">
+                                <span class="material-symbols-outlined text-[20px]">check</span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${produto}</p>
+                                <p class="text-sm font-extrabold text-brandDarkBlue">Meta Atingida</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Realizado</p>
+                            <p class="text-sm font-extrabold text-brandGreen">${window.formatMoedaFull(real)}</p>
+                        </div>
+                    </div>
+                `;
+        } else if (meta > 0 && real < meta) {
+          // Card-item VERMELHO (produto que NÃO bateu a meta)
+          const faltou = meta - real;
+          const percFalta = ((faltou / meta) * 100).toFixed(1);
+          listHtml += `
+                    <div class="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-100 shadow-sm animate-fade-in list-item-stagger">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center font-bold shadow-sm">
+                                <span class="material-symbols-outlined text-[20px]">trending_down</span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${produto}</p>
+                                <p class="text-red-600 font-extrabold text-sm">Faltou ${window.formatMoedaFull(faltou)}</p>
+                                <p class="text-red-400 text-[10px]">${percFalta}% abaixo da meta</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Realizado / Meta</p>
+                            <p class="text-sm font-extrabold text-brandDarkBlue">${window.formatMoedaFull(real)}</p>
+                            <p class="text-[10px] text-slate-400">de ${window.formatMoedaFull(meta)}</p>
+                        </div>
+                    </div>
+                `;
+        }
+      });
+
+      const modal = document.getElementById('modal-detalhe-meta');
+      const content = document.getElementById('modal-detalhe-meta-content');
+
+      // Estilo do modal adaptativo: verde se mês atingiu, vermelho se não
+      const barEl = content.querySelector('.absolute.top-0');
+      if (barEl) {
+        barEl.classList.remove('bg-brandGreen', 'bg-red-500', 'bg-amber-500');
+        barEl.classList.add(atingiu ? 'bg-brandGreen' : 'bg-red-500');
+      }
+
+      const tituloEl = document.getElementById('modal-detalhe-meta-titulo');
+      if (atingiu) {
+        tituloEl.innerHTML = `<span class="material-symbols-outlined text-brandGreen">verified</span> Detalhamento por Produto: ${nomesMesesFull[mesIdx]} / ${ano}`;
+      } else {
+        tituloEl.innerHTML = `<span class="material-symbols-outlined text-red-500">warning</span> Detalhamento por Produto: ${nomesMesesFull[mesIdx]} / ${ano}`;
+      }
+
+      document.getElementById('modal-detalhe-meta-lista').innerHTML = listHtml || `
+            <div class="text-center py-10 opacity-50">
+                <span class="material-symbols-outlined text-4xl mb-2">info</span>
+                <p class="text-xs font-bold">Nenhum produto com meta cadastrada neste mês.</p>
+            </div>
+        `;
+
+      modal.classList.remove('hidden'); modal.classList.add('flex');
+      setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
     };
 
     // ─── Modal de Parcelamentos Ativos ───
