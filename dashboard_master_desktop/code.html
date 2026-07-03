@@ -1569,7 +1569,18 @@
         _chartConsServico = new ApexCharts(document.querySelector('#chart-consolidado-servico'), {
           ...baseBar, series: [],
           colors: ['#59a4d8', '#aad12f'],
-          dataLabels: { ...baseBar.dataLabels, style: { ...baseBar.dataLabels.style, fontSize: '9px' } },
+          dataLabels: {
+            ...baseBar.dataLabels,
+            style: { ...baseBar.dataLabels.style, fontSize: '9px' },
+            formatter: function (val, opts) {
+              if (!val || isNaN(val) || val === 0 || !isFinite(val)) return "";
+              // Ocultar rótulo de barras muito pequenas para evitar sobreposição
+              var max = 0;
+              opts.w.globals.series.forEach(function(s) { s.forEach(function(v) { if (v > max) max = v; }); });
+              if (max > 0 && val < max * 0.05) return "";
+              return window.formatMil ? window.formatMil(val) : val;
+            }
+          },
           xaxis: { categories: [], labels: { rotate: -35, hideOverlappingLabels: true, trim: true, style: { colors: '#475569', fontSize: '10px', fontWeight: 600 } } }
         });
         _chartConsServico.render();
