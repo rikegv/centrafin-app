@@ -5,6 +5,46 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-03 — Deploy em produção: lote de 10 OS
+
+**URL:** https://centra-fin.web.app
+**Timestamp:** 2026-07-03, deploy via `firebase deploy --only hosting`
+**Commit range:** aec5c39..66f487b (9 commits, push 797fffd..66f487b)
+
+### OS deployadas neste lote
+
+| OS | Escopo | Validação visual |
+|----|--------|-----------------|
+| OS-AGING-01 | Tabela Aging de Notas Vencidas no Dashboard Master | Aprovada pelo diretor |
+| OS-CONSOLIDADO-01 | Gráfico Consolidado full-width (aba Consolidado) | Aprovada pelo diretor |
+| OS-CONSOLIDADO-02 | Reordenação (Consolidado no topo), paleta Por Serviço (azul/verde), rótulos sobrepostos (threshold 5%) | Aprovada pelo diretor |
+| OS-METAS-DASH-01 (itens 1,3,5,6) | Gráfico mensal bruto, dataLabels corrigidos, modal "Não Atingida", filtro ampliado | Aprovada pelo diretor |
+| OS-METAS-KPI-01 | Cards KPI Meta Anual Bruta/Real na tela Metas | Aprovada pelo diretor |
+| OS-CONTRASTE-01 | Cores de dataLabels nos gráficos Meta Anual (branco/cinza por série) | Aprovada pelo diretor |
+| OS-CONTRASTE-02 | Overflow de rótulos nos gráficos Meta Anual (textAnchor: end + function colors) | Aprovada pelo diretor |
+| OS-METAS-BINARIO-01 | Cards de atingimento mensal binários + modal universal abrirModalDetalheMeta (reverte OS-METAS-PARCIAL-01) | Aprovada pelo diretor |
+| Gauges individuais >100% | Remoção do Math.min nos 5 velocímetros de produto (completa OS-METAS-DASH-01 item 4) | Aprovada pelo diretor |
+
+### Notas
+
+- **Aba Consolidado — itens conhecidos entregues:** a reordenação (Consolidado no topo)
+  e a paleta do gráfico Por Serviço foram entregues como parte da OS-CONSOLIDADO-02.
+  Todos os 3 itens da spec estão em produção.
+- **OS-METAS-PARCIAL-01 revertida:** o estado "Parcial" (amber) nos cards mensais foi
+  introduzido e revertido na mesma sessão. Decisão do diretor: a classificação binária
+  global é a correta (soma vs meta geral). O detalhe por produto vive apenas no modal
+  de clique (abrirModalDetalheMeta).
+- **Regra permanente adicionada ao CLAUDE.md:** reporte obrigatório de regressões
+  corrigidas silenciosamente (decisão do diretor, motivada por regressão no filtro de
+  status do modal de metas).
+- **Código morto identificado:** funções `abrirModalMetaBatida` e `abrirModalMetaNaoAtingida`
+  não são mais chamadas (substituídas por `abrirModalDetalheMeta`). Limpeza pendente
+  para sessão futura.
+- **Override `border-amber-200` em theme.css:** remanescente da OS-METAS-PARCIAL-01.
+  Não causa dano; pode ser removido em limpeza futura ou reaproveitado.
+
+---
+
 ## 2026-07-01 - OS-FECHAMENTO-01 concluida (deploy em producao)
 
 Matrizes Comercial x Servico no Dashboard Master > Fechamento publicadas em
