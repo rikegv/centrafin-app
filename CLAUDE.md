@@ -162,6 +162,27 @@ diretor é registrada no DIARIO.md.
 - Decisão pendente do diretor: manter repo público ou torná-lo privado (regras e scripts
   de dados ficam visíveis no público).
 
+### Escopo estrito de execução (regra permanente — NÃO violar)
+Cada agente implementa **SOMENTE** o que está explicitamente listado na Ordem de
+Serviço. Se, durante a implementação, o agente identificar que uma mudança adicional
+parece necessária ou benéfica (ex.: tocar em código compartilhado, ajustar estilo em
+outro componente), ele **NÃO implementa por conta própria** — reporta ao coordenador,
+que escala ao diretor antes de agir. Nenhuma OS autoriza alterações fora do que está
+escrito nela, mesmo que pareçam pequenas ou óbvias.
+
+### Reporte obrigatório de regressões corrigidas (regra permanente — NÃO violar)
+Sempre que um agente (arquiteto, engenheiro, designer, testador) **identificar e
+corrigir**, durante sua própria execução, um erro ou regressão que reintroduziu
+comportamento já corrigido anteriormente em outra OS — mesmo que a correção tenha
+sido bem-sucedida e o resultado final esteja correto — isso **DEVE ser reportado
+explicitamente ao diretor** no relatório de status, não apenas mencionado de passagem
+ou omitido por já ter sido "resolvido internamente". Entender COMO e ONDE erros
+acontecem é tão importante quanto garantir que o resultado final esteja correto —
+padrões de regressão silenciosa indicam risco estrutural que pode se repetir em OS
+futuras. (Decisão do diretor 2026-07-03, motivada por regressão no filtro de status
+do modal de metas: worktree reintroduziu filtro `!== 'RECEBIDO'` + âncora
+`data_baixa`, corrigido silenciosamente na integração.)
+
 ### Convenções
 - Commits: Conventional Commits (feat:, fix:, chore:, docs:, refactor:).
 - Branches: feature/<nome>, fix/<nome>.
