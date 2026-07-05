@@ -922,9 +922,9 @@
     import { renderSidebar } from "../sidebar.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import {
-        getFirestore, collection, query, where, getDocs, writeBatch, doc, serverTimestamp, onSnapshot, limit, orderBy, updateDoc, addDoc, setDoc, deleteDoc
+        getFirestore, connectFirestoreEmulator, collection, query, where, getDocs, writeBatch, doc, serverTimestamp, onSnapshot, limit, orderBy, updateDoc, addDoc, setDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getAuth, connectAuthEmulator, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { importarCustoFolha, slugEvento } from "../importacao_folha.js";
 
     const firebaseConfig = {
@@ -940,6 +940,12 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    // Emulador local (detecção automática — seguro em produção)
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      try { connectFirestoreEmulator(db, 'localhost', 8080); } catch(e) {}
+      try { connectAuthEmulator(auth, 'http://localhost:9099'); } catch(e) {}
+    }
 
     // ── CONSTANTES ───────────────────────────────────────────────────────────
     const CHAVE_PAGINA = 'custo_folha';
@@ -988,7 +994,26 @@
     // bulk delete na topbar e do ícone de lixeira por linha. Auditoria
     // 2026-04-28: a UI de exclusão é EXCLUSIVA do perfil super_admin.
     let isSuperAdm = false;
+    let usuarioLogadoNome = 'Sistema';
+    let usuarioLogadoEmail = '';
     const selecaoIds = new Set();
+
+    // ── Esteira de aprovações — utilitário de criação de solicitação ────────
+    async function _criarSolicitacaoAprovacao(tipoOp, colecaoAlvo, docIdAlvo, dadosAntigos, dadosNovos, resumo, moduloOrigem) {
+        await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
+            tipo_operacao: tipoOp,
+            colecao_alvo: colecaoAlvo,
+            doc_id_alvo: docIdAlvo,
+            dados_antigos: dadosAntigos,
+            dados_novos: dadosNovos,
+            resumo: resumo,
+            modulo_origem: moduloOrigem,
+            status: 'Pendente',
+            solicitado_por: usuarioLogadoNome,
+            solicitado_por_email: usuarioLogadoEmail,
+            criado_em: serverTimestamp(),
+        });
+    }
 
     // Top bar da tabela
     const inputBusca = document.getElementById('input-busca');
@@ -1153,7 +1178,15 @@
 
     // ── AUTH / SIDEBAR / GUARDIÃO ────────────────────────────────────────────
     onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "../login.html"; return; }
+        if (!user) {
+          if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            const cred = JSON.parse(sessionStorage.getItem('_emu_cred') || 'null');
+            if (cred) {
+              try { const r = await signInWithEmailAndPassword(auth, cred.e, cred.s); user = r.user; }
+              catch(e) { window.location.href = "../login.html"; return; }
+            } else { window.location.href = "../login.html"; return; }
+          } else { window.location.href = "../login.html"; return; }
+        }
         try {
             const { getDoc, doc: docFn } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
             let dref = docFn(db, "Usuarios", user.email.toLowerCase());
@@ -1185,6 +1218,8 @@
                 return;
             }
             renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
+            usuarioLogadoNome = dadosUser.nome || dadosUser.email || user.email || 'Sistema';
+            usuarioLogadoEmail = String(dadosUser.email || user.email || '').toLowerCase();
             // Habilita UI de exclusão APENAS para super_admin. Tudo o que
             // depende disso (header de seleção, checkboxes nas linhas, ícone
             // de lixeira, botão de bulk delete) é mantido oculto até aqui.
@@ -3501,21 +3536,36 @@
 
         setEditarLoading(true);
         try {
-            await updateDoc(doc(db, COLECAO, editandoId), {
-                nome,
-                empresa_atribuida: emp,
-                centro_custo: cc,
-            });
-            // Atualiza o cache em memória para refletir imediatamente na tabela,
-            // sem esperar o ciclo do onSnapshot.
-            const idx = cacheRegistros.findIndex(r => r._id === editandoId);
-            if (idx >= 0) {
-                cacheRegistros[idx] = { ...cacheRegistros[idx], nome, empresa_atribuida: emp, centro_custo: cc };
-                renderHistorico();
+            if (!isSuperAdm) {
+                // Esteira: master grava solicitação UPDATE em CustosFolha.
+                const regAtual = cacheRegistros.find(r => r._id === editandoId);
+                const dadosAntigos = regAtual ? {
+                    nome: regAtual.nome || null,
+                    empresa_atribuida: regAtual.empresa_atribuida || null,
+                    centro_custo: regAtual.centro_custo || null,
+                } : null;
+                await _criarSolicitacaoAprovacao('UPDATE', COLECAO, editandoId, dadosAntigos,
+                    { nome, empresa_atribuida: emp, centro_custo: cc },
+                    `Edição: ${nome} · ${emp}`, 'FOLHA');
+                fecharModal('modal-editar');
+                editandoId = null;
+                mostrarSucesso('Cadastro atualizado.');
+            } else {
+                await updateDoc(doc(db, COLECAO, editandoId), {
+                    nome,
+                    empresa_atribuida: emp,
+                    centro_custo: cc,
+                });
+                // Atualiza o cache em memória para refletir imediatamente na tabela.
+                const idx = cacheRegistros.findIndex(r => r._id === editandoId);
+                if (idx >= 0) {
+                    cacheRegistros[idx] = { ...cacheRegistros[idx], nome, empresa_atribuida: emp, centro_custo: cc };
+                    renderHistorico();
+                }
+                fecharModal('modal-editar');
+                editandoId = null;
+                mostrarSucesso('Cadastro atualizado.');
             }
-            fecharModal('modal-editar');
-            editandoId = null;
-            mostrarSucesso('Cadastro atualizado.');
         } catch (err) {
             console.error('[Editar] updateDoc falhou:', err);
             if (err.code === 'permission-denied') {
@@ -4976,8 +5026,16 @@
         }
         btnAdicionarEmpresa.disabled = true;
         try {
-            await addDoc(collection(db, 'Base_Empresas'), { nome_fantasia: nome });
-            inputNovaEmpresa.value = '';
+            if (!isSuperAdm) {
+                await _criarSolicitacaoAprovacao('CREATE', 'Base_Empresas', null, null,
+                    { nome_fantasia: nome },
+                    `Nova empresa: ${nome}`, 'FOLHA');
+                inputNovaEmpresa.value = '';
+                mostrarSucesso('Empresa cadastrada.');
+            } else {
+                await addDoc(collection(db, 'Base_Empresas'), { nome_fantasia: nome });
+                inputNovaEmpresa.value = '';
+            }
         } catch (err) {
             console.error('[Base_Empresas] addDoc falhou:', err);
             if (err.code === 'permission-denied') {
@@ -5022,8 +5080,18 @@
                 return mostrarErro(`Já existe uma empresa chamada "${novo}".`);
             }
             try {
-                await updateDoc(doc(db, 'Base_Empresas', id), { nome_fantasia: novo });
-                editandoEmpresaId = null;
+                if (!isSuperAdm) {
+                    await _criarSolicitacaoAprovacao('UPDATE', 'Base_Empresas', id,
+                        { nome_fantasia: alvo.nome },
+                        { nome_fantasia: novo },
+                        `Edição empresa: "${alvo.nome}" → "${novo}"`, 'FOLHA');
+                    editandoEmpresaId = null;
+                    renderListaEmpresasCrud();
+                    mostrarSucesso('Empresa atualizada.');
+                } else {
+                    await updateDoc(doc(db, 'Base_Empresas', id), { nome_fantasia: novo });
+                    editandoEmpresaId = null;
+                }
             } catch (err) {
                 console.error('[Base_Empresas] updateDoc falhou:', err);
                 if (err.code === 'permission-denied') mostrarErro('Acesso Negado: apenas administradores podem editar empresas.');
@@ -5043,7 +5111,15 @@
             });
             if (!ok) return;
             try {
-                await deleteDoc(doc(db, 'Base_Empresas', id));
+                if (!isSuperAdm) {
+                    await _criarSolicitacaoAprovacao('DELETE', 'Base_Empresas', id,
+                        { nome_fantasia: alvo.nome },
+                        null,
+                        `Exclusão empresa: "${alvo.nome}"`, 'FOLHA');
+                    mostrarSucesso('Empresa excluída.');
+                } else {
+                    await deleteDoc(doc(db, 'Base_Empresas', id));
+                }
             } catch (err) {
                 console.error('[Base_Empresas] deleteDoc falhou:', err);
                 if (err.code === 'permission-denied') mostrarErro('Acesso Negado: apenas administradores podem excluir empresas.');

@@ -353,9 +353,10 @@
         import {
             getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword,
             signOut, onAuthStateChanged,
-            setPersistence, browserSessionPersistence
+            setPersistence, browserSessionPersistence,
+            connectAuthEmulator
         } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, serverTimestamp, updateDoc, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
@@ -370,6 +371,12 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
+
+        // Emulador local (detecção automática — seguro em produção)
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            try { connectFirestoreEmulator(db, 'localhost', 8080); } catch(e) {}
+            try { connectAuthEmulator(auth, 'http://localhost:9099'); } catch(e) {}
+        }
 
         // Aplica a persistência ANTES de qualquer fluxo (popup ou onAuthState).
         // O await sem catch propaga falhas inesperadas — em rede normal essa
@@ -588,6 +595,11 @@
                 // Sessão volátil também neste fluxo (idempotente, defesa em profundidade).
                 await setPersistence(auth, browserSessionPersistence);
                 const result = await signInWithEmailAndPassword(auth, email, senha);
+                // Emulador: persistir credenciais para re-auth em outras páginas
+                // (connectAuthEmulator reseta a sessão em cada navegação)
+                if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                    sessionStorage.setItem('_emu_cred', JSON.stringify({ e: email, s: senha }));
+                }
                 await rotearAposLogin(result.user);
             } catch (error) {
                 console.error('Erro na autenticação (e-mail/senha):', error?.code || error);

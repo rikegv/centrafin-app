@@ -40,7 +40,7 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
     // `aprovacoes` no menus_permitidos. Posicionado entre "Configurações e
     // Privacidade" (super_admin-only) e "Alterar tema" — bloco de governança.
     let adminMenuHtml = '';
-    const podeVerAprovacoes = userProfile === 'super_admin' || menusPermitidos.includes('aprovacoes');
+    const podeVerAprovacoes = userProfile === 'super_admin' || (userProfile !== 'master' && menusPermitidos.includes('aprovacoes'));
     if (userProfile === 'super_admin' || podeVerAprovacoes) {
         const itemConfiguracoes = userProfile === 'super_admin' ? `
                 <a data-menu="configuracoes_privacidade" class="${isConfiguracoesActive} ${menuLinkClass}" href="${prefix}master.html">

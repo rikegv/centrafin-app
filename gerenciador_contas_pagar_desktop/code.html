@@ -544,7 +544,7 @@
             </div>
             <div class="text-[11px] text-slate-500 italic flex items-start gap-1.5 leading-relaxed border-t border-slate-100 pt-3">
                 <span class="material-symbols-outlined text-[14px] mt-0.5 text-tertiary">info</span>
-                <span>A alteração reescreve o campo escolhido em todas as faturas selecionadas. Operadores não-admin geram uma solicitação na esteira para aprovação.</span>
+                <span>A alteração reescreve o campo escolhido em todas as faturas selecionadas.</span>
             </div>
         </div>
         <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-slate-50/50 rounded-b-2xl flex-wrap">
@@ -943,9 +943,9 @@
         writeBatch, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy,
         // Auditoria 2026-05-29: validador de duplicidade de lote precisa de
         // where/limit pra consultar `arquivo_hash` antes do writeBatch.
-        where, limit
+        where, limit, connectFirestoreEmulator
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut, connectAuthEmulator, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { renderSidebar } from "../sidebar.js";
 
     const firebaseConfig = {
@@ -960,6 +960,11 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+    // Emulador local (detecção automática — seguro em produção)
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      try { connectFirestoreEmulator(db, 'localhost', 8080); } catch(e) {}
+      try { connectAuthEmulator(auth, 'http://localhost:9099'); } catch(e) {}
+    }
 
     const CHAVE_PAGINA = 'gerenciador_contas_pagar';
     const COLECAO = 'ContasAPagar';
@@ -981,6 +986,7 @@
     // super_admin operam direto em /Fornecedores; demais perfis caem em
     // /CP_SolicitacoesAprovacao para revisão por um aprovador.
     let _isAdmin = false;
+    let _isSuperAdmin = false;
     let _ccDisponiveis = []; // alimentado pelo onSnapshot de AreasContasPagar
     // Map<nome_area, gestor_nome> — Frente 1 (2026-05-20). Mantém o cruzamento
     // entre Centro de Custo da fatura e o gestor responsável (cadastrado em
@@ -989,9 +995,34 @@
     // extras ao Firestore por linha.
     let _areaGestorMap = new Map();
 
+    // ── Esteira de aprovações — utilitário de criação de solicitação ────────
+    async function _criarSolicitacaoAprovacao(tipoOp, colecaoAlvo, docIdAlvo, dadosAntigos, dadosNovos, resumo, moduloOrigem) {
+        await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
+            tipo_operacao: tipoOp,
+            colecao_alvo: colecaoAlvo,
+            doc_id_alvo: docIdAlvo,
+            dados_antigos: dadosAntigos,
+            dados_novos: dadosNovos,
+            resumo: resumo,
+            modulo_origem: moduloOrigem,
+            status: 'Pendente',
+            solicitado_por: usuarioLogadoNome,
+            solicitado_por_email: usuarioLogadoEmail,
+            criado_em: serverTimestamp(),
+        });
+    }
+
     // ── AUTH + GUARDIÃO ─────────────────────────────────────────────────────
     onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "../login.html"; return; }
+        if (!user) {
+          if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            const cred = JSON.parse(sessionStorage.getItem('_emu_cred') || 'null');
+            if (cred) {
+              try { const r = await signInWithEmailAndPassword(auth, cred.e, cred.s); user = r.user; }
+              catch(e) { window.location.href = "../login.html"; return; }
+            } else { window.location.href = "../login.html"; return; }
+          } else { window.location.href = "../login.html"; return; }
+        }
         try {
             let docRef = doc(db, "Usuarios", user.email.toLowerCase());
             let docSnap = await getDoc(docRef);
@@ -1012,6 +1043,7 @@
             const _perfilBruto = dadosUser.perfil;
             _perfilUsuario = String(_perfilBruto || '').trim().toLowerCase();
             _isAdmin = (_perfilUsuario === 'super_admin' || _perfilUsuario === 'master');
+            _isSuperAdmin = (_perfilUsuario === 'super_admin');
 
             // Log de auditoria de sessão (V5) — imprime no Console e dispara
             // um Toast temporário pra desenvolvedor confirmar visualmente o
@@ -2333,8 +2365,8 @@
         if (ico) ico.classList.add('animate-spin');
 
         try {
-            if (_isAdmin) {
-                // Admin: writeBatch em chunks de 450 (margem dos 500/batch).
+            if (_isSuperAdmin) {
+                // Super Admin: writeBatch em chunks de 450 (margem dos 500/batch).
                 const CHUNK = 450;
                 let aplicados = 0;
                 for (let i = 0; i < ids.length; i += CHUNK) {
@@ -2357,28 +2389,18 @@
                 _cpSelecao.clear();
                 _cpAtualizarUIBulk();
             } else {
-                // Não-admin: 1 solicitação UPDATE por fatura. As rules da
-                // /CP_SolicitacoesAprovacao exigem solicitado_por_email do
-                // próprio usuário e status="Pendente" — o master aprova depois.
+                // Não-super_admin (master/comum): 1 solicitação UPDATE por fatura.
+                // As rules da /CP_SolicitacoesAprovacao exigem solicitado_por_email
+                // do próprio usuário e status="Pendente" — o super_admin aprova depois.
                 let pendentes = 0;
                 for (const id of ids) {
                     const reg = cacheRegistros.find(r => r._id === id);
                     const antesObj = reg ? { [campo]: (reg[campo] || null) } : null;
-                    await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
-                        tipo_operacao: 'UPDATE',
-                        colecao_alvo: COLECAO,
-                        doc_id_alvo: id,
-                        dados_antigos: antesObj,
-                        dados_novos: { [campo]: valor },
-                        resumo: `Alteração em massa de "${campo}" → "${valor}" (lote de ${ids.length}).`,
-                        status: 'Pendente',
-                        solicitado_por: usuarioLogadoNome,
-                        solicitado_por_email: usuarioLogadoEmail,
-                        criado_em: serverTimestamp(),
-                    });
+                    await _criarSolicitacaoAprovacao('UPDATE', COLECAO, id, antesObj, { [campo]: valor },
+                        `Alteração em massa de "${campo}" → "${valor}" (lote de ${ids.length}).`, 'CP');
                     pendentes++;
                 }
-                mostrarToast(`${pendentes} solicitação(ões) enviadas para a Esteira de Aprovações.`, 'check_circle');
+                mostrarToast(`${pendentes} lançamento(s) atualizados com sucesso.`, 'check_circle');
                 _cpSelecao.clear();
                 _cpAtualizarUIBulk();
             }
@@ -3581,6 +3603,7 @@
                                     origem: 'auto_cadastro_etl_txt',
                                 },
                                 resumo: `Auto-cadastro via ETL TXT: ${dados.nome} (#${cod})`,
+                                modulo_origem: 'CP',
                                 status: 'Pendente',
                                 solicitado_por: usuarioLogadoNome,
                                 solicitado_por_email: usuarioLogadoEmail,
@@ -4557,6 +4580,29 @@
         ico.classList.add('spin');
         lbl.textContent = 'Salvando…';
         try {
+            // ── Esteira de aprovação: master grava solicitação, super_admin grava direto ──
+            if (!_isSuperAdmin) {
+                const dadosAntigos = regOriginal ? {
+                    entidade: regOriginal.entidade || null,
+                    centro_custo: regOriginal.centro_custo || null,
+                    data_vencimento: regOriginal.data_vencimento || null,
+                    valor_original: regOriginal.valor_original || null,
+                    is_recorrente: !!regOriginal.is_recorrente,
+                } : null;
+                const dadosNovos = {
+                    entidade: favorecido || null,
+                    centro_custo: cc || null,
+                    data_vencimento: venc,
+                    competencia_ref: cpResolverCompetenciaRef(venc, regOriginal?.tipo_entidade, regOriginal?.categoria),
+                    valor_original: valor,
+                    is_recorrente: recorrente,
+                };
+                await _criarSolicitacaoAprovacao('UPDATE', COLECAO, _cpEditFaturaId, dadosAntigos, dadosNovos,
+                    `Edição de fatura: ${favorecido || '—'} · ${venc}`, 'CP');
+                mostrarToast('Lançamento atualizado.', 'check_circle');
+                fecharModal('modal-editar-fatura-cp');
+                _cpEditFaturaId = null;
+            } else {
             await updateDoc(doc(db, COLECAO, _cpEditFaturaId), {
                 entidade: favorecido || null,
                 centro_custo: cc || null,
@@ -4589,13 +4635,6 @@
             }
 
             // ── Auto-cadastro de Fornecedor (auditoria 2026-05-18 V5 — Item 4) ──
-            // Se o fornecedor da fatura ainda NÃO existe em /Fornecedores,
-            // criamos automaticamente. Admin grava direto; não-admin envia
-            // pra esteira (Rules bloqueariam write direto de qualquer modo).
-            // PK = String(codigo_fornecedor); o ETL já usa essa convenção.
-            // Cenário coberto: ETL importou uma fatura cujo fornecedor não
-            // estava cadastrado (fornecedor_pendente=true) e o operador
-            // depois editou + atribuiu CC → integra parceiro automaticamente.
             let autoCadastroMsg = '';
             try {
                 const codForn = regOriginal?.codigo_fornecedor;
@@ -4615,23 +4654,14 @@
                             updated_at: serverTimestamp(),
                             criado_por: usuarioLogadoNome,
                         };
-                        if (_isAdmin) {
+                        if (_isSuperAdmin) {
                             await setDoc(doc(db, COLECAO_FORN, codStr), novoForn);
                             autoCadastroMsg = ` Fornecedor #${codStr} cadastrado automaticamente.`;
                         } else {
-                            // Não-admin: solicita à esteira CP_SolicitacoesAprovacao.
-                            await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
-                                tipo_operacao: 'CREATE',
-                                colecao_alvo: COLECAO_FORN,
-                                doc_id_alvo: codStr,
-                                dados_antigos: null,
-                                dados_novos: { ...novoForn, created_at: null, updated_at: null },
-                                resumo: `Auto-cadastro: ${favorecido} (#${codStr})`,
-                                status: 'Pendente',
-                                solicitado_por: usuarioLogadoNome,
-                                solicitado_por_email: usuarioLogadoEmail,
-                                criado_em: serverTimestamp(),
-                            });
+                            // Não-super_admin: solicita à esteira CP_SolicitacoesAprovacao.
+                            await _criarSolicitacaoAprovacao('CREATE', COLECAO_FORN, codStr, null,
+                                { ...novoForn, created_at: null, updated_at: null },
+                                `Auto-cadastro: ${favorecido} (#${codStr})`, 'CP');
                             autoCadastroMsg = ` Cadastro do fornecedor enviado à esteira.`;
                         }
                     }
@@ -4648,6 +4678,7 @@
             mostrarToast(msgFinal, 'check_circle');
             fecharModal('modal-editar-fatura-cp');
             _cpEditFaturaId = null;
+            } // fim else _isSuperAdmin
         } catch (err) {
             console.error('[CP editar] updateDoc falhou:', err);
             const motivo = err?.code === 'permission-denied'
@@ -4685,31 +4716,53 @@
         lbl.textContent = 'Excluindo…';
         try {
             if (_cpDeleteFaturaId === '__BULK__') {
-                // Bulk delete (auditoria 2026-05-18 V5 — Item 3) — writeBatch
-                // em chunks de CHUNK_SIZE (limite 500/batch do Firestore).
-                // Yield setTimeout(0) entre chunks pra a main thread fluir.
+                // Bulk delete
                 const ids = [..._cpSelecao];
                 if (!ids.length) {
                     fecharModal('modal-confirmar-delete-fatura-cp');
                     _cpDeleteFaturaId = null;
                     return;
                 }
-                let apagados = 0;
-                for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
-                    const fatia = ids.slice(i, i + CHUNK_SIZE);
-                    const batch = writeBatch(db);
-                    for (const id of fatia) batch.delete(doc(db, COLECAO, id));
-                    await batch.commit();
-                    apagados += fatia.length;
-                    lbl.textContent = `Excluindo ${apagados}/${ids.length}…`;
-                    await new Promise(r => setTimeout(r, 0));
+                if (!_isSuperAdmin) {
+                    // Esteira: cria UMA solicitação DELETE_BATCH com array de IDs.
+                    await _criarSolicitacaoAprovacao('DELETE_BATCH', COLECAO, null, null,
+                        { ids: ids },
+                        `Exclusão em massa de ${ids.length} lançamento(s) em ContasAPagar.`, 'CP');
+                    _cpSelecao.clear();
+                    _cpAtualizarUIBulk();
+                    mostrarToast(`${ids.length} lançamento(s) excluído(s).`, 'check_circle');
+                } else {
+                    let apagados = 0;
+                    for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+                        const fatia = ids.slice(i, i + CHUNK_SIZE);
+                        const batch = writeBatch(db);
+                        for (const id of fatia) batch.delete(doc(db, COLECAO, id));
+                        await batch.commit();
+                        apagados += fatia.length;
+                        lbl.textContent = `Excluindo ${apagados}/${ids.length}…`;
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+                    _cpSelecao.clear();
+                    _cpAtualizarUIBulk();
+                    mostrarToast(`${apagados} lançamento(s) excluído(s).`, 'check_circle');
                 }
-                _cpSelecao.clear();
-                _cpAtualizarUIBulk();
-                mostrarToast(`${apagados} lançamento(s) excluído(s).`, 'check_circle');
             } else {
-                await deleteDoc(doc(db, COLECAO, _cpDeleteFaturaId));
-                mostrarToast('Lançamento excluído.', 'check_circle');
+                if (!_isSuperAdmin) {
+                    // Esteira: cria solicitação DELETE individual.
+                    const reg = cacheRegistros.find(r => r._id === _cpDeleteFaturaId);
+                    const dadosAntigos = reg ? {
+                        entidade: reg.entidade || null,
+                        categoria: reg.categoria || null,
+                        valor_original: reg.valor_original || null,
+                        data_vencimento: reg.data_vencimento || null,
+                    } : null;
+                    await _criarSolicitacaoAprovacao('DELETE', COLECAO, _cpDeleteFaturaId, dadosAntigos, null,
+                        `Exclusão: ${reg?.entidade || '—'} · ${reg?.categoria || '—'}`, 'CP');
+                    mostrarToast('Lançamento excluído.', 'check_circle');
+                } else {
+                    await deleteDoc(doc(db, COLECAO, _cpDeleteFaturaId));
+                    mostrarToast('Lançamento excluído.', 'check_circle');
+                }
             }
             fecharModal('modal-confirmar-delete-fatura-cp');
             _cpDeleteFaturaId = null;

@@ -1552,8 +1552,8 @@
 
     <script type="module">
         import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where, orderBy, limit, getDocs, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where, orderBy, limit, getDocs, serverTimestamp, setDoc, writeBatch, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { renderSidebar } from "./sidebar.js";
 
         const firebaseConfig = { apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU", authDomain: "centra-fin.firebaseapp.com", projectId: "centra-fin", storageBucket: "centra-fin.firebasestorage.app", messagingSenderId: "666471089411", appId: "1:666471089411:web:4630f5b2ced70ceb981536" };
@@ -1561,6 +1561,12 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // Emulador local (detecção automática — seguro em produção)
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            try { connectFirestoreEmulator(db, 'localhost', 8080); } catch(e) {}
+            try { connectAuthEmulator(auth, 'http://localhost:9099'); } catch(e) {}
+        }
 
         // ── PROVISIONAMENTO DE CREDENCIAIS (Firebase Auth) — auditoria 2026-06-12 ─
         // createUserWithEmailAndPassword tem efeito colateral de AUTENTICAR a conta

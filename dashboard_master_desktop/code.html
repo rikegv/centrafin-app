@@ -4444,8 +4444,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getFirestore, connectFirestoreEmulator, collection, query, where, getDocs, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getAuth, connectAuthEmulator, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { renderSidebar } from "../sidebar.js";
 
     const firebaseConfig = {
@@ -4459,8 +4459,25 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+    // Emulador local (detecção automática — seguro em produção)
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      try { connectFirestoreEmulator(db, 'localhost', 8080); } catch(e) {}
+      try { connectAuthEmulator(auth, 'http://localhost:9099'); } catch(e) {}
+    }
     onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = "../login.html"; return; }
+      if (!user) {
+        // Em emulador, connectAuthEmulator reseta a sessão persistida.
+        // Re-autentica com credenciais salvas pelo login.html.
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+          const cred = JSON.parse(sessionStorage.getItem('_emu_cred') || 'null');
+          if (cred) {
+            try {
+              const r = await signInWithEmailAndPassword(auth, cred.e, cred.s);
+              user = r.user;
+            } catch(e) { window.location.href = "../login.html"; return; }
+          } else { window.location.href = "../login.html"; return; }
+        } else { window.location.href = "../login.html"; return; }
+      }
 
       // ETAPA 1 — Autenticação/RBAC (bloqueante, rápido).
       let dadosUser, userProfile, menusPermitidos;

@@ -1,0 +1,14 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "CP_SolicitacoesAprovacao",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "modulo_origem", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

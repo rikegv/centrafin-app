@@ -26,6 +26,18 @@ service cloud.firestore {
       return perfil == "consulta";
     }
 
+    // Função auxiliar: verifica se o perfil é super_admin
+    function isSuperAdmin() {
+      let perfil = get(/databases/$(database)/documents/Usuarios/$(request.auth.token.email)).data.perfil;
+      return perfil == "super_admin";
+    }
+
+    // Função auxiliar: verifica se o perfil é master
+    function isMaster() {
+      let perfil = get(/databases/$(database)/documents/Usuarios/$(request.auth.token.email)).data.perfil;
+      return perfil == "master";
+    }
+
     // LANCAMENTOS — base do Faturamento/CRF.
     // Auditoria 2026-05-13 (Privilege Segregation): leitura restrita aos menus
     // que efetivamente leem a coleção (CRF operacional, Dashboard Master,
@@ -221,24 +233,31 @@ service cloud.firestore {
     }
 
     // CP_SOLICITACOESAPROVACAO — auditoria 2026-05-18 (Fase 3 — Governança).
-    // Refatoração 2026-05-18 (B): separação operacional × governança. Leitura
-    // liberada para quem tem o menu novo `aprovacoes` (tela centralizada de
-    // pendências). Criação continua disponível pra quem tem `gerenciador_contas_pagar`
-    // (compat com fluxos legados que ainda postavam daqui) — campo
-    // solicitado_por_email travado ao próprio e-mail. Aprovar/Rejeitar
-    // (update do status) é exclusivo de admin. Delete é restrito (audit trail
-    // imutável; rejeitados ficam no histórico).
+    // Refatoração 2026-05-18 (B): separação operacional × governança.
+    // Refatoração 2026-07-03: Sistema de Aprovações v2 (Dois Níveis).
+    //   - create: expandido para aceitar master de QUALQUER módulo (CRF, CP,
+    //     Folha, Metas) via isMaster(), além de hasMenu('aprovacoes') e
+    //     hasMenu('gerenciador_contas_pagar'). Master pode criar solicitação,
+    //     mas NÃO pode aprovar/rejeitar.
+    //   - update/delete: restrito a isSuperAdmin() — master NÃO pode
+    //     auto-aprovar. Audit trail imutável.
     match /CP_SolicitacoesAprovacao/{docId} {
       allow read: if request.auth != null && (
         isAdmin() || hasMenu('aprovacoes') || hasMenu('gerenciador_contas_pagar')
       );
+      // Sistema de Aprovações v2 (2026-07-03): create expandido para aceitar
+      // master de QUALQUER módulo (CRF, CP, Folha, Metas) — não apenas
+      // gerenciador_contas_pagar. Master pode criar solicitação, mas NÃO pode
+      // aprovar/rejeitar (update restrito a isSuperAdmin).
       allow create: if request.auth != null
-        && (hasMenu('aprovacoes') || hasMenu('gerenciador_contas_pagar'))
+        && (hasMenu('aprovacoes') || hasMenu('gerenciador_contas_pagar') || isMaster())
         && request.resource.data.solicitado_por_email == request.auth.token.email
         && request.resource.data.status == 'Pendente'
         && !isConsulta();
-      allow update: if request.auth != null && isAdmin() && !isConsulta();
-      allow delete: if request.auth != null && isAdmin() && !isConsulta();
+      // Aprovar/Rejeitar: SOMENTE super_admin — master NÃO pode auto-aprovar.
+      allow update: if request.auth != null && isSuperAdmin() && !isConsulta();
+      // Audit trail imutável — delete restrito a super_admin.
+      allow delete: if request.auth != null && isSuperAdmin() && !isConsulta();
     }
 
     // CP_BASE_DESPESAS — auditoria 2026-05-15 (refatoração ETL).

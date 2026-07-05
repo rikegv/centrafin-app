@@ -1319,8 +1319,8 @@
   <script type="module">
     import { renderSidebar } from "../sidebar.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, doc, setDoc, onSnapshot, deleteDoc, getDoc, serverTimestamp, query, where, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getFirestore, connectFirestoreEmulator, collection, addDoc, getDocs, doc, setDoc, onSnapshot, deleteDoc, getDoc, serverTimestamp, query, where, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getAuth, connectAuthEmulator, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAHy6pN_agZ4DZDPDmJ580tUF4iTgX2siU",
@@ -1334,7 +1334,43 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
+    // Emulador local (detecção automática — seguro em produção)
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      try { connectFirestoreEmulator(db, 'localhost', 8080); } catch(e) {}
+      try { connectAuthEmulator(auth, 'http://localhost:9099'); } catch(e) {}
+    }
+
     let usuarioLogadoNome = "Sistema";
+    let usuarioLogadoEmail = '';
+    let _isSuperAdmin = false;
+
+    // ── Esteira de aprovações — utilitário de criação de solicitação ────────
+    async function _criarSolicitacaoAprovacao(tipoOp, colecaoAlvo, docIdAlvo, dadosAntigos, dadosNovos, resumo, moduloOrigem) {
+        await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
+            tipo_operacao: tipoOp,
+            colecao_alvo: colecaoAlvo,
+            doc_id_alvo: docIdAlvo,
+            dados_antigos: dadosAntigos,
+            dados_novos: dadosNovos,
+            resumo: resumo,
+            modulo_origem: moduloOrigem,
+            status: 'Pendente',
+            solicitado_por: usuarioLogadoNome,
+            solicitado_por_email: usuarioLogadoEmail,
+            criado_em: serverTimestamp(),
+        });
+    }
+
+    // Toast para feedback da esteira (amber, mesmo padrão do CP).
+    function _toastEsteira(msg, cor) {
+        const bg = cor === 'sucesso' ? 'bg-emerald-600' : 'bg-amber-600';
+        const t = document.createElement('div');
+        t.className = `fixed top-6 right-6 z-[70] px-5 py-3 rounded-xl shadow-2xl text-white font-bold text-xs ${bg}`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3500);
+    }
+
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         let docRef = doc(db, "Usuarios", user.email.toLowerCase());
@@ -1345,6 +1381,8 @@
         if (docSnap.exists()) {
           const dadosUser = docSnap.data();
           usuarioLogadoNome = dadosUser.nome || user.email;
+          usuarioLogadoEmail = String(dadosUser.email || user.email || '').toLowerCase();
+          _isSuperAdmin = (dadosUser.perfil === 'super_admin');
 
           if (dadosUser.status === 'inativo') {
             await signOut(auth);
@@ -1361,6 +1399,10 @@
           }
 
           window.isSuperAdmin = dadosUser.perfil === 'super_admin';
+          // Admin (master/super_admin) pode ver UI de seleção/exclusão. Master
+          // usa via esteira; super_admin grava direto. Flag _isAdmin controla a
+          // visibilidade; _isSuperAdmin controla se grava direto ou via esteira.
+          window._isAdminCRF = (dadosUser.perfil === 'super_admin' || dadosUser.perfil === 'master');
           if (window.aplicarTogglesSuperAdmin) window.aplicarTogglesSuperAdmin();
           renderSidebar(dadosUser.perfil, dadosUser.menus_permitidos || []);
 
@@ -2656,17 +2698,40 @@
           });
         }
 
-        if (idParaEditar) {
-          await setDoc(doc(db, "Lancamentos", idParaEditar), { ...payload, data_edicao: new Date() }, { merge: true });
-          await registrarLog("ALTERAÇÃO", `Alterou os dados da Fatura NF ${nf} do cliente ${cliente}.`);
-          idParaEditar = null;
+        if (!_isSuperAdmin) {
+          // ── Esteira: master/comum grava solicitação, super_admin grava direto ──
+          if (idParaEditar) {
+            const regAtual = todasAsNotas.find(d => d.id === idParaEditar);
+            const dadosAntigos = regAtual ? {
+                nf: regAtual.nf || regAtual['Nº NF'] || null,
+                cliente: regAtual.cliente || regAtual.Cliente || null,
+                valor_fatura: regAtual.valor_fatura || regAtual['Valor Fatura'] || null,
+                status: regAtual.status || regAtual.Status || null,
+            } : null;
+            await _criarSolicitacaoAprovacao('UPDATE', 'Lancamentos', idParaEditar, dadosAntigos,
+                { ...payload, data_edicao: new Date().toISOString() },
+                `Edição de fatura NF ${nf} · ${cliente}`, 'CRF');
+            idParaEditar = null;
+          } else {
+            await _criarSolicitacaoAprovacao('CREATE', 'Lancamentos', null, null,
+                { ...payload, data_criacao: new Date().toISOString() },
+                `Nova fatura manual NF ${nf} · ${cliente}`, 'CRF');
+          }
+          if (alertaSucesso) alertaSucesso.classList.remove('hidden');
+          setTimeout(() => { fecharModal(); }, 1500);
         } else {
-          await addDoc(collection(db, "Lancamentos"), { ...payload, data_criacao: new Date() });
-          await registrarLog("INCLUSÃO", `Criou uma nova Fatura Manual NF ${nf} para o cliente ${cliente}.`);
-        }
+          if (idParaEditar) {
+            await setDoc(doc(db, "Lancamentos", idParaEditar), { ...payload, data_edicao: new Date() }, { merge: true });
+            await registrarLog("ALTERAÇÃO", `Alterou os dados da Fatura NF ${nf} do cliente ${cliente}.`);
+            idParaEditar = null;
+          } else {
+            await addDoc(collection(db, "Lancamentos"), { ...payload, data_criacao: new Date() });
+            await registrarLog("INCLUSÃO", `Criou uma nova Fatura Manual NF ${nf} para o cliente ${cliente}.`);
+          }
 
-        if (alertaSucesso) alertaSucesso.classList.remove('hidden');
-        setTimeout(() => { fecharModal(); }, 1500);
+          if (alertaSucesso) alertaSucesso.classList.remove('hidden');
+          setTimeout(() => { fecharModal(); }, 1500);
+        }
       } catch (error) {
         console.error("❌ Erro ao salvar lançamento:", error);
         const mErro = document.getElementById('modal-erro');
@@ -3097,7 +3162,7 @@
           if (statusReal === "PREJUÍZO") statusClass = "bg-red-900 text-white shadow-sm";
           if (statusReal === "PROTESTO") statusClass = "bg-orange-100 text-orange-800 border border-orange-200";
           const cellClass = "px-4 py-3 text-[10px] text-on-surface-variant font-medium border-r border-slate-100 last:border-r-0 shadow-[1px_0_0_rgba(0,0,0,0.02)]";
-          const cellSelClass = window.isSuperAdmin ? "" : "hidden";
+          const cellSelClass = window._isAdminCRF ? "" : "hidden";
           const isChecked = window.idsSelecionadosMassa && window.idsSelecionadosMassa.has(data.id) ? "checked" : "";
           tr.innerHTML = `
             <td class="${cellSelClass} px-3 py-3 text-center border-r border-slate-100 w-10"><input type="checkbox" class="row-check-massa rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer" data-id="${data.id}" ${isChecked}></td>
@@ -3337,8 +3402,21 @@
       btnExcluirConfirmar.addEventListener('click', async () => {
         if (!idParaExcluir) return;
         try {
-          await deleteDoc(doc(db, "Lancamentos", idParaExcluir));
-          await registrarLog("EXCLUSÃO", `Apagou o registro de faturamento NF ${infoExclusaoAtual.nf} do cliente ${infoExclusaoAtual.cliente}.`);
+          if (!_isSuperAdmin) {
+            // Esteira: master/comum cria solicitação DELETE.
+            const regAtual = todasAsNotas.find(d => d.id === idParaExcluir);
+            const dadosAntigos = regAtual ? {
+                nf: regAtual.nf || regAtual['Nº NF'] || null,
+                cliente: regAtual.cliente || regAtual.Cliente || null,
+                valor_fatura: regAtual.valor_fatura || regAtual['Valor Fatura'] || null,
+            } : null;
+            await _criarSolicitacaoAprovacao('DELETE', 'Lancamentos', idParaExcluir, dadosAntigos, null,
+                `Exclusão: NF ${infoExclusaoAtual.nf} · ${infoExclusaoAtual.cliente}`, 'CRF');
+            _toastEsteira('Registro excluído com sucesso.', 'sucesso');
+          } else {
+            await deleteDoc(doc(db, "Lancamentos", idParaExcluir));
+            await registrarLog("EXCLUSÃO", `Apagou o registro de faturamento NF ${infoExclusaoAtual.nf} do cliente ${infoExclusaoAtual.cliente}.`);
+          }
 
           if (mExcluir && mExcluirContent) { mExcluir.classList.add('opacity-0', 'pointer-events-none'); mExcluirContent.classList.add('scale-95'); }
           idParaExcluir = null;
@@ -3351,7 +3429,7 @@
             if (mErroMsg) mErroMsg.textContent = "Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.";
             if (mErro) mErro.classList.remove('opacity-0', 'pointer-events-none');
           } else {
-            alert("Erro ao excluir registro.");
+            _toastEsteira("Erro ao excluir registro.");
           }
         }
       });
@@ -3375,9 +3453,11 @@
     const labelConfirmarMassa = document.getElementById('label-confirmar-excluir-massa');
 
     window.aplicarTogglesSuperAdmin = function () {
-      const ehSuper = !!window.isSuperAdmin;
-      if (colSelHead) colSelHead.classList.toggle('hidden', !ehSuper);
-      if (!ehSuper) {
+      // Seleção/exclusão visível para qualquer admin (master + super_admin).
+      // Master usa esteira; super_admin grava direto.
+      const ehAdmin = !!window._isAdminCRF;
+      if (colSelHead) colSelHead.classList.toggle('hidden', !ehAdmin);
+      if (!ehAdmin) {
         window.idsSelecionadosMassa.clear();
       }
       // Re-renderiza a tabela para aplicar/remover a coluna de checkbox em cada linha.
@@ -3388,7 +3468,7 @@
     function atualizarBarraSelMassa() {
       const n = window.idsSelecionadosMassa.size;
       if (qtdSelMassa) qtdSelMassa.textContent = n;
-      if (barraSelMassa) barraSelMassa.classList.toggle('hidden', n === 0 || !window.isSuperAdmin);
+      if (barraSelMassa) barraSelMassa.classList.toggle('hidden', n === 0 || !window._isAdminCRF);
       if (checkSelTodos) {
         const visiveis = Array.from(document.querySelectorAll('.row-check-massa'));
         const totalVis = visiveis.length;
@@ -3444,7 +3524,7 @@
 
     if (btnExcluirSelMassa) {
       btnExcluirSelMassa.addEventListener('click', () => {
-        if (!window.isSuperAdmin) return;
+        if (!window._isAdminCRF) return;
         if (window.idsSelecionadosMassa.size === 0) return;
         abrirModalExcluirMassa();
       });
@@ -3454,7 +3534,31 @@
 
     if (btnConfirmarMassa) {
       btnConfirmarMassa.addEventListener('click', async () => {
-        if (!window.isSuperAdmin) return;
+        if (!window.isSuperAdmin && !_isSuperAdmin) {
+          // Master: exclusão em massa via esteira de aprovação.
+          const ids = Array.from(window.idsSelecionadosMassa);
+          if (ids.length === 0) { fecharModalExcluirMassa(); return; }
+          btnConfirmarMassa.disabled = true;
+          if (iconConfirmarMassa) { iconConfirmarMassa.textContent = 'progress_activity'; iconConfirmarMassa.classList.add('animate-spin'); }
+          if (labelConfirmarMassa) labelConfirmarMassa.textContent = 'Enviando…';
+          try {
+            await _criarSolicitacaoAprovacao('DELETE_BATCH', 'Lancamentos', null, null,
+                { ids: ids },
+                `Exclusão em massa de ${ids.length} lançamento(s) em Lancamentos (CRF).`, 'CRF');
+            window.idsSelecionadosMassa.clear();
+            atualizarBarraSelMassa();
+            fecharModalExcluirMassa();
+            _toastEsteira(`${ids.length} registro(s) excluído(s) com sucesso.`, 'sucesso');
+          } catch (err) {
+            console.error('Erro ao criar solicitação:', err);
+            _toastEsteira('Erro ao excluir lançamentos em massa.');
+          } finally {
+            btnConfirmarMassa.disabled = false;
+            if (iconConfirmarMassa) { iconConfirmarMassa.textContent = 'delete_sweep'; iconConfirmarMassa.classList.remove('animate-spin'); }
+            if (labelConfirmarMassa) labelConfirmarMassa.textContent = 'Excluir todos';
+          }
+          return;
+        }
         const ids = Array.from(window.idsSelecionadosMassa);
         if (ids.length === 0) { fecharModalExcluirMassa(); return; }
 
@@ -3484,7 +3588,7 @@
             if (mErroMsg) mErroMsg.textContent = 'Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.';
             if (mErro) mErro.classList.remove('opacity-0', 'pointer-events-none');
           } else {
-            alert('Erro ao excluir lançamentos em massa.');
+            _toastEsteira('Erro ao excluir lançamentos em massa.');
           }
         } finally {
           btnConfirmarMassa.disabled = false;
@@ -3764,33 +3868,27 @@
       if (label) label.textContent = 'Desmembrando…';
 
       try {
-        const batch = writeBatch(db);
-        // 1) Cria N filhas — todas herdam tudo da original e sobrescrevem o que muda.
+        // Monta os dados de cada parcela pra uso direto ou via esteira.
+        const operacoesParcelas = [];
         parcelas.forEach(p => {
-          const childRef = doc(collection(db, 'Lancamentos'));
           const venc = p.venc;
-          const vencISO = `${venc.getFullYear()}-${String(venc.getMonth()+1).padStart(2,'0')}-${String(venc.getDate()).padStart(2,'0')}`;
           const vencBR = `${String(venc.getDate()).padStart(2,'0')}/${String(venc.getMonth()+1).padStart(2,'0')}/${venc.getFullYear()}`;
           const childData = { ...notaOriginal };
           delete childData.id;
-          // Valores fatiados
           childData['valor_fatura'] = p.bruto;
           childData['Valor Fatura'] = p.bruto;
           childData['valor'] = p.bruto;
-          childData['Vl. Líquido'] = p.bruto; // bruto da planilha — Líquido sai do helper via desconto=0
+          childData['Vl. Líquido'] = p.bruto;
           childData['Valor Descto.'] = 0;
           childData['valor_liquido'] = p.liquido;
           childData['Taxa'] = p.taxa;
           childData['taxa'] = p.taxa;
           childData['faturamento_real_manual'] = p.real;
-          // RPS filho
           childData['rps'] = `${rpsBase}-${p.indice}`;
           childData['Nº NF'] = `${rpsBase}-${p.indice}`;
-          // Vencimentos atualizados
           childData['vencimento'] = vencBR;
           childData['Dt Vecto'] = vencBR;
           childData['Dt Vecto  '] = vencBR;
-          // Limpa campos de baixa — filhas nascem A VENCER
           childData['data_baixa'] = '';
           childData['Dt Baixa'] = '';
           childData['data_recebimento'] = '';
@@ -3799,14 +3897,40 @@
           childData['status'] = 'A VENCER';
           childData['saldo_residual'] = p.bruto;
           childData['tipo_divergencia'] = '';
-          // Marcação de origem
           childData['origem_parcelamento'] = true;
           childData['parent_id'] = notaOriginal.id;
           childData['parent_rps'] = rpsBase;
           childData['parcela_indice'] = p.indice;
           childData['parcela_total'] = n;
-          childData['data_parcelamento'] = new Date();
-          batch.set(childRef, childData);
+          childData['data_parcelamento'] = new Date().toISOString();
+          operacoesParcelas.push({ acao: 'CREATE', doc_id: null, dados: childData });
+        });
+
+        if (!_isSuperAdmin) {
+          // Esteira: master grava BATCH_COMPOUND com todas as operações.
+          const operacoes = [
+            { acao: 'UPDATE', doc_id: notaOriginal.id, dados: {
+              status: 'DESMEMBRADO', Status: 'DESMEMBRADO',
+              desmembrado_em: new Date().toISOString(),
+              parcelas_geradas: n, data_edicao: new Date().toISOString()
+            }},
+            ...operacoesParcelas
+          ];
+          await _criarSolicitacaoAprovacao('BATCH_COMPOUND', 'Lancamentos', notaOriginal.id,
+              { status: notaOriginal.status || notaOriginal.Status || null },
+              { operacoes: operacoes },
+              `Parcelamento: NF ${rpsBase} em ${n} parcelas (${notaOriginal.cliente || notaOriginal.Cliente || '-'})`, 'CRF');
+          if (fb) {
+            fb.textContent = `${n} parcelas criadas com sucesso. A nota original foi marcada como DESMEMBRADO.`;
+            fb.className = 'text-[11px] font-bold rounded-lg px-3 py-2 border bg-green-50 border-green-200 text-green-700';
+            fb.classList.remove('hidden');
+          }
+          setTimeout(fecharModalParcelamento, 1400);
+        } else {
+        const batch = writeBatch(db);
+        operacoesParcelas.forEach(op => {
+          const childRef = doc(collection(db, 'Lancamentos'));
+          batch.set(childRef, { ...op.dados, data_parcelamento: new Date() });
         });
         // 2) Marca a original como DESMEMBRADO (sai do KPI via core_rules.js).
         batch.update(doc(db, 'Lancamentos', notaOriginal.id), {
@@ -3825,6 +3949,7 @@
           fb.classList.remove('hidden');
         }
         setTimeout(fecharModalParcelamento, 1400);
+        } // fim else _isSuperAdmin
       } catch (err) {
         console.error('[Parcelamento] erro:', err);
         if (fb) {
@@ -3915,7 +4040,7 @@
       try {
         const rpsMae = nota.rps || nota['Nº NF'] || '';
 
-        // 1) Busca filhas: prioriza parent_id; fallback parent_rps caso o id não tenha sido gravado.
+        // 1) Busca filhas: prioriza parent_id; fallback parent_rps.
         let filhasDocs = [];
         if (nota.id) {
           const qById = query(collection(db, 'Lancamentos'), where('parent_id', '==', nota.id));
@@ -3928,9 +4053,24 @@
           snapByRps.forEach(d => filhasDocs.push(d));
         }
 
+        if (!_isSuperAdmin) {
+          // Esteira: BATCH_COMPOUND com DELETEs das filhas + UPDATE da mãe.
+          const operacoes = filhasDocs.map(d => ({ acao: 'DELETE', doc_id: d.id, dados: null }));
+          operacoes.push({ acao: 'UPDATE', doc_id: nota.id, dados: {
+            status: '', Status: '', desmembrado_em: null, parcelas_geradas: null, data_edicao: new Date().toISOString()
+          }});
+          await _criarSolicitacaoAprovacao('BATCH_COMPOUND', 'Lancamentos', nota.id,
+              { status: 'DESMEMBRADO', parcelas_geradas: nota.parcelas_geradas || filhasDocs.length },
+              { operacoes: operacoes },
+              `Desfazer parcelamento: NF ${rpsMae} (${nota.cliente || nota.Cliente || '-'}) — ${filhasDocs.length} parcela(s)`, 'CRF');
+          if (fb) {
+            fb.textContent = `Parcelamento desfeito com sucesso. ${filhasDocs.length} parcela(s) excluída(s) e nota original restaurada.`;
+            fb.className = 'text-[11px] font-bold rounded-lg px-3 py-2 border bg-green-50 border-green-200 text-green-700';
+            fb.classList.remove('hidden');
+          }
+          setTimeout(fecharModalDesfazerParcelamento, 1400);
+        } else {
         // 2) writeBatch: deleta filhas + restaura mãe atomicamente.
-        //    O status canônico é re-derivado por `obterStatusReal` a partir de
-        //    `data_baixa`/`vencimento`. Limpando status/Status, a marca DESMEMBRADO some.
         const batch = writeBatch(db);
         filhasDocs.forEach(d => batch.delete(doc(db, 'Lancamentos', d.id)));
         batch.update(doc(db, 'Lancamentos', nota.id), {
@@ -3949,9 +4089,8 @@
           fb.className = 'text-[11px] font-bold rounded-lg px-3 py-2 border bg-green-50 border-green-200 text-green-700';
           fb.classList.remove('hidden');
         }
-        // O onSnapshot de `Lancamentos` já dispara aplicarFiltros + atualizarMetrics
-        // automaticamente, então a tabela e os KPIs se reconfiguram sozinhos.
         setTimeout(fecharModalDesfazerParcelamento, 1400);
+        } // fim else _isSuperAdmin
       } catch (err) {
         console.error('[DesfazerParcelamento] erro:', err);
         if (fb) {

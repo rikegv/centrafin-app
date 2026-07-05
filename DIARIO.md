@@ -5,6 +5,48 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-04 — Sistema de Aprovações em Dois Níveis
+
+### Decisão do diretor (2026-07-03): enforcement client-side
+
+**RISCO ACEITO E REGISTRADO:** O mecanismo de aprovação (master propõe, super_admin
+aprova) é implementado com trava **client-side apenas** (JavaScript da tela). As
+`firestore.rules` das coleções de dado real (Lancamentos, ContasAPagar, CustosFolha,
+Base_Empresas, MetasFinanceiras) **NÃO foram restringidas** para o perfil master —
+ele mantém escrita técnica direta nelas.
+
+Consequência: um usuário Master com conhecimento técnico pode, em teoria, burlar a
+esteira de aprovação escrevendo diretamente no Firestore via DevTools, SDK ou
+qualquer cliente HTTP autenticado. Esse risco foi **comunicado ao diretor na proposta
+arquitetural** (2026-07-03) e **aceito conscientemente**, dado que a alternativa
+(Cloud Functions) introduziria dependência e custo novos, exigindo aprovação via Lei
+da Decisão. O modelo é consistente com o já aceito na Fase 3 (Esteira de Aprovação
+de Fornecedores) para operadores comuns.
+
+Única proteção no banco: `CP_SolicitacoesAprovacao` tem `allow update/delete`
+restrito a `isSuperAdmin()` — master NÃO pode auto-aprovar suas próprias
+solicitações (isso SIM é enforced no banco).
+
+### OS incluídas neste deploy
+
+| OS | Escopo |
+|----|--------|
+| OS-SISTEMA-APROVACOES | Interceptores de CRUD para master em 5 módulos (CRF, CP, Folha, Metas, Aprovações); funções isSuperAdmin()/isMaster() em firestore.rules; índice composto; tipos BATCH_COMPOUND e DELETE_BATCH |
+| OS-APROVACAO-DISCRICAO-01 | Ocultação total do mecanismo para o master: menu Aprovações oculto, toasts de sucesso idênticos ao fluxo direto |
+| OS-APROVACAO-IDENTIFICADOR-01 | Nº NF (e equivalente por módulo) na descrição das solicitações, substituindo o ID interno do Firestore |
+| Correção toast exclusão CRF | alertaSucesso dentro de modal fechado → _toastEsteira flutuante |
+
+### Validação visual do diretor (2026-07-04)
+
+- Exclusão individual (CRF): toast de sucesso aparece corretamente ✓
+- Parcelamento (CRF): toast de sucesso aparece corretamente ✓
+- Menu Aprovações oculto para Master ✓
+- Nº da NF exibido corretamente na tela de Aprovações ✓
+
+### Teste de emulador (firestore.rules): 15/15 cenários passaram
+
+---
+
 ## 2026-07-03 — Deploy em produção: lote de 10 OS
 
 **URL:** https://centra-fin.web.app

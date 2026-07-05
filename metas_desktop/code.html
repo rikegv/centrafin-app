@@ -258,8 +258,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, connectFirestoreEmulator, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, connectAuthEmulator, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { renderSidebar } from "../sidebar.js";
 
         const firebaseConfig = {
@@ -275,11 +275,37 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        // Emulador local (detecção automática — seguro em produção)
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+          try { connectFirestoreEmulator(db, 'localhost', 8080); } catch(e) {}
+          try { connectAuthEmulator(auth, 'http://localhost:9099'); } catch(e) {}
+        }
+
         // Variáveis Globais
         window.listaMetas = [];
         window.idMetaEdicao = null;
+        let _isSuperAdmin = false;
+        let usuarioLogadoNome = 'Sistema';
+        let usuarioLogadoEmail = '';
         const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
         const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        // ── Esteira de aprovações — utilitário de criação de solicitação ────
+        async function _criarSolicitacaoAprovacao(tipoOp, colecaoAlvo, docIdAlvo, dadosAntigos, dadosNovos, resumo, moduloOrigem) {
+            await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
+                tipo_operacao: tipoOp,
+                colecao_alvo: colecaoAlvo,
+                doc_id_alvo: docIdAlvo,
+                dados_antigos: dadosAntigos,
+                dados_novos: dadosNovos,
+                resumo: resumo,
+                modulo_origem: moduloOrigem,
+                status: 'Pendente',
+                solicitado_por: usuarioLogadoNome,
+                solicitado_por_email: usuarioLogadoEmail,
+                criado_em: serverTimestamp(),
+            });
+        }
 
         // Autenticação
         onAuthStateChanged(auth, async (user) => {
@@ -291,6 +317,9 @@
                 if (docSnap.exists()) {
                     const dadosUser = docSnap.data();
                     const userProfile = dadosUser.perfil;
+                    _isSuperAdmin = (userProfile === 'super_admin');
+                    usuarioLogadoNome = dadosUser.nome || dadosUser.email || user.email || 'Sistema';
+                    usuarioLogadoEmail = String(dadosUser.email || user.email || '').toLowerCase();
 
                     // GUARDIÃO DE ROTA — Auditoria 2026-04-28: redirect amigável.
                     const CHAVE_PAGINA = 'metas';
@@ -519,11 +548,33 @@
             };
 
             try {
+                if (!_isSuperAdmin) {
+                    // Esteira: master grava solicitação em CP_SolicitacoesAprovacao.
+                    if (window.idMetaEdicao) {
+                        const metaAtual = window.listaMetas.find(m => m.id === window.idMetaEdicao);
+                        const dadosAntigos = metaAtual ? {
+                            ano: metaAtual.ano, produto: metaAtual.produto, total: metaAtual.total,
+                        } : null;
+                        await _criarSolicitacaoAprovacao('UPDATE', 'MetasFinanceiras', window.idMetaEdicao,
+                            dadosAntigos, metaData,
+                            `Edição meta: ${produto} ${ano}`, 'METAS');
+                    } else {
+                        let existe = window.listaMetas.find(m => m.ano == ano && m.produto == produto);
+                        if (existe) {
+                            window.mostrarAlerta(`Atenção: Já existe uma meta cadastrada para ${produto} no ano ${ano}. Edite a existente.`);
+                            btn.innerHTML = `Salvar Meta Financeira`;
+                            btn.disabled = false;
+                            return;
+                        }
+                        await _criarSolicitacaoAprovacao('CREATE', 'MetasFinanceiras', null, null, metaData,
+                            `Nova meta: ${produto} ${ano}`, 'METAS');
+                    }
+                    window.fecharModalMeta();
+                    window.carregarMetas();
+                } else {
                 if (window.idMetaEdicao) {
-                    // Atualiza
                     await updateDoc(doc(db, "MetasFinanceiras", window.idMetaEdicao), metaData);
                 } else {
-                    // Checar se já existe o mesmo produto no mesmo ano
                     let existe = window.listaMetas.find(m => m.ano == ano && m.produto == produto);
                     if (existe) {
                         window.mostrarAlerta(`Atenção: Já existe uma meta cadastrada para ${produto} no ano ${ano}. Edite a existente.`);
@@ -531,12 +582,12 @@
                         btn.disabled = false;
                         return;
                     }
-                    // Cria novo
                     await addDoc(collection(db, "MetasFinanceiras"), metaData);
                 }
 
                 window.fecharModalMeta();
                 window.carregarMetas();
+                } // fim else _isSuperAdmin
             } catch (error) {
                 console.error("Erro ao salvar:", error);
                 if (error.code === 'permission-denied') {
@@ -553,14 +604,26 @@
         window.excluirMeta = async (id) => {
             if (confirm("Tem certeza que deseja excluir permanentemente esta meta?")) {
                 try {
-                    await deleteDoc(doc(db, "MetasFinanceiras", id));
-                    window.carregarMetas();
+                    if (!_isSuperAdmin) {
+                        // Esteira: master grava solicitação DELETE.
+                        const metaAtual = window.listaMetas.find(m => m.id === id);
+                        const dadosAntigos = metaAtual ? {
+                            ano: metaAtual.ano, produto: metaAtual.produto, total: metaAtual.total,
+                        } : null;
+                        await _criarSolicitacaoAprovacao('DELETE', 'MetasFinanceiras', id,
+                            dadosAntigos, null,
+                            `Exclusão meta: ${metaAtual?.produto || '—'} ${metaAtual?.ano || '—'}`, 'METAS');
+                        window.carregarMetas();
+                    } else {
+                        await deleteDoc(doc(db, "MetasFinanceiras", id));
+                        window.carregarMetas();
+                    }
                 } catch (error) {
                     console.error("Erro ao excluir:", error);
                     if (error.code === 'permission-denied') {
                         window.mostrarAlerta("Acesso Negado: Seu perfil não tem permissão para realizar ou salvar alterações. Contate o administrador.");
                     } else {
-                        alert("Erro ao excluir meta.");
+                        window.mostrarAlerta("Erro ao excluir meta.");
                     }
                 }
             }
