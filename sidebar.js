@@ -293,7 +293,7 @@ function _renderBannerEsteira(total, prefix) {
         // Glass design — fica sobre o conteúdo sem alterar o layout existente.
         // Posicionado centralizado no top com offset à direita do sidebar
         // colapsado (left calc 80px + 50%). Não interfere em scroll do main.
-        banner.className = 'fixed top-4 z-[120] flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/15 backdrop-blur-xl border border-amber-400/40 shadow-2xl shadow-amber-500/10 text-secondary';
+        banner.className = 'fixed top-4 z-[120] flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/15 backdrop-blur-xl border border-amber-400/40 shadow-2xl shadow-amber-500/10';
         banner.style.left = 'calc(50% + 40px)';
         banner.style.transform = 'translateX(-50%)';
         banner.style.maxWidth = 'min(720px, calc(100vw - 120px))';
@@ -301,9 +301,9 @@ function _renderBannerEsteira(total, prefix) {
         banner.innerHTML =
             '<span class="material-symbols-outlined text-amber-500 text-2xl shrink-0">fact_check</span>' +
             '<div class="min-w-0 flex-1">' +
-                '<p class="font-headline text-sm font-extrabold leading-tight text-amber-900 dark:text-amber-100">Esteira de Aprovações</p>' +
-                '<p class="text-[12px] font-medium leading-snug mt-0.5 text-amber-800 dark:text-amber-200">' +
-                    'Você possui <strong id="cfin-banner-count" class="tabular-nums text-amber-700 dark:text-amber-400"></strong> ' +
+                '<p class="font-headline text-sm font-extrabold leading-tight text-banner-esteira">Esteira de Aprovações</p>' +
+                '<p class="text-[12px] font-medium leading-snug mt-0.5 text-banner-esteira-sub">' +
+                    'Você possui <strong id="cfin-banner-count" class="tabular-nums text-banner-esteira-count"></strong> ' +
                     '<span id="cfin-banner-plural"></span> sua validação na Esteira de Aprovações.' +
                 '</p>' +
             '</div>' +
