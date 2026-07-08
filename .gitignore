@@ -1,3 +1,7 @@
+# Claude Code — sessão local (worktrees de agentes + config da máquina)
+.claude/worktrees/
+.claude/settings.local.json
+
 # Logs
 logs
 *.log
