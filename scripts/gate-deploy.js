@@ -15,6 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 function readStdin() {
   try {
@@ -42,6 +43,23 @@ function main() {
 
   if (!DEPLOY_PATTERN.test(command)) {
     process.exit(0); // não é comando de deploy/push — libera
+  }
+
+  // ── Check de working directory limpo (OS-APROVACAO-AJUSTES-02, 2026-07-08) ──
+  // Impede deploy/push quando há alterações não commitadas. Motivação: deploy em
+  // produção ficou à frente do git por falta desta trava. Decisão do diretor.
+  try {
+    const status = execSync('git status --porcelain', { encoding: 'utf8', timeout: 5000 }).trim();
+    if (status.length > 0) {
+      process.stderr.write(
+        'BLOQUEADO: working directory sujo — ha alteracoes nao commitadas.\n' +
+        'Commite as alteracoes antes de fazer deploy/push.\n' +
+        'Arquivos pendentes:\n' + status + '\n'
+      );
+      process.exit(2);
+    }
+  } catch (e) {
+    // Se git não disponível ou timeout, não bloqueia (falha aberta).
   }
 
   const stateDir = path.join(process.cwd(), '.claude', 'state');
