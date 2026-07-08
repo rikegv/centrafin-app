@@ -5,6 +5,25 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-08 — Reforço gate-deploy.js: trava de working directory sujo
+
+### Decisão do diretor (2026-07-08)
+
+Motivado pelo deploy fora de sequência da OS-APROVACAO-AJUSTES-02 (código em produção sem commit), o diretor aprovou a adição de um check no `scripts/gate-deploy.js` que bloqueia deploy/push quando há alterações não commitadas (`git status --porcelain`).
+
+### Testes realizados
+
+| Cenário | Resultado | Exit code |
+|---------|-----------|-----------|
+| Working directory sujo (arquivos modificados/untracked) | **BLOQUEADO** com lista de arquivos pendentes | 2 |
+| Working directory limpo (tudo commitado) | **LIBERADO** | 0 |
+
+### Ajuste complementar no .gitignore
+
+Adicionados `.claude/worktrees/` e `.claude/settings.local.json` ao `.gitignore` — são arquivos de sessão local do Claude Code que sujavam o working directory permanentemente, o que impediria deploys legítimos.
+
+---
+
 ## 2026-07-08 — OS-APROVACAO-AJUSTES-02: Banner + Data no Parcelamento
 
 ### Correções
