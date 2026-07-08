@@ -5,6 +5,25 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-08 — OS-APROVACAO-AJUSTES-02: Banner + Data no Parcelamento
+
+### Correções
+
+| Item | Problema | Correção |
+|------|----------|----------|
+| Banner esteira | Exibido para Master (sidebar.js:238 incluía 'master'), violando regra de discrição | Condição alterada para `perfilN !== 'super_admin'` — Master nunca vê. Título renomeado de "Atenção Master" para "Esteira de Aprovações". Contraste corrigido (text-amber-900/800). |
+| Data no parcelamento CRF | Modal de parcelamento não tinha campo de data — datas auto-calculadas sem customização | Novo campo "Data Base de Vencimento" (input type="date") editável, pré-preenchido com vencimento da nota. Preview recalcula ao alterar. |
+
+### Registro de deploy fora de sequência
+
+**Esta OS foi deployada ANTES de ser commitada, por decisão do diretor motivada por dificuldade de acesso ao ambiente local. O deploy em produção ficou temporariamente à frente do git entre 16:05:11 (horário do deploy) e o commit `c9d1711` (horário deste commit).** O diretor autorizou o deploy direto e o alinhamento posterior do repositório. Situação regularizada com commit + push.
+
+### Arquivos alterados
+- `sidebar.js` — condição de visibilidade + título + contraste do banner
+- `contas_a_receber_desktop/code.html` — campo de data + lógica de override em calcularParcelas/renderPreviewParcelas
+
+---
+
 ## 2026-07-04 — Sistema de Aprovações em Dois Níveis
 
 ### Decisão do diretor (2026-07-03): enforcement client-side
