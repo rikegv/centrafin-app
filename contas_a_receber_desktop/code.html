@@ -1200,6 +1200,14 @@
         <div id="parcelamento-resumo" class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1.5"></div>
         <div class="flex items-end gap-4">
           <div class="flex-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Data Base de Vencimento</label>
+            <input type="date" id="parcelamento-data-base"
+              class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+            <p class="text-[10px] text-slate-400 mt-1 font-medium">A primeira parcela vence 30 dias após esta data.</p>
+          </div>
+        </div>
+        <div class="flex items-end gap-4">
+          <div class="flex-1">
             <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Número de Parcelas</label>
             <input type="number" id="parcelamento-n" min="2" max="36" value="2"
               class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
@@ -3717,20 +3725,26 @@
       return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
     }
 
-    function calcularParcelas(nota, n) {
+    function calcularParcelas(nota, n, overrideBaseDate) {
       // Base: vencimento original. Fallback: emissão. Cada parcela = base + 30*i dias, ajustado p/ dia útil.
-      const baseRaw = nota['vencimento'] || nota['Dt Vecto  '] || nota['Dt Vecto'] || nota['data_emissao'] || nota['Dt Emissao'];
       let baseDate = null;
-      if (baseRaw) {
-        const s = String(baseRaw).trim();
-        if (s.includes('/')) {
-          const p = s.split('/');
-          if (p.length === 3) baseDate = new Date(parseInt(p[2],10), parseInt(p[1],10)-1, parseInt(p[0],10));
-        } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-          const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-          baseDate = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
-        } else if (baseRaw && baseRaw.toDate) {
-          baseDate = baseRaw.toDate();
+      if (overrideBaseDate) {
+        const mo = String(overrideBaseDate).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (mo) baseDate = new Date(parseInt(mo[1],10), parseInt(mo[2],10)-1, parseInt(mo[3],10));
+      }
+      if (!baseDate) {
+        const baseRaw = nota['vencimento'] || nota['Dt Vecto  '] || nota['Dt Vecto'] || nota['data_emissao'] || nota['Dt Emissao'];
+        if (baseRaw) {
+          const s = String(baseRaw).trim();
+          if (s.includes('/')) {
+            const p = s.split('/');
+            if (p.length === 3) baseDate = new Date(parseInt(p[2],10), parseInt(p[1],10)-1, parseInt(p[0],10));
+          } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+            const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            baseDate = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+          } else if (baseRaw && baseRaw.toDate) {
+            baseDate = baseRaw.toDate();
+          }
         }
       }
       if (!baseDate) baseDate = new Date();
@@ -3761,8 +3775,8 @@
       return parcelas;
     }
 
-    function renderPreviewParcelas(nota, n) {
-      const parcelas = calcularParcelas(nota, n);
+    function renderPreviewParcelas(nota, n, overrideBaseDate) {
+      const parcelas = calcularParcelas(nota, n, overrideBaseDate);
       const tbody = document.getElementById('parcelamento-preview-tbody');
       const container = document.getElementById('parcelamento-preview-container');
       const rpsBase = String(nota.rps || nota['Nº NF'] || nota['NF'] || '').trim();
@@ -3828,8 +3842,28 @@
           </div>
         `;
       }
+      // Preenche a data base editável com o vencimento da nota (ou hoje como fallback).
+      const baseRawParc = nota['vencimento'] || nota['Dt Vecto  '] || nota['Dt Vecto'] || nota['data_emissao'] || nota['Dt Emissao'];
+      let baseDateParc = null;
+      if (baseRawParc) {
+          const s = String(baseRawParc).trim();
+          if (s.includes('/')) {
+              const p = s.split('/');
+              if (p.length === 3) baseDateParc = new Date(parseInt(p[2],10), parseInt(p[1],10)-1, parseInt(p[0],10));
+          } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+              const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+              baseDateParc = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+          } else if (baseRawParc && baseRawParc.toDate) {
+              baseDateParc = baseRawParc.toDate();
+          }
+      }
+      if (!baseDateParc || isNaN(baseDateParc.getTime())) baseDateParc = new Date();
+      baseDateParc.setHours(0,0,0,0);
+      const isoBase = baseDateParc.toISOString().split('T')[0];
+      document.getElementById('parcelamento-data-base').value = isoBase;
+
       document.getElementById('parcelamento-n').value = '2';
-      renderPreviewParcelas(nota, 2);
+      renderPreviewParcelas(nota, 2, isoBase);
       abrirModalParcelamento();
     };
 
@@ -3838,13 +3872,19 @@
       if (!_parcelamentoNota) return;
       const n = Math.max(2, Math.min(36, parseInt(document.getElementById('parcelamento-n').value, 10) || 2));
       document.getElementById('parcelamento-n').value = n;
-      renderPreviewParcelas(_parcelamentoNota, n);
+      renderPreviewParcelas(_parcelamentoNota, n, document.getElementById('parcelamento-data-base').value);
     });
     document.getElementById('parcelamento-n').addEventListener('change', () => {
       if (!_parcelamentoNota) return;
       const n = Math.max(2, Math.min(36, parseInt(document.getElementById('parcelamento-n').value, 10) || 2));
       document.getElementById('parcelamento-n').value = n;
-      renderPreviewParcelas(_parcelamentoNota, n);
+      renderPreviewParcelas(_parcelamentoNota, n, document.getElementById('parcelamento-data-base').value);
+    });
+
+    document.getElementById('parcelamento-data-base').addEventListener('change', () => {
+      if (!_parcelamentoNota) return;
+      const n = Math.max(2, Math.min(36, parseInt(document.getElementById('parcelamento-n').value, 10) || 2));
+      renderPreviewParcelas(_parcelamentoNota, n, document.getElementById('parcelamento-data-base').value);
     });
 
     document.getElementById('btn-fechar-parcelamento').addEventListener('click', fecharModalParcelamento);
@@ -3859,7 +3899,7 @@
       const fb = document.getElementById('parcelamento-feedback');
 
       const n = Math.max(2, Math.min(36, parseInt(document.getElementById('parcelamento-n').value, 10) || 2));
-      const parcelas = calcularParcelas(_parcelamentoNota, n);
+      const parcelas = calcularParcelas(_parcelamentoNota, n, document.getElementById('parcelamento-data-base').value);
       const notaOriginal = _parcelamentoNota;
       const rpsBase = String(notaOriginal.rps || notaOriginal['Nº NF'] || notaOriginal['NF'] || '').trim();
 

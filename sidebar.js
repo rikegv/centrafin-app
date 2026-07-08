@@ -235,7 +235,7 @@ const _BANNER_SS_KEY = 'centrafin.session.banner_esteira_dismissed';
 async function instalarBannerEsteiraMaster(userProfile, prefix) {
     if (_bannerEsteiraInstalado) return;
     const perfilN = String(userProfile || '').trim().toLowerCase();
-    if (perfilN !== 'master' && perfilN !== 'super_admin') return;
+    if (perfilN !== 'super_admin') return;
     // Já estamos na própria tela de Aprovações — alerta seria redundante.
     if (window.location.pathname.includes('aprovacoes_desktop')) return;
     // Dismiss persistente nesta sessão — respeita escolha do usuário.
@@ -301,8 +301,8 @@ function _renderBannerEsteira(total, prefix) {
         banner.innerHTML =
             '<span class="material-symbols-outlined text-amber-500 text-2xl shrink-0">fact_check</span>' +
             '<div class="min-w-0 flex-1">' +
-                '<p class="font-headline text-sm font-extrabold leading-tight text-secondary dark:text-white">Atenção Master</p>' +
-                '<p class="text-[12px] font-medium leading-snug mt-0.5 text-slate-700 dark:text-slate-200">' +
+                '<p class="font-headline text-sm font-extrabold leading-tight text-amber-900 dark:text-amber-100">Esteira de Aprovações</p>' +
+                '<p class="text-[12px] font-medium leading-snug mt-0.5 text-amber-800 dark:text-amber-200">' +
                     'Você possui <strong id="cfin-banner-count" class="tabular-nums text-amber-700 dark:text-amber-400"></strong> ' +
                     '<span id="cfin-banner-plural"></span> sua validação na Esteira de Aprovações.' +
                 '</p>' +
