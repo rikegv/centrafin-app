@@ -202,6 +202,10 @@
         </div>
         <div id="ad-corpo" class="flex-1 overflow-y-auto px-7 py-5 space-y-3 text-sm text-slate-700"></div>
         <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+            <button id="btn-revisar-aprovar" type="button" class="hidden inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 active:scale-95 transition-all">
+                <span class="material-symbols-outlined text-sm">rate_review</span>
+                <span>Realizar Alterações</span>
+            </button>
             <button id="btn-cancelar-apv-detalhes" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Fechar</button>
         </div>
     </div>
@@ -240,6 +244,32 @@
             <button id="btn-confirmar-apv-rejeicao" type="button" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-red-600 text-white text-xs font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
                 <span id="apv-rejeicao-icon" class="material-symbols-outlined text-sm">cancel</span>
                 <span id="apv-rejeicao-label">Confirmar Rejeição</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Revisar e Aprovar -->
+<div id="modal-apv-revisao" class="fixed inset-0 z-[82] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-apv-revisao"></div>
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100 max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-emerald-600 text-xl">rate_review</span>
+                </div>
+                <h3 class="font-headline text-lg font-extrabold text-secondary tracking-tight">Revisar e Aprovar</h3>
+            </div>
+            <button id="btn-fechar-apv-revisao" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div id="apv-revisao-corpo" class="flex-1 overflow-y-auto px-7 py-5 space-y-3 text-sm text-slate-700"></div>
+        <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+            <button id="btn-cancelar-apv-revisao" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+            <button id="btn-confirmar-apv-revisao" type="button" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                <span id="apv-revisao-icon" class="material-symbols-outlined text-sm">check_circle</span>
+                <span id="apv-revisao-label">Salvar e Aprovar</span>
             </button>
         </div>
     </div>
@@ -628,11 +658,13 @@
             const emailLinha = s.solicitado_por_email
                 ? `<div class="text-[10px] text-slate-400 font-mono mt-1 truncate" title="${escHTML(s.solicitado_por_email)}">${escHTML(s.solicitado_por_email)}</div>`
                 : '';
+            const resumoTexto = s.resumo ? escHTML(s.resumo) : descricaoAlvo(s);
             linhas[i] = `
                 <tr class="hover:bg-slate-50/60 transition-colors align-top">
                     <td class="px-4 py-3 align-top">${badgeOperacao(s.tipo_operacao)}${moduloBadge}</td>
                     <td class="px-4 py-3 text-xs text-slate-700 leading-relaxed">
-                        <div>${descricaoHumana(s)}</div>
+                        <div class="font-bold text-secondary text-[13px] mb-0.5">${resumoTexto}</div>
+                        <div class="text-slate-500">${descricaoHumana(s)}</div>
                         ${emailLinha}
                     </td>
                     <td class="px-4 py-3 align-top text-xs font-mono text-slate-500 tabular-nums">${fmtDataSolicit(s.criado_em)}</td>
@@ -674,13 +706,19 @@
         ov.classList.remove('flex');
     }
 
-    async function aprovarSolicitacao(s) {
+    async function aprovarSolicitacao(s, dadosAprovadosOverride) {
         if (!_isSuperAdmin) { mostrarToast('Apenas super_admin pode aprovar.', 'error', true); return; }
         const op = String(s.tipo_operacao || '');
-        mostrarLoader('Aplicando aprovação…', `Operação: ${op}`);
+        mostrarLoader('Aplicando aprovação...', `Operação: ${op}`);
+
+        // dados_aprovados: se o SuperAdmin editou via modal de revisao, usa o override;
+        // caso contrario, usa dados_novos como aprovado ipsis litteris.
+        const dadosAprovados = dadosAprovadosOverride || s.dados_novos;
+        const foiEditado = !!dadosAprovadosOverride;
+
         try {
             if (op === 'CREATE' || op === 'UPDATE') {
-                const dados = s.dados_novos || {};
+                const dados = dadosAprovados || {};
                 const payload = { ...dados, updated_at: serverTimestamp() };
                 if (op === 'CREATE') payload.created_at = serverTimestamp();
                 if (s.doc_id_alvo) {
@@ -692,7 +730,6 @@
                 if (!s.doc_id_alvo) throw new Error('DELETE sem doc_id_alvo.');
                 await deleteDoc(doc(db, s.colecao_alvo, s.doc_id_alvo));
             } else if (op === 'DELETE_BATCH') {
-                // Exclusão em massa: array de IDs no dados_novos.ids.
                 const ids = (s.dados_novos && s.dados_novos.ids) || [];
                 if (!ids.length) throw new Error('DELETE_BATCH sem IDs.');
                 for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
@@ -704,9 +741,8 @@
                     await batch.commit();
                 }
             } else if (op === 'BATCH_COMPOUND') {
-                // Operação composta: array de operações individuais.
-                const operacoes = (s.dados_novos && s.dados_novos.operacoes) || [];
-                if (!operacoes.length) throw new Error('BATCH_COMPOUND sem operações.');
+                const operacoes = (dadosAprovados && dadosAprovados.operacoes) || [];
+                if (!operacoes.length) throw new Error('BATCH_COMPOUND sem operacoes.');
                 const batch = writeBatch(db);
                 for (const item of operacoes) {
                     if (item.acao === 'CREATE') {
@@ -741,17 +777,23 @@
             } else {
                 throw new Error('Tipo de operação não suportado: ' + op);
             }
-            // Audit trail: marca a solicitação como aprovada.
-            await updateDoc(doc(db, COLECAO_APROV, s._id), {
+
+            // Audit trail: marca a solicitacao como aprovada.
+            const auditPayload = {
                 status: 'Aprovado',
                 aprovado_por: usuarioLogadoNome,
                 aprovado_por_email: usuarioLogadoEmail,
                 decidido_por_email: usuarioLogadoEmail,
                 aprovado_em: serverTimestamp(),
-            });
-            mostrarToast('Solicitação aprovada e aplicada.', 'check_circle');
+                dados_aprovados: dadosAprovados,
+                observacao_aprovacao: foiEditado
+                    ? 'Aprovado com alteracoes pelo SuperAdmin'
+                    : 'Aprovado conforme solicitado',
+            };
+            await updateDoc(doc(db, COLECAO_APROV, s._id), auditPayload);
+            mostrarToast('Solicitacao aprovada e aplicada.', 'check_circle');
         } catch (err) {
-            console.error('[Aprovação] aplicar falhou:', err);
+            console.error('[Aprovacao] aplicar falhou:', err);
             const motivo = err?.code === 'permission-denied'
                 ? 'Acesso negado pelo Firestore.'
                 : (err?.message || 'erro desconhecido');
@@ -957,47 +999,79 @@
         return map[col] || col;
     }
 
-    function abrirDetalhes(s) {
-        document.getElementById('ad-subtitulo').textContent =
-            `${_nomeColecaoAmigavel(s.colecao_alvo)}${s.doc_id_alvo ? ' · #' + s.doc_id_alvo : ''}`;
-        const corpo = document.getElementById('ad-corpo');
-        const op = String(s.tipo_operacao || '').toUpperCase();
-        const cabecalho = `
-            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
-                    ${_badgeOperacao(op)}
-                    <span class="text-[11px] font-mono text-slate-400 tabular-nums">${fmtDataSolicit(s.criado_em)}</span>
-                </div>
-                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Solicitado por</dt>
-                    <dd class="text-slate-800 font-bold">${escHTML(s.solicitado_por || '—')}</dd>
-                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">E-mail</dt>
-                    <dd class="text-slate-600 font-mono break-all">${escHTML(s.solicitado_por_email || '')}</dd>
-                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Coleção alvo</dt>
-                    <dd class="text-slate-700 font-medium">${escHTML(_nomeColecaoAmigavel(s.colecao_alvo))}</dd>
-                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Resumo</dt>
-                    <dd class="text-slate-700 font-medium">${escHTML(s.resumo || '—')}</dd>
-                </dl>
-            </div>`;
+    // Guarda a solicitação aberta no modal de detalhes para reuso.
+    let _solicitacaoDetalhes = null;
 
-        // Para CREATE: só mostra "dados novos"; pra DELETE: só "dados antigos";
-        // pra UPDATE: ambos lado a lado (diff visual). IMPORT_BATCH: dados_novos é array.
-        let cards = '';
-        if (op === 'CREATE') {
-            cards = _renderCardCampos('Dados a Cadastrar', s.dados_novos, 'emerald');
-        } else if (op === 'DELETE') {
-            cards = _renderCardCampos('Registro a Excluir', s.dados_antigos, 'red');
-        } else if (op === 'DELETE_BATCH') {
-            const ids = (s.dados_novos && s.dados_novos.ids) || [];
-            cards = `<div class="bg-red-50/40 border border-red-100 rounded-xl p-4">
+    function _renderCardStatusAtual(dados) {
+        if (dados == null) {
+            return `
+                <div class="border-l-4 border-red-400 bg-red-50/30 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-red-700 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">history</span>
+                        Status Atual
+                    </p>
+                    <p class="text-xs text-slate-400 italic">Sem estado anterior (registro novo)</p>
+                </div>`;
+        }
+        const entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+        if (!entradas.length) {
+            return `
+                <div class="border-l-4 border-red-400 bg-red-50/30 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-red-700 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">history</span>
+                        Status Atual
+                    </p>
+                    <p class="text-xs text-slate-400 italic">— sem campos —</p>
+                </div>`;
+        }
+        const linhas = entradas.map(([k, v]) => `
+            <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${escHTML(ROTULOS_AMIGAVEIS[k] || k)}</dt>
+            <dd class="text-xs text-slate-700 break-words">${_fmtValorHumano(k, v)}</dd>
+        `).join('');
+        return `
+            <div class="border-l-4 border-red-400 bg-red-50/30 rounded-xl p-4">
                 <p class="text-[10px] font-extrabold uppercase tracking-widest text-red-700 mb-3 flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[14px]">delete_sweep</span>
-                    IDs a Excluir (${ids.length})
+                    <span class="material-symbols-outlined text-[14px]">history</span>
+                    Status Atual
                 </p>
-                <div class="text-xs text-slate-600 font-mono break-all max-h-40 overflow-y-auto">${ids.map(id => escHTML(id)).join(', ')}</div>
+                <dl class="grid grid-cols-2 gap-x-4 gap-y-2">${linhas}</dl>
             </div>`;
-        } else if (op === 'BATCH_COMPOUND') {
-            const ops = (s.dados_novos && s.dados_novos.operacoes) || [];
+    }
+
+    function _renderCardAlteracaoProposta(s) {
+        const op = String(s.tipo_operacao || '').toUpperCase();
+        const dados = s.dados_novos;
+
+        if (op === 'DELETE') {
+            return `
+                <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                        Alteração Proposta
+                    </p>
+                    <p class="text-xs text-red-600 font-bold flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">delete</span>
+                        Exclusão do registro
+                    </p>
+                </div>`;
+        }
+        if (op === 'DELETE_BATCH') {
+            const ids = (dados && dados.ids) || [];
+            return `
+                <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                        Alteração Proposta
+                    </p>
+                    <p class="text-xs text-red-600 font-bold flex items-center gap-1 mb-2">
+                        <span class="material-symbols-outlined text-[14px]">delete_sweep</span>
+                        Exclusão de ${ids.length} registro(s)
+                    </p>
+                    <div class="text-[11px] text-slate-500 font-mono break-all max-h-32 overflow-y-auto">${ids.map(id => escHTML(id)).join(', ')}</div>
+                </div>`;
+        }
+        if (op === 'BATCH_COMPOUND') {
+            const ops = (dados && dados.operacoes) || [];
             const opsHtml = ops.slice(0, 10).map((item, idx) => {
                 const acaoLabel = item.acao === 'CREATE' ? 'Criar' : item.acao === 'UPDATE' ? 'Editar' : item.acao === 'DELETE' ? 'Excluir' : item.acao;
                 const cor = item.acao === 'CREATE' ? 'emerald' : item.acao === 'DELETE' ? 'red' : 'amber';
@@ -1006,25 +1080,97 @@
                     ${item.dados ? `<div class="text-[11px] text-slate-600 truncate">${Object.entries(item.dados).slice(0, 3).map(([k,v]) => `<span class="font-bold">${escHTML(k)}</span>: ${escHTML(String(v ?? ''))}`).join(' · ')}</div>` : ''}
                 </div>`;
             }).join('');
-            cards = `<div class="bg-purple-50/40 border border-purple-100 rounded-xl p-4">
-                <p class="text-[10px] font-extrabold uppercase tracking-widest text-purple-700 mb-3 flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[14px]">call_split</span>
-                    Operações Compostas (${ops.length})
-                </p>
-                <div class="space-y-2">${opsHtml}</div>
-                ${ops.length > 10 ? `<p class="text-[10px] text-slate-400 italic mt-2">… mais ${ops.length - 10} operação(ões).</p>` : ''}
-            </div>`;
-        } else if (op === 'IMPORT_BATCH') {
-            cards = _renderCardCampos('Registros do Lote', s.dados_novos, 'tertiary');
-        } else {
-            // UPDATE: side-by-side.
-            cards = `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                ${_renderCardCampos('Antes', s.dados_antigos, 'amber')}
-                ${_renderCardCampos('Depois', s.dados_novos, 'emerald')}
-            </div>`;
+            return `
+                <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                        Alteração Proposta
+                    </p>
+                    <p class="text-xs text-slate-600 font-medium mb-2">${ops.length} operação(ões) composta(s)</p>
+                    <div class="space-y-2">${opsHtml}</div>
+                    ${ops.length > 10 ? `<p class="text-[10px] text-slate-400 italic mt-2">... mais ${ops.length - 10} operação(ões).</p>` : ''}
+                </div>`;
         }
+        if (op === 'IMPORT_BATCH') {
+            return _renderCardCampos('Alteração Proposta', dados, 'emerald');
+        }
+        // CREATE / UPDATE: show dados_novos fields
+        if (dados == null) {
+            return `
+                <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                        Alteração Proposta
+                    </p>
+                    <p class="text-xs text-slate-400 italic">N/A</p>
+                </div>`;
+        }
+        const entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+        if (!entradas.length) {
+            return `
+                <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                        Alteração Proposta
+                    </p>
+                    <p class="text-xs text-slate-400 italic">— sem campos —</p>
+                </div>`;
+        }
+        const linhas = entradas.map(([k, v]) => `
+            <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${escHTML(ROTULOS_AMIGAVEIS[k] || k)}</dt>
+            <dd class="text-xs text-slate-700 break-words">${_fmtValorHumano(k, v)}</dd>
+        `).join('');
+        return `
+            <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
+                <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                    Alteração Proposta
+                </p>
+                <dl class="grid grid-cols-2 gap-x-4 gap-y-2">${linhas}</dl>
+            </div>`;
+    }
+
+    function abrirDetalhes(s) {
+        _solicitacaoDetalhes = s;
+        const resumoTitulo = s.resumo || descricaoAlvo(s);
+        document.getElementById('ad-subtitulo').textContent =
+            `${_nomeColecaoAmigavel(s.colecao_alvo)}${s.doc_id_alvo ? ' · #' + s.doc_id_alvo : ''}`;
+        const corpo = document.getElementById('ad-corpo');
+        const op = String(s.tipo_operacao || '').toUpperCase();
+        const cabecalho = `
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                    <h4 class="font-headline text-base font-extrabold text-secondary">${escHTML(resumoTitulo)}</h4>
+                    ${_badgeOperacao(op)}
+                </div>
+                <span class="text-[11px] font-mono text-slate-400 tabular-nums">${fmtDataSolicit(s.criado_em)}</span>
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs mt-3">
+                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Solicitado por</dt>
+                    <dd class="text-slate-800 font-bold">${escHTML(s.solicitado_por || '—')}</dd>
+                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">E-mail</dt>
+                    <dd class="text-slate-600 font-mono break-all">${escHTML(s.solicitado_por_email || '')}</dd>
+                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Colecao alvo</dt>
+                    <dd class="text-slate-700 font-medium">${escHTML(_nomeColecaoAmigavel(s.colecao_alvo))}</dd>
+                </dl>
+            </div>`;
+
+        // Two-card layout: Status Atual + Alteração Proposta
+        const cards = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${_renderCardStatusAtual(s.dados_antigos)}
+            ${_renderCardAlteracaoProposta(s)}
+        </div>`;
 
         corpo.innerHTML = cabecalho + cards;
+
+        // Show "Realizar Alteracoes" button only for Pendentes with editable data and SuperAdmin
+        const btnRevisar = document.getElementById('btn-revisar-aprovar');
+        const editableOps = ['UPDATE', 'CREATE', 'BATCH_COMPOUND'];
+        if (_isSuperAdmin && editableOps.includes(op)) {
+            btnRevisar.classList.remove('hidden');
+        } else {
+            btnRevisar.classList.add('hidden');
+        }
+
         abrirModal('modal-apv-detalhes');
     }
 
@@ -1062,6 +1208,132 @@
     document.querySelectorAll('[data-modal-overlay]').forEach(o => {
         o.addEventListener('click', () => fecharModal(o.getAttribute('data-modal-overlay')));
     });
+
+    // ── Revisar e Aprovar (segundo modal) ──────────────────────────────────
+    document.getElementById('btn-revisar-aprovar').addEventListener('click', () => {
+        if (!_solicitacaoDetalhes) return;
+        abrirModalRevisao(_solicitacaoDetalhes);
+    });
+    document.getElementById('btn-fechar-apv-revisao').addEventListener('click', () => fecharModal('modal-apv-revisao'));
+    document.getElementById('btn-cancelar-apv-revisao').addEventListener('click', () => fecharModal('modal-apv-revisao'));
+    document.getElementById('btn-confirmar-apv-revisao').addEventListener('click', () => confirmarRevisao());
+
+    function _detectarTipoInput(chave, valor) {
+        if (typeof valor === 'number') return 'number';
+        const s = String(valor || '');
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return 'date';
+        if (/data|vencimento|emissao|competencia/i.test(chave) && /^\d{2}\/\d{2}\/\d{4}$/.test(s)) return 'text';
+        return 'text';
+    }
+
+    function abrirModalRevisao(s) {
+        if (!_isSuperAdmin) return;
+        const op = String(s.tipo_operacao || '').toUpperCase();
+        const corpo = document.getElementById('apv-revisao-corpo');
+
+        if (op === 'BATCH_COMPOUND') {
+            const operacoes = (s.dados_novos && s.dados_novos.operacoes) || [];
+            let html = `<p class="text-xs text-slate-500 font-medium mb-3">Edite os campos das operações compostas conforme necessário.</p>`;
+            operacoes.forEach((item, idx) => {
+                if (!item.dados) return;
+                const acaoLabel = item.acao === 'CREATE' ? 'Criar' : item.acao === 'UPDATE' ? 'Editar' : item.acao === 'DELETE' ? 'Excluir' : item.acao;
+                const campos = Object.entries(item.dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+                const camposHtml = campos.map(([k, v]) => {
+                    const tipo = _detectarTipoInput(k, v);
+                    const step = tipo === 'number' ? ' step="any"' : '';
+                    return `<div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">${escHTML(ROTULOS_AMIGAVEIS[k] || k)}</label>
+                        <input type="${tipo}"${step} data-batch-idx="${idx}" data-campo="${escHTML(k)}" value="${escHTML(String(v ?? ''))}"
+                            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all" />
+                    </div>`;
+                }).join('');
+                html += `<div class="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-3">
+                    <p class="text-[10px] font-bold text-slate-600 mb-2">#${idx + 1} ${acaoLabel}${item.doc_id ? ' · ' + escHTML(item.doc_id) : ''}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${camposHtml}</div>
+                </div>`;
+            });
+            corpo.innerHTML = html;
+        } else {
+            // CREATE / UPDATE: editable fields from dados_novos
+            const dados = s.dados_novos || {};
+            const entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+            if (!entradas.length) {
+                corpo.innerHTML = `<p class="text-xs text-slate-400 italic">Sem campos editaveis.</p>`;
+            } else {
+                const camposHtml = entradas.map(([k, v]) => {
+                    const tipo = _detectarTipoInput(k, v);
+                    const step = tipo === 'number' ? ' step="any"' : '';
+                    return `<div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">${escHTML(ROTULOS_AMIGAVEIS[k] || k)}</label>
+                        <input type="${tipo}"${step} data-campo="${escHTML(k)}" value="${escHTML(String(v ?? ''))}"
+                            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all" />
+                    </div>`;
+                }).join('');
+                corpo.innerHTML = `
+                    <p class="text-xs text-slate-500 font-medium mb-3">Edite os campos abaixo antes de aprovar. Os valores editados serao aplicados no banco.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${camposHtml}</div>`;
+            }
+        }
+
+        abrirModal('modal-apv-revisao');
+    }
+
+    async function confirmarRevisao() {
+        if (!_solicitacaoDetalhes) return;
+        const s = _solicitacaoDetalhes;
+        const op = String(s.tipo_operacao || '').toUpperCase();
+
+        const btn = document.getElementById('btn-confirmar-apv-revisao');
+        const ico = document.getElementById('apv-revisao-icon');
+        const lbl = document.getElementById('apv-revisao-label');
+        btn.disabled = true;
+        if (ico) { ico.textContent = 'progress_activity'; ico.classList.add('spin'); }
+        if (lbl) lbl.textContent = 'Aprovando...';
+
+        try {
+            let dadosAprovados;
+
+            if (op === 'BATCH_COMPOUND') {
+                // Reconstruct operacoes array with edited values
+                const operacoes = JSON.parse(JSON.stringify((s.dados_novos && s.dados_novos.operacoes) || []));
+                const inputs = document.querySelectorAll('#apv-revisao-corpo input[data-batch-idx]');
+                for (const inp of inputs) {
+                    const idx = parseInt(inp.getAttribute('data-batch-idx'), 10);
+                    const campo = inp.getAttribute('data-campo');
+                    if (operacoes[idx] && operacoes[idx].dados) {
+                        const original = operacoes[idx].dados[campo];
+                        let val = inp.value;
+                        if (typeof original === 'number') val = parseFloat(val) || 0;
+                        operacoes[idx].dados[campo] = val;
+                    }
+                }
+                dadosAprovados = { operacoes };
+            } else {
+                // CREATE / UPDATE: read all inputs
+                dadosAprovados = { ...(s.dados_novos || {}) };
+                const inputs = document.querySelectorAll('#apv-revisao-corpo input[data-campo]');
+                for (const inp of inputs) {
+                    const campo = inp.getAttribute('data-campo');
+                    const original = (s.dados_novos || {})[campo];
+                    let val = inp.value;
+                    if (typeof original === 'number') val = parseFloat(val) || 0;
+                    dadosAprovados[campo] = val;
+                }
+            }
+
+            fecharModal('modal-apv-revisao');
+            fecharModal('modal-apv-detalhes');
+            await aprovarSolicitacao(s, dadosAprovados);
+            _solicitacaoDetalhes = null;
+        } catch (err) {
+            console.error('[Revisao] falhou:', err);
+            mostrarToast('Falha ao aprovar com alteracoes: ' + (err?.message || 'erro'), 'error', true);
+        } finally {
+            btn.disabled = false;
+            if (ico) { ico.textContent = 'check_circle'; ico.classList.remove('spin'); }
+            if (lbl) lbl.textContent = 'Salvar e Aprovar';
+        }
+    }
 
     // ── Toast ───────────────────────────────────────────────────────────────
     let _toastTimer = null;
