@@ -5,6 +5,62 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-10 — OS-APROVACAO-MODAL-02 a 05: Modais de Aprovação — diff, resumo de negócio, campos editáveis
+
+### Contexto e escopo final
+
+Série de 4 OSs (MODAL-02 a 05) cobrindo a tela de Aprovações (`aprovacoes_desktop/code.html`)
+e os call sites de captura de dados nos módulos CRF, CP, Folha e Metas.
+
+### O que foi implementado
+
+1. **Badge com nome real da operação** — "PARCELAMENTO", "DESFAZER PARCELAMENTO" em vez do
+   genérico "COMPOSTA" (tabela e modal).
+2. **Diff real para edições simples (UPDATE)** — tabela "Campo | Valor atual | Alterado para"
+   mostrando SOMENTE campos que efetivamente mudaram.
+   - Iteração apenas de chaves de `dados_novos` (campo ausente no novo = não tocado).
+   - Normalização: `"1800"` (string) = `1800` (number); `null` = `""`.
+   - Metadados excluídos: `data_edicao`, `data_importacao`, `created_at`, `updated_at`, `*_timestamp`.
+3. **Captura completa de `dados_antigos`** — spread do registro em cache nos 4 módulos, em vez
+   de subconjunto manual de 3-5 campos.
+4. **Resumo de negócio por tipo de operação composta:**
+   - **Parcelamento:** Status Atual (Valor da Fatura + Status) | Tabela de parcelas (Valor + Vencimento).
+   - **Desfazer parcelamento:** Status Atual (Status + Parcelas geradas) | Resumo (N excluídas + nota restaurada).
+   - **Exclusão em massa (DELETE_BATCH):** formato existente mantido (N registros + lista IDs).
+5. **Modal "Realizar Alterações"** — campos editáveis filtrados:
+   - UPDATE simples: apenas campos do diff.
+   - Parcelamento: apenas Valor + Vencimento por parcela.
+   - Desfazer parcelamento / DELETE_BATCH: botão removido (sem campos editáveis).
+
+### Decisão do diretor: `data_edicao` é metadado
+
+`data_edicao` (carimbo automático de salvamento) adicionado a `_isMetadadoTecnico` — muda a
+cada edição mas nunca é decisão do usuário. `data_importacao` idem (carimbo do ETL).
+
+### Aprendizado (5+ rodadas até acertar)
+
+**Operações compostas exigem definição explícita de "resumo de negócio" por tipo.** Não é
+suficiente generalizar a lógica de diff de edição simples para operações como parcelamento,
+desfazer parcelamento ou exclusão em massa — cada tipo tem campos relevantes diferentes,
+lógica de exibição diferente, e campos editáveis diferentes (ou nenhum). A abordagem correta
+é: (1) propor o resumo de negócio em texto ao diretor, tipo por tipo; (2) obter confirmação
+antes de implementar; (3) implementar renderização dedicada, não genérica.
+
+**Evidência antes de tela:** Na OS-MODAL-04 o diretor exigiu prova do cálculo de diff em texto
+com dados reais ANTES de qualquer mudança de HTML — isso evitou uma quarta rodada de
+"parece certo mas na prática não funciona". Lição: para lógica de transformação de dados,
+provar o cálculo com dados reais antes de tocar na interface.
+
+### Commits
+
+- `7d894d7` feat: OS-APROVACAO-MODAL-02 — badge real, card legível, diagnóstico do botão
+- `dad23a4` feat: OS-APROVACAO-MODAL-03 — diff real nos modais de aprovação
+- `c7218ad` fix: OS-APROVACAO-MODAL-04 — diff definitivo com tabela unificada
+- `8f93845` feat: OS-APROVACAO-MODAL-05 — resumo de negócio para operações compostas
+- `234e08a` fix: OS-APROVACAO-MODAL-05 — valor fatura no status, modal revisão cirúrgico
+
+---
+
 ## 2026-07-08 — Reforço gate-deploy.js: trava de working directory sujo
 
 ### Decisão do diretor (2026-07-08)
