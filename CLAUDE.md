@@ -63,6 +63,17 @@ Faturamento, Custo de Folha, DRE, Dashboards executivos e gestão de cadastros/a
 - Filtros avançados (centros de custo) restritos ao escopo de dados do usuário no backend
   (regras), não só no front.
 
+### Regra de fonte única para dashboards (decisão diretor 2026-07-10)
+- **Dashboards NUNCA implementam lógica de cálculo/classificação própria** quando o dado
+  já existe calculado em um módulo gerenciador. Devem sempre **ler o valor já persistido**
+  (campo gravado no Firestore pelo gerenciador), nunca recalcular de forma independente.
+  Duplicar regra de negócio em dois lugares cria divergência silenciosa com o tempo —
+  evidência: Dashboard Custo de Folha divergiu R$ 5.638 do Gerenciador por classificadores
+  desatualizados (salario_cadastral, BOLSA_AUXILIO).
+- Corolário: quando um gerenciador calcula um total (ex.: `custo_total`), deve **persistir
+  o resultado** no documento do Firestore como campo canônico. O dashboard soma esse campo
+  diretamente.
+
 ### Volume / escala de referência
 - App de controladoria interno; leitura intensiva de coleções financeiras. Padrão de
   performance: Map/Reduce client-side em memória para evitar requisições repetidas pesadas
