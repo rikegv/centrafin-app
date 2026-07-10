@@ -552,9 +552,7 @@
                     // Esteira: master grava solicitação em CP_SolicitacoesAprovacao.
                     if (window.idMetaEdicao) {
                         const metaAtual = window.listaMetas.find(m => m.id === window.idMetaEdicao);
-                        const dadosAntigos = metaAtual ? {
-                            ano: metaAtual.ano, produto: metaAtual.produto, total: metaAtual.total,
-                        } : null;
+                        const dadosAntigos = metaAtual ? (() => { const { _id, id, ...rest } = metaAtual; return rest; })() : null;
                         await _criarSolicitacaoAprovacao('UPDATE', 'MetasFinanceiras', window.idMetaEdicao,
                             dadosAntigos, metaData,
                             `Edição meta: ${produto} ${ano}`, 'METAS');

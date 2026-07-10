@@ -4582,13 +4582,7 @@
         try {
             // ── Esteira de aprovação: master grava solicitação, super_admin grava direto ──
             if (!_isSuperAdmin) {
-                const dadosAntigos = regOriginal ? {
-                    entidade: regOriginal.entidade || null,
-                    centro_custo: regOriginal.centro_custo || null,
-                    data_vencimento: regOriginal.data_vencimento || null,
-                    valor_original: regOriginal.valor_original || null,
-                    is_recorrente: !!regOriginal.is_recorrente,
-                } : null;
+                const dadosAntigos = regOriginal ? (() => { const { _id, ...rest } = regOriginal; return rest; })() : null;
                 const dadosNovos = {
                     entidade: favorecido || null,
                     centro_custo: cc || null,

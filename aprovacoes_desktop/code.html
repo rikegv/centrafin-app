@@ -1012,7 +1012,7 @@
     // Guarda a solicitação aberta no modal de detalhes para reuso.
     let _solicitacaoDetalhes = null;
 
-    function _renderCardStatusAtual(dados) {
+    function _renderCardStatusAtual(dados, dadosNovos, tipoOp) {
         if (dados == null) {
             return `
                 <div class="border-l-4 border-red-400 bg-red-50/30 rounded-xl p-4">
@@ -1023,7 +1023,14 @@
                     <p class="text-xs text-slate-400 italic">Sem estado anterior (registro novo)</p>
                 </div>`;
         }
-        const entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+        // Para UPDATE: mostrar apenas os campos que mudaram (valores antigos)
+        let entradas;
+        if (tipoOp === 'UPDATE' && dadosNovos) {
+            const diffs = _camposDiff(dados, dadosNovos);
+            entradas = diffs.map(d => [d.chave, d.antes]);
+        } else {
+            entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+        }
         if (!entradas.length) {
             return `
                 <div class="border-l-4 border-red-400 bg-red-50/30 rounded-xl p-4">
@@ -1031,7 +1038,7 @@
                         <span class="material-symbols-outlined text-[14px]">history</span>
                         Status Atual
                     </p>
-                    <p class="text-xs text-slate-400 italic">— sem campos —</p>
+                    <p class="text-xs text-slate-400 italic">— sem campos alterados —</p>
                 </div>`;
         }
         const linhas = entradas.map(([k, v]) => `
@@ -1082,20 +1089,38 @@
         }
         if (op === 'BATCH_COMPOUND') {
             const ops = (dados && dados.operacoes) || [];
+            const antigos = s.dados_antigos || {};
             // Resumo legível agrupado por tipo de ação
             const nCreate = ops.filter(o => o.acao === 'CREATE').length;
             const nUpdate = ops.filter(o => o.acao === 'UPDATE').length;
             const nDelete = ops.filter(o => o.acao === 'DELETE').length;
 
             const linhasResumo = [];
-            // Campos-chave da operação UPDATE (status, parcelas, etc.)
+            // Sub-itens UPDATE: aplicar diff, mostrar só campos alterados
             const upd = ops.find(o => o.acao === 'UPDATE' && o.dados);
             if (upd && upd.dados) {
-                const entries = Object.entries(upd.dados).filter(([k]) => !_isMetadadoTecnico(k) && !k.startsWith('_'));
-                entries.forEach(([k, v]) => {
-                    linhasResumo.push({ chave: ROTULOS_AMIGAVEIS[k] || k, valor: _fmtValorHumano(k, v) });
-                });
+                const diffs = _camposDiff(antigos, upd.dados);
+                if (diffs.length) {
+                    diffs.forEach(d => {
+                        linhasResumo.push({ chave: ROTULOS_AMIGAVEIS[d.chave] || d.chave, valor: _fmtValorHumano(d.chave, d.depois) });
+                    });
+                } else {
+                    // Fallback: sem diff detectável, mostrar tudo
+                    const entries = Object.entries(upd.dados).filter(([k]) => !_isMetadadoTecnico(k) && !k.startsWith('_'));
+                    entries.forEach(([k, v]) => {
+                        linhasResumo.push({ chave: ROTULOS_AMIGAVEIS[k] || k, valor: _fmtValorHumano(k, v) });
+                    });
+                }
             }
+            // Sub-itens CREATE: mostrar campos preenchidos normalmente
+            ops.filter(o => o.acao === 'CREATE' && o.dados).forEach(cr => {
+                const entries = Object.entries(cr.dados).filter(([k]) => !_isMetadadoTecnico(k) && !k.startsWith('_'));
+                entries.forEach(([k, v]) => {
+                    if (v != null && v !== '') {
+                        linhasResumo.push({ chave: ROTULOS_AMIGAVEIS[k] || k, valor: _fmtValorHumano(k, v) });
+                    }
+                });
+            });
             if (nCreate > 0) linhasResumo.push({ chave: 'Registros criados', valor: String(nCreate) });
             if (nDelete > 0) linhasResumo.push({ chave: 'Registros excluídos', valor: String(nDelete) });
 
@@ -1130,7 +1155,14 @@
                     <p class="text-xs text-slate-400 italic">N/A</p>
                 </div>`;
         }
-        const entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+        // Para UPDATE: mostrar apenas campos que mudaram (valores novos)
+        let entradas;
+        if (op === 'UPDATE' && s.dados_antigos) {
+            const diffs = _camposDiff(s.dados_antigos, dados);
+            entradas = diffs.map(d => [d.chave, d.depois]);
+        } else {
+            entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+        }
         if (!entradas.length) {
             return `
                 <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
@@ -1138,7 +1170,7 @@
                         <span class="material-symbols-outlined text-[14px]">edit_note</span>
                         Alteração Proposta
                     </p>
-                    <p class="text-xs text-slate-400 italic">— sem campos —</p>
+                    <p class="text-xs text-slate-400 italic">— sem campos alterados —</p>
                 </div>`;
         }
         const linhas = entradas.map(([k, v]) => `
@@ -1181,7 +1213,7 @@
 
         // Two-card layout: Status Atual + Alteração Proposta
         const cards = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            ${_renderCardStatusAtual(s.dados_antigos)}
+            ${_renderCardStatusAtual(s.dados_antigos, s.dados_novos, op)}
             ${_renderCardAlteracaoProposta(s)}
         </div>`;
 
@@ -1263,11 +1295,22 @@
 
         if (op === 'BATCH_COMPOUND') {
             const operacoes = (s.dados_novos && s.dados_novos.operacoes) || [];
+            const antigos = s.dados_antigos || {};
             let html = `<p class="text-xs text-slate-500 font-medium mb-3">Edite os campos das operações compostas conforme necessário.</p>`;
             operacoes.forEach((item, idx) => {
                 if (!item.dados) return;
-                const acaoLabel = item.acao === 'CREATE' ? 'Criar' : item.acao === 'UPDATE' ? 'Editar' : item.acao === 'DELETE' ? 'Excluir' : item.acao;
-                const campos = Object.entries(item.dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+                if (item.acao === 'DELETE') return; // DELETE sub-items: nada editável
+                const acaoLabel = item.acao === 'CREATE' ? 'Criar' : item.acao === 'UPDATE' ? 'Editar' : item.acao;
+                // UPDATE sub-items: filtrar campos editáveis pelo diff
+                let campos;
+                if (item.acao === 'UPDATE') {
+                    const diffs = _camposDiff(antigos, item.dados);
+                    campos = diffs.map(d => [d.chave, d.depois]);
+                } else {
+                    // CREATE: manter todos os campos editáveis
+                    campos = Object.entries(item.dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+                }
+                if (!campos.length) return;
                 const camposHtml = campos.map(([k, v]) => {
                     const tipo = _detectarTipoInput(k, v);
                     const step = tipo === 'number' ? ' step="any"' : '';
@@ -1286,7 +1329,14 @@
         } else {
             // CREATE / UPDATE: editable fields from dados_novos
             const dados = s.dados_novos || {};
-            const entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+            // Para UPDATE: mostrar apenas campos que mudaram
+            let entradas;
+            if (op === 'UPDATE' && s.dados_antigos) {
+                const diffs = _camposDiff(s.dados_antigos, dados);
+                entradas = diffs.map(d => [d.chave, d.depois]);
+            } else {
+                entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
+            }
             if (!entradas.length) {
                 corpo.innerHTML = `<p class="text-xs text-slate-400 italic">Sem campos editaveis.</p>`;
             } else {

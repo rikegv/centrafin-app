@@ -2710,12 +2710,7 @@
           // ── Esteira: master/comum grava solicitação, super_admin grava direto ──
           if (idParaEditar) {
             const regAtual = todasAsNotas.find(d => d.id === idParaEditar);
-            const dadosAntigos = regAtual ? {
-                nf: regAtual.nf || regAtual['Nº NF'] || null,
-                cliente: regAtual.cliente || regAtual.Cliente || null,
-                valor_fatura: regAtual.valor_fatura || regAtual['Valor Fatura'] || null,
-                status: regAtual.status || regAtual.Status || null,
-            } : null;
+            const dadosAntigos = regAtual ? (() => { const { _id, id, ...rest } = regAtual; return rest; })() : null;
             await _criarSolicitacaoAprovacao('UPDATE', 'Lancamentos', idParaEditar, dadosAntigos,
                 { ...payload, data_edicao: new Date().toISOString() },
                 `Edição de fatura NF ${nf} · ${cliente}`, 'CRF');

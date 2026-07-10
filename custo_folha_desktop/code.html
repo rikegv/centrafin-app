@@ -3539,11 +3539,7 @@
             if (!isSuperAdm) {
                 // Esteira: master grava solicitação UPDATE em CustosFolha.
                 const regAtual = cacheRegistros.find(r => r._id === editandoId);
-                const dadosAntigos = regAtual ? {
-                    nome: regAtual.nome || null,
-                    empresa_atribuida: regAtual.empresa_atribuida || null,
-                    centro_custo: regAtual.centro_custo || null,
-                } : null;
+                const dadosAntigos = regAtual ? (() => { const { _id, ...rest } = regAtual; return rest; })() : null;
                 await _criarSolicitacaoAprovacao('UPDATE', COLECAO, editandoId, dadosAntigos,
                     { nome, empresa_atribuida: emp, centro_custo: cc },
                     `Edição: ${nome} · ${emp}`, 'FOLHA');
