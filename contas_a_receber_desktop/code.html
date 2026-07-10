@@ -3952,7 +3952,7 @@
             ...operacoesParcelas
           ];
           await _criarSolicitacaoAprovacao('BATCH_COMPOUND', 'Lancamentos', notaOriginal.id,
-              { status: notaOriginal.status || notaOriginal.Status || null },
+              { status: notaOriginal.status || notaOriginal.Status || null, valor_fatura: notaOriginal.valor_fatura || notaOriginal['Valor Fatura'] || null },
               { operacoes: operacoes },
               `Parcelamento: NF ${rpsBase} em ${n} parcelas (${notaOriginal.cliente || notaOriginal.Cliente || '-'})`, 'CRF');
           if (fb) {
@@ -4095,7 +4095,7 @@
             status: '', Status: '', desmembrado_em: null, parcelas_geradas: null, data_edicao: new Date().toISOString()
           }});
           await _criarSolicitacaoAprovacao('BATCH_COMPOUND', 'Lancamentos', nota.id,
-              { status: 'DESMEMBRADO', parcelas_geradas: nota.parcelas_geradas || filhasDocs.length },
+              { status: 'DESMEMBRADO', parcelas_geradas: nota.parcelas_geradas || filhasDocs.length, valor_fatura: nota.valor_fatura || nota['Valor Fatura'] || null },
               { operacoes: operacoes },
               `Desfazer parcelamento: NF ${rpsMae} (${nota.cliente || nota.Cliente || '-'}) — ${filhasDocs.length} parcela(s)`, 'CRF');
           if (fb) {

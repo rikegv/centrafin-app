@@ -1127,56 +1127,71 @@
         }
         if (op === 'BATCH_COMPOUND') {
             const ops = (dados && dados.operacoes) || [];
-            const antigos = s.dados_antigos || {};
-            // Resumo legível agrupado por tipo de ação
+            const resumo = s.resumo || '';
+            const isParcelamento = /^Parcelamento:/i.test(resumo);
+            const isDesfazer = /^Desfazer parcelamento:/i.test(resumo);
             const nCreate = ops.filter(o => o.acao === 'CREATE').length;
-            const nUpdate = ops.filter(o => o.acao === 'UPDATE').length;
             const nDelete = ops.filter(o => o.acao === 'DELETE').length;
+            const fmtBRL = v => typeof v === 'number' ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v) : escHTML(String(v ?? '—'));
 
-            const linhasResumo = [];
-            // Sub-itens UPDATE: aplicar diff, mostrar só campos alterados
-            const upd = ops.find(o => o.acao === 'UPDATE' && o.dados);
-            if (upd && upd.dados) {
-                const diffs = _camposDiff(antigos, upd.dados);
-                if (diffs.length) {
-                    diffs.forEach(d => {
-                        linhasResumo.push({ chave: ROTULOS_AMIGAVEIS[d.chave] || d.chave, valor: _fmtValorHumano(d.chave, d.depois) });
-                    });
-                } else {
-                    // Fallback: sem diff detectável, mostrar tudo
-                    const entries = Object.entries(upd.dados).filter(([k]) => !_isMetadadoTecnico(k) && !k.startsWith('_'));
-                    entries.forEach(([k, v]) => {
-                        linhasResumo.push({ chave: ROTULOS_AMIGAVEIS[k] || k, valor: _fmtValorHumano(k, v) });
-                    });
-                }
+            if (isParcelamento) {
+                // Parcelamento: tabela de parcelas com valor e vencimento
+                const parcelas = ops.filter(o => o.acao === 'CREATE' && o.dados);
+                const linhasParcelas = parcelas.map((p, i) => {
+                    const val = p.dados.valor_fatura ?? p.dados['Valor Fatura'] ?? '—';
+                    const venc = p.dados.vencimento || p.dados['Dt Vecto'] || '—';
+                    return `<tr class="border-b border-slate-100 last:border-0">
+                        <td class="py-1.5 pr-3 text-xs text-slate-600">Parcela ${i + 1}</td>
+                        <td class="py-1.5 px-3 text-xs font-mono font-bold text-secondary tabular-nums">${fmtBRL(val)}</td>
+                        <td class="py-1.5 pl-3 text-xs text-slate-500">${escHTML(String(venc))}</td>
+                    </tr>`;
+                }).join('');
+                return `
+                    <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
+                        <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[14px]">call_split</span>
+                            Parcelamento em ${nCreate} parcela(s)
+                        </p>
+                        <table class="w-full">
+                            <thead><tr class="border-b border-slate-200">
+                                <th class="pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-left">Parcela</th>
+                                <th class="pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-left px-3">Valor</th>
+                                <th class="pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-left pl-3">Vencimento</th>
+                            </tr></thead>
+                            <tbody>${linhasParcelas}</tbody>
+                        </table>
+                        <p class="text-[10px] text-slate-400 italic mt-2">Nota original marcada como DESMEMBRADO</p>
+                    </div>`;
             }
-            // Sub-itens CREATE: mostrar campos preenchidos normalmente
-            ops.filter(o => o.acao === 'CREATE' && o.dados).forEach(cr => {
-                const entries = Object.entries(cr.dados).filter(([k]) => !_isMetadadoTecnico(k) && !k.startsWith('_'));
-                entries.forEach(([k, v]) => {
-                    if (v != null && v !== '') {
-                        linhasResumo.push({ chave: ROTULOS_AMIGAVEIS[k] || k, valor: _fmtValorHumano(k, v) });
-                    }
-                });
-            });
-            if (nCreate > 0) linhasResumo.push({ chave: 'Registros criados', valor: String(nCreate) });
-            if (nDelete > 0) linhasResumo.push({ chave: 'Registros excluídos', valor: String(nDelete) });
-
-            const resumoHtml = linhasResumo.map(r =>
-                `<div class="flex items-baseline gap-2 py-1.5 border-b border-slate-100 last:border-0">
-                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">${escHTML(r.chave)}</dt>
-                    <dd class="text-xs text-slate-700 font-medium truncate">${r.valor}</dd>
-                </div>`
-            ).join('');
-
+            if (isDesfazer) {
+                // Desfazer parcelamento
+                return `
+                    <div class="border-l-4 border-red-400 bg-red-50/30 rounded-xl p-4">
+                        <p class="text-[10px] font-extrabold uppercase tracking-widest text-red-700 mb-3 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[14px]">undo</span>
+                            Desfazer Parcelamento
+                        </p>
+                        <div class="space-y-1.5 text-xs text-slate-700">
+                            <p class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[14px] text-red-500">delete_sweep</span>
+                                <span class="font-medium">${nDelete} parcela(s) serão excluídas</span>
+                            </p>
+                            <p class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[14px] text-emerald-500">restore</span>
+                                <span class="font-medium">Nota original restaurada (status limpo)</span>
+                            </p>
+                        </div>
+                    </div>`;
+            }
+            // Fallback genérico para BATCH_COMPOUND não reconhecido
             return `
-                <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
-                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[14px]">edit_note</span>
-                        Alteração Proposta
+                <div class="border-l-4 border-purple-400 bg-purple-50/30 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-purple-700 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">call_split</span>
+                        Operação Composta
                     </p>
-                    <p class="text-xs text-slate-600 font-medium mb-2">${escHTML(s.resumo || (ops.length + ' operação(ões)'))}</p>
-                    <dl class="mt-2">${resumoHtml}</dl>
+                    <p class="text-xs text-slate-600 font-medium">${escHTML(resumo || (ops.length + ' operação(ões)'))}</p>
+                    <p class="text-[10px] text-slate-400 mt-1">${nCreate > 0 ? nCreate + ' criação(ões)' : ''}${nDelete > 0 ? (nCreate > 0 ? ' · ' : '') + nDelete + ' exclusão(ões)' : ''}</p>
                 </div>`;
         }
         if (op === 'IMPORT_BATCH') {
@@ -1242,10 +1257,31 @@
                 </dl>
             </div>`;
 
-        // UPDATE: tabela unificada de diff. Outros: layout de cards.
+        // UPDATE: tabela unificada de diff. BATCH_COMPOUND: cards de negócio. Outros: layout padrão.
         let cards;
         if (op === 'UPDATE' && s.dados_antigos) {
             cards = _renderTabelaDiff(s);
+        } else if (op === 'BATCH_COMPOUND') {
+            // Status Atual dedicado para compostas: Valor da Fatura + Status
+            const ant = s.dados_antigos || {};
+            const fmtBRL = v => typeof v === 'number' ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v) : null;
+            const linhasStatus = [];
+            if (ant.valor_fatura != null) linhasStatus.push(`<dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Valor da Fatura</dt><dd class="text-xs font-mono font-bold text-secondary tabular-nums">${fmtBRL(ant.valor_fatura) || escHTML(String(ant.valor_fatura))}</dd>`);
+            if (ant.status != null) linhasStatus.push(`<dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</dt><dd class="text-xs text-slate-700 font-medium">${escHTML(String(ant.status))}</dd>`);
+            if (ant.parcelas_geradas != null) linhasStatus.push(`<dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Parcelas geradas</dt><dd class="text-xs text-slate-700 font-medium">${escHTML(String(ant.parcelas_geradas))}</dd>`);
+            const statusAtualHtml = linhasStatus.length
+                ? `<div class="border-l-4 border-red-400 bg-red-50/30 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-red-700 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">history</span>
+                        Status Atual
+                    </p>
+                    <dl class="grid grid-cols-2 gap-x-4 gap-y-2">${linhasStatus.join('')}</dl>
+                </div>`
+                : _renderCardStatusAtual(s.dados_antigos);
+            cards = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                ${statusAtualHtml}
+                ${_renderCardAlteracaoProposta(s)}
+            </div>`;
         } else {
             cards = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 ${_renderCardStatusAtual(s.dados_antigos)}
