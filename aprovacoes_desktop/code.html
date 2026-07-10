@@ -457,25 +457,32 @@
         const s = String(k);
         if (s === 'created_at' || s === 'updated_at' || s === 'id' ||
             s === 'solicitante_uid' || s === 'criado_por' ||
-            s === 'aprovado_por_email' || s === 'rejeitado_por_email') return true;
+            s === 'aprovado_por_email' || s === 'rejeitado_por_email' ||
+            s === 'data_edicao' || s === 'data_importacao') return true;
         if (/_timestamp$/i.test(s)) return true;
         return false;
     }
+    function _normalizar(v) {
+        if (v == null || v === '') return null;
+        // number vs string numérica: "1800" e 1800 são iguais
+        if (typeof v === 'number') return v;
+        if (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) return Number(v);
+        return v;
+    }
     function _camposDiff(antigos, novos) {
-        const keys = new Set([
-            ...Object.keys(antigos || {}),
-            ...Object.keys(novos || {}),
-        ]);
+        // Itera APENAS as chaves de dados_novos (payload do formulário).
+        // Campo ausente em dados_novos = não foi tocado = ignorado.
+        // Campo ausente em dados_antigos mas presente em dados_novos = mudança
+        // (de vazio para o valor novo).
         const diffs = [];
-        for (const k of keys) {
+        const ant = antigos || {};
+        for (const k of Object.keys(novos || {})) {
             if (_isMetadadoTecnico(k)) continue;
             if (String(k).startsWith('_')) continue;
-            const a = antigos ? antigos[k] : undefined;
-            const b = novos ? novos[k] : undefined;
-            // Comparação "fraca" — null/'' são considerados equivalentes pra
-            // não destacar falsos diffs vindos de campos vazios.
-            const aN = (a == null || a === '') ? null : a;
-            const bN = (b == null || b === '') ? null : b;
+            const a = ant[k];
+            const b = novos[k];
+            const aN = _normalizar(a);
+            const bN = _normalizar(b);
             if (JSON.stringify(aN) === JSON.stringify(bN)) continue;
             diffs.push({ chave: k, antes: a, depois: b });
         }
@@ -1012,7 +1019,45 @@
     // Guarda a solicitação aberta no modal de detalhes para reuso.
     let _solicitacaoDetalhes = null;
 
-    function _renderCardStatusAtual(dados, dadosNovos, tipoOp) {
+    // Tabela unificada de diff para UPDATE: "Valor atual | Alterado para"
+    function _renderTabelaDiff(s) {
+        const diffs = _camposDiff(s.dados_antigos || {}, s.dados_novos || {});
+        if (!diffs.length) {
+            return `
+                <div class="border-l-4 border-slate-300 bg-slate-50/50 rounded-xl p-4">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[14px]">compare_arrows</span>
+                        Alterações
+                    </p>
+                    <p class="text-xs text-slate-400 italic">Nenhuma alteração de dado detectada</p>
+                </div>`;
+        }
+        const linhas = diffs.map(d => `
+            <tr class="border-b border-slate-100 last:border-0">
+                <td class="py-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap align-top">${escHTML(ROTULOS_AMIGAVEIS[d.chave] || d.chave)}</td>
+                <td class="py-2 px-3 text-xs text-red-700 align-top">${_fmtValorHumano(d.chave, d.antes)}</td>
+                <td class="py-2 pl-3 text-xs text-emerald-700 font-medium align-top">${_fmtValorHumano(d.chave, d.depois)}</td>
+            </tr>`).join('');
+        return `
+            <div class="border-l-4 border-amber-400 bg-amber-50/30 rounded-xl p-4">
+                <p class="text-[10px] font-extrabold uppercase tracking-widest text-amber-700 mb-3 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px]">compare_arrows</span>
+                    Alterações
+                </p>
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-slate-200">
+                            <th class="pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-left">Campo</th>
+                            <th class="pb-2 text-[10px] font-bold text-red-400 uppercase tracking-wider text-left px-3">Valor atual</th>
+                            <th class="pb-2 text-[10px] font-bold text-emerald-500 uppercase tracking-wider text-left pl-3">Alterado para</th>
+                        </tr>
+                    </thead>
+                    <tbody>${linhas}</tbody>
+                </table>
+            </div>`;
+    }
+
+    function _renderCardStatusAtual(dados) {
         if (dados == null) {
             return `
                 <div class="border-l-4 border-red-400 bg-red-50/30 rounded-xl p-4">
@@ -1023,14 +1068,7 @@
                     <p class="text-xs text-slate-400 italic">Sem estado anterior (registro novo)</p>
                 </div>`;
         }
-        // Para UPDATE: mostrar apenas os campos que mudaram (valores antigos)
-        let entradas;
-        if (tipoOp === 'UPDATE' && dadosNovos) {
-            const diffs = _camposDiff(dados, dadosNovos);
-            entradas = diffs.map(d => [d.chave, d.antes]);
-        } else {
-            entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
-        }
+        const entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
         if (!entradas.length) {
             return `
                 <div class="border-l-4 border-red-400 bg-red-50/30 rounded-xl p-4">
@@ -1038,7 +1076,7 @@
                         <span class="material-symbols-outlined text-[14px]">history</span>
                         Status Atual
                     </p>
-                    <p class="text-xs text-slate-400 italic">— sem campos alterados —</p>
+                    <p class="text-xs text-slate-400 italic">— sem dados —</p>
                 </div>`;
         }
         const linhas = entradas.map(([k, v]) => `
@@ -1144,7 +1182,7 @@
         if (op === 'IMPORT_BATCH') {
             return _renderCardCampos('Alteração Proposta', dados, 'emerald');
         }
-        // CREATE / UPDATE: show dados_novos fields
+        // CREATE: mostrar todos os campos preenchidos (não há diff possível)
         if (dados == null) {
             return `
                 <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
@@ -1155,14 +1193,7 @@
                     <p class="text-xs text-slate-400 italic">N/A</p>
                 </div>`;
         }
-        // Para UPDATE: mostrar apenas campos que mudaram (valores novos)
-        let entradas;
-        if (op === 'UPDATE' && s.dados_antigos) {
-            const diffs = _camposDiff(s.dados_antigos, dados);
-            entradas = diffs.map(d => [d.chave, d.depois]);
-        } else {
-            entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
-        }
+        const entradas = Object.entries(dados).filter(([k]) => !k.startsWith('_') && !_isMetadadoTecnico(k));
         if (!entradas.length) {
             return `
                 <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
@@ -1170,7 +1201,7 @@
                         <span class="material-symbols-outlined text-[14px]">edit_note</span>
                         Alteração Proposta
                     </p>
-                    <p class="text-xs text-slate-400 italic">— sem campos alterados —</p>
+                    <p class="text-xs text-slate-400 italic">— sem campos —</p>
                 </div>`;
         }
         const linhas = entradas.map(([k, v]) => `
@@ -1211,11 +1242,16 @@
                 </dl>
             </div>`;
 
-        // Two-card layout: Status Atual + Alteração Proposta
-        const cards = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            ${_renderCardStatusAtual(s.dados_antigos, s.dados_novos, op)}
-            ${_renderCardAlteracaoProposta(s)}
-        </div>`;
+        // UPDATE: tabela unificada de diff. Outros: layout de cards.
+        let cards;
+        if (op === 'UPDATE' && s.dados_antigos) {
+            cards = _renderTabelaDiff(s);
+        } else {
+            cards = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                ${_renderCardStatusAtual(s.dados_antigos)}
+                ${_renderCardAlteracaoProposta(s)}
+            </div>`;
+        }
 
         corpo.innerHTML = cabecalho + cards;
 
