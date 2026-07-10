@@ -393,7 +393,15 @@
         return `${dd}/${mm} ${hh}:${mi}`;
     }
 
-    function badgeOperacao(op) {
+    function _nomeRealOperacao(resumo, upper) {
+        if (!resumo) return null;
+        const m = String(resumo).match(/^([^:]+):/);
+        if (!m) return null;
+        const nome = m[1].trim();
+        return upper ? nome.toUpperCase() : nome;
+    }
+
+    function badgeOperacao(op, resumo) {
         const map = {
             CREATE:         { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', ico: 'add_circle',    lbl: 'CADASTRO' },
             UPDATE:         { bg: 'bg-amber-50 text-amber-700 border-amber-200',       ico: 'edit',          lbl: 'EDIÇÃO' },
@@ -403,7 +411,8 @@
             IMPORT_BATCH:   { bg: 'bg-tertiary/10 text-tertiary border-tertiary/30',   ico: 'cloud_upload',  lbl: 'IMPORTAÇÃO' },
         };
         const m = map[op] || { bg: 'bg-slate-100 text-slate-500 border-slate-200', ico: 'help', lbl: op || '—' };
-        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${m.bg}"><span class="material-symbols-outlined text-[12px]">${m.ico}</span>${m.lbl}</span>`;
+        const lbl = (op === 'BATCH_COMPOUND' && _nomeRealOperacao(resumo, true)) || m.lbl;
+        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${m.bg}"><span class="material-symbols-outlined text-[12px]">${m.ico}</span>${escHTML(lbl)}</span>`;
     }
 
     function descricaoAlvo(s) {
@@ -661,7 +670,7 @@
             const resumoTexto = s.resumo ? escHTML(s.resumo) : descricaoAlvo(s);
             linhas[i] = `
                 <tr class="hover:bg-slate-50/60 transition-colors align-top">
-                    <td class="px-4 py-3 align-top">${badgeOperacao(s.tipo_operacao)}${moduloBadge}</td>
+                    <td class="px-4 py-3 align-top">${badgeOperacao(s.tipo_operacao, s.resumo)}${moduloBadge}</td>
                     <td class="px-4 py-3 text-xs text-slate-700 leading-relaxed">
                         <div class="font-bold text-secondary text-[13px] mb-0.5">${resumoTexto}</div>
                         <div class="text-slate-500">${descricaoHumana(s)}</div>
@@ -970,7 +979,7 @@
     }
 
     // Badge da operação dentro do modal (cor + ícone consistentes com a lista).
-    function _badgeOperacao(op) {
+    function _badgeOperacao(op, resumo) {
         const map = {
             CREATE:         { bg: 'bg-emerald-100 text-emerald-800 border-emerald-200', ico: 'add_circle',    lbl: 'Novo Cadastro' },
             UPDATE:         { bg: 'bg-amber-100 text-amber-800 border-amber-200',       ico: 'edit',          lbl: 'Edição' },
@@ -980,9 +989,10 @@
             IMPORT_BATCH:   { bg: 'bg-tertiary/15 text-tertiary border-tertiary/30',    ico: 'cloud_upload',  lbl: 'Importação em Lote' },
         };
         const m = map[op] || { bg: 'bg-slate-100 text-slate-600 border-slate-200', ico: 'help', lbl: op || '—' };
+        const lbl = (op === 'BATCH_COMPOUND' && _nomeRealOperacao(resumo)) || m.lbl;
         return `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold border ${m.bg}">
             <span class="material-symbols-outlined text-[14px]">${m.ico}</span>
-            ${m.lbl}
+            ${escHTML(lbl)}
         </span>`;
     }
 
@@ -1072,23 +1082,38 @@
         }
         if (op === 'BATCH_COMPOUND') {
             const ops = (dados && dados.operacoes) || [];
-            const opsHtml = ops.slice(0, 10).map((item, idx) => {
-                const acaoLabel = item.acao === 'CREATE' ? 'Criar' : item.acao === 'UPDATE' ? 'Editar' : item.acao === 'DELETE' ? 'Excluir' : item.acao;
-                const cor = item.acao === 'CREATE' ? 'emerald' : item.acao === 'DELETE' ? 'red' : 'amber';
-                return `<div class="bg-${cor}-50/30 border border-${cor}-100 rounded-lg p-3">
-                    <p class="text-[10px] text-${cor}-700 font-bold mb-1">#${idx + 1} ${acaoLabel}${item.doc_id ? ' · ' + escHTML(item.doc_id) : ''}</p>
-                    ${item.dados ? `<div class="text-[11px] text-slate-600 truncate">${Object.entries(item.dados).slice(0, 3).map(([k,v]) => `<span class="font-bold">${escHTML(k)}</span>: ${escHTML(String(v ?? ''))}`).join(' · ')}</div>` : ''}
-                </div>`;
-            }).join('');
+            // Resumo legível agrupado por tipo de ação
+            const nCreate = ops.filter(o => o.acao === 'CREATE').length;
+            const nUpdate = ops.filter(o => o.acao === 'UPDATE').length;
+            const nDelete = ops.filter(o => o.acao === 'DELETE').length;
+
+            const linhasResumo = [];
+            // Campos-chave da operação UPDATE (status, parcelas, etc.)
+            const upd = ops.find(o => o.acao === 'UPDATE' && o.dados);
+            if (upd && upd.dados) {
+                const entries = Object.entries(upd.dados).filter(([k]) => !_isMetadadoTecnico(k) && !k.startsWith('_'));
+                entries.forEach(([k, v]) => {
+                    linhasResumo.push({ chave: ROTULOS_AMIGAVEIS[k] || k, valor: _fmtValorHumano(k, v) });
+                });
+            }
+            if (nCreate > 0) linhasResumo.push({ chave: 'Registros criados', valor: String(nCreate) });
+            if (nDelete > 0) linhasResumo.push({ chave: 'Registros excluídos', valor: String(nDelete) });
+
+            const resumoHtml = linhasResumo.map(r =>
+                `<div class="flex items-baseline gap-2 py-1.5 border-b border-slate-100 last:border-0">
+                    <dt class="text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">${escHTML(r.chave)}</dt>
+                    <dd class="text-xs text-slate-700 font-medium truncate">${r.valor}</dd>
+                </div>`
+            ).join('');
+
             return `
                 <div class="border-l-4 border-emerald-400 bg-emerald-50/30 rounded-xl p-4">
                     <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-[14px]">edit_note</span>
                         Alteração Proposta
                     </p>
-                    <p class="text-xs text-slate-600 font-medium mb-2">${ops.length} operação(ões) composta(s)</p>
-                    <div class="space-y-2">${opsHtml}</div>
-                    ${ops.length > 10 ? `<p class="text-[10px] text-slate-400 italic mt-2">... mais ${ops.length - 10} operação(ões).</p>` : ''}
+                    <p class="text-xs text-slate-600 font-medium mb-2">${escHTML(s.resumo || (ops.length + ' operação(ões)'))}</p>
+                    <dl class="mt-2">${resumoHtml}</dl>
                 </div>`;
         }
         if (op === 'IMPORT_BATCH') {
@@ -1141,7 +1166,7 @@
             <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                 <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
                     <h4 class="font-headline text-base font-extrabold text-secondary">${escHTML(resumoTitulo)}</h4>
-                    ${_badgeOperacao(op)}
+                    ${_badgeOperacao(op, s.resumo)}
                 </div>
                 <span class="text-[11px] font-mono text-slate-400 tabular-nums">${fmtDataSolicit(s.criado_em)}</span>
                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs mt-3">
@@ -1211,8 +1236,12 @@
 
     // ── Revisar e Aprovar (segundo modal) ──────────────────────────────────
     document.getElementById('btn-revisar-aprovar').addEventListener('click', () => {
-        if (!_solicitacaoDetalhes) return;
-        abrirModalRevisao(_solicitacaoDetalhes);
+        if (!_solicitacaoDetalhes) { console.warn('[Aprovações] btn-revisar-aprovar: _solicitacaoDetalhes é null'); return; }
+        try {
+            abrirModalRevisao(_solicitacaoDetalhes);
+        } catch (err) {
+            console.error('[Aprovações] Erro ao abrir modal de revisão:', err);
+        }
     });
     document.getElementById('btn-fechar-apv-revisao').addEventListener('click', () => fecharModal('modal-apv-revisao'));
     document.getElementById('btn-cancelar-apv-revisao').addEventListener('click', () => fecharModal('modal-apv-revisao'));
@@ -1227,7 +1256,8 @@
     }
 
     function abrirModalRevisao(s) {
-        if (!_isSuperAdmin) return;
+        console.log('[Aprovações] abrirModalRevisao chamada, tipo:', s?.tipo_operacao, 'isSuperAdmin:', _isSuperAdmin);
+        if (!_isSuperAdmin) { console.warn('[Aprovações] abrirModalRevisao bloqueada: não é SuperAdmin'); return; }
         const op = String(s.tipo_operacao || '').toUpperCase();
         const corpo = document.getElementById('apv-revisao-corpo');
 
