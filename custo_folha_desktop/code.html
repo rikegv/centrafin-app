@@ -2512,6 +2512,7 @@
     // ── HISTÓRICO: estado + render ───────────────────────────────────────────
     let unsubHistorico = null;
     let ultimoFiltroKey = '';
+    let _persistindoTotais = false;
     let cacheRegistros = [];     // resultado bruto da query atual (Folha + PJ)
     let _cacheFolha = [];         // só Folha (CustosFolha) — última fatia recebida
     let _cachePJ = [];            // só PJ (ContasAPagar) — listener persistente
@@ -3179,6 +3180,51 @@
             // os campos Bnf_VT/VR/VA/MED são injetados no `reg` em tempo de
             // runtime e capturados pelo calcularTotais sem mudanças no motor.
             refinados.forEach(enriquecerCltComBeneficios);
+            // ── PERSISTÊNCIA DE TOTAIS (OS-CUSTO-FOLHA-DASH-01) ──────────────
+            // Calcula custo_total + componentes e grava no Firestore para que
+            // dashboards leiam diretamente o campo persistido (regra de fonte
+            // única). Anti-loop: dirty-check + guard booleano de sessão.
+            if (!_persistindoTotais) {
+                const docsParaPersistir = [];
+                for (const reg of refinados) {
+                    if (!reg || !reg._id) continue;
+                    // Captura valores originais do snapshot ANTES de calcularTotais
+                    // (que muta reg.total_beneficios_pago/desconto/liquido).
+                    const prev_custo_total = reg.custo_total;
+                    const prev_vencimentos = reg.total_vencimentos;
+                    const prev_encargos = reg.total_encargos;
+                    const prev_beneficios = reg.total_beneficios_pago;
+                    const prev_descontos = reg.total_descontos_bnf;
+                    const prev_salario = reg.total_salario_bruto;
+                    const t = calcularTotais(reg);
+                    const diff = (a, b) => Math.abs((a || 0) - (b || 0)) >= 0.01;
+                    if (diff(prev_custo_total, t.total) ||
+                        diff(prev_vencimentos, t.vencimentos) ||
+                        diff(prev_encargos, t.encargos) ||
+                        diff(prev_beneficios, t.beneficios) ||
+                        diff(prev_descontos, t.descontosBnf) ||
+                        diff(prev_salario, t.salarioBruto)) {
+                        docsParaPersistir.push({ id: reg._id, totais: t });
+                    }
+                }
+                if (docsParaPersistir.length > 0) {
+                    _persistindoTotais = true;
+                    console.log(`[CustoFolha] Persistindo totais: ${docsParaPersistir.length} de ${refinados.length} docs atualizados`);
+                    for (const { id, totais } of docsParaPersistir) {
+                        updateDoc(doc(db, COLECAO, id), {
+                            custo_total: totais.total,
+                            total_vencimentos: totais.vencimentos,
+                            total_encargos: totais.encargos,
+                            total_beneficios_pago: totais.beneficios,
+                            total_descontos_bnf: totais.descontosBnf,
+                            total_salario_bruto: totais.salarioBruto,
+                        }).catch(err => console.warn('[CustoFolha] Persistir totais falhou:', id, err?.code || err?.message));
+                    }
+                }
+            } else {
+                _persistindoTotais = false;
+            }
+            // ── FIM PERSISTÊNCIA DE TOTAIS ────────────────────────────────────
             // Folha + PJ (auditoria 2026-05-18): mescla com os PJs já em cache,
             // filtrando-os pelos mesmos critérios server-side da query Folha.
             _cacheFolha = refinados;
