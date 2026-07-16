@@ -2265,6 +2265,10 @@
             // Cobre slugs `BOLSA_AUXILIO_ESTAGIARIO_Valor` e
             // `COMPLEMENTO_BOLSA_AUXILIO_Valor` via `includes`.
             'BOLSA_AUXILIO',
+            // OS-FOLHA-BLOCO-B (2026-07-16): DIFERENCA_SALARIAL caía em
+            // "outros valores" porque SALARIAL ≠ SALARIO (a 7ª letra
+            // diverge: A vs O). Keyword própria captura o slug.
+            'DIFERENCA',
         ];
 
         // 3. Se contém qualquer raiz acima, é Vencimento.
@@ -3680,6 +3684,9 @@
         // Buckets contábeis (apenas números finitos). Espelha calcularTotais:
         // descontos de folha caem em 'descontos_folha' (informativo, NÃO soma).
         if (typeof raw === 'number' && Number.isFinite(raw)) {
+            // OS-FOLHA-BLOCO-B: arredondamento negativo exibido em Descontos
+            // (no cálculo, continua em vencimentos — reduz o total corretamente).
+            if (String(k).toUpperCase().includes('ARREDONDAMENTO') && raw < 0) return 'descontos_folha';
             if (isDescFolhaInfo(k))          return 'descontos_folha'; // informativo
             if (isEncargo(k))                return 'encargos';
             if (k.startsWith('Bnf_'))        return 'beneficios';
@@ -3870,8 +3877,7 @@
             secao('Encargos Sociais', 'account_balance', 'text-secondary', grupos.encargos) +
             secao('Benefícios Pagos', 'card_travel', 'text-tertiary', grupos.beneficios) +
             secao('Descontos em Benefícios', 'card_travel', 'text-red-500', grupos.descontos_bnf) +
-            secao('Descontos de Folha', 'trending_down', 'text-slate-500', grupos.descontos_folha,
-                  ` <span class="normal-case text-slate-400 font-normal">— informativo, não entra no Custo Total</span>`) +
+            secao('Descontos', 'trending_down', 'text-slate-500', grupos.descontos_folha) +
             secao('Quantidades e Índices', 'functions', 'text-slate-500', grupos.quantidades) +
             secao('Outros valores importados', 'help', 'text-amber-500', grupos.outros_valores,
                   ` <span class="normal-case text-slate-400 font-normal">— não mapeados no cálculo</span>`) +
