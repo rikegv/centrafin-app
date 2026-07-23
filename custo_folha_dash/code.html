@@ -105,6 +105,7 @@
       } catch (e) {}
     })();
   </script>
+  <script src="../core_rules.js?v=20260723a"></script>
   <script src="../theme_manager.js?v=20260508a" defer></script>
 </head>
 
@@ -674,209 +675,38 @@
     const EMPRESA_PJ_SENTINELA = 'PJ';
 
     // ==========================================
-    // WHITELISTS — espelha o importador (custo_folha_desktop/code.html L660-758)
-    // Fórmula: Custo Total = Vencimentos + Encargos + Benefícios Pagos − Descontos Benefícios
+    // CLASSIFICADORES E CÁLCULO — delegam para core_rules.js (Fonte Única)
+    // OS-FOLHA-FONTE-UNICA-01: elimina divergência entre Gerenciador e Dashboard.
     // ==========================================
-    function isVencimento(k) {
-      const key = String(k || '').toUpperCase();
-      if (key.endsWith('_QTDE')) return false;
-      // Pró-labore é PROVENTO mesmo com FGTS no slug ("PRO_LABORE_C_FGTS_Valor")
-      // — caso comum de sócio-administrador. Sem essa exceção, a blindagem
-      // FGTS abaixo o joga em "outros valores" e ele vaza p/ Encargos.
-      const ehProLabore = key.includes('PRO_LABORE') || key.includes('PROLABORE');
-      if (ehProLabore) {
-        if (key.startsWith('DESC_') || key.startsWith('DESCTO_')) return false;
-        if (key.includes('DESCONTO')) return false;
-        if (key.startsWith('BASE_')) return false;
-        return true;
-      }
-      if (key.includes('INSS') || key.includes('IRRF') || key.includes('DESCONTO') ||
-          key.includes('EDUCACAO') || key.includes('FGTS') || key.includes('BASE_')) {
-        return false;
-      }
-      const keywords = [
-        'SALARIO', 'PRO_LABORE', 'DSR', 'CRECHE',
-        'COMISSAO', 'BANCO_DE_HORAS', 'ARREDONDAMENTO', 'REEMBOLSO',
-        'AVISO_PREVIO', 'FERIAS', '1_3', 'EMPRESTIMO_SALDO_NEGATIVO',
-        '13O', 'AJUDA_DE_CUSTO', 'RESCISAO', 'HORA_EXTRA',
-        'PARTICIPACAO', 'LUCRO',
-        'BONUS', 'PREMIO', 'PREMIACAO', 'GRATIFICACAO',
-        // Auditoria 2026-05-18 (Conector PJ ➔ Ranking de Colaboradores):
-        // PJ presta serviço e o slug canônico é SERVICOS_PRESTADOS_Valor.
-        // Reconhecer aqui é o que faz o valor PJ somar em Vencimentos no dash.
-        'SERVICOS_PRESTADOS',
-      ];
-      return keywords.some(word => key.includes(word));
-    }
+    const isVencimento = folhaCustoIsVencimento;
+    const isEncargo = folhaCustoIsEncargo;
+    const isDescFolhaInfo = folhaCustoIsDescFolhaInfo;
+    const isBnfDesc = folhaCustoIsBnfDesc;
+    const SET_BNF_PAGO = FOLHA_CUSTO_SET_BNF_PAGO;
+    const SET_BNF_DESC = FOLHA_CUSTO_SET_BNF_DESC;
+    function _hasToken(key, token) { return _folhaCustoHasToken(key, token); }
 
-    // Encargos Patronais — auditoria 2026-04-27.
-    // Whitelist tokenizada + blacklist defensiva. Espelha custo_folha_desktop.
-    // INSS retido / IRRF / sindicato JAMAIS entram aqui (já estão no Bruto).
-    function _hasToken(key, token) {
-      return new RegExp(`(^|_)${token}(_|$)`).test(key);
-    }
-    function isEncargo(k) {
-      const key = String(k || '').toUpperCase();
-      if (key.endsWith('_QTDE')) return false;
-      if (key.startsWith('BASE_')) return false;
-      if (key.startsWith('DESC_') || key.startsWith('DESCTO_')) return false;
-      if (key.includes('DESCONTO')) return false;
-      // Pró-labore é PROVENTO — bloqueio antes da whitelist FGTS pra impedir
-      // que "PRO_LABORE_C_FGTS_Valor" vaze pra encargos via token FGTS.
-      if (key.includes('PRO_LABORE') || key.includes('PROLABORE')) return false;
-      // Blacklist explícita — descontos do funcionário.
-      if (_hasToken(key, 'IRRF') || _hasToken(key, 'IR_RETIDO')) return false;
-      if (key.includes('SINDIC')) return false;        // SINDICATO + SINDICAL
-      if (_hasToken(key, 'CONTRIBUICAO_ASSISTENCIAL')) return false;
-      if (_hasToken(key, 'INSS_RETIDO')) return false;
-      if (_hasToken(key, 'INSS') && !key.includes('PATRONAL')) return false;
-      // Whitelist patronal por TOKEN.
-      const tokens = ['INSS_PATRONAL', 'FGTS', 'TERCEIROS', 'RAT', 'FAP', 'SISTEMA_S'];
-      return tokens.some(t => _hasToken(key, t));
-    }
-    function isDescFolhaInfo(k) {
-      const key = String(k || '').toUpperCase();
-      if (key.endsWith('_QTDE')) return false;
-      if (key.startsWith('BASE_')) return false;
-      if (_hasToken(key, 'INSS') && !key.includes('PATRONAL')) return true;
-      if (_hasToken(key, 'IRRF') || _hasToken(key, 'IR_RETIDO')) return true;
-      if (key.includes('SINDIC')) return true;        // SINDICATO + SINDICAL
-      if (_hasToken(key, 'CONTRIBUICAO_ASSISTENCIAL')) return true;
-      return false;
-    }
-
-    const SET_BNF_PAGO = new Set([
-      'VALE_TRANSPORTE_Valor', 'VALE_REFEICAO_Valor',
-      'ASSISTENCIA_MEDICA_Valor', 'ASSISTENCIA_ODONTOLOGICA_Valor',
-      'VALE_ALIMENTACAO_Valor',
-    ]);
-
-    const SET_BNF_DESC = new Set([
-      'SEGURO_DE_VIDA_Valor', 'DESCTO_DE_VALE_TRANSPORTE_Valor',
-      'DEVOLUCAO_DE_VR_NAO_UTILIZADO_Valor',
-      'DESCTO_DE_VALE_REFEICAO_Valor',
-      'DESCTO_DE_ASSISTENCIA_MEDICA_Valor',
-    ]);
-
-    // isBnfDesc estende SET_BNF_DESC para coparticipação odontológica.
-    // Auditoria 2026-04-27 (caso Henrique): "DESCONTO CONTRIBUIÇÃO ODONTOLOGICA"
-    // estava caindo em "outros valores" e não reduzia o Custo Total — corrige
-    // diferença de R$ 11,25 vs. relatório oficial. Espelha custo_folha_desktop.
-    function isBnfDesc(k) {
-      if (SET_BNF_DESC.has(k)) return true;
-      const key = String(k || '').toUpperCase();
-      if (key.endsWith('_QTDE')) return false;
-      if (key.startsWith('BASE_')) return false;
-      const ehDesconto = key.startsWith('DESC_') || key.startsWith('DESCTO_') || key.includes('DESCONTO');
-      if (ehDesconto && key.includes('ODONTOL')) return true;
-      return false;
-    }
-
-    // Subset de Vencimentos = salário base mensal (incluindo PRO_LABORE).
-    // Detecção FLEXÍVEL por substring SALARIO/PRO_LABORE — captura variações
-    // tipo SALARIO_Valor, SALARIO_BASE_Valor, SALARIO_BRUTO_MENSAL_Valor, etc.
-    // Blindagens excluem rubricas que CONTÊM "salário" mas NÃO são base mensal:
-    // família, maternidade, adiantamento, líquido, 13º, férias, bases de cálculo
-    // e descontos. Mantém o KPI "Salário Bruto" coerente: salário-base × cabeça.
-    function isSalarioBase(k) {
-      const key = String(k || '').toUpperCase();
-      // Precisa conter SALARIO, PRO_LABORE ou SERVICOS_PRESTADOS — caso contrário,
-      // descarta cedo. Auditoria 2026-05-18 (Conector PJ): PJ entra via
-      // SERVICOS_PRESTADOS — sem esta cláusula o KPI Salário Bruto ignora os PJs.
-      if (!key.includes('SALARIO') && !key.includes('PRO_LABORE') && !key.includes('SERVICOS_PRESTADOS')) return false;
-      // Blindagens: rejeita variantes que não são salário base mensal.
-      if (key.endsWith('_QTDE'))           return false;
-      // Auditoria 2026-04-28: ANTES era `key.includes('BASE_')` o que rejeitava
-      // SILENCIOSAMENTE chaves como SALARIO_BASE_Valor. O bucket Salário Bruto
-      // ficava zerado quando a planilha vinha com a coluna "Salário Base".
-      // Agora rejeitamos só chaves que COMEÇAM com BASE_ (BASE_INSS, BASE_FGTS,
-      // BASE_IRRF) — bases de cálculo de tributos, não salário.
-      if (key.startsWith('BASE_'))         return false; // BASE_INSS, BASE_FGTS
-      if (key.includes('FAMILIA'))         return false; // Salário-família
-      if (key.includes('MATERNIDADE'))     return false; // Auxílio maternidade
-      if (key.includes('ADIANTAMENTO'))    return false;
-      if (key.includes('LIQUIDO'))         return false; // Salário líquido
-      if (key.includes('13O'))             return false; // 13º salário
-      if (key.includes('FERIAS'))          return false;
-      if (key.includes('RESCISAO'))        return false;
-      if (key.includes('AVISO_PREVIO'))    return false;
-      if (key.includes('DESCONTO'))        return false;
-      if (key.startsWith('DESC_'))         return false;
-      if (key.startsWith('DESCTO_'))       return false;
-      if (key.includes('INSS_S_'))         return false; // INSS s/ 13º
-      if (key.includes('IRRF'))            return false;
-      return true;
-    }
-
-    // Set global pra debug — coleta todas as chaves classificadas como salário
-    // base durante as varreduras. Logado em processarCustoFolha pra o usuário
-    // ver no Console quais slugs do Firestore estão entrando na conta.
+    // Variáveis de auditoria/debug (locais ao dashboard)
     const _chavesSalarioDetectadas = new Set();
+    const _audEncargosPorChave    = new Map();
+    const _audDescFolhaPorChave   = new Map();
+    const _audInssEmOutrosBuckets = new Map();
 
-    // Auditoria 2026-04-27 (rodada 2): rastreio por chave para detectar se
-    // alguma rubrica de INSS retido vazou pro bucket de encargos no banco real.
-    // Não muda nenhuma regra — só observa. Lido em processarCustoFolha.
-    const _audEncargosPorChave    = new Map(); // k -> soma R$
-    const _audDescFolhaPorChave   = new Map(); // k -> soma R$
-    const _audInssEmOutrosBuckets = new Map(); // k -> { bucket, soma }
-
+    // Wrapper que delega o cálculo para core_rules.js e alimenta auditoria local.
     function calcularTotais(reg) {
-      let vencimentos = 0, encargos = 0, beneficios = 0, descontosBnf = 0, salarioBruto = 0;
+      const result = folhaCustoCalcularTotais(reg);
+      // Alimenta auditoria de debug local (não altera o cálculo)
       for (const k of Object.keys(reg || {})) {
         const raw = reg[k];
         if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
-        // Salário bruto acumula em PARALELO ao bucket Vencimentos — fora da
-        // cadeia de precedência pra não alterar a soma contábil.
-        if (isSalarioBase(k)) {
-          salarioBruto += raw;
-          _chavesSalarioDetectadas.add(k);
-        }
-
-        // Precedência (espelha custo_folha_desktop):
-        //   1. Descontos folha (INSS retido/IRRF/sindicato) — descarta ANTES
-        //      de qualquer match. Já estão embutidos no Bruto.
-        //   2. Encargos patronais (whitelist tokenizada).
-        //   3. Benefícios (Bnf_* + Sets estritos).
-        //   4. Vencimentos (validador flexível).
+        if (folhaCustoIsSalarioBrutoKey(k)) _chavesSalarioDetectadas.add(k);
         const kUpper = String(k).toUpperCase();
         const tocaINSS = kUpper.includes('INSS');
-
-        if (isDescFolhaInfo(k))    {
-          _audDescFolhaPorChave.set(k, (_audDescFolhaPorChave.get(k) || 0) + raw);
-          continue;
-        }
-        if (isEncargo(k))          {
-          encargos += raw;
-          _audEncargosPorChave.set(k, (_audEncargosPorChave.get(k) || 0) + raw);
-          continue;
-        }
-        if (k.startsWith('Bnf_'))  {
-          beneficios += raw;
-          if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'beneficios (Bnf_)', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
-          continue;
-        }
-        if (SET_BNF_PAGO.has(k))   {
-          beneficios += raw;
-          if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'beneficios (SET_BNF_PAGO)', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
-          continue;
-        }
-        if (isBnfDesc(k))          {
-          descontosBnf += raw;
-          if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'descontosBnf', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
-          continue;
-        }
-        if (isVencimento(k))       {
-          vencimentos += raw;
-          if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'vencimentos', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
-          continue;
-        }
-        // Caiu em "outros" — se contém INSS, é alerta crítico.
-        if (tocaINSS) _audInssEmOutrosBuckets.set(k, { bucket: 'outros (não somou)', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw });
+        if (folhaCustoIsDescFolhaInfo(k)) { _audDescFolhaPorChave.set(k, (_audDescFolhaPorChave.get(k) || 0) + raw); }
+        else if (folhaCustoIsEncargo(k))  { _audEncargosPorChave.set(k, (_audEncargosPorChave.get(k) || 0) + raw); }
+        else if (tocaINSS) { _audInssEmOutrosBuckets.set(k, { bucket: 'a verificar', soma: (_audInssEmOutrosBuckets.get(k)?.soma || 0) + raw }); }
       }
-      // Custo Total = Vencimentos + Encargos + (Bnf Pagos − Desc. Bnf).
-      // INSS/IRRF retidos NÃO somam — já estão dentro do SALARIO bruto.
-      const total = vencimentos + encargos + beneficios - descontosBnf;
-      return { vencimentos, encargos, beneficios, descontosBnf, total, salarioBruto };
+      return result;
     }
 
     // ==========================================
