@@ -204,6 +204,192 @@ function obterStatusReal(data, hojeData) {
   return "A VENCER";
 }
 
+/* -------- Custo de Folha — funções compartilhadas (Fonte Única) ------- */
+
+// Normaliza competência PJ para formato canônico "YYYY-MM".
+// CP grava "MM/YYYY"; Folha usa "YYYY-MM". Fallback: data_vencimento "YYYY-MM-DD".
+function folhaNormalizarCompetenciaPJ(raw, fallbackVencimento) {
+    var s = String(raw || '').trim();
+    var m = s.match(/^(\d{4})-(\d{2})$/);
+    if (m) return s;
+    m = s.match(/^(\d{2})\/(\d{4})$/);
+    if (m) return m[2] + '-' + m[1];
+    var mv = String(fallbackVencimento || '').match(/^(\d{4})-(\d{2})/);
+    if (mv) return mv[1] + '-' + mv[2];
+    return '';
+}
+
+// Normalização canônica de nome de empresa.
+// "SOULAN CONSULTORIA 3" → "SOULAN CONSULTORIA" (regra diretoria).
+// Sentinela "PJ" → "SOULAN CONSULTORIA" (fallback anti-sentinela).
+function folhaEmpresaCanonica(empresaRaw) {
+    var emp = String(empresaRaw || '').trim();
+    if (!emp) return emp;
+    var cmp = emp.toUpperCase().replace(/\s+/g, ' ').trim();
+    if (cmp === 'SOULAN CONSULTORIA 3') return 'SOULAN CONSULTORIA';
+    if (cmp === 'PJ') return 'SOULAN CONSULTORIA';
+    return emp;
+}
+
+// Resolve a empresa REAL de um PJ via lookup em Fornecedores.
+// caches = { porCodigo: Map, porDoc: Map, porNome: Map }
+// Cascata: (1) código fornecedor → (2) CNPJ/CPF → (3) nome → (4) empresa do lançamento.
+function folhaPjResolverEmpresa(codForn, dataLanc, caches) {
+    var _norm = function(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim(); };
+    var _digitos = function(s) { return String(s || '').replace(/\D/g, ''); };
+    var emp = '';
+    if (codForn != null && caches.porCodigo && caches.porCodigo.has(String(codForn))) {
+        emp = caches.porCodigo.get(String(codForn));
+    }
+    if (!emp && dataLanc) {
+        var doc = _digitos(dataLanc.cnpj || dataLanc.cpf || dataLanc.cnpj_cpf || dataLanc.documento);
+        if (doc && caches.porDoc && caches.porDoc.has(doc)) emp = caches.porDoc.get(doc);
+    }
+    if (!emp && dataLanc) {
+        var nm = _norm(dataLanc.entidade || dataLanc.favorecido || dataLanc.nome);
+        if (nm && caches.porNome && caches.porNome.has(nm)) emp = caches.porNome.get(nm);
+    }
+    if (!emp && dataLanc && dataLanc.empresa) emp = String(dataLanc.empresa);
+    emp = folhaEmpresaCanonica(emp);
+    return emp || 'SOULAN CONSULTORIA';
+}
+
+/* -------- Custo de Folha — classificação e cálculo (Fonte Única) ------ */
+// Extraído do Gerenciador (custo_folha_desktop) sem alteração de lógica.
+// Ambos os módulos (Gerenciador e Dashboard) importam daqui.
+
+function _folhaCustoHasToken(key, token) {
+    return new RegExp('(^|_)' + token + '(_|$)').test(key);
+}
+
+function folhaCustoIsVencimento(k) {
+    var key = String(k || '').toUpperCase();
+    if (key.endsWith('_QTDE')) return false;
+    if (key === 'SALARIO_CADASTRAL') return false;
+    var ehProLabore = key.includes('PRO_LABORE') || key.includes('PROLABORE');
+    if (ehProLabore) {
+        if (key.startsWith('DESC_') || key.startsWith('DESCTO_')) return false;
+        if (key.includes('DESCONTO')) return false;
+        if (key.startsWith('BASE_')) return false;
+        return true;
+    }
+    if (key.includes('INSS') || key.includes('IRRF') || key.includes('DESCONTO') ||
+        key.includes('EDUCACAO') || key.includes('FGTS') || key.includes('BASE_')) {
+        return false;
+    }
+    var keywords = [
+        'SALARIO', 'PRO_LABORE', 'DSR', 'CRECHE',
+        'COMISSAO', 'BANCO_DE_HORAS', 'ARREDONDAMENTO', 'REEMBOLSO',
+        'AVISO_PREVIO', 'FERIAS', '1_3', 'EMPRESTIMO_SALDO_NEGATIVO',
+        '13O', 'AJUDA_DE_CUSTO', 'RESCISAO', 'HORA_EXTRA',
+        'PARTICIPACAO', 'LUCRO',
+        'BONUS', 'PREMIO', 'PREMIACAO', 'GRATIFICACAO',
+        'SERVICOS_PRESTADOS',
+        'BOLSA_AUXILIO',
+        'DIFERENCA',
+    ];
+    return keywords.some(function(word) { return key.includes(word); });
+}
+
+function folhaCustoIsEncargo(k) {
+    var key = String(k || '').toUpperCase();
+    if (key.endsWith('_QTDE')) return false;
+    if (key.startsWith('BASE_')) return false;
+    if (key.startsWith('DESC_') || key.startsWith('DESCTO_')) return false;
+    if (key.includes('DESCONTO')) return false;
+    if (key.includes('PRO_LABORE') || key.includes('PROLABORE')) return false;
+    if (_folhaCustoHasToken(key, 'IRRF') || _folhaCustoHasToken(key, 'IR_RETIDO')) return false;
+    if (key.includes('SINDIC')) return false;
+    if (_folhaCustoHasToken(key, 'CONTRIBUICAO_ASSISTENCIAL')) return false;
+    if (_folhaCustoHasToken(key, 'INSS_RETIDO')) return false;
+    if (_folhaCustoHasToken(key, 'INSS') && !key.includes('PATRONAL')) return false;
+    var tokens = ['INSS_PATRONAL', 'FGTS', 'TERCEIROS', 'RAT', 'FAP', 'SISTEMA_S'];
+    return tokens.some(function(t) { return _folhaCustoHasToken(key, t); });
+}
+
+function folhaCustoIsDescFolhaInfo(k) {
+    var key = String(k || '').toUpperCase();
+    if (key.endsWith('_QTDE')) return false;
+    if (key.startsWith('BASE_')) return false;
+    if (_folhaCustoHasToken(key, 'INSS') && !key.includes('PATRONAL')) return true;
+    if (_folhaCustoHasToken(key, 'IRRF') || _folhaCustoHasToken(key, 'IR_RETIDO')) return true;
+    if (key.includes('SINDIC')) return true;
+    if (_folhaCustoHasToken(key, 'CONTRIBUICAO_ASSISTENCIAL')) return true;
+    if (_folhaCustoHasToken(key, 'MULTA_ART_480_CLT')) return true;
+    if (_folhaCustoHasToken(key, 'HORAS_NAO_COMPENSADAS')) return true;
+    if (key.startsWith('DESC_EMPRESTIMO_CONSIGNADO')) return true;
+    return false;
+}
+
+var FOLHA_CUSTO_SET_BNF_PAGO = new Set([
+    'VALE_TRANSPORTE_Valor', 'VALE_REFEICAO_Valor',
+    'ASSISTENCIA_MEDICA_Valor', 'ASSISTENCIA_ODONTOLOGICA_Valor',
+    'VALE_ALIMENTACAO_Valor',
+]);
+
+var FOLHA_CUSTO_SET_BNF_DESC = new Set([
+    'SEGURO_DE_VIDA_Valor', 'DESCTO_DE_VALE_TRANSPORTE_Valor',
+    'DEVOLUCAO_DE_VR_NAO_UTILIZADO_Valor',
+    'DESCTO_DE_VALE_REFEICAO_Valor',
+    'DESCTO_DE_ASSISTENCIA_MEDICA_Valor',
+]);
+
+function folhaCustoIsBnfDesc(k) {
+    if (FOLHA_CUSTO_SET_BNF_DESC.has(k)) return true;
+    var key = String(k || '').toUpperCase();
+    if (key.endsWith('_QTDE')) return false;
+    if (key.startsWith('BASE_')) return false;
+    var ehDesconto = key.startsWith('DESC_') || key.startsWith('DESCTO_') || key.includes('DESCONTO');
+    if (ehDesconto && key.includes('ODONTOL')) return true;
+    return false;
+}
+
+function folhaCustoIsSalarioBrutoKey(k) {
+    var key = String(k || '')
+        .normalize('NFD').replace(/[\u0300-\u036f\s_]/g, '')
+        .toUpperCase();
+    if (!key) return false;
+    if (key.startsWith('DESC') || key.startsWith('DESCTO')) return false;
+    if (key.includes('DESCONTO')) return false;
+    if (key.startsWith('BASE')) return false;
+    if (key === 'SALARIOCADASTRAL') return false;
+    if (key.includes('PROLABORE')) return true;
+    if (key.includes('SERVICOSPRESTADOS')) return true;
+    if (key.includes('BOLSAAUXILIO')) return true;
+    if (key.includes('SALARIOBASE')) return true;
+    if (key.includes('SALARIOFAMILIA')) return true;
+    if (key.includes('SALARIOMATERNIDADE')) return true;
+    if (key === 'SALARIO' || key === 'SALARIOVALOR') return true;
+    return false;
+}
+
+// Motor central de cálculo de custo de folha. Retorna os 5 buckets contábeis.
+// NÃO altera o registro (reg) — a injeção volátil de total_beneficios_* é
+// responsabilidade do chamador, se necessário.
+function folhaCustoCalcularTotais(reg) {
+    var vencimentos = 0, encargos = 0, beneficios = 0, descontosBnf = 0, salarioBruto = 0;
+    var usarSomenteTXT = (reg && reg._has_benef_txt === true);
+    var keys = Object.keys(reg || {});
+    for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
+        var raw = reg[k];
+        if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
+        if (folhaCustoIsDescFolhaInfo(k))    { continue; }
+        if (folhaCustoIsEncargo(k))          { encargos += raw; continue; }
+        if (k.startsWith('Bnf_'))            { beneficios += raw; continue; }
+        if (k.startsWith('BnfDesc_'))        { descontosBnf += raw; continue; }
+        if (!usarSomenteTXT && FOLHA_CUSTO_SET_BNF_PAGO.has(k)) { beneficios += raw; continue; }
+        if (!usarSomenteTXT && folhaCustoIsBnfDesc(k))          { descontosBnf += raw; continue; }
+        if (folhaCustoIsVencimento(k)) {
+            vencimentos += raw;
+            if (folhaCustoIsSalarioBrutoKey(k)) salarioBruto += raw;
+            continue;
+        }
+    }
+    var total = vencimentos + encargos + beneficios - descontosBnf;
+    return { vencimentos: vencimentos, encargos: encargos, beneficios: beneficios, descontosBnf: descontosBnf, total: total, salarioBruto: salarioBruto };
+}
+
 /* ---------------- Compat com window.* (Master legado) ---------------- */
 
 // As `function name(){}` acima já criam binding global E propriedade em `window`.
@@ -226,6 +412,19 @@ window.calcularFaturamentoRealMaster = calcularFaturamentoReal;
 // `extrairNum` no Master era um parser de moeda — agora aponta direto para o canônico.
 window.extrairNum = parseMoedaCRF;
 
+// Custo de Folha — funções compartilhadas
+window.folhaNormalizarCompetenciaPJ = folhaNormalizarCompetenciaPJ;
+window.folhaEmpresaCanonica = folhaEmpresaCanonica;
+window.folhaPjResolverEmpresa = folhaPjResolverEmpresa;
+window.folhaCustoIsVencimento = folhaCustoIsVencimento;
+window.folhaCustoIsEncargo = folhaCustoIsEncargo;
+window.folhaCustoIsDescFolhaInfo = folhaCustoIsDescFolhaInfo;
+window.folhaCustoIsBnfDesc = folhaCustoIsBnfDesc;
+window.folhaCustoIsSalarioBrutoKey = folhaCustoIsSalarioBrutoKey;
+window.folhaCustoCalcularTotais = folhaCustoCalcularTotais;
+window.FOLHA_CUSTO_SET_BNF_PAGO = FOLHA_CUSTO_SET_BNF_PAGO;
+window.FOLHA_CUSTO_SET_BNF_DESC = FOLHA_CUSTO_SET_BNF_DESC;
+
 // Bag formal — referência canônica para quem prefere acessar via objeto.
 window.CoreRules = {
   parseMoedaCRF: parseMoedaCRF,
@@ -235,5 +434,13 @@ window.CoreRules = {
   calcularFaturamentoReal: calcularFaturamentoReal,
   obterValorLiquido: obterValorLiquido,
   obterFaturamentoReal: obterFaturamentoReal,
-  obterStatusReal: obterStatusReal
+  obterStatusReal: obterStatusReal,
+  folhaCustoIsVencimento: folhaCustoIsVencimento,
+  folhaCustoIsEncargo: folhaCustoIsEncargo,
+  folhaCustoIsDescFolhaInfo: folhaCustoIsDescFolhaInfo,
+  folhaCustoIsBnfDesc: folhaCustoIsBnfDesc,
+  folhaCustoIsSalarioBrutoKey: folhaCustoIsSalarioBrutoKey,
+  folhaCustoCalcularTotais: folhaCustoCalcularTotais,
+  FOLHA_CUSTO_SET_BNF_PAGO: FOLHA_CUSTO_SET_BNF_PAGO,
+  FOLHA_CUSTO_SET_BNF_DESC: FOLHA_CUSTO_SET_BNF_DESC
 };
