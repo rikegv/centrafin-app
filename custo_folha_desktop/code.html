@@ -154,6 +154,14 @@
                 <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Desc. Benefício</p>
                 <h3 id="kpi-descontos-bnf" class="text-base font-extrabold font-manrope text-red-600 leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
             </div>
+            <!-- 7. Salário Contrato (informativo — NÃO entra no Custo Total) -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-dashed border-slate-300/60 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all opacity-80">
+                <span class="p-1 bg-slate-100 text-slate-500 rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">description</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Sal. Contrato</p>
+                <h3 id="kpi-salario-contrato" class="text-base font-extrabold font-manrope text-slate-500 leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+            </div>
         </section>
 
         <!-- CARD HISTÓRICO + TOPBAR DE TABELA -->
@@ -207,7 +215,7 @@
 
             <!-- Tabela -->
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse [&_th]:border-r [&_th]:border-slate-200/40 [&_th:last-child]:border-r-0 [&_td]:border-r [&_td]:border-slate-200/40 [&_td:last-child]:border-r-0">
                     <thead class="bg-slate-50 border-b border-slate-100 text-[10px]">
                         <tr>
                             <!-- Coluna de seleção (Super Adm). Liberada via JS após auth. -->
@@ -219,6 +227,7 @@
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">CPF</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Empresa</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Centro de Custo</th>
+                            <th class="px-4 py-3 text-right font-bold text-slate-400 uppercase tracking-widest">Sal. Contrato</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Salário Bruto</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Vencimentos</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest">Encargos Sociais</th>
@@ -2433,7 +2442,7 @@
     // que aplica `isSalarioBrutoKey` lá no motor.
     function atualizarKPIs(registrosFiltrados) {
         let salarioBruto = 0, vencimentos = 0, encargos = 0,
-            beneficios = 0, descontosBnf = 0, total = 0;
+            beneficios = 0, descontosBnf = 0, total = 0, salarioContrato = 0;
         // Auditoria 2026-05-27 (Paridade Macro × Linha): acumulamos benefícios
         // a partir das propriedades injetadas (`reg.total_beneficios_pago` e
         // `reg.total_beneficios_desconto`) em vez do retorno solto — chamamos
@@ -2447,6 +2456,7 @@
             beneficios   += (Number(r.total_beneficios_pago)     || 0);
             descontosBnf += (Number(r.total_beneficios_desconto) || 0);
             total        += t.total;
+            salarioContrato += (Number(r.salario_cadastral) || 0);
         }
         const setKPI = (id, valor, prefixo = '') => {
             const el = document.getElementById(id);
@@ -2463,6 +2473,7 @@
         // Desc. Benefício: prefixo "-" quando há valor, espelha o visual da
         // coluna na tabela (vermelho + sinal negativo).
         setKPI('kpi-descontos-bnf', descontosBnf, descontosBnf ? '-' : '');
+        setKPI('kpi-salario-contrato', salarioContrato);
     }
 
     // Popula o multi-select "Filtrar por Funcionário" — auditoria 2026-05-20.
@@ -2574,6 +2585,7 @@
                     <td class="px-4 py-3 text-xs text-slate-500 font-mono">${isPJ ? '—' : fmtCPF(r.cpf)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(emp)}</td>
                     <td class="px-4 py-3 text-xs text-slate-500 uppercase font-bold">${escapeHTML(cc)}</td>
+                    <td class="px-4 py-3 text-xs text-right font-semibold text-slate-400">${fmtBRL.format(Number(r.salario_cadastral) || 0)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.salarioBruto)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.vencimentos)}</td>
                     <td class="px-4 py-3 text-xs text-right font-semibold text-slate-700">${fmtBRL.format(t.encargos)}</td>
