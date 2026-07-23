@@ -5,9 +5,140 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
-## 2026-07-23 — OS-IMPORT-ROBUSTEZ-01: Importação de Lancamentos resiliente
+## 2026-07-23 — Sessão completa: Importação 2025, Timezone, Folha Blocos A–D, Fonte Única
 
-### Status: IMPLEMENTADO — aguarda validação visual do diretor + testes com dados reais.
+### 1. Importação da base 2025 (OS-IMPORT-ROBUSTEZ-01, commit 9c0b908)
+
+**Problema:** Importação parcial — 3.639 de 5.639 registros entraram, faltando R$ 7.360.360,61.
+Causa raiz: `addDoc` gera ID no cliente; numa operação longa (5.639 escritas sequenciais),
+retry do SDK após resposta de rede perdida reenviou o mesmo ID → "Document already exists" →
+loop abortou sem tolerância a falha, deixando importação parcial silenciosa.
+
+**Correção:** writeBatch com chunks de 450 (usa `batch.set`, não `batch.create` — retry
+sobrescreve silenciosamente em vez de falhar). Tolerância a falha por lote (cada
+`batch.commit` tem try/catch individual — lote que falha registra NFs afetadas e continua).
+Relatório final obrigatório (criados/atualizados/falhados + lista de NFs com erro).
+Indicador de progresso ("Criando lote X de Y — Z de N"). Dedup por nf+cnpj preservada
+intacta.
+
+**Resultado em produção:** 2.000 criados, 3.639 atualizados, 0 falhados. Base 2025 fechada
+em 5.639 docs / R$ 94.799.626,63.
+
+**Números de referência auditados (base 2025):**
+- Total: 5.639 docs, R$ 94.799.626,63 (Valor Fatura)
+- Jan 722 / Fev 588 / Mar 497 / Abr 433 / Mai 430 / Jun 380 / Jul 365 / Ago 400 /
+  Set 427 / Out 423 / Nov 404 / Dez 570
+
+---
+
+### 2. Bug de timezone na conversão de data (OS-CRF-DATA-TIMEZONE-01, commit f92aea2)
+
+**Problema:** 6 conversões inline de serial Excel no CRF usavam
+`new Date((serial - 25569) * 86400 * 1000)`, criando Date em UTC midnight. No fuso de
+Brasília (UTC-3), `getMonth()`/`getDate()` retornavam o dia/mês ANTERIOR para notas
+emitidas no dia 1º.
+
+- 1 função quebrada de fato: `parseDataAuditoria` — 90 notas de 2025 e 81 de 2026
+  (R$ 737.386,86) apareciam no mês errado no relatório de auditoria.
+- 5 funções "funcionavam por acaso" — usavam `.toISOString()`/`.getTime()` logo depois,
+  que anulavam o erro por coincidência. Bomba-relógio: bastaria trocar por `.getMonth()`
+  numa refatoração futura para o bug ressurgir.
+
+**Correção:** Todas as 6 substituídas por `parseDataLocal`/`extrairISOLocal` do core_rules.js
+(que usam `getUTCFullYear`/`getUTCMonth`/`getUTCDate` — imunes a timezone). 72 linhas
+removidas, 14 inseridas. Dashboard Master e DRE Gerencial não afetados (já usavam métodos
+corretos).
+
+---
+
+### 3. Auditoria de Folha — Blocos A/B/C/D (merges 7691a2e, f43c2c8, daebefe)
+
+- **Bloco A:** Removida mensagem "informativo, não entra no Custo Total"; rótulo simplificado
+  para "Descontos". Regra permanente registrada: as 5 verbas investigadas (INSS retido, IRRF,
+  Contribuição Assistencial, Seguro de Vida, Contribuição Odontológica) já estão embutidas no
+  Salário Bruto — somá-las seria DUPLA CONTAGEM.
+- **Bloco B:** DIFERENCA_SALARIAL reclassificada de "outros valores" para Vencimentos
+  (keyword `DIFERENCA` adicionada ao `isVencimento`).
+- **Bloco C:** Seção "Exame Médico" adicionada ao modal Olho do Gerenciador. Conflito de
+  merge com bloco A resolvido (rótulo "Descontos" do A + seção "Exame Médico" do C).
+- **Bloco D:** Selo de build debug removido do Dashboard de Custo de Folha.
+
+---
+
+### 4. Fonte Única de cálculo de folha (commits d3b77fa, fe713c5, 87ac299, b9e84f4)
+
+**Problema:** Gerenciador e Dashboard tinham implementações SEPARADAS da mesma regra de
+cálculo de custo de folha, que divergiram ao longo do tempo. Resolvido em 3 camadas
+sucessivas, cada uma revelando a próxima:
+
+**(a) Fórmula de cálculo (OS-FOLHA-FONTE-UNICA-01, d3b77fa):**
+Classificadores (isVencimento, isEncargo, isDescFolhaInfo, isBnfDesc, isSalarioBrutoKey) e
+`calcularTotais` extraídos do Gerenciador para `core_rules.js` como funções `folhaCusto*`.
+Ambos os módulos passaram a delegar. Divergências corrigidas no Dashboard: faltavam
+`BOLSA_AUXILIO`, `DIFERENCA`, `SALARIO_CADASTRAL` rejection, 3 itens informativos em
+isDescFolhaInfo, e a guarda `_has_benef_txt` (TXT como fonte de verdade para benefícios).
+
+**(b) Atribuição de empresa dos PJs (OS-FOLHA-PJ-EMPRESA-01, fe713c5):**
+Gerenciador marcava todo PJ como `empresa='PJ'`, normalizado para "SOULAN CONSULTORIA" via
+`folhaEmpresaCanonica`. Dashboard resolvia a empresa real via lookup em Fornecedores.
+Decisão do diretor: PJ aparece na empresa real. Impacto medido: SOULAN CONSULTORIA
+desinflou R$ 753.673,73; NEAT ganhou R$ 650.221,74; SOULAN ADM ganhou R$ 103.451,99.
+Total global inalterado (R$ 0,00 de diferença). Funções extraídas: `folhaPjResolverEmpresa`,
+`folhaEmpresaCanonica`, `folhaNormalizarCompetenciaPJ`.
+
+**(c) Enriquecimento de benefícios CLT via TXT (b9e84f4):**
+O Dashboard não enriquecia CLTs com benefícios do TXT analítico (CP_Beneficios_PJ). A
+função `enriquecerCltComBeneficios` e o cache `_cacheBeneficiosPorMatricula` existiam
+APENAS no Gerenciador. Dashboard subestimava benefícios em R$ 67.258,97 e descontos em
+R$ 1.587,87 (gap de R$ 68.846,84 no Custo Total para NEAT). Extraídos para core_rules.js:
+`folhaEnriquecerCltComBeneficios`, `folhaMontarCacheBeneficiosPJ`.
+
+**Incidente durante o processo (hotfix 87ac299):**
+Deploy quebrou o Gerenciador em produção ("ReferenceError: folhaCustoIsVencimento is not
+defined") porque a tag `<script src="core_rules.js">` foi adicionada ao Dashboard mas
+esquecida no Gerenciador. Tela em branco por ~10 minutos até o hotfix.
+
+---
+
+### Aprendizados (REGRAS PERMANENTES)
+
+1. **Ao extrair lógica para módulo compartilhado, verificar que TODOS os módulos consumidores
+   têm a tag de import.** A ausência só aparece em runtime — não há typecheck nem build step
+   neste projeto. Checklist pós-extração: `grep -r "folha*" *.html` confirma uso; confirmar
+   que cada HTML que usa tem `<script src="core_rules.js">`.
+
+2. **Divergência entre dois módulos raramente tem causa única.** Unificar a fórmula não basta
+   se a ORIGEM DOS DADOS (merges, caches, enriquecimentos) continuar duplicada. Verificar as
+   três camadas: (a) fórmula de cálculo, (b) conjunto de registros (PJs, filtros), (c)
+   enriquecimento pré-cálculo (benefícios TXT).
+
+3. **Nunca "portar" (copiar) uma função para outro módulo como solução de divergência.** Isso
+   recria a causa raiz — em poucos meses as duas implementações divergem de novo. Sempre
+   extrair para local comum (core_rules.js) e ambos os módulos chamam a mesma função.
+
+4. **Operações de escrita em massa (importação) exigem batch + tolerância a falha + relatório
+   final.** Loop sequencial sem isso produz falha parcial silenciosa — o usuário não sabe o
+   que entrou e o que faltou. writeBatch + try/catch por lote + contadores ao final.
+
+---
+
+### Resumo técnico da sessão
+
+| OS | Commit(s) | Arquivo principal | Saldo |
+|----|-----------|-------------------|-------|
+| IMPORT-ROBUSTEZ-01 | 9c0b908 | contas_a_receber_desktop/code.html | +175 -35 |
+| CRF-DATA-TIMEZONE-01 | f92aea2 | contas_a_receber_desktop/code.html | +14 -72 |
+| FOLHA Blocos A–D | 7691a2e, f43c2c8, daebefe | custo_folha_desktop, custo_folha_dash | merge de 3 branches |
+| FOLHA-FONTE-UNICA-01 | d3b77fa | core_rules.js, custo_folha_desktop, custo_folha_dash | +285 -553 |
+| FOLHA-PJ-EMPRESA-01 | fe713c5 | core_rules.js, custo_folha_desktop, custo_folha_dash | +90 -69 |
+| Hotfix script tag | 87ac299 | custo_folha_desktop/code.html | +1 |
+| Benefícios CLT TXT | b9e84f4 | core_rules.js, custo_folha_desktop, custo_folha_dash | +114 -176 |
+
+---
+
+## 2026-07-23 — OS-IMPORT-ROBUSTEZ-01: Importação de Lancamentos resiliente (entrada original)
+
+### Status: CONCLUÍDO — deployado e validado em produção.
 
 ### Causa raiz do problema
 Importação da base 2025 de Contas a Receber falhou após 3.639 de 5.639 registros.
