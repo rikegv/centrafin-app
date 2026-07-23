@@ -57,6 +57,57 @@ definição determina se é correção simples de filtro ou mudança estrutural.
 
 ---
 
+## 2026-07-16 — OS-FOLHA-CUSTO-REAL-01 (Bloco A): Composição do custo de folha — investigação e transparência
+
+### Decisão do diretor
+
+Investigação completa sobre a composição do custo de folha para determinar se verbas
+marcadas como "informativo" (INSS retido, IRRF, Contribuição Assistencial, Seguro de
+Vida, Contribuição Odontológica) deviam ser adicionadas ao custo total.
+
+### Conclusão comprovada aritmeticamente (REGRA PERMANENTE — protege contra dupla contagem)
+
+Todas as 5 verbas investigadas **JÁ ESTÃO EMBUTIDAS no Salário Bruto / Vencimentos**:
+- **INSS retido** (`INSS_Valor`) — retenção do funcionário, incluída no bruto
+- **IRRF retido** (`IRRF_Valor`, `IR_RETIDO_Valor`) — retenção do funcionário, incluída no bruto
+- **Contribuição Assistencial** (`CONTRIBUICAO_ASSISTENCIAL_Valor`) — desconto sindical do funcionário, incluído no bruto
+- **Seguro de Vida** (`SEGURO_DE_VIDA_Valor`) — coparticipação do funcionário, incluída no bruto
+- **Contribuição Odontológica** (`DESCONTO_CONTRIBUICAO_ODONTOLOGICA_Valor`) — coparticipação do funcionário, incluída no bruto
+
+**Prova**: `TOTAL_VECTO − TOTAL_DESCTO = LIQUIDO` com gap zero em todos os funcionários
+testados (Beatriz Martins Romao, Débora Santos Gomes, Caio Monteiro). As 5 verbas compõem
+o `TOTAL_DESCTO` — são deduzidas do bruto para chegar ao líquido.
+
+**Consequência**: somá-las ao custo total causaria **DUPLA CONTAGEM** (o bruto já as contém).
+O cálculo atual (`calcularTotais()`: vencimentos + encargos + benefícios − descontos_bnf)
+está algebricamente correto.
+
+**Qualquer futura alteração que pretenda "adicionar descontos ao custo total" deve ser
+rejeitada**, salvo prova de que a natureza da verba mudou (passou a ser custo adicional
+pago pela empresa por cima do salário, não desconto do funcionário).
+
+### O que foi implementado
+
+1. Rótulo da seção "Descontos de Folha" no modal Olho renomeado para "Descontos" — sem
+   mensagem explicativa (decisão do diretor: tela limpa).
+2. Mensagem "informativo, não entra no Custo Total" removida completamente.
+3. **Nenhuma alteração de cálculo** — apenas texto de UI.
+
+### Nota sobre Seguro de Vida e Contribuição Odontológica
+
+Os campos `Bnf_Seguro` e `Bnf_Odonto` (custo bruto do benefício pago pela empresa)
+existem na estrutura mas estão zerados em Jun/2026 — dependem de importação de
+benefícios PJ (`_origens.beneficios`). Quando preenchidos, esses campos entram
+corretamente como "Benefícios Pagos" (bucket separado, sem risco de dupla contagem).
+
+### Contexto de risco
+
+Esta OS opera na mesma área sensível da inflação acidental revertida em `bab45d8`
+(dupla contagem de `salario_cadastral`). A investigação em 3 fases com aprovação
+do diretor antes de cada etapa foi aplicada para máxima cautela.
+
+---
+
 ## 2026-07-10 — OS-APROVACAO-MODAL-02 a 05: Modais de Aprovação — diff, resumo de negócio, campos editáveis
 
 ### Contexto e escopo final
