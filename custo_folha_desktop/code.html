@@ -1303,102 +1303,14 @@
         if (_unsubBeneficiosPJ) { _unsubBeneficiosPJ(); _unsubBeneficiosPJ = null; }
         try {
             _unsubBeneficiosPJ = onSnapshot(collection(db, 'CP_Beneficios_PJ'), (snap) => {
-                const mapPJ = new Map();         // legado: comp_fid → total (PJ Internos)
-                const mapFull = new Map();       // legado: comp_fid → {vt,vr,total} (export Base Completa)
-                const mapMatricula = new Map();  // NOVO:   comp_matricula → abertura completa (CLT)
+                // Delega montagem dos 3 mapas para core_rules.js (Fonte Única).
+                const docs = [];
+                snap.forEach(d => docs.push(d.data() || {}));
+                const result = folhaMontarCacheBeneficiosPJ(docs);
 
-                snap.forEach(d => {
-                    const data = d.data() || {};
-                    const comp = String(data.competencia || '').trim();
-                    const fid  = String(data.fornecedor_id || '').trim();
-                    // Auditoria 2026-05-26 (Pente Fino — Asymmetry Bug): RH emite
-                    // matrícula no TXT com zeros à esquerda ("027521") enquanto
-                    // o Excel canônico vem sem ("27521"). Sem strip, o `.get()`
-                    // do Map nunca casa → CLT fica com Benef. Pagos zerado.
-                    // Normalizamos AMBOS os lados via `.replace(/^0+/, '')`
-                    // (aqui no índice + em `enriquecerCltComBeneficios` no lookup).
-                    const matricula = String(data.fil_codigo || '').trim().replace(/^0+/, '');
-
-                    if (!comp || !matricula) return;
-
-                    // 1) Mapa de contexto para PJs Internos (LEGADO INTACTO).
-                    //    Pulamos ORFAO aqui porque `pjParaFolha` faz lookup
-                    //    por `fornecedor_id` — ORFAO não bate em PJ algum.
-                    if (fid && fid !== 'ORFAO') {
-                        const chavePJ = `${comp}_${fid}`;
-                        const valor = Number(data.valor_total) || 0;
-                        if (valor > 0) {
-                            mapPJ.set(chavePJ, (mapPJ.get(chavePJ) || 0) + valor);
-                            // Auditoria 2026-05-28 (Abertura Analítica do Export):
-                            // capturamos também `valor_va` (Vale Alimentação) e
-                            // `valor_med` (Assistência Médica) pra que o motor
-                            // de exportação consiga abrir VT / VR / AM em colunas
-                            // dedicadas ao invés de jogar tudo em "Outros".
-                            // Auditoria 2026-05-28 (Quebra Analítica de Descontos):
-                            // capturamos também os descontos (`desconto_*`) e o
-                            // total de descontos pra que o export PJ possa abrir
-                            // (-) Descto VT/VR/AM/Outros simétrico aos proventos.
-                            const vt  = Number(data.valor_vt)  || 0;
-                            const vr  = Number(data.valor_vr)  || 0;
-                            const va  = Number(data.valor_va)  || 0;
-                            const med = Number(data.valor_med) || 0;
-                            const odo = Number(data.valor_odonto) || 0;
-                            const dvt  = Number(data.desconto_vt)   || 0;
-                            const dvr  = Number(data.desconto_vr)   || 0;
-                            const dva  = Number(data.desconto_va)   || 0;
-                            const dmed = Number(data.desconto_med)  || 0;
-                            const dodo = Number(data.desconto_odonto) || 0;
-                            const dtot = Number(data.total_descontos) || 0;
-                            const prev = mapFull.get(chavePJ) || {
-                                valor_vt: 0, valor_vr: 0, valor_va: 0, valor_med: 0, valor_odonto: 0, valor_total: 0,
-                                desconto_vt: 0, desconto_vr: 0, desconto_va: 0, desconto_med: 0, desconto_odonto: 0, total_descontos: 0,
-                            };
-                            mapFull.set(chavePJ, {
-                                // Identidade (auditoria 2026-06-03) — usada pela
-                                // linha sintética de benefício; CC cai no fallback
-                                // do cadastro de Fornecedores se o TXT veio zerado.
-                                nome:            String(data.nome_fornecedor || prev.nome || '').trim(),
-                                centro_custo:    String(data.centro_custo || prev.centro_custo || '').trim(),
-                                fornecedor_id:   fid,
-                                valor_vt:        prev.valor_vt        + vt,
-                                valor_vr:        prev.valor_vr        + vr,
-                                valor_va:        prev.valor_va        + va,
-                                valor_med:       prev.valor_med       + med,
-                                valor_odonto:    (prev.valor_odonto || 0) + odo,
-                                valor_total:     prev.valor_total     + valor,
-                                desconto_vt:     prev.desconto_vt     + dvt,
-                                desconto_vr:     prev.desconto_vr     + dvr,
-                                desconto_va:     prev.desconto_va     + dva,
-                                desconto_med:    prev.desconto_med    + dmed,
-                                desconto_odonto: (prev.desconto_odonto || 0) + dodo,
-                                total_descontos: prev.total_descontos + dtot,
-                            });
-                        }
-                    }
-
-                    // 2) NOVO: Mapa universal por matrícula — inclui ORFAO (CLT).
-                    //    Captura a abertura completa de proventos e descontos
-                    //    do TXT, alinhando com a granularidade do gerenciador.
-                    const chaveMatricula = `${comp}_${matricula}`;
-                    mapMatricula.set(chaveMatricula, {
-                        vt_pago:               Number(data.valor_vt  || 0),
-                        vr_pago:               Number(data.valor_vr  || 0),
-                        va_pago:               Number(data.valor_va  || 0),
-                        med_pago:              Number(data.valor_med || 0),
-                        odonto_pago:           Number(data.valor_odonto || 0),
-                        total_proventos_benef: Number(data.valor_total || 0),
-                        desconto_vt:           Number(data.desconto_vt  || 0),
-                        desconto_vr:           Number(data.desconto_vr  || 0),
-                        desconto_va:           Number(data.desconto_va  || 0),
-                        desconto_med:          Number(data.desconto_med || 0),
-                        desconto_odonto:       Number(data.desconto_odonto || 0),
-                        total_descontos_benef: Number(data.total_descontos || 0),
-                    });
-                });
-
-                _cacheBeneficiosPJ = mapPJ;
-                _cacheBeneficiosPJFull = mapFull;
-                _cacheBeneficiosPorMatricula = mapMatricula;
+                _cacheBeneficiosPJ = result.mapPJ;
+                _cacheBeneficiosPJFull = result.mapFull;
+                _cacheBeneficiosPorMatricula = result.mapMatricula;
 
                 // Re-render em cascata:
                 //  (a) PJ — remapeia `_cachePJ` a partir do raw pra refletir
@@ -2431,59 +2343,9 @@
     // Total sem alterar a fórmula contábil.
     //
     // PJ é skipado (já tem o lookup via pjParaFolha + _cacheBeneficiosPJ).
+    // Delega para core_rules.js (Fonte Única).
     function enriquecerCltComBeneficios(reg) {
-        if (!reg || reg.is_pj) return reg;
-
-        // Tenta múltiplas chaves do schema da Folha — `codigo` é o canônico
-        // (vem da coluna CODIGO/MATRICULA/CHAPA do Excel via ROTULOS_FIXOS).
-        // UPPERCASE alinha com a normalização do lado TXT.
-        // Auditoria 2026-05-26 (Pente Fino — Asymmetry Bug): strip de zeros à
-        // esquerda neutraliza a divergência de formatos do RH ("027521" no TXT
-        // vs "27521" no Excel). MESMA regex aplicada do lado da gravação em
-        // `inscreverBeneficiosPJ` — chaves canônicas batem sempre.
-        const matriculaRaw = reg.matricula || reg.codigo || reg.chapa || '';
-        const matriculaSafe = String(matriculaRaw).trim().toUpperCase().replace(/^0+/, '');
-        const compRef = String(reg.competencia_ref || '').trim();
-        if (!matriculaSafe || !compRef) return reg;
-
-        const chave = `${compRef}_${matriculaSafe}`;
-        const benefTXT = _cacheBeneficiosPorMatricula.get(chave);
-
-        if (benefTXT) {
-            // Injeta proventos sob prefixo `Bnf_` — calcularTotais soma
-            // automaticamente no bucket "beneficios" (R$).
-            reg.Bnf_VT  = Number(benefTXT.vt_pago)  || 0;
-            reg.Bnf_VR  = Number(benefTXT.vr_pago)  || 0;
-            reg.Bnf_VA  = Number(benefTXT.va_pago)  || 0;
-            reg.Bnf_MED = Number(benefTXT.med_pago) || 0;
-            // Auditoria 2026-06-01 (Fix Odonto): cód 281 (Assis. Odontológica
-            // Pago) entra como provento `Bnf_Odonto`; calcularTotais soma no
-            // bucket "beneficios" via prefixo Bnf_*.
-            reg.Bnf_Odonto = Number(benefTXT.odonto_pago) || 0;
-            // Auditoria 2026-05-27 (TXT como Fonte de Verdade Absoluta):
-            // injeta também os DESCONTOS de coparticipação sob prefixo
-            // `BnfDesc_*`. calcularTotais lê esse prefixo e bloqueia
-            // `isBnfDesc` do Excel quando `_has_benef_txt = true`. Garante
-            // que o líquido contábil reflita 100% o TXT analítico.
-            reg.BnfDesc_VT  = Number(benefTXT.desconto_vt)  || 0;
-            reg.BnfDesc_VR  = Number(benefTXT.desconto_vr)  || 0;
-            reg.BnfDesc_VA  = Number(benefTXT.desconto_va)  || 0;
-            reg.BnfDesc_MED = Number(benefTXT.desconto_med) || 0;
-            // cód 775 (Descto de Assist. Odontológica) — coparticipação.
-            // Como BnfDesc_*, calcularTotais lê e o guard `usarSomenteTXT`
-            // suprime o desconto odonto do Excel pra não dobrar.
-            reg.BnfDesc_Odonto = Number(benefTXT.desconto_odonto) || 0;
-            reg._has_benef_txt = true;
-        } else {
-            // Fallback de segurança — campos definidos como 0 pra não deixar
-            // undefined que poderia confundir o `Object.keys` no Olho.
-            reg.Bnf_VT  = reg.Bnf_VT  || 0;
-            reg.Bnf_VR  = reg.Bnf_VR  || 0;
-            reg.Bnf_VA  = reg.Bnf_VA  || 0;
-            reg.Bnf_MED = reg.Bnf_MED || 0;
-            reg.Bnf_Odonto = reg.Bnf_Odonto || 0;
-        }
-        return reg;
+        return folhaEnriquecerCltComBeneficios(reg, _cacheBeneficiosPorMatricula);
     }
 
     // Listener leve de AreasContasPagar (auditoria 2026-05-26 Frente 3) —

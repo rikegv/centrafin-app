@@ -1689,6 +1689,7 @@
     let _cacheFornEmpresaPorDoc  = new Map(); // cnpj/cpf (dígitos) → empresa
     let _cacheFornEmpresaPorNome = new Map(); // nome normalizado   → empresa
     let _cacheBeneficiosPJFullDash = new Map(); // "comp_fid" → decomposição benefício
+    let _cacheBeneficiosPorMatricula = new Map(); // "comp_matricula" → abertura CLT (Fonte Única)
     let _unsubPJDash = null;
     let _unsubFornCC = null;
     let _unsubBenefPJDash = null;
@@ -1797,44 +1798,26 @@
 
     // Listener de CP_Beneficios_PJ no dash (auditoria 2026-06-05) — antes
     // INEXISTENTE; por isso o benefício do PJ nunca chegava ao Dashboard.
-    // Indexa por "comp_fid" (fornecedor_id), pulando ÓRFÃOS (não casam PJ).
+    // Usa folhaMontarCacheBeneficiosPJ (core_rules.js) para montar os 3 mapas
+    // (PJ, Full, Matrícula) de uma vez — Fonte Única com o Gerenciador.
     function inscreverBeneficiosPJDash() {
         if (_unsubBenefPJDash) { _unsubBenefPJDash(); _unsubBenefPJDash = null; }
         try {
             _unsubBenefPJDash = onSnapshot(collection(db, 'CP_Beneficios_PJ'), (snap) => {
-                const mapFull = new Map();
-                snap.forEach(d => {
-                    const data = d.data() || {};
-                    const comp = String(data.competencia || '').trim();
-                    const fid  = String(data.fornecedor_id || '').trim();
-                    if (!comp || !fid || fid === 'ORFAO') return;
-                    const chave = `${comp}_${fid}`;
-                    const prev = mapFull.get(chave) || {
-                        valor_vt: 0, valor_vr: 0, valor_va: 0, valor_med: 0, valor_odonto: 0,
-                        desconto_vt: 0, desconto_vr: 0, desconto_va: 0, desconto_med: 0, desconto_odonto: 0,
-                        nome: '', centro_custo: '',
-                    };
-                    mapFull.set(chave, {
-                        valor_vt:        prev.valor_vt        + (Number(data.valor_vt)  || 0),
-                        valor_vr:        prev.valor_vr        + (Number(data.valor_vr)  || 0),
-                        valor_va:        prev.valor_va        + (Number(data.valor_va)  || 0),
-                        valor_med:       prev.valor_med       + (Number(data.valor_med) || 0),
-                        valor_odonto:    prev.valor_odonto    + (Number(data.valor_odonto) || 0),
-                        desconto_vt:     prev.desconto_vt     + (Number(data.desconto_vt)  || 0),
-                        desconto_vr:     prev.desconto_vr     + (Number(data.desconto_vr)  || 0),
-                        desconto_va:     prev.desconto_va     + (Number(data.desconto_va)  || 0),
-                        desconto_med:    prev.desconto_med    + (Number(data.desconto_med) || 0),
-                        desconto_odonto: prev.desconto_odonto + (Number(data.desconto_odonto) || 0),
-                        nome:            String(data.nome_fornecedor || prev.nome || '').trim(),
-                        centro_custo:    String(data.centro_custo || prev.centro_custo || '').trim(),
-                    });
-                });
-                _cacheBeneficiosPJFullDash = mapFull;
+                const docs = [];
+                snap.forEach(d => docs.push(d.data() || {}));
+                const result = folhaMontarCacheBeneficiosPJ(docs);
+                _cacheBeneficiosPJFullDash = result.mapFull;
+                _cacheBeneficiosPorMatricula = result.mapMatricula;
                 _pjDashRebuild();
+                // Re-enriquece CLTs com benefícios atualizados (listener pode
+                // chegar depois dos CLTs — precisa re-injetar Bnf_*).
+                (window._custoFolhaBase || []).forEach(r => folhaEnriquecerCltComBeneficios(r, _cacheBeneficiosPorMatricula));
                 try { processarCustoFolha(); } catch (_) { /* no-op */ }
             }, (err) => {
                 console.warn('[CustoFolhaDash][BenefPJ] listener falhou:', err?.code || err?.message);
                 _cacheBeneficiosPJFullDash = new Map();
+                _cacheBeneficiosPorMatricula = new Map();
             });
         } catch (err) {
             console.warn('[CustoFolhaDash][BenefPJ] inscrição falhou:', err?.message);
@@ -1941,6 +1924,8 @@
           window._custoFolhaBase = todos;
           console.log(`[CustoFolhaDash] Registros carregados: ${window._custoFolhaBase.length}`);
         }
+        // Enriquece CLTs com benefícios do TXT (Fonte Única — core_rules.js).
+        (window._custoFolhaBase || []).forEach(r => folhaEnriquecerCltComBeneficios(r, _cacheBeneficiosPorMatricula));
         processarCustoFolha();
       } catch (err) {
         console.error('[CustoFolhaDash] Erro ao carregar CustosFolha:', err);

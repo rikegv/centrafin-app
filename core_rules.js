@@ -254,6 +254,95 @@ function folhaPjResolverEmpresa(codForn, dataLanc, caches) {
     return emp || 'SOULAN CONSULTORIA';
 }
 
+// Enriquece um registro CLT com benefícios do TXT analítico (CP_Beneficios_PJ).
+// cacheBenefPorMatricula = Map<"comp_matricula", { vt_pago, vr_pago, ... }>
+// Retorna o próprio reg (mutado). PJs são ignorados.
+function folhaEnriquecerCltComBeneficios(reg, cacheBenefPorMatricula) {
+    if (!reg || reg.is_pj) return reg;
+    var matriculaRaw = reg.matricula || reg.codigo || reg.chapa || '';
+    var matriculaSafe = String(matriculaRaw).trim().toUpperCase().replace(/^0+/, '');
+    var compRef = String(reg.competencia_ref || '').trim();
+    if (!matriculaSafe || !compRef) return reg;
+    var chave = compRef + '_' + matriculaSafe;
+    var benefTXT = cacheBenefPorMatricula.get(chave);
+    if (benefTXT) {
+        reg.Bnf_VT  = Number(benefTXT.vt_pago)  || 0;
+        reg.Bnf_VR  = Number(benefTXT.vr_pago)  || 0;
+        reg.Bnf_VA  = Number(benefTXT.va_pago)  || 0;
+        reg.Bnf_MED = Number(benefTXT.med_pago) || 0;
+        reg.Bnf_Odonto = Number(benefTXT.odonto_pago) || 0;
+        reg.BnfDesc_VT  = Number(benefTXT.desconto_vt)  || 0;
+        reg.BnfDesc_VR  = Number(benefTXT.desconto_vr)  || 0;
+        reg.BnfDesc_VA  = Number(benefTXT.desconto_va)  || 0;
+        reg.BnfDesc_MED = Number(benefTXT.desconto_med) || 0;
+        reg.BnfDesc_Odonto = Number(benefTXT.desconto_odonto) || 0;
+        reg._has_benef_txt = true;
+    } else {
+        reg.Bnf_VT  = reg.Bnf_VT  || 0;
+        reg.Bnf_VR  = reg.Bnf_VR  || 0;
+        reg.Bnf_VA  = reg.Bnf_VA  || 0;
+        reg.Bnf_MED = reg.Bnf_MED || 0;
+        reg.Bnf_Odonto = reg.Bnf_Odonto || 0;
+    }
+    return reg;
+}
+
+// Monta o Map de benefícios por matrícula a partir de um snapshot de CP_Beneficios_PJ.
+// Retorna { mapPJ, mapFull, mapMatricula } para uso pelos módulos.
+function folhaMontarCacheBeneficiosPJ(docs) {
+    var mapPJ = new Map();
+    var mapFull = new Map();
+    var mapMatricula = new Map();
+    for (var i = 0; i < docs.length; i++) {
+        var data = docs[i];
+        var comp = String(data.competencia || '').trim();
+        var fid = String(data.fornecedor_id || '').trim();
+        var matricula = String(data.fil_codigo || '').trim().replace(/^0+/, '');
+        if (!comp || !matricula) continue;
+        // PJ (fid != ORFAO)
+        if (fid && fid !== 'ORFAO') {
+            var chavePJ = comp + '_' + fid;
+            var valor = Number(data.valor_total) || 0;
+            if (valor > 0) {
+                mapPJ.set(chavePJ, (mapPJ.get(chavePJ) || 0) + valor);
+                var vt=Number(data.valor_vt)||0, vr=Number(data.valor_vr)||0, va=Number(data.valor_va)||0;
+                var med=Number(data.valor_med)||0, odo=Number(data.valor_odonto)||0;
+                var dvt=Number(data.desconto_vt)||0, dvr=Number(data.desconto_vr)||0, dva=Number(data.desconto_va)||0;
+                var dmed=Number(data.desconto_med)||0, dodo=Number(data.desconto_odonto)||0, dtot=Number(data.total_descontos)||0;
+                var prev = mapFull.get(chavePJ) || {
+                    valor_vt:0,valor_vr:0,valor_va:0,valor_med:0,valor_odonto:0,valor_total:0,
+                    desconto_vt:0,desconto_vr:0,desconto_va:0,desconto_med:0,desconto_odonto:0,total_descontos:0,
+                    nome:'',centro_custo:'',fornecedor_id:fid
+                };
+                mapFull.set(chavePJ, {
+                    nome: String(data.nome_fornecedor||prev.nome||'').trim(),
+                    centro_custo: String(data.centro_custo||prev.centro_custo||'').trim(),
+                    fornecedor_id: fid,
+                    valor_vt:prev.valor_vt+vt, valor_vr:prev.valor_vr+vr, valor_va:prev.valor_va+va,
+                    valor_med:prev.valor_med+med, valor_odonto:(prev.valor_odonto||0)+odo,
+                    valor_total:prev.valor_total+valor,
+                    desconto_vt:prev.desconto_vt+dvt, desconto_vr:prev.desconto_vr+dvr, desconto_va:prev.desconto_va+dva,
+                    desconto_med:prev.desconto_med+dmed, desconto_odonto:(prev.desconto_odonto||0)+dodo,
+                    total_descontos:prev.total_descontos+dtot
+                });
+            }
+        }
+        // CLT (universal por matrícula)
+        var chaveMatricula = comp + '_' + matricula;
+        mapMatricula.set(chaveMatricula, {
+            vt_pago:Number(data.valor_vt||0), vr_pago:Number(data.valor_vr||0),
+            va_pago:Number(data.valor_va||0), med_pago:Number(data.valor_med||0),
+            odonto_pago:Number(data.valor_odonto||0),
+            total_proventos_benef:Number(data.valor_total||0),
+            desconto_vt:Number(data.desconto_vt||0), desconto_vr:Number(data.desconto_vr||0),
+            desconto_va:Number(data.desconto_va||0), desconto_med:Number(data.desconto_med||0),
+            desconto_odonto:Number(data.desconto_odonto||0),
+            total_descontos_benef:Number(data.total_descontos||0)
+        });
+    }
+    return { mapPJ: mapPJ, mapFull: mapFull, mapMatricula: mapMatricula };
+}
+
 /* -------- Custo de Folha — classificação e cálculo (Fonte Única) ------ */
 // Extraído do Gerenciador (custo_folha_desktop) sem alteração de lógica.
 // Ambos os módulos (Gerenciador e Dashboard) importam daqui.
@@ -416,6 +505,8 @@ window.extrairNum = parseMoedaCRF;
 window.folhaNormalizarCompetenciaPJ = folhaNormalizarCompetenciaPJ;
 window.folhaEmpresaCanonica = folhaEmpresaCanonica;
 window.folhaPjResolverEmpresa = folhaPjResolverEmpresa;
+window.folhaEnriquecerCltComBeneficios = folhaEnriquecerCltComBeneficios;
+window.folhaMontarCacheBeneficiosPJ = folhaMontarCacheBeneficiosPJ;
 window.folhaCustoIsVencimento = folhaCustoIsVencimento;
 window.folhaCustoIsEncargo = folhaCustoIsEncargo;
 window.folhaCustoIsDescFolhaInfo = folhaCustoIsDescFolhaInfo;
