@@ -1518,11 +1518,8 @@
       if (entrada === null || entrada === undefined || entrada === "" || entrada === "-") return "-";
       try {
         let isoString = "";
-        let dataFinal = null;
-        if (typeof entrada.toDate === 'function') dataFinal = entrada.toDate();
-        else if (entrada instanceof Date) dataFinal = entrada;
-        else if (typeof entrada === 'number') dataFinal = new Date((entrada - 25569) * 86400 * 1000);
-        if (dataFinal && !isNaN(dataFinal.getTime())) isoString = dataFinal.toISOString();
+        const dataFinal = parseDataLocal(entrada);
+        if (dataFinal && !isNaN(dataFinal.getTime())) isoString = `${dataFinal.getFullYear()}-${String(dataFinal.getMonth()+1).padStart(2,'0')}-${String(dataFinal.getDate()).padStart(2,'0')}T00:00:00.000Z`;
         else isoString = String(entrada).trim();
 
         if (isoString.includes('/') && isoString.split('/').length === 3) return isoString;
@@ -1816,18 +1813,10 @@
         if (dtInicio || dtFim) {
           dadosFiltrados = todasAsNotas.filter(data => {
             let emissaoRaw = data['data_emissao'] || data['Dt Emissao'] || "";
-            let d = null;
-            if (emissaoRaw.toDate) d = emissaoRaw.toDate();
-            else if (emissaoRaw instanceof Date) d = emissaoRaw;
-            else if (typeof emissaoRaw === 'number') d = new Date((emissaoRaw - 25569) * 86400 * 1000);
-            else {
-              const s = String(emissaoRaw).trim();
-              if (s.includes('/')) d = new Date(`${s.split('/')[2]}-${s.split('/')[1]}-${s.split('/')[0]}`);
-              else d = new Date(s);
-            }
+            const d = parseDataLocal(emissaoRaw);
 
             if (d && !isNaN(d.getTime())) {
-              const iso = d.toISOString().split('T')[0];
+              const iso = extrairISOLocal(emissaoRaw);
               if (dtInicio && iso < dtInicio) return false;
               if (dtFim && iso > dtFim) return false;
               return true;
@@ -1963,23 +1952,8 @@
     }
 
     function parseDataAuditoria(raw) {
-      if (raw === null || raw === undefined || raw === '' || raw === '-') return null;
-      let d = null;
-      if (raw && typeof raw.toDate === 'function') d = raw.toDate();
-      else if (raw instanceof Date) d = raw;
-      else if (typeof raw === 'number') d = new Date((raw - 25569) * 86400 * 1000);
-      else {
-        const s = String(raw).trim();
-        if (s.includes('/')) {
-          const p = s.split('/');
-          if (p.length === 3) d = new Date(`${p[2].padStart(4, '20')}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}T00:00:00`);
-        } else if (s.includes('-')) {
-          const p = s.split('T')[0].split('-');
-          if (p.length === 3) d = new Date(`${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}T00:00:00`);
-        } else {
-          d = new Date(s);
-        }
-      }
+      // Delega para parseDataLocal (core_rules.js) — timezone-safe para serial Excel.
+      const d = parseDataLocal(raw);
       if (d && !isNaN(d.getTime())) { d.setHours(0, 0, 0, 0); return d; }
       return null;
     }
@@ -3026,23 +3000,9 @@
     window.direcaoSort = 'asc';
 
     function parseDataSortCRF(raw) {
-      if (raw === null || raw === undefined || raw === '' || raw === '-') return null;
-      try {
-        let d = null;
-        if (raw && typeof raw === 'object' && raw.toDate) d = raw.toDate();
-        else if (raw instanceof Date) d = raw;
-        else if (typeof raw === 'number') d = new Date((raw - 25569) * 86400 * 1000);
-        else {
-          const s = String(raw).trim();
-          if (s.includes('/')) {
-            const p = s.split('/');
-            if (p.length === 3) d = new Date(`${p[2]}-${p[1]}-${p[0]}`);
-          } else {
-            d = new Date(s);
-          }
-        }
-        return (d && !isNaN(d.getTime())) ? d.getTime() : null;
-      } catch (e) { return null; }
+      // Delega para parseDataLocal (core_rules.js) — timezone-safe para serial Excel.
+      const d = parseDataLocal(raw);
+      return (d && !isNaN(d.getTime())) ? d.getTime() : null;
     }
 
     function parseMoneySortCRF(raw) {
@@ -3731,23 +3691,8 @@
         const parseValor = parseMoedaCRF;
         const valorFatura = parseValor(data['valor_fatura'] || data['Valor Fatura'] || data['valor'] || 0);
         const valorLiquido = obterValorLiquido(data);
-        const formatForInput = (raw) => {
-          if (!raw) return "";
-          try {
-            let d = null;
-            if (raw.toDate) d = raw.toDate();
-            else if (raw instanceof Date) d = raw;
-            else if (typeof raw === 'number') d = new Date((raw - 25569) * 86400 * 1000);
-            else {
-              const s = String(raw).trim();
-              if (s.includes('-') && s.length >= 10) return s.split('T')[0];
-              if (s.includes('/') && s.split('/').length === 3) return `${s.split('/')[2]}-${s.split('/')[1].padStart(2, '0')}-${s.split('/')[0].padStart(2, '0')}`;
-              d = new Date(s);
-            }
-            if (d && !isNaN(d.getTime())) return d.toISOString().split('T')[0];
-          } catch (e) { return ""; }
-          return "";
-        };
+        // extrairISOLocal (core_rules.js) — timezone-safe para serial Excel.
+        const formatForInput = (raw) => extrairISOLocal(raw) || "";
         setVal('campo-nf', nf);
         setVal('campo-descricao', descContrato);
         setVal('campo-cliente', cliente);
@@ -4374,15 +4319,12 @@
       }
 
       todasAsNotas.sort((a, b) => {
+        // parseDataLocal (core_rules.js) — timezone-safe para serial Excel.
         const getEmissao = (doc) => {
           const raw = doc["data_emissao"] || doc["Dt Emissao"] || doc["data_criacao"] || "";
           if (!raw) return 0;
-          if (raw.toDate) return raw.toDate().getTime();
-          if (raw instanceof Date) return raw.getTime();
-          if (typeof raw === 'number') return new Date((raw - 25569) * 86400 * 1000).getTime();
-          const s = String(raw).trim();
-          if (s.includes('/')) return new Date(`${s.split('/')[2]}-${s.split('/')[1]}-${s.split('/')[0]}`).getTime();
-          return new Date(s).getTime() || 0;
+          const d = parseDataLocal(raw);
+          return (d && !isNaN(d.getTime())) ? d.getTime() : 0;
         };
         return getEmissao(b) - getEmissao(a);
       });
