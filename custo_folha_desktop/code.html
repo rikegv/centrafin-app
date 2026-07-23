@@ -3696,6 +3696,8 @@
             if (k.startsWith('BnfDesc_'))    return 'descontos_bnf';
             if (isBnfDesc(k))                return 'descontos_bnf';
             if (isVencimento(k))             return 'vencimentos';
+            // OS-FOLHA-BLOCO-C: verbas de exame médico/ASO em caixa própria.
+            if (KU.includes('EXAME_MEDICO')) return 'exame_medico';
             // D) Amber — só o que sobrou E é número (dinheiro não mapeado).
             return 'outros_valores';
         }
@@ -3819,6 +3821,7 @@
         const grupos = {
             identificacao: [], datas: [], vencimentos: [], encargos: [],
             beneficios: [], descontos_bnf: [], descontos_folha: [],
+            exame_medico: [],
             quantidades: [], outros_valores: [], metadados: [], outros: [],
         };
         // Auditoria 2026-05-28 (Cleanup do Modal Olho — duplicata de descontos):
@@ -3878,6 +3881,7 @@
             secao('Benefícios Pagos', 'card_travel', 'text-tertiary', grupos.beneficios) +
             secao('Descontos em Benefícios', 'card_travel', 'text-red-500', grupos.descontos_bnf) +
             secao('Descontos', 'trending_down', 'text-slate-500', grupos.descontos_folha) +
+            secao('Exame Médico', 'medical_services', 'text-tertiary', grupos.exame_medico) +
             secao('Quantidades e Índices', 'functions', 'text-slate-500', grupos.quantidades) +
             secao('Outros valores importados', 'help', 'text-amber-500', grupos.outros_valores,
                   ` <span class="normal-case text-slate-400 font-normal">— não mapeados no cálculo</span>`) +
