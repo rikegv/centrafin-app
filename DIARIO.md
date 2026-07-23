@@ -5,6 +5,58 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-07-23 — OS-IMPORT-ROBUSTEZ-01: Importação de Lancamentos resiliente
+
+### Status: IMPLEMENTADO — aguarda validação visual do diretor + testes com dados reais.
+
+### Causa raiz do problema
+Importação da base 2025 de Contas a Receber falhou após 3.639 de 5.639 registros.
+Loop sequencial de `addDoc` individuais sofria retry do SDK Firebase em perda de rede
+→ "Document already exists" → abortava tudo, deixando 2.000 registros faltantes
+(R$ 7.360.360,61).
+
+### O que foi implementado (branch `feature/import-robustez`)
+1. **writeBatch com lotes de 450** — substitui loop sequencial de addDoc/updateDoc.
+   Usa `doc(collection(db, "Lancamentos"))` para IDs aleatórios client-side (equivalente
+   funcional a addDoc, sem risco de duplicar docs existentes com IDs determinísticos).
+2. **Tolerância a falha por lote** — try/catch individual por batch.commit(). Lote que
+   falha registra docs falhados e continua com o próximo. Não aborta.
+3. **Indicador de progresso** — botão mostra "Criando/Atualizando lote X de Y — Z de N".
+4. **Relatório final** — modal de sucesso expandido com cards (Criados/Atualizados/Falhados)
+   + lista de NFs com motivo de falha (até 50, com indicador de overflow).
+5. **Dedup INTOCADA** — normChaveDoc, mapExistentes, classificação novos/atualizados
+   preservados integralmente.
+
+### Decisão do diretor
+- NÃO reimportar até validação completa da robustez.
+
+### Arquivo alterado
+- `contas_a_receber_desktop/code.html` — função `processarSalvamentoImportacao` + modal de sucesso.
+
+### Pendências
+- Validação visual do diretor (feature com UI).
+- Testes com dados reais: (a) 5.639 registros entram; (b) reimportação não duplica; (c) relatório bate.
+- Flag READY_OS-IMPORT-ROBUSTEZ-01 após validação.
+
+---
+
+## Pendência — Custo de Folha × Reembolsos de PJ Interno (registrada 2026-07-17)
+
+**Status: PENDENTE — aguarda solicitação explícita do diretor para implementar.**
+
+Lançamentos de REEMBOLSO feitos a PJs internos (vindos do módulo Contas a Pagar) NÃO
+devem entrar no custo de folha. Reembolso (Uber, almoço com cliente, compras adiantadas)
+é devolução de dinheiro que o PJ adiantou — não é custo de pessoal/remuneração. Só deve
+entrar no custo de folha a nota de serviço/remuneração do PJ.
+
+### A definir antes da implementação
+
+Como o sistema distingue um lançamento de "reembolso" de uma "nota de serviço" do PJ:
+campo específico, categoria, palavra na descrição, ou se precisará de marcação nova. Essa
+definição determina se é correção simples de filtro ou mudança estrutural.
+
+---
+
 ## 2026-07-10 — OS-APROVACAO-MODAL-02 a 05: Modais de Aprovação — diff, resumo de negócio, campos editáveis
 
 ### Contexto e escopo final

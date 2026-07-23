@@ -965,12 +965,32 @@
     class="fixed inset-0 z-[70] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
     <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" id="modal-sucesso-overlay"></div>
     <div
-      class="bg-white w-full max-w-sm rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100"
+      class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 p-10 transform scale-95 transition-transform duration-300 relative text-center border border-slate-100"
       id="modal-sucesso-content">
       <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"><span
           class="material-symbols-outlined text-5xl text-[#aad12f]">check_circle</span></div>
       <h3 class="font-headline text-2xl font-bold text-[#002443] mb-3 tracking-tight">Importação Concluída!</h3>
-      <p class="text-slate-500 text-[14px] mb-8 font-medium">A base foi carregada e salva com sucesso no sistema.</p>
+      <p id="modal-sucesso-resumo" class="text-slate-500 text-[14px] mb-4 font-medium">A base foi carregada e salva com sucesso no sistema.</p>
+      <div id="modal-sucesso-detalhes" class="hidden text-left mb-6">
+        <div id="modal-sucesso-stats" class="grid grid-cols-3 gap-2 mb-3">
+          <div class="bg-green-50 rounded-lg p-2 text-center">
+            <div id="stat-criados" class="text-lg font-bold text-green-700">0</div>
+            <div class="text-[10px] text-green-600 font-medium">Criados</div>
+          </div>
+          <div class="bg-blue-50 rounded-lg p-2 text-center">
+            <div id="stat-atualizados" class="text-lg font-bold text-blue-700">0</div>
+            <div class="text-[10px] text-blue-600 font-medium">Atualizados</div>
+          </div>
+          <div class="bg-red-50 rounded-lg p-2 text-center">
+            <div id="stat-falhados" class="text-lg font-bold text-red-700">0</div>
+            <div class="text-[10px] text-red-600 font-medium">Falhados</div>
+          </div>
+        </div>
+        <div id="modal-sucesso-falhas" class="hidden max-h-40 overflow-y-auto border border-red-200 rounded-lg p-2 bg-red-50/50">
+          <p class="text-xs font-bold text-red-700 mb-1">Registros com falha:</p>
+          <ul id="lista-falhas" class="text-[11px] text-red-600 space-y-0.5 list-disc list-inside"></ul>
+        </div>
+      </div>
       <button id="btn-sucesso-concluir"
         class="w-full py-4 bg-[#aad12f] text-[#341100] rounded-xl text-sm font-bold shadow-lg shadow-[#aad12f]/40 hover:brightness-105 active:scale-95 transition-all">Concluir</button>
     </div>
@@ -2525,50 +2545,131 @@
     }
 
     async function processarSalvamentoImportacao(novos, atualizados, btnOriginalText) {
+      const TAMANHO_LOTE = 450; // Firestore writeBatch suporta até 500 ops; margem de segurança.
+      const totalOps = novos.length + atualizados.length;
+      let criados = 0;
+      let atualizadosOk = 0;
+      const falhas = []; // { nf: string, motivo: string }
+
       try {
         btnProcessar.disabled = true;
-        btnProcessar.textContent = "Carregando, aguarde!";
         btnProcessar.classList.add('opacity-70');
 
-        for (const docData of novos) {
-          delete docData.idExistente;
-          delete docData.comercialAntigo;
-          delete docData.historico_comercial_existente;
-          await addDoc(collection(db, "Lancamentos"), docData);
+        // --- FASE 1: Gravar NOVOS em lotes ---
+        const lotesNovos = [];
+        for (let i = 0; i < novos.length; i += TAMANHO_LOTE) {
+          lotesNovos.push(novos.slice(i, i + TAMANHO_LOTE));
         }
 
-        for (const docData of atualizados) {
-          const idDoc = docData.idExistente;
-          delete docData.idExistente;
+        for (let idx = 0; idx < lotesNovos.length; idx++) {
+          const processados = (idx * TAMANHO_LOTE) + lotesNovos[idx].length;
+          btnProcessar.textContent = `Criando lote ${idx + 1} de ${lotesNovos.length + Math.ceil(atualizados.length / TAMANHO_LOTE)} — ${processados} de ${totalOps}`;
 
-          const updatePayload = {
-            'Dt Baixa': docData['Dt Baixa'] || "",
-            'Valor Baixa': docData['Valor Baixa'] || 0,
-            'Status': docData['Status'] || "",
-            'saldo_residual': docData.saldo_residual || 0,
-            'tipo_divergencia': docData.tipo_divergencia || "",
-            data_edicao: new Date()
-          };
-          const novoComercial = docData['Comissionado 01'] || docData['Vendedor'];
-          const antigoComercial = docData.comercialAntigo;
-          if (novoComercial && antigoComercial && novoComercial !== antigoComercial) {
-            updatePayload.historico_comercial = docData.historico_comercial_existente || [];
-            updatePayload.historico_comercial.push({
-              comercial_antigo: antigoComercial,
-              comercial_novo: novoComercial,
-              data_alteracao: new Date().toISOString()
-            });
-            updatePayload['Comissionado 01'] = novoComercial;
+          const batch = writeBatch(db);
+          const docsNoLote = [];
+          for (const docData of lotesNovos[idx]) {
+            const nfRef = docData.rps || docData['Nº NF'] || '(sem NF)';
+            delete docData.idExistente;
+            delete docData.comercialAntigo;
+            delete docData.historico_comercial_existente;
+            const novoDocRef = doc(collection(db, "Lancamentos"));
+            batch.set(novoDocRef, docData);
+            docsNoLote.push(nfRef);
           }
 
-          delete docData.comercialAntigo;
-          delete docData.historico_comercial_existente;
-          if (docData['status']) updatePayload.status = docData.status;
-
-          await updateDoc(doc(db, "Lancamentos", idDoc), updatePayload);
+          try {
+            await batch.commit();
+            criados += lotesNovos[idx].length;
+          } catch (errLote) {
+            for (const nf of docsNoLote) {
+              falhas.push({ nf, motivo: errLote.message || String(errLote) });
+            }
+          }
         }
 
-        await registrarLog("INCLUSÃO/ATUALIZAÇÃO", `Importou base com ${novos.length} notas e atualizou ${atualizados.length} registros que já existiam.`);
+        // --- FASE 2: Gravar ATUALIZADOS em lotes ---
+        const lotesAtualiz = [];
+        for (let i = 0; i < atualizados.length; i += TAMANHO_LOTE) {
+          lotesAtualiz.push(atualizados.slice(i, i + TAMANHO_LOTE));
+        }
+
+        for (let idx = 0; idx < lotesAtualiz.length; idx++) {
+          const processados = criados + falhas.length + (idx * TAMANHO_LOTE) + lotesAtualiz[idx].length;
+          const loteGlobal = lotesNovos.length + idx + 1;
+          const totalLotes = lotesNovos.length + lotesAtualiz.length;
+          btnProcessar.textContent = `Atualizando lote ${loteGlobal} de ${totalLotes} — ${processados} de ${totalOps}`;
+
+          const batch = writeBatch(db);
+          const docsNoLote = [];
+          for (const docData of lotesAtualiz[idx]) {
+            const idDoc = docData.idExistente;
+            const nfRef = docData.rps || docData['Nº NF'] || '(sem NF)';
+            delete docData.idExistente;
+
+            const updatePayload = {
+              'Dt Baixa': docData['Dt Baixa'] || "",
+              'Valor Baixa': docData['Valor Baixa'] || 0,
+              'Status': docData['Status'] || "",
+              'saldo_residual': docData.saldo_residual || 0,
+              'tipo_divergencia': docData.tipo_divergencia || "",
+              data_edicao: new Date()
+            };
+            const novoComercial = docData['Comissionado 01'] || docData['Vendedor'];
+            const antigoComercial = docData.comercialAntigo;
+            if (novoComercial && antigoComercial && novoComercial !== antigoComercial) {
+              updatePayload.historico_comercial = docData.historico_comercial_existente || [];
+              updatePayload.historico_comercial.push({
+                comercial_antigo: antigoComercial,
+                comercial_novo: novoComercial,
+                data_alteracao: new Date().toISOString()
+              });
+              updatePayload['Comissionado 01'] = novoComercial;
+            }
+
+            delete docData.comercialAntigo;
+            delete docData.historico_comercial_existente;
+            if (docData['status']) updatePayload.status = docData.status;
+
+            batch.update(doc(db, "Lancamentos", idDoc), updatePayload);
+            docsNoLote.push(nfRef);
+          }
+
+          try {
+            await batch.commit();
+            atualizadosOk += lotesAtualiz[idx].length;
+          } catch (errLote) {
+            for (const nf of docsNoLote) {
+              falhas.push({ nf, motivo: errLote.message || String(errLote) });
+            }
+          }
+        }
+
+        // --- FASE 3: Log e relatório ---
+        await registrarLog("INCLUSÃO/ATUALIZAÇÃO", `Importou base: ${criados} criados, ${atualizadosOk} atualizados, ${falhas.length} falhados de ${totalOps} total.`);
+
+        // Preencher relatório no modal de sucesso
+        document.getElementById('stat-criados').textContent = criados;
+        document.getElementById('stat-atualizados').textContent = atualizadosOk;
+        document.getElementById('stat-falhados').textContent = falhas.length;
+        document.getElementById('modal-sucesso-detalhes').classList.remove('hidden');
+
+        if (falhas.length > 0) {
+          document.getElementById('modal-sucesso-falhas').classList.remove('hidden');
+          const listaFalhas = document.getElementById('lista-falhas');
+          listaFalhas.innerHTML = falhas.slice(0, 50).map(f =>
+            `<li>NF <strong>${f.nf}</strong>: ${f.motivo}</li>`
+          ).join('');
+          if (falhas.length > 50) {
+            listaFalhas.innerHTML += `<li class="font-bold">... e mais ${falhas.length - 50} registros com falha.</li>`;
+          }
+          document.getElementById('modal-sucesso-resumo').textContent =
+            `Importação concluída com ${falhas.length} falha(s). Veja o relatório abaixo.`;
+        } else {
+          document.getElementById('modal-sucesso-falhas').classList.add('hidden');
+          document.getElementById('modal-sucesso-resumo').textContent =
+            'A base foi carregada e salva com sucesso no sistema.';
+        }
+
         const modalSucesso = document.getElementById('modal-sucesso');
         const modalSucessoContent = document.getElementById('modal-sucesso-content');
         modalSucesso.classList.remove('opacity-0', 'pointer-events-none');
@@ -2616,6 +2717,10 @@
           modalSucesso.classList.add('opacity-0', 'pointer-events-none');
           modalSucessoContent.classList.add('scale-95');
         }
+        // Limpar estado do relatório para próxima importação
+        document.getElementById('modal-sucesso-detalhes').classList.add('hidden');
+        document.getElementById('modal-sucesso-falhas').classList.add('hidden');
+        document.getElementById('lista-falhas').innerHTML = '';
         fecharModalImportar();
         limparFeedback();
 
