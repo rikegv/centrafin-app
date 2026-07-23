@@ -1693,19 +1693,8 @@
     let _unsubFornCC = null;
     let _unsubBenefPJDash = null;
 
-    function _normalizarCompetenciaPJ(raw, fallbackVencimento) {
-        const s = String(raw || '').trim();
-        // Formato Folha já — passthrough.
-        let m = s.match(/^(\d{4})-(\d{2})$/);
-        if (m) return s;
-        // Formato CP "MM/YYYY" → "YYYY-MM".
-        m = s.match(/^(\d{2})\/(\d{4})$/);
-        if (m) return `${m[2]}-${m[1]}`;
-        // Fallback: deriva da data_vencimento "YYYY-MM-DD".
-        const mv = String(fallbackVencimento || '').match(/^(\d{4})-(\d{2})/);
-        if (mv) return `${mv[1]}-${mv[2]}`;
-        return '';
-    }
+    // Delega para core_rules.js (Fonte Única — OS-FOLHA-PJ-EMPRESA-01).
+    const _normalizarCompetenciaPJ = folhaNormalizarCompetenciaPJ;
 
     // ── CONSOLIDAÇÃO PJ — 1 LINHA POR (PJ × COMPETÊNCIA) (auditoria 2026-06-05) ─
     // Espelha o custo_folha_desktop: cada PJ vira UMA entrada por competência
@@ -1723,45 +1712,13 @@
     // "Campos Girassol" cadastrada como NEAT computa na barra da NEAT, qualquer
     // que seja o centro de custo na folha. Sem vínculo no cadastro, cai na
     // empresa já gravada no lançamento e, em último caso, na principal — nunca 'PJ'.
+    // Delegam para core_rules.js (Fonte Única — OS-FOLHA-PJ-EMPRESA-01).
     function _pjEmpresaPorFornecedor(codForn, dataLanc) {
-        const _norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
-        const _digitos = (s) => String(s || '').replace(/\D/g, '');
-        let emp = '';
-        // 1) por código do fornecedor (chave relacional primária).
-        if (codForn != null && _cacheFornEmpresa.has(String(codForn))) {
-            emp = _cacheFornEmpresa.get(String(codForn));
-        }
-        // 2) por CNPJ/CPF do profissional.
-        if (!emp && dataLanc) {
-            const doc = _digitos(dataLanc.cnpj || dataLanc.cpf || dataLanc.cnpj_cpf || dataLanc.documento);
-            if (doc && _cacheFornEmpresaPorDoc.has(doc)) emp = _cacheFornEmpresaPorDoc.get(doc);
-        }
-        // 3) por nome do profissional (entidade/favorecido).
-        if (!emp && dataLanc) {
-            const nm = _norm(dataLanc.entidade || dataLanc.favorecido || dataLanc.nome);
-            if (nm && _cacheFornEmpresaPorNome.has(nm)) emp = _cacheFornEmpresaPorNome.get(nm);
-        }
-        // 4) fallback: empresa já no lançamento; senão principal. Nunca 'PJ'.
-        if (!emp && dataLanc && dataLanc.empresa) emp = String(dataLanc.empresa);
-        emp = _folhaEmpresaCanonica(emp); // higieniza (regra "3" exata + guarda anti-PJ)
-        return emp || 'SOULAN CONSULTORIA';
+        return folhaPjResolverEmpresa(codForn, dataLanc, {
+            porCodigo: _cacheFornEmpresa, porDoc: _cacheFornEmpresaPorDoc, porNome: _cacheFornEmpresaPorNome
+        });
     }
-
-    // Higienização CANÔNICA do nome da empresa (auditoria 2026-06-19) — regras
-    // duras da diretoria, aplicadas em filtro, dropdown e agregação do gráfico:
-    //  - EXCLUSIVAMENTE "SOULAN CONSULTORIA 3" funde na principal "SOULAN
-    //    CONSULTORIA". Igualdade EXATA (case/espaços normalizados) — "NEAT 3" ou
-    //    qualquer outra empresa com o dígito 3 NÃO é absorvida.
-    //  - 'PJ' é vínculo, não empresa: guarda final caso algum registro escape do
-    //    vínculo relacional — incorpora na principal, nunca vira barra própria.
-    function _folhaEmpresaCanonica(empresaRaw) {
-        let emp = String(empresaRaw || '').trim();
-        if (!emp) return emp;
-        const cmp = emp.toUpperCase().replace(/\s+/g, ' ').trim();
-        if (cmp === 'SOULAN CONSULTORIA 3') return 'SOULAN CONSULTORIA';
-        if (cmp === EMPRESA_PJ_SENTINELA) return 'SOULAN CONSULTORIA';
-        return emp;
-    }
+    const _folhaEmpresaCanonica = folhaEmpresaCanonica;
 
     function _pjDashBase(compRef, codForn, dataLanc) {
         const ccLanc = String(dataLanc?.centro_custo || '').trim();

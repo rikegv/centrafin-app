@@ -204,6 +204,56 @@ function obterStatusReal(data, hojeData) {
   return "A VENCER";
 }
 
+/* -------- Custo de Folha — funções compartilhadas (Fonte Única) ------- */
+
+// Normaliza competência PJ para formato canônico "YYYY-MM".
+// CP grava "MM/YYYY"; Folha usa "YYYY-MM". Fallback: data_vencimento "YYYY-MM-DD".
+function folhaNormalizarCompetenciaPJ(raw, fallbackVencimento) {
+    var s = String(raw || '').trim();
+    var m = s.match(/^(\d{4})-(\d{2})$/);
+    if (m) return s;
+    m = s.match(/^(\d{2})\/(\d{4})$/);
+    if (m) return m[2] + '-' + m[1];
+    var mv = String(fallbackVencimento || '').match(/^(\d{4})-(\d{2})/);
+    if (mv) return mv[1] + '-' + mv[2];
+    return '';
+}
+
+// Normalização canônica de nome de empresa.
+// "SOULAN CONSULTORIA 3" → "SOULAN CONSULTORIA" (regra diretoria).
+// Sentinela "PJ" → "SOULAN CONSULTORIA" (fallback anti-sentinela).
+function folhaEmpresaCanonica(empresaRaw) {
+    var emp = String(empresaRaw || '').trim();
+    if (!emp) return emp;
+    var cmp = emp.toUpperCase().replace(/\s+/g, ' ').trim();
+    if (cmp === 'SOULAN CONSULTORIA 3') return 'SOULAN CONSULTORIA';
+    if (cmp === 'PJ') return 'SOULAN CONSULTORIA';
+    return emp;
+}
+
+// Resolve a empresa REAL de um PJ via lookup em Fornecedores.
+// caches = { porCodigo: Map, porDoc: Map, porNome: Map }
+// Cascata: (1) código fornecedor → (2) CNPJ/CPF → (3) nome → (4) empresa do lançamento.
+function folhaPjResolverEmpresa(codForn, dataLanc, caches) {
+    var _norm = function(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim(); };
+    var _digitos = function(s) { return String(s || '').replace(/\D/g, ''); };
+    var emp = '';
+    if (codForn != null && caches.porCodigo && caches.porCodigo.has(String(codForn))) {
+        emp = caches.porCodigo.get(String(codForn));
+    }
+    if (!emp && dataLanc) {
+        var doc = _digitos(dataLanc.cnpj || dataLanc.cpf || dataLanc.cnpj_cpf || dataLanc.documento);
+        if (doc && caches.porDoc && caches.porDoc.has(doc)) emp = caches.porDoc.get(doc);
+    }
+    if (!emp && dataLanc) {
+        var nm = _norm(dataLanc.entidade || dataLanc.favorecido || dataLanc.nome);
+        if (nm && caches.porNome && caches.porNome.has(nm)) emp = caches.porNome.get(nm);
+    }
+    if (!emp && dataLanc && dataLanc.empresa) emp = String(dataLanc.empresa);
+    emp = folhaEmpresaCanonica(emp);
+    return emp || 'SOULAN CONSULTORIA';
+}
+
 /* -------- Custo de Folha — classificação e cálculo (Fonte Única) ------ */
 // Extraído do Gerenciador (custo_folha_desktop) sem alteração de lógica.
 // Ambos os módulos (Gerenciador e Dashboard) importam daqui.
@@ -363,6 +413,9 @@ window.calcularFaturamentoRealMaster = calcularFaturamentoReal;
 window.extrairNum = parseMoedaCRF;
 
 // Custo de Folha — funções compartilhadas
+window.folhaNormalizarCompetenciaPJ = folhaNormalizarCompetenciaPJ;
+window.folhaEmpresaCanonica = folhaEmpresaCanonica;
+window.folhaPjResolverEmpresa = folhaPjResolverEmpresa;
 window.folhaCustoIsVencimento = folhaCustoIsVencimento;
 window.folhaCustoIsEncargo = folhaCustoIsEncargo;
 window.folhaCustoIsDescFolhaInfo = folhaCustoIsDescFolhaInfo;

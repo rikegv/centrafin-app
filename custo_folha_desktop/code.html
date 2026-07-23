@@ -1871,22 +1871,38 @@
             _unsubFornCC = onSnapshot(collection(db, 'Fornecedores'), (snap) => {
                 const map = new Map();
                 const mapFull = new Map();
+                // OS-FOLHA-PJ-EMPRESA-01: caches de empresa (mesma lógica do Dashboard)
+                const mapEmp = new Map(), mapEmpDoc = new Map(), mapEmpNome = new Map();
+                const _norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+                const _digitos = (s) => String(s || '').replace(/\D/g, '');
                 snap.forEach(d => {
                     const data = d.data() || {};
                     const cc = String(data.centro_custo || '').trim();
                     const codigo = String(data.codigo != null ? data.codigo : d.id);
+                    const idDoc = String(d.id || '').trim();
                     if (cc) map.set(codigo, cc);
-                    // Cache paralelo (auditoria 2026-05-26 Frente 3) — guarda
-                    // codigo_beneficio_folha e nome para o motor de Base Completa.
                     mapFull.set(codigo, {
                         codigo,
                         centro_custo: cc,
                         nome: String(data.nome || '').trim(),
                         codigo_beneficio_folha: String(data.codigo_beneficio_folha || '').trim(),
                     });
+                    // Vínculo relacional empresa (cadastro do fornecedor).
+                    const emp = String(data.empresa || '').trim().toUpperCase();
+                    if (emp) {
+                        mapEmp.set(codigo, emp);
+                        if (idDoc && idDoc !== codigo) mapEmp.set(idDoc, emp);
+                        const doc = _digitos(data.cnpj || data.cpf || data.cnpj_cpf || data.documento);
+                        if (doc) mapEmpDoc.set(doc, emp);
+                        const nm = _norm(data.nome || data.nome_fantasia || data.razao_social || data.entidade);
+                        if (nm) mapEmpNome.set(nm, emp);
+                    }
                 });
                 _cacheFornCC = map;
                 _cacheFornInfo = mapFull;
+                _cacheFornEmpresa = mapEmp;
+                _cacheFornEmpresaPorDoc = mapEmpDoc;
+                _cacheFornEmpresaPorNome = mapEmpNome;
                 // Re-render: força o pjParaFolha a re-rodar sobre o cache atual
                 // do PJ — necessário pra refletir mudanças de CC nos cards.
                 if (_cachePJ.length) {
@@ -2086,13 +2102,13 @@
     // regra do CC: extrai as empresas ÚNICAS do universo de dados visíveis
     // (cacheRegistros, já filtrado por permissão de CC). Um usuário segmentado a
     // um Centro de Custo passa a ver apenas as empresas relacionadas ao seu
-    // escopo — nunca a lista completa da Base. O sentinela PJ ('PJ') é excluído
-    // (não é uma empresa real; mantém paridade com a lista antiga da Base).
+    // escopo — nunca a lista completa da Base. OS-FOLHA-PJ-EMPRESA-01: PJs
+    // agora têm empresa real, sem sentinela — filtro não precisa mais excluir 'PJ'.
     function popularFiltroEmpresaDeDados() {
         if (!filtroEmpresa) return;
         const empresas = [...new Set(
             cacheRegistros.map(r => String(r?.empresa_atribuida || '').trim())
-                .filter(e => e && e !== EMPRESA_PJ_SENTINELA)
+                .filter(e => e)
         )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
         popularMultiEmpresas(filtroEmpresa, 'Todas as Empresas', empresas);
         const exportEmpresa = document.getElementById('export-filtro-empresa');
@@ -2255,6 +2271,10 @@
     // (codigo, nome, centro_custo, codigo_beneficio_folha) usada pelo motor de
     // Base Completa para resolver Código/Matrícula e cruzar com CP_Beneficios_PJ.
     let _cacheFornInfo = new Map();
+    // OS-FOLHA-PJ-EMPRESA-01: caches de empresa para resolução real de PJ.
+    let _cacheFornEmpresa = new Map();
+    let _cacheFornEmpresaPorDoc = new Map();
+    let _cacheFornEmpresaPorNome = new Map();
     // Mapa Centro de Custo → Gestor Responsável (auditoria 2026-05-26 Frente 3).
     // Listener leve em /AreasContasPagar (mesma fonte usada pelo gerenciador).
     let _areaGestorMap = new Map();
@@ -2293,19 +2313,8 @@
     //
     // A normalização aceita ambos os formatos e cai num fallback de
     // data_vencimento "YYYY-MM-DD" quando a competência veio ausente/inválida.
-    function _normalizarCompetenciaPJ(raw, fallbackVencimento) {
-        const s = String(raw || '').trim();
-        // Já no formato Folha — passthrough.
-        let m = s.match(/^(\d{4})-(\d{2})$/);
-        if (m) return s;
-        // Formato CP "MM/YYYY" → converte pra "YYYY-MM".
-        m = s.match(/^(\d{2})\/(\d{4})$/);
-        if (m) return `${m[2]}-${m[1]}`;
-        // Fallback: deriva da data_vencimento (YYYY-MM-DD).
-        const mv = String(fallbackVencimento || '').match(/^(\d{4})-(\d{2})/);
-        if (mv) return `${mv[1]}-${mv[2]}`;
-        return '';
-    }
+    // Delega para core_rules.js (Fonte Única — OS-FOLHA-PJ-EMPRESA-01).
+    const _normalizarCompetenciaPJ = folhaNormalizarCompetenciaPJ;
 
     // ── CONSOLIDAÇÃO PJ — 1 LINHA POR (PJ × COMPETÊNCIA) (auditoria 2026-06-05) ─
     // Mudança de rota a pedido do usuário: em vez de 1 linha por lançamento (+
@@ -2332,7 +2341,9 @@
             is_pj: true,
             nome,
             cpf: '',
-            empresa_atribuida: EMPRESA_PJ_SENTINELA,
+            empresa_atribuida: folhaPjResolverEmpresa(codForn, dataLanc, {
+                porCodigo: _cacheFornEmpresa, porDoc: _cacheFornEmpresaPorDoc, porNome: _cacheFornEmpresaPorNome
+            }),
             centro_custo: cc,
             competencia_ref: compRef,
             // Chave canônica que dispara isVencimento + isSalarioBrutoKey (fatura).
