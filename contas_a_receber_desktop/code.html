@@ -824,17 +824,8 @@
             <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Tipo de Serviço</label>
             <select id="filtro-tipo-servico" multiple size="6" data-checkbox-multi data-placeholder="Todos os Serviços"
               class="w-full border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-inner">
+              <!-- Opções populadas dinamicamente da base em popularFiltroTipoServico() -->
               <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Serviços</option>
-              <option value="UNIDADES">UNIDADES</option>
-              <option value="TEMPORARIO">TEMPORARIO</option>
-              <option value="ESTAGIO">ESTAGIO</option>
-              <option value="CONSULTORIA">CONSULTORIA</option>
-              <option value="PROCESSAMENTO DE PPA">PROCESSAMENTO DE PPA</option>
-              <option value="RPO">RPO</option>
-              <option value="ASSESSMENT">ASSESSMENT</option>
-              <option value="TREINAMENTO">TREINAMENTO</option>
-              <option value="SUBSCRIPTION">SUBSCRIPTION</option>
-              <option value="HOTMART">HOTMART</option>
             </select>
           </div>
           <div>
@@ -3093,11 +3084,36 @@
       if (typeof aplicarFiltros === 'function') aplicarFiltros();
     };
 
+    // --- Tipo de Serviço: leitura e normalização canônicas (OS-FILTRO-SERVICO-DINAMICO-01) ---
+    // O filtro de Tipo de Serviço deixou de ser hardcoded no HTML e passou a ser derivado da
+    // base. Para a <option> gerada casar com o valor comparado no filtro, os DOIS lados
+    // (popularFiltroTipoServico e aplicarFiltros) precisam usar a MESMA leitura de campo e a
+    // MESMA normalização — por isso as funções abaixo são compartilhadas.
+    // Precedência de campo idêntica à já usada em obterFaturamentoReal/auditarServicosNaoMapeados:
+    // a base tem 'Descrição Do Contrato' (ETL) e 'descricao_contrato'/'descricao' (criados no app).
+    function obterTipoServicoBruto(d) {
+      return String(d['descricao_contrato'] || d['Descrição Do Contrato'] || d['Tipo de Serviço'] || d['tipo_servico'] || d['descricao'] || "");
+    }
+    // Agrupa grafias equivalentes: sem acento, sem espaço duplo, caixa alta.
+    // (auditoria 2026-08: a base tem 'ESTAGIO' e 'ESTÁGIO' para o mesmo serviço; sem o
+    // colapso de \s+ um valor com espaço duplo nunca casaria com a própria option)
+    function normTipoServico(s) {
+      return String(s || "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toUpperCase();
+    }
+
     function aplicarFiltros() {
       const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const termo = inputBusca ? inputBusca.value.trim() : "";
       const t = norm(termo);
       const fTipoArr = getMultiValues('filtro-tipo-servico');
+      // Casamento EXATO normalizado (decisão diretor): antes era por substring, o que fazia
+      // marcar TREINAMENTO trazer também TREINAMENTO DE PPA. Set montado fora do loop de
+      // ~9,5 mil notas para não renormalizar a seleção a cada documento.
+      const fTipoNormSet = new Set(fTipoArr.map(normTipoServico));
       const fStatusArr = getMultiValues('filtro-status');
       const fEmpresaArr = getMultiValues('filtro-empresa');
       const fComercialArr = getMultiValues('filtro-comercial');
@@ -3118,7 +3134,9 @@
           const cliente = String(data['cliente'] || data['Cliente'] || "");
           const codCliente = String(data['codigo_cliente'] || data['Cd.Cliente'] || "");
           const cnpj = String(data['cnpj'] || data['CNPJ Cliente'] || "");
-          const tipoServico = String(data['descricao'] || data['Descrição Do Contrato'] || data['Tipo de Serviço'] || data['tipo_servico'] || "");
+          // Leitura canônica (obterTipoServicoBruto): antes esta linha lia 'descricao' primeiro,
+          // ordem diferente do resto do módulo — divergência silenciosa esperando acontecer.
+          const tipoServico = obterTipoServicoBruto(data);
           const emissaoRaw = data['data_emissao'] || data['Dt Emissao'] || '';
           const emissaoFormatada = formatarDataBR(emissaoRaw);
           const mesRefRaw = data['mes_referencia'] || (emissaoFormatada !== '-' ? emissaoFormatada.substring(3) : '');
@@ -3139,7 +3157,7 @@
             norm(formatarDataBR(vencRaw)).includes(t) || norm(formatarDataBR(baixaRaw)).includes(t) || norm(String(vFaturaRaw)).includes(t) || norm(String(faturRealVal)).includes(t) || norm(empresaCalcBusca).includes(t) ||
             norm(nf_e_calc).includes(t) || norm(statusReal).includes(t) || norm(comercialLimpo).includes(t);
 
-          let bateTipo = fTipoArr.includes("Todos") || fTipoArr.some(tipo => norm(tipoServico).includes(norm(tipo)));
+          let bateTipo = fTipoArr.includes("Todos") || fTipoNormSet.has(normTipoServico(tipoServico));
           let bateComercial = fComercialArr.includes("Todos") || fComercialArr.includes(comercialLimpo);
           const checarPeriodo = (raw, inicio, fim) => {
             if (!inicio && !fim) return true;
@@ -4343,6 +4361,44 @@
         const opcoes = Array.from(setComercial).sort((a, b) => a.localeCompare(b, 'pt-BR'));
         sel.innerHTML = '<option value="Todos" class="font-bold border-b pb-1 mb-1">Todos os Comerciais</option>' +
           opcoes.map(c => `<option value="${c}">${c}</option>`).join('');
+        // Restaura seleção anterior (se existia)
+        if (!antigos.includes('Todos')) {
+          Array.from(sel.options).forEach(opt => {
+            opt.selected = antigos.includes(opt.value);
+          });
+        }
+        try { sel.dispatchEvent(new Event('cb-multi-sync')); } catch (_) {}
+      })();
+
+      // Popula filtro de Tipo de Serviço dinamicamente (data-derived)
+      // Antes as opções eram fixas no HTML e envelheceram junto com a base: a auditoria de
+      // 2026-08 achou 5 tipos reais sem opção no filtro (TERCEIROS, FOPAG, INTEGRACAO,
+      // DEVOLUTIVA, TREINAMENTO DE PPA) e 1 opção sem nenhuma nota (PROCESSAMENTO DE PPA).
+      (function popularFiltroTipoServico() {
+        const sel = document.getElementById('filtro-tipo-servico');
+        if (!sel) return;
+        // Agrupa pela forma normalizada e conta as grafias brutas de cada grupo: a base traz
+        // 'ESTAGIO' e 'ESTÁGIO' para o mesmo serviço, e uma só opção deve representar os dois.
+        const grupos = new Map(); // chave normalizada -> Map(grafia bruta -> ocorrências)
+        todasAsNotas.forEach(d => {
+          const bruto = obterTipoServicoBruto(d).replace(/\s+/g, ' ').trim();
+          if (!bruto || bruto === '-') return; // descarta vazio e o placeholder '-'
+          const chave = normTipoServico(bruto);
+          if (!chave) return;
+          if (!grupos.has(chave)) grupos.set(chave, new Map());
+          const grafias = grupos.get(chave);
+          grafias.set(bruto, (grafias.get(bruto) || 0) + 1);
+        });
+        // Rótulo = a grafia mais frequente do grupo (empate → primeira em ordem alfabética,
+        // para o resultado não depender da ordem de leitura do snapshot).
+        const opcoes = Array.from(grupos.values())
+          .map(grafias => Array.from(grafias.entries())
+            .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0], 'pt-BR'))[0][0])
+          .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+        const antigos = getMultiValues('filtro-tipo-servico');
+        sel.innerHTML = '<option value="Todos" class="font-bold border-b pb-1 mb-1">Todos os Serviços</option>' +
+          opcoes.map(s => `<option value="${s}">${s}</option>`).join('');
         // Restaura seleção anterior (se existia)
         if (!antigos.includes('Todos')) {
           Array.from(sel.options).forEach(opt => {
