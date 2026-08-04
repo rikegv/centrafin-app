@@ -5,6 +5,107 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-08-04 — OS-FILTRO-SERVICO-DINAMICO-01: filtro de Tipo de Serviço data-derived
+
+**Problema (relatado pelo diretor):** o filtro avançado de "tipo de serviço" no Gerenciador
+de Faturamentos não trazia todos os tipos da base — lista fixa no HTML. Tipo novo cadastrado
+não aparecia no filtro.
+
+### Investigação (arquiteto)
+
+Lista hardcoded em `contas_a_receber_desktop/code.html:824-838`: 10 `<option>` estáticas.
+Campo real nos documentos: **`Descrição Do Contrato`** (9.496 docs, vindo do ETL) +
+`descricao`/`descricao_contrato` (109 docs, criados/editados no app). 10 docs sem tipo.
+
+Varredura dos 9.513 docs reais de `Lancamentos` (`scripts/audit-tipos-servico.cjs`, read-only):
+**14 tipos distintos normalizados** (15 grafias brutas) contra **10 no filtro**.
+
+| tipo | notas | | tipo | notas |
+|---|---|---|---|---|
+| TEMPORARIO | 4.181 | | RPO | 29 |
+| UNIDADES | 2.162 | | **INTEGRAÇÃO** | **21** |
+| **TERCEIROS** | **1.145** | | **DEVOLUTIVA** | **20** |
+| CONSULTORIA | 786 | | ASSESSMENT | 19 |
+| SUBSCRIPTION | 674 | | HOTMART | 8 |
+| TREINAMENTO | 228 | | **TREINAMENTO DE PPA** | **1** |
+| **FOPAG** | **182** | | ESTAGIO/ESTÁGIO | 47 |
+
+Em negrito, os 5 tipos **invisíveis no filtro** — **1.368 notas (14,4% da base)** que nenhum
+filtro específico alcançava. Além disso, a opção `PROCESSAMENTO DE PPA` existia no filtro
+com **zero** notas na base (opção morta).
+
+Normalização era necessária: a base tem `ESTAGIO` e `ESTÁGIO` para o mesmo serviço — sem
+tratar, a opção apareceria duplicada. Mesmo bug de acento da auditoria 2026-06-19
+(`core_rules.js:95`).
+
+### Decisões do diretor
+- Ordenação **alfabética pt-BR** (posição estável; ordenar por volume faria o item pular
+  de lugar conforme a base cresce).
+- Casamento **EXATO normalizado**, não mais por substring: marcar TREINAMENTO deixa de
+  arrastar TREINAMENTO DE PPA. Opções passam a ser 1:1 com o que está gravado.
+
+### Implementação (arquivo único: `contas_a_receber_desktop/code.html`)
+- `<option>` fixas removidas; sobrou só "Todos" — espelha `filtro-comercial`.
+- Nova IIFE `popularFiltroTipoServico()` ao lado de `popularFiltroComercial()`, dentro do
+  mesmo callback do `onSnapshot`. **Zero query nova ao Firestore**: deriva de `todasAsNotas`,
+  já em memória. Rótulo = grafia majoritária do grupo, desempate alfabético (determinístico,
+  não depende da ordem de leitura do snapshot).
+- Helpers compartilhados `obterTipoServicoBruto` / `normTipoServico` — os dois lados (option
+  gerada e valor comparado) obrigados a usar a mesma leitura e a mesma normalização.
+- `Set` normalizado montado fora do laço das ~9,5 mil notas.
+
+**Regressão corrigida durante a execução (reporte obrigatório):** `aplicarFiltros():3121` lia
+o campo `descricao` **antes** de `descricao_contrato` — ordem divergente do resto do módulo
+(`obterFaturamentoReal`, `auditarServicosNaoMapeados`). Unificado na ordem canônica. Validado
+contra os 9.513 docs reais: **zero documentos divergentes hoje**, nenhum efeito colateral no
+filtro de Empresa nem na busca textual, que compartilham a mesma variável. Corrigido como
+higiene — com a option gerada de um lado e a comparação do outro, ordens diferentes seriam
+divergência silenciosa esperando o primeiro documento com os dois campos preenchidos.
+
+**Incidente de execução (reporte obrigatório):** o engenheiro gravou o bloco de helpers com
+acentos escapados como `ç` em vez de UTF-8 real; detectou no próprio `git diff` e
+corrigiu antes de entregar. Sem impacto funcional — registrado por ser erro que passa
+despercebido em revisão rápida.
+
+### Validação (testador-auditor)
+`scripts/test-filtro-servico-dinamico.cjs` (read-only) **extrai o código real** do
+`code.html` por brace-matching e roda via `vm` contra os 9.513 docs de produção — não
+reimplementa a lógica, senão o teste não provaria nada sobre o que vai ao ar.
+
+- Soma das options + 10 sem tipo = **9.513** = total real. Nenhuma nota some ou duplica.
+- Alcance do filtro: **8.135 → 9.503 notas (+1.368)**.
+- TREINAMENTO devolve exatamente 228 (não arrasta TREINAMENTO DE PPA); ESTAGIO/ESTÁGIO
+  viram uma option que traz as 47; PROCESSAMENTO DE PPA sumiu.
+- `firestore.rules` não tocado → gate do emulador não se aplica.
+
+### Validação visual do diretor
+O diretor informou que só consegue validar em produção. Em vez de deployar sem validação
+(violaria a Lei do fluxo), usou-se **preview channel** — previsto na constituição para este
+caso: app real, Firestore real, URL temporário, produção intocada.
+`https://centra-fin--filtro-servico-gdk18bq4.web.app` (expira 2026-08-11).
+**Diretor validou textualmente em 2026-08-04: "Validado".**
+
+### Pendências abertas (fora de escopo, aguardando OS própria)
+1. **Injeção de HTML nas `<option>`** (severidade MÉDIA): `` `<option value="${s}">${s}</option>` ``
+   sem escape. Não é classe nova — `popularFiltroComercial` já fazia igual — mas a superfície
+   cresceu (antes 100% estático). Exige acesso autenticado de escrita. Hardening: reusar o
+   `escapeHTML` de `assets/checkbox_multi.js`.
+2. `auditarServicosNaoMapeados()` (~linha 2861) tem as mesmas listas hardcoded envelhecendo,
+   e é ela que zera o Faturamento Real de serviço não reconhecido. Mesma doença, outro lugar.
+3. **`scripts/check-syntax.cjs` está cego neste módulo**: falha em `<script>` #7 e #8 mesmo
+   sem mudança alguma (regex casa `<script>` dentro de comentário HTML; corpo ESM salvo como
+   `.cjs`). Confirmado independentemente contra HEAD. O DoD de sintaxe deste módulo não vale
+   nada até isso ser corrigido.
+4. Filtro de **Status** fixo com 5 valores, mas `obterStatusReal()` produz 7 — faltam
+   `Cancelada` e `DESMEMBRADO`. Mesmo tipo de buraco, não autorizado a corrigir.
+   (Filtro de **Empresa** está correto: os 4 valores são o retorno fechado de
+   `calcularEmpresaAtribuida`, não dado livre.)
+5. Divergência entre regra e base: `core_rules.js` lista a keyword `HR METRICS`, que não tem
+   nenhuma nota; e `TREINAMENTO DE PPA` (1 nota) aparenta ser erro de digitação de
+   `PROCESSAMENTO DE PPA`.
+
+---
+
 ## 2026-07-23 — Sessão completa: Importação 2025, Timezone, Folha Blocos A–D, Fonte Única
 
 ### 1. Importação da base 2025 (OS-IMPORT-ROBUSTEZ-01, commit 9c0b908)

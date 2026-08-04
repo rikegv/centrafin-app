@@ -1,0 +1,25 @@
+OS-FILTRO-SERVICO-DINAMICO-01 — filtro de Tipo de Serviço data-derived
+Branch: feature/filtro-servico-dinamico
+Commit: 1b102e1
+
+GATES:
+- Investigacao (arquiteto): 14 tipos reais na base x 10 no filtro fixo; 5 tipos
+  invisiveis (1.368 notas), 1 opcao morta (PROCESSAMENTO DE PPA).
+- Decisoes do diretor: ordenacao alfabetica pt-BR; casamento EXATO normalizado.
+- Engenheiro-frontend: OK (arquivo unico contas_a_receber_desktop/code.html).
+- Testador-auditor: APROVADO. Logica real extraida do code.html rodada contra os
+  9.513 docs reais de Lancamentos. Soma das options + 10 sem tipo = 9.513.
+  Alcance do filtro: 8.135 -> 9.503 notas.
+- Sintaxe: modulo alterado parseia limpo como ESM. Falhas do check-syntax.cjs
+  em <script> #7/#8 confirmadas como pre-existentes (defeito do proprio checker).
+- firestore.rules NAO tocado -> gate do emulador nao se aplica.
+- Check anti-segredo: limpo.
+- Validacao visual do diretor: APROVADA em 2026-08-04 no preview channel
+  https://centra-fin--filtro-servico-gdk18bq4.web.app ("Validado").
+
+PENDENCIAS NAO BLOQUEANTES (fora de escopo, aguardando OS propria):
+- Injecao de HTML nas <option> (severidade media, padrao pre-existente em
+  popularFiltroComercial).
+- auditarServicosNaoMapeados() ainda com listas hardcoded.
+- scripts/check-syntax.cjs com defeitos proprios (gate cego neste modulo).
+- Filtro de Status fixo com 5 valores; obterStatusReal produz 7.
