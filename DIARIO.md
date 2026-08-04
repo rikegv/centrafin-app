@@ -85,6 +85,53 @@ caso: app real, Firestore real, URL temporário, produção intocada.
 `https://centra-fin--filtro-servico-gdk18bq4.web.app` (expira 2026-08-11).
 **Diretor validou textualmente em 2026-08-04: "Validado".**
 
+### Deploy (2026-08-04)
+
+Fluxo cumprido na ordem: arquiteto (investigação) → engenheiro-frontend → testador-auditor
+→ validação visual do diretor → flag `READY_OS-FILTRO-SERVICO-DINAMICO-01` → deployer.
+
+- Commit da feature: `1b102e1` (branch `feature/filtro-servico-dinamico`).
+- Merge na main: **`8fb0a1d`** (`--no-ff`, sem conflito, mesmo padrão dos merges anteriores).
+- Deploy **isolado**: `firebase deploy --only hosting --project centra-fin`. `firestore.rules`
+  **não** foi incluído — confirmado por `git diff` vazio para esse arquivo antes e depois do
+  merge. Release complete, health check **HTTP 200** em `https://centra-fin.web.app`.
+- **Sem push para o GitHub** — não autorizado nesta rodada; a main ficou 4 commits à frente
+  de `origin/main`.
+- **Diretor confirmou o sucesso do deploy em 2026-08-04** e seguiu conferindo o
+  comportamento em produção.
+
+### Incidentes de processo (registro para não se repetirem)
+
+**1. Gate de deploy bloqueou por sujeira de OSs anteriores.** O `gate-deploy.js` (hook
+`PreToolUse:Bash`) barrou o deployer: `git status --porcelain` exige limpo, e havia **10
+arquivos untracked que não pertenciam a esta OS** — flags `READY_` de 8 features já mescladas
+(aprovacao-modal 02/03/05, crf-data-timezone, folha-blocos-abcd, folha-col-salario,
+folha-fonte-unica, folha-pj-empresa, import-robustez) e 5 scripts de teste. Ficaram como
+untracked nos merges passados e foram se acumulando até travar o deploy de outra feature.
+O deployer **parou e escalou em vez de forçar** — comportamento correto. Resolvido pelo
+coordenador com dois commits separados, deliberadamente fora do commit da feature:
+`d037f7a` (chore: artefatos órfãos) e `c1598cb` (docs: DIARIO).
+**Lição:** flag READY e scripts de teste devem entrar no commit da própria OS que os gerou;
+caso contrário, viram dívida que cobra juros no deploy seguinte.
+
+**2. `check-secrets.cjs` dá verde falso quando chamado sem nada staged.** Ele varre apenas
+`git diff --cached`. Com o índice vazio respondeu *"Nada staged. Nada para checar"* e saiu
+com sucesso — um "limpo" por **ausência de escopo, não por verificação**. O deployer não
+aceitou o verde: rodou os mesmos padrões manualmente contra
+`git diff main..feature/filtro-servico-dinamico` (o diff que de fato ia a produção) e
+confirmou zero ocorrências. Somado ao `check-syntax.cjs` cego neste módulo, são **dois gates
+do DoD emitindo verde não confiável** na mesma OS.
+
+**3. Validação visual sem ambiente local.** O diretor informou que só consegue validar em
+produção. Em vez de deployar antes da validação (violaria a Lei do fluxo), usou-se o
+**preview channel** — previsto na constituição exatamente para isso. Deve ser o caminho
+padrão nas próximas features com UI: app real + Firestore real + URL temporário, produção
+intocada até a aprovação.
+
+**4. Housekeeping pendente:** 16 worktrees de agentes órfãos acumulados em
+`.claude/worktrees/`, de OSs anteriores. Removido apenas o desta OS; os demais aguardam
+autorização do diretor.
+
 ### Pendências abertas (fora de escopo, aguardando OS própria)
 1. **Injeção de HTML nas `<option>`** (severidade MÉDIA): `` `<option value="${s}">${s}</option>` ``
    sem escape. Não é classe nova — `popularFiltroComercial` já fazia igual — mas a superfície
@@ -92,10 +139,12 @@ caso: app real, Firestore real, URL temporário, produção intocada.
    `escapeHTML` de `assets/checkbox_multi.js`.
 2. `auditarServicosNaoMapeados()` (~linha 2861) tem as mesmas listas hardcoded envelhecendo,
    e é ela que zera o Faturamento Real de serviço não reconhecido. Mesma doença, outro lugar.
-3. **`scripts/check-syntax.cjs` está cego neste módulo**: falha em `<script>` #7 e #8 mesmo
-   sem mudança alguma (regex casa `<script>` dentro de comentário HTML; corpo ESM salvo como
-   `.cjs`). Confirmado independentemente contra HEAD. O DoD de sintaxe deste módulo não vale
-   nada até isso ser corrigido.
+3. **Os dois gates do DoD furados** (ver Incidentes 1 e 2):
+   - `scripts/check-syntax.cjs` está **cego neste módulo** — falha em `<script>` #7 e #8 mesmo
+     sem mudança alguma (regex casa `<script>` dentro de comentário HTML; corpo ESM salvo como
+     `.cjs`). Confirmado independentemente contra HEAD.
+   - `scripts/check-secrets.cjs` **aprova sem verificar** quando chamado com o índice vazio.
+   Enquanto não forem corrigidos, o verde desses dois gates não significa nada.
 4. Filtro de **Status** fixo com 5 valores, mas `obterStatusReal()` produz 7 — faltam
    `Cancelada` e `DESMEMBRADO`. Mesmo tipo de buraco, não autorizado a corrigir.
    (Filtro de **Empresa** está correto: os 4 valores são o retorno fechado de
