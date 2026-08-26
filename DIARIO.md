@@ -5,6 +5,131 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-08-26 — OS-FILTROS-MULTI-BLOCO-1: filtros do Dashboard Master em multi-select
+
+**Contexto (diretor):** precisava selecionar mais de uma condição por filtro. Antecedeu esta OS
+um levantamento completo dos filtros do sistema (ver seção "Mapa de filtros" abaixo), que separou
+o que era só limitação de implementação do que exige decisão de negócio antes de mudar.
+
+**Escopo:** os 5 filtros do modal "Filtros Avançados" do Dashboard Master
+(`dashboard_master_desktop/code.html`): Cliente, Comercial, Empresa, Região, Descrição/Serviço.
+Arquivo único alterado (+294/−74). Reaproveitou o componente `assets/checkbox_multi.js` já em
+produção em 19 filtros — **sem implementação nova e sem tocar no componente compartilhado**.
+
+### Correção ao enunciado da OS (arquiteto)
+A OS presumia que os 4 pontos que chamam `aplicarFiltrosModal()` programaticamente setavam os
+selects. **Não setam**: `limparFiltroGraficoEmissoes` e os 3 `dataPointSelection`
+(chart-emissoes-30dias, chart-emissoes-ano, chart-cr-inad-mensal) mexem apenas nos dois inputs de
+data. Confirmado por grep que são exatamente 4. Ficaram **intocados** (byte-idênticos a `main`) e
+foram validados só por regressão.
+
+### Decisão do diretor durante a execução (R3)
+Na aba Contas a Receber, a lista de Cliente era repopulada a partir de `_ultimoArrayProcessado`
+(dataset **já filtrado**). Com single-select isso apenas impedia alargar a seleção; com
+multi-select viraria perda de dado — os clientes selecionados sumiriam da lista, o componente
+cairia no fallback e religaria "Todos", **apagando o filtro ao simplesmente reabrir o modal**.
+Diretor aprovou corrigir dentro desta OS: a fonte passou a ser `dadosGlobaisFirestore`.
+
+### Regressão latente pré-existente, corrigida de passagem (reporte obrigatório)
+`popularListasFiltro` roda a **cada snapshot** do Firestore e recriava as options com
+`innerHTML +=` dentro do laço, o que **destruía `option.selected`** enquanto `filtrosPorAba`
+continuava indicando filtro ativo. Efeito em produção até hoje: um colega salvando uma nota no
+Gerenciador **zerava silenciosamente o filtro do diretor no meio da análise**, com o badge
+"Filtros Ativos" seguindo aceso. Refatorado para `.map().join('')` com atribuição única +
+preservação de seleção + `cb-multi-sync`. É mudança de comportamento observável, por isso
+registrada e não absorvida em silêncio.
+
+Também corrigido: `preencherSelect` sobrescrevia os rótulos específicos ("Todos os Clientes",
+"Todas as Regiões") por um genérico "Todos" no primeiro snapshot.
+
+### Armadilhas da migração string→array (todas tratadas)
+- `verificarFiltroAtivoNaAba` usava truthiness — `['Todos']` é truthy e o badge acenderia para
+  sempre. Helper `temMulti()`.
+- `{ ...filtroAplicado }` é spread raso: as 5 abas passariam a compartilhar o **mesmo** array.
+  Trocado por factories (`_filtroNeutro()` / cópia profunda).
+- `Set`s pré-computados **fora** do `.filter()` — instrumentado: 1 construção por chamada sobre
+  5.000 notas, nunca O(N).
+- Caixa assimétrica preservada de propósito: `emp`/`ser` em UPPER, `cli`/`com`/`reg` raw.
+- Sentinela do componente é a string literal `Todos` (o `value=""` anterior não era reconhecido).
+
+### Empresa passou a ser data-derived
+As 4 `<option>` fixas saíram do HTML. Derivação usa a **mesma expressão do predicado**
+(`calcEmpresaExcel(ser) || empresa_atribuida`), cuja regra canônica vive em `core_rules.js` —
+sem classificador novo, respeitando a fonte única. Fallback defensivo mantém as 4 fixas enquanto
+a base não carregou.
+
+### Gate de designer (spec + auditoria)
+Achado que a investigação inicial não tinha pego: `checkbox_multi.js` hardcoda cores claras
+(`bg-white`, `slate-*`) e **este modal é escuro** (`bg-[#002443]`) — renderizaria blocos brancos.
+Contorno: bloco CSS escopado em `#modal-filtros` no `<style>` da própria página, com `!important`
+(necessário porque `theme.css` remapeia `.bg-white → var(--bg-card) !important` no tema escuro) e
+ancorado em ID para vencer por especificidade. **`checkbox_multi.js` e `theme.css` intactos** —
+os 19 usos em produção preservados. Spec em `design/specs/os-filtros-multi-bloco1.md`.
+`data-cb-portal` **não** foi usado: em modo portal o painel migra para o `<body>` sem atributo
+identificador e escaparia do CSS de escopo, voltando a ficar branco.
+Auditoria de tokens: aprovada, cobertura de cor completa, sem elemento órfão. O designer ainda
+encontrou 2 regras do `theme.css` não catalogadas na própria spec e verificou que também perdem
+por especificidade. `primary` **não** foi adicionado ao `tailwind.config` — o override já supre
+accent, foco e hover (e neutraliza o anel azul padrão do Tailwind, que o config sozinho deixaria).
+
+### Testes (testador-auditor, bateria própria)
+O testador **rejeitou confiar** nos 17 testes do engenheiro: eram honestos, mas reimplementavam
+`calcEmpresaExcel` em vez de usar o `core_rules.js` real e **não comparavam contra `main`** —
+justamente a equivalência exigida. Escreveu bateria própria extraindo o código ao vivo dos dois
+branches. Resultado: **T-A a T-K todos PASS**.
+- **Equivalência**: 36 seleções únicas sobre dataset com casos-limite (ESTÁGIO com/sem acento,
+  caixa mista, campos ausentes, chaves alternativas, fallback `empresa_atribuida`) → resultado
+  **idêntico registro a registro** ao predicado de `main`. Zero regressão em seleção única.
+- União (OR dentro do campo, AND entre campos), sentinela, badge, preservação de seleção em
+  snapshot e no ramo CR, ausência de aliasing, normalização do consumidor CR, escopo, DoD e
+  performance: todos PASS.
+- `firestore.rules` **não** foi tocada → sem gate de emulador nesta OS.
+
+### Validação visual e deploy (2026-08-26)
+Fluxo cumprido: arquiteto → designer (spec) → engenheiro-frontend → designer (auditoria de
+tokens) → testador-auditor → validação visual do diretor → flag `READY_filtros-multi-bloco1` →
+deployer. Validação feita em `firebase serve` local (porta 5000) contra Firestore real;
+confirmado antes que o servidor entregava a versão nova, para não validar cache.
+**Diretor autorizou o deploy em produção em 2026-08-26.**
+
+- Commit da feature: `3d9cf88` (branch `feature/filtros-multi-bloco1`).
+- Merge na main: **`15fcd87`**, sem conflito, sem `--force`.
+- **Push executado** para `origin` (main e branch de feature) — diferente da OS anterior, que
+  ficou sem push.
+- Deploy **isolado**: `firebase deploy --only hosting`. `firestore.rules` não incluída.
+- Timestamp: **26/08/2026, 17:15:54–17:16:19**. Health check HTTP 200 em
+  `https://centra-fin.web.app`, com `data-checkbox-multi` presente 5× e `checkbox_multi.js` 200.
+- **Check anti-tag-faltante** (o diretor exigiu, após o deploy anterior ter quebrado o
+  Gerenciador por uma tag de `core_rules.js` ausente): as 6 tags `<script src>` verificadas
+  **três vezes** — pré-merge, pós-merge em `main` e em produção. Todas presentes.
+
+### Mapa de filtros do sistema (levantamento que originou os blocos)
+19 filtros já eram multi (Contas a Pagar 7, Folha 4+3 de exportação, Faturamento 4, Fornecedores 3).
+17 eram single: **12 de conversão direta** e **5 que exigem decisão do diretor antes**, por
+alimentarem cálculo ou eixo de gráfico:
+1. **Competência do DRE** — igualdade estrita de mês; multi obriga escolher entre DRE acumulado
+   (com margem recalculada, não somada) ou colunas mês a mês, que é outra tela.
+2. **Ano do AGING** — âncora do eixo de 12 meses; multi-ano colapsa o eixo. Saída sugerida:
+   trocar Ano+Meses por intervalo de competência, como já faz o Dashboard de Custo de Folha.
+3. **Ano da aba Metas (dashboard)** — meta é grandeza anual por produto; somar dois anos produz
+   % de atingimento sem significado.
+4. **Ano da Gestão de Metas** — viável (risco médio), atenção ao `where ano == X` → `where in`.
+5. **Abas de Empresa do DRE** — multi é consolidado parcial; já existe a aba CONSOLIDADO.
+   Decisão de UX, não de código.
+
+**Blocos restantes propostos:** Bloco 2 = os pequenos (Aprovações tipo/módulo, Despesas
+evento/valor, Funcionário do Dashboard de Custo de Folha, Empresa da Auditoria do CRF).
+Bloco 3 = só após decisão do diretor sobre competência/ano.
+
+### Pendências registradas e NÃO corrigidas (escopo estrito)
+- **R7**: `filtrosPorAba` não tem a aba `consolidado`, embora `alternarVisao` a suporte — o badge
+  congela nessa visão e o estado não é replicado para ela. Bug pré-existente.
+- Foco por teclado no trigger ficou só como borda verde, sem anel (coerente com os inputs de data
+  do mesmo modal, não é regressão). Ajuste futuro de 1 linha, se o diretor quiser.
+- Segmentos/Serviços do AGING continuam **hardcoded** (4 opções) — candidato a data-derived.
+
+---
+
 ## 2026-08-04 — OS-FILTRO-SERVICO-DINAMICO-01: filtro de Tipo de Serviço data-derived
 
 **Problema (relatado pelo diretor):** o filtro avançado de "tipo de serviço" no Gerenciador
