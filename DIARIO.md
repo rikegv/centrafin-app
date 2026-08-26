@@ -86,11 +86,22 @@ branches. Resultado: **T-A a T-K todos PASS**.
 - `firestore.rules` **não** foi tocada → sem gate de emulador nesta OS.
 
 ### Validação visual e deploy (2026-08-26)
-Fluxo cumprido: arquiteto → designer (spec) → engenheiro-frontend → designer (auditoria de
-tokens) → testador-auditor → validação visual do diretor → flag `READY_filtros-multi-bloco1` →
-deployer. Validação feita em `firebase serve` local (porta 5000) contra Firestore real;
-confirmado antes que o servidor entregava a versão nova, para não validar cache.
-**Diretor autorizou o deploy em produção em 2026-08-26.**
+Fluxo executado: arquiteto → designer (spec) → engenheiro-frontend → designer (auditoria de
+tokens) → testador-auditor → flag `READY_filtros-multi-bloco1` → deployer.
+
+**Ressalva formal — a validação visual do diretor NÃO foi concluída antes do deploy.**
+O ambiente foi preparado (`firebase serve` local na porta 5000, contra Firestore real, com
+verificação prévia de que o servidor entregava a versão nova e não cache) e o roteiro de
+validação foi entregue ao diretor, com dois pontos que só se verificam em runtime: o painel do
+campo "Descrição / Serviço" (último do grid, abre sempre para baixo, sem flip) e a barra de busca
+do componente em lista longa. O diretor então **autorizou explicitamente o deploy em produção**,
+e o coordenador registrou essa autorização como evidência do gate — leitura que o próprio diretor
+corrigiu em seguida, ao informar que o Bloco 2 aguarda a validação visual do Bloco 1.
+
+Portanto: **o Bloco 1 está em produção com a validação visual pendente**, por decisão expressa do
+diretor de autorizar o deploy. A Lei do fluxo prevê a validação ANTES da flag; aqui a ordem foi
+invertida por autorização direta. Fica registrado como exceção consciente, não como precedente —
+e a validação visual segue pendente sobre o código já publicado.
 
 - Commit da feature: `3d9cf88` (branch `feature/filtros-multi-bloco1`).
 - Merge na main: **`15fcd87`**, sem conflito, sem `--force`.
@@ -120,6 +131,30 @@ alimentarem cálculo ou eixo de gráfico:
 **Blocos restantes propostos:** Bloco 2 = os pequenos (Aprovações tipo/módulo, Despesas
 evento/valor, Funcionário do Dashboard de Custo de Folha, Empresa da Auditoria do CRF).
 Bloco 3 = só após decisão do diretor sobre competência/ano.
+**Bloco 2 está bloqueado até a validação visual do Bloco 1 pelo diretor** (decisão do diretor,
+2026-08-26).
+
+### Estado ao encerrar a sessão (2026-08-26)
+- Produção: `main` = `15fcd87`, deployada e saudável. `origin/main` sincronizada com o merge.
+- Commits de documentação do DIARIO (`e4350c6` e este) publicados em `origin` pelo deployer,
+  sob autorização do diretor. Nenhum código pendente de publicação.
+- Servidor local `firebase serve` (porta 5000), preparado para a validação visual, **derrubado**
+  ao fim da sessão por autorização do diretor. Para retomar a validação:
+  `firebase serve --only hosting --port 5000` e abrir `http://localhost:5000/login.html`
+  (o código validado é o mesmo que está em produção).
+- **Pendência aberta e bloqueante para o Bloco 2:** validação visual do Bloco 1 pelo diretor.
+- Branch `feature/filtros-multi-bloco1` preservada local e no remoto (não deletada).
+- Artefatos de teste (scripts de equivalência, sintaxe e performance) ficaram no scratchpad da
+  sessão, **não versionados** — a evidência dos resultados está registrada acima.
+
+### Aprendizado de processo desta OS
+Três achados relevantes só apareceram **por causa dos gates**, não da leitura inicial do código:
+o conflito de tema escuro × componente claro (gate do designer, antes de codar); o fato de os 4
+pontos programáticos não tocarem os selects (gate do arquiteto, corrigindo a premissa da própria
+OS); e a regressão latente de perda de seleção em snapshot (arquiteto, ao mapear o estado).
+O testador ter **recusado os testes do engenheiro** e escrito bateria própria foi o que produziu
+a evidência de equivalência contra `main` — o teste que o diretor havia exigido nominalmente e
+que a suíte do engenheiro não cobria.
 
 ### Pendências registradas e NÃO corrigidas (escopo estrito)
 - **R7**: `filtrosPorAba` não tem a aba `consolidado`, embora `alternarVisao` a suporte — o badge
