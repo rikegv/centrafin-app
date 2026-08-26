@@ -1,0 +1,75 @@
+OS-FILTROS-MULTI-BLOCO-1 — 5 filtros do modal #modal-filtros viram multi-select
+por checkbox (assets/checkbox_multi.js)
+Branch: feature/filtros-multi-bloco1
+Arquivo alterado: dashboard_master_desktop/code.html (+294/-74)
+
+GATES:
+- Escopo (T-I): confirmado por diff -- SOMENTE dashboard_master_desktop/code.html
+  foi alterado (+ design/specs/os-filtros-multi-bloco1.md, doc). firestore.rules,
+  assets/checkbox_multi.js, theme.css, core_rules.js intactos (diff vazio). Texto
+  do badge, aba consolidado, DRE, Metas, crossfilters de clique (processarDashMetas)
+  nao tocados.
+- T-A (equivalencia com main, o teste mais importante): codigo REAL extraido ao
+  vivo de `git show main:...` e do branch (mesma tecnica, nao retranscrito),
+  rodado no MESMO sandbox Node com core_rules.js REAL (calcularEmpresaAtribuida
+  com strip de acento) sobre dataset sintetico com casos-limite (caixa mista,
+  ESTAGIO acentuado/sem acento, campos ausentes/vazios, chaves alternativas
+  cliente/cidade_cliente minusculas, nomes com espaco, fallback empresa_atribuida).
+  36 selecoes unicas testadas (5 campos x valores distintos + Empresa calculada) =
+  RESULTADO IDENTICO registro a registro entre predicado antigo (string ===) e
+  novo (Set.has()). PASS.
+- T-B (uniao/OR dentro do campo, AND entre campos): uniao de 2 valores por campo
+  bate com a uniao manual do predicado antigo rodado 2x; AND entre Cliente+Comercial
+  reduz para a intersecao correta ([1,6]). PASS.
+- T-C (4 pontos programaticos: limparFiltroGraficoEmissoes ~2603,
+  dataPointSelection chart-emissoes-30dias/ano ~3413/3424, chart-cr-inad-mensal
+  ~3602): diff = zero (blocos byte-identicos a main, confirmado por extracao e
+  diff textual). Funcionalmente: filtro de Cliente ja ativo + clique programatico
+  de data testados juntos com aplicarFiltrosModal() real -- COMBINAM em AND (nao
+  se anulam); teste de controle confirma que a mesma janela de data sem Cliente
+  traz mais registros (nao e falso-positivo por acidente). PASS.
+- T-D (sentinela "Todos"): handler de change extraido ao vivo de
+  assets/checkbox_multi.js (arquivo intocado, 19 usos em producao) -- marcar
+  "Todos" desmarca o resto, marcar outro desmarca "Todos", desmarcar o ultimo
+  religa "Todos". PASS.
+- T-E (badge "Filtros Ativos"): apagado no neutro, aceso com selecao real,
+  apagado apos limparFiltrosInterativos (mesma funcao chamada pelo "Limpar Tudo"
+  E pelo X do badge -- confirmado via grep dos 2 onclick). PASS.
+- T-F (preservacao de selecao na repopulacao): popularListasFiltro (roda a cada
+  snapshot do Firestore) nao zera selecao existente + dispara cb-multi-sync;
+  ramo CR de abrirModalFiltros (bug R3, fonte agora dadosGlobaisFirestore)
+  preserva selecao de Cliente ao reabrir o modal na aba Contas a Receber; esconde-
+  campos de Comercial/Regiao/Servico na aba CR preservado. PASS.
+- T-G (sem aliasing entre abas): as 5 abas recebem instancias de array distintas
+  (filtroAplicado() e _filtroNeutro() sao factories, nao spread raso); mutar o
+  array de uma aba nao vaza para as outras 4, em aplicarFiltrosModal E em
+  limparFiltrosInterativos. PASS.
+- T-H (consumidor CR ~2355): diff mostra generalizacao fiel de valor unico ->
+  Set, normalizacao preservada (setEmpCR via _crEmpresaDaNota, UPPER com
+  fallback 'OUTROS'; setCliCR raw/trim, sem uppercase). PASS.
+- T-J (DoD sintaxe): 4 blocos <script> parseiam limpo (bloco ESM #4 validado com
+  node --experimental-vm-modules); CSS do <head> balanceado. Sem padrao de
+  segredo (apiKey/secret/private_key/service_account) no diff. firestore.rules
+  SEM diff (git diff --stat vazio) -- gate de emulador nao se aplica, confirmado.
+- T-K (performance): instrumentado o construtor Set no sandbox sobre 5.000
+  notas sinteticas -- exatamente 1 Set construido por chamada de
+  aplicarFiltrosModal (O(1), nunca O(N)); os `const setXxx = ...` ficam FORA do
+  `.filter()`, confirmado por extracao de codigo real e por contagem.
+- Estrutura dos 5 <select>: multiple/size/data-checkbox-multi/data-placeholder/
+  sentinela "Todos"/sem data-cb-portal/sem <option value=""> residual -- OK nos 5.
+- Scripts do engenheiro (scratchpad): revisados linha a linha, nao sao testes
+  fantasma -- syntax_check.cjs e check_multi.cjs sao checagens estruturais
+  legitimas; test_filtros_multi.cjs (17 testes) cobre comportamento do branch
+  isoladamente mas NAO comparava contra main (reimplementava calcEmpresaExcel em
+  vez de usar core_rules.js real) -- por isso o testador escreveu bateria propria
+  de equivalencia (T-A/T-B) e funcional (T-C/D/E/F/G/K) usando codigo extraido ao
+  vivo dos dois lados + core_rules.js real, em vez de confiar cegamente.
+
+PENDENCIA BLOQUEANTE PARA DEPLOY (nao para esta flag):
+- Validacao visual do diretor AINDA NAO OCORREU. Esta flag libera o gate tecnico
+  do testador; o deployer NAO pode publicar sem a aprovacao visual do diretor
+  registrada no DIARIO.md (Parte B do CLAUDE.md -- "Validacao visual do diretor").
+
+Scripts do testador (scratchpad, nao versionados):
+- test_equivalencia.cjs (T-A/T-B), test_sentinela_td.cjs (T-D),
+  test_funcional_cdefg.cjs (T-C/E/F/G), test_perf_tk.cjs (T-K).

@@ -32,6 +32,10 @@
        `parseMoedaCRF`, `obterValorLiquido` etc. como globals + aliases legados
        (calcEmpresaExcel, extrairNum, *Master) para compat. -->
   <script src="../core_rules.js?v=20260508a"></script>
+  <!-- Multi-select por checkbox dos 5 filtros do modal "Filtros Avançados".
+       Componente compartilhado (19 usos em produção) — o arquivo NÃO é alterado
+       nesta OS, por isso a chave de cache é a mesma dos demais módulos. -->
+  <script src="../assets/checkbox_multi.js?v=20260518v5" defer></script>
 
   <style>
     /* Fade-in suave do app shell (auditoria 2026-04-29) — body mantém o bg
@@ -98,6 +102,131 @@
     .card-entry-anim {
       opacity: 0;
       animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    /* ── Multi-select por checkbox (assets/checkbox_multi.js) dentro do modal DARK
+       de Filtros Avançados. O componente injeta classes CLARAS hardcoded
+       (bg-white / slate-* / primary-*, ver linhas 61-66, 77-82, 139-182 dele).
+       Aqui elas são remapeadas para a paleta do modal, em ESCOPO LOCAL — o
+       componente não é alterado e os demais módulos (CP/CRF/master) não são afetados.
+       `!important` é obrigatório: theme.css:44-45 e 80-106 remapeiam .bg-white e
+       .text-slate-* com !important no tema escuro. Especificidade de ID vence. */
+    #modal-filtros {
+      --dm-f-surface: #0a192f;
+      /* mesma superfície dos inputs de data */
+      --dm-f-panel-bg: #0a192f;
+      --dm-f-border: #1a4895;
+      /* brandMidBlue */
+      --dm-f-text: #ffffff;
+      --dm-f-muted: #bfd7ea;
+      /* brandPaleBlue */
+      --dm-f-accent: #aad12f;
+      /* brandGreen */
+      --dm-f-hover: rgba(170, 209, 47, 0.12);
+      --dm-f-hairline: rgba(255, 255, 255, 0.10);
+    }
+
+    /* Trigger: geometria alinhada aos inputs de data do modal (rounded-lg / px-3 py-2) */
+    #modal-filtros .cb-multi-trigger {
+      background: var(--dm-f-surface) !important;
+      border-color: var(--dm-f-border) !important;
+      border-radius: 0.5rem !important;
+      padding: 0.5rem 0.75rem !important;
+      box-shadow: none !important;
+    }
+
+    #modal-filtros .cb-multi-trigger:hover,
+    #modal-filtros .cb-multi-trigger:focus,
+    #modal-filtros .cb-multi-trigger:focus-visible {
+      border-color: var(--dm-f-accent) !important;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+
+    #modal-filtros .cb-multi-trigger [data-cb-label] {
+      color: var(--dm-f-muted) !important;
+    }
+
+    #modal-filtros .cb-multi-trigger [data-cb-label].text-slate-800 {
+      color: var(--dm-f-text) !important;
+    }
+
+    #modal-filtros .cb-multi-trigger [data-cb-chevron] {
+      color: var(--dm-f-muted) !important;
+    }
+
+    /* Panel */
+    #modal-filtros .cb-multi-panel {
+      background: var(--dm-f-panel-bg) !important;
+      border-color: var(--dm-f-border) !important;
+      box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.65) !important;
+      max-height: min(16rem, 42vh) !important;
+      color-scheme: dark;
+    }
+
+    #modal-filtros .cb-multi-panel > p {
+      color: var(--dm-f-muted) !important;
+    }
+
+    /* Itens */
+    #modal-filtros .cb-multi-row span {
+      color: var(--dm-f-text) !important;
+    }
+
+    #modal-filtros .cb-multi-row:hover {
+      background: var(--dm-f-hover) !important;
+    }
+
+    #modal-filtros .cb-multi-row.cb-multi-sent span {
+      color: var(--dm-f-accent) !important;
+      border-bottom-color: var(--dm-f-hairline) !important;
+    }
+
+    #modal-filtros .cb-multi-row input[type="checkbox"] {
+      accent-color: var(--dm-f-accent);
+      background-color: var(--dm-f-surface);
+      border-color: var(--dm-f-border) !important;
+    }
+
+    /* Busca interna (aparece com > 8 opções — checkbox_multi.js:145) */
+    #modal-filtros .cb-multi-busca-wrap {
+      background: var(--dm-f-panel-bg) !important;
+      border-bottom-color: var(--dm-f-hairline) !important;
+    }
+
+    #modal-filtros .cb-multi-busca-wrap .material-symbols-outlined {
+      color: var(--dm-f-muted) !important;
+    }
+
+    #modal-filtros [data-cb-busca] {
+      background: #002443 !important;
+      border-color: var(--dm-f-border) !important;
+      color: var(--dm-f-text) !important;
+    }
+
+    #modal-filtros [data-cb-busca]::placeholder {
+      color: var(--dm-f-muted) !important;
+      opacity: 0.7;
+    }
+
+    #modal-filtros [data-cb-busca]:focus {
+      border-color: var(--dm-f-accent) !important;
+      box-shadow: none !important;
+    }
+
+    /* Scrollbar do panel — mesma receita do .custom-scroll da página */
+    #modal-filtros .cb-multi-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #modal-filtros .cb-multi-panel::-webkit-scrollbar-track {
+      background: rgba(26, 72, 149, 0.2);
+      border-radius: 4px;
+    }
+
+    #modal-filtros .cb-multi-panel::-webkit-scrollbar-thumb {
+      background: #59a4d8;
+      border-radius: 4px;
     }
 
   </style>
@@ -1144,43 +1273,50 @@
           </div>
         </div>
 
+        <!-- Os 5 filtros abaixo são MULTI-select por checkbox (assets/checkbox_multi.js).
+             O select nativo (multiple) segue sendo a fonte da verdade; o componente apenas
+             troca a UI. O option `value="Todos"` é a SENTINELA hardcoded do componente
+             (checkbox_multi.js:29) — não trocar por value="". -->
         <div class="col-span-1" data-filtro-campo="cliente">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Cliente</label>
-          <select id="filtro-modal-cliente"
+          <select id="filtro-modal-cliente" multiple size="6" data-checkbox-multi
+            data-placeholder="Todos os Clientes"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
-            <option value="">Todos os Clientes</option>
+            <option value="Todos" selected>Todos os Clientes</option>
           </select>
         </div>
         <div class="col-span-1" data-filtro-campo="comercial">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Comercial</label>
-          <select id="filtro-modal-comercial"
+          <select id="filtro-modal-comercial" multiple size="5" data-checkbox-multi
+            data-placeholder="Todos os Comerciais"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
-            <option value="">Todos os Comerciais</option>
+            <option value="Todos" selected>Todos os Comerciais</option>
           </select>
         </div>
         <div class="col-span-1" data-filtro-campo="empresa">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Empresa</label>
-          <select id="filtro-modal-empresa"
+          <!-- Opções populadas dinamicamente em popularListasFiltro() a partir da base
+               (mesma expressão do predicado de filtro). As 4 options fixas antigas
+               envelheciam junto com a base. -->
+          <select id="filtro-modal-empresa" multiple size="5" data-checkbox-multi data-placeholder="Todas"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
-            <option value="">Todas</option>
-            <option value="SOULAN ADM">SOULAN ADM</option>
-            <option value="SOULAN CONSULTORIA">SOULAN CONSULTORIA</option>
-            <option value="NEAT">NEAT</option>
-            <option value="ESTÁGIO">ESTÁGIO</option>
+            <option value="Todos" selected>Todas</option>
           </select>
         </div>
         <div class="col-span-1" data-filtro-campo="regiao">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Região (Estado)</label>
-          <select id="filtro-modal-regiao"
+          <select id="filtro-modal-regiao" multiple size="6" data-checkbox-multi
+            data-placeholder="Todas as Regiões"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
-            <option value="">Todas as Regiões</option>
+            <option value="Todos" selected>Todas as Regiões</option>
           </select>
         </div>
         <div class="col-span-2" data-filtro-campo="servico">
           <label class="text-brandPaleBlue text-xs font-bold mb-1.5 block">Descrição / Serviço</label>
-          <select id="filtro-modal-servico"
+          <select id="filtro-modal-servico" multiple size="6" data-checkbox-multi
+            data-placeholder="Todos os Serviços"
             class="w-full bg-[#0a192f] border border-brandMidBlue text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-brandGreen">
-            <option value="">Todos os Serviços</option>
+            <option value="Todos" selected>Todos os Serviços</option>
           </select>
         </div>
       </div>
@@ -1199,18 +1335,59 @@
   <script>
     window.visaoAtivaFaturamento = 'soulan';
     window.visaoKpiFaturamento = 'soulan';
+
+    // ── HELPERS MULTI-SELECT (padrão CRF/Custo de Folha — auditoria 2026-05-14) ──
+    // Convenção: o sentinela "Todos" significa "nenhum filtro ativo". Quando
+    // o usuário não seleciona nada ou seleciona "Todos", o getter devolve
+    // ["Todos"]. O caller verifica via `isMultiAll(arr)`.
+    // REGRA: nenhuma manipulação de `option.selected` fora destes helpers —
+    // sem o `cb-multi-sync` o <select> fica certo e a pílula na tela, errada.
+    function getMultiValues(sel) {
+      if (!sel) return ['Todos'];
+      const vals = Array.from(sel.selectedOptions).map(o => o.value);
+      if (vals.length === 0 || vals.includes('Todos')) return ['Todos'];
+      return vals;
+    }
+    function isMultiAll(arr) {
+      return !arr || arr.length === 0 || arr.includes('Todos');
+    }
+    function setMultiValues(sel, vals) {
+      if (!sel) return;
+      const wanted = new Set(vals && vals.length ? vals : ['Todos']);
+      let qualquerSelecionado = false;
+      Array.from(sel.options).forEach(opt => {
+        opt.selected = wanted.has(opt.value);
+        if (opt.selected) qualquerSelecionado = true;
+      });
+      if (!qualquerSelecionado) {
+        const todos = sel.querySelector('option[value="Todos"]');
+        if (todos) todos.selected = true;
+      }
+      // Notifica o upgrader de checkbox (assets/checkbox_multi.js) para
+      // re-sincronizar o UI. Não-op nos selects ainda nativos — listener
+      // só existe quando o upgrade aconteceu.
+      try { sel.dispatchEvent(new Event('cb-multi-sync')); } catch (_) {}
+    }
+
+    // Estado neutro dos 5 filtros multi: SEMPRE ['Todos'], nunca [].
+    // (`[]` é truthy em JS e acenderia o badge "Filtros Ativos" para sempre.)
+    const _filtroNeutro = () => ({ ini: '', fim: '', cli: ['Todos'], com: ['Todos'], emp: ['Todos'], reg: ['Todos'], ser: ['Todos'] });
+
     window.filtrosPorAba = {
-      soulan: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
-      thomas: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
-      emissoes: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
-      fechamento: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' },
-      contasreceber: { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' }
+      soulan: _filtroNeutro(),
+      thomas: _filtroNeutro(),
+      emissoes: _filtroNeutro(),
+      fechamento: _filtroNeutro(),
+      contasreceber: _filtroNeutro()
     };
 
     window.verificarFiltroAtivoNaAba = function () {
       let f = window.filtrosPorAba[window.visaoAtivaFaturamento];
       if (!f) return;
-      let ativo = f.ini || f.fim || f.cli || f.com || f.emp || f.reg || f.ser;
+      // Os 5 campos multi guardam arrays: truthiness não serve (`['Todos']` e `[]`
+      // são truthy). Só conta como filtro ativo um array com item que não o sentinela.
+      const temMulti = (a) => Array.isArray(a) && a.length > 0 && !a.includes('Todos');
+      let ativo = f.ini || f.fim || temMulti(f.cli) || temMulti(f.com) || temMulti(f.emp) || temMulti(f.reg) || temMulti(f.ser);
       if (ativo) {
         document.getElementById('aviso-filtro-ativo').classList.remove('hidden');
         document.getElementById('aviso-filtro-ativo').classList.add('flex');
@@ -1259,15 +1436,18 @@
       if (f) {
         document.getElementById('filtro-modal-data-inicio').value = f.ini;
         document.getElementById('filtro-modal-data-fim').value = f.fim;
-        document.getElementById('filtro-modal-cliente').value = f.cli;
-        document.getElementById('filtro-modal-comercial').value = f.com;
-        document.getElementById('filtro-modal-empresa').value = f.emp;
-        document.getElementById('filtro-modal-regiao').value = f.reg;
-        document.getElementById('filtro-modal-servico').value = f.ser;
+        setMultiValues(document.getElementById('filtro-modal-cliente'), f.cli);
+        setMultiValues(document.getElementById('filtro-modal-comercial'), f.com);
+        setMultiValues(document.getElementById('filtro-modal-empresa'), f.emp);
+        setMultiValues(document.getElementById('filtro-modal-regiao'), f.reg);
+        setMultiValues(document.getElementById('filtro-modal-servico'), f.ser);
       }
 
       // ── Aba "Contas a Receber": esconde Comercial/Região/Serviço e repopula
-      // a lista de Clientes apenas com os clientes presentes no array já filtrado.
+      // a lista de Clientes a partir da BASE COMPLETA.
+      // Antes a fonte era `window._ultimoArrayProcessado` (dataset JÁ FILTRADO). Com
+      // multi-select isso apagaria a seleção do operador ao reabrir o modal: os clientes
+      // escolhidos deixam de existir na lista → o componente religa o sentinela "Todos".
       const isCR = aba === 'contasreceber';
       document.querySelectorAll('[data-filtro-campo]').forEach(div => {
         const campo = div.getAttribute('data-filtro-campo');
@@ -1278,8 +1458,7 @@
         }
       });
       if (isCR) {
-        // Repopula Clientes do array atual da tela (ignora os demais sets).
-        const baseCR = window._ultimoArrayProcessado || window.dadosGlobaisFirestore || [];
+        const baseCR = window.dadosGlobaisFirestore || [];
         const sClientes = new Set();
         baseCR.forEach(d => {
           const cli = String(d['Cliente'] || d['cliente'] || '').trim();
@@ -1287,12 +1466,15 @@
         });
         const elCli = document.getElementById('filtro-modal-cliente');
         if (elCli) {
-          const atual = elCli.value;
-          elCli.innerHTML = '<option value="">Todos os Clientes</option>';
-          Array.from(sClientes).sort().forEach(c => {
-            elCli.innerHTML += `<option value="${c}">${c}</option>`;
-          });
-          elCli.value = atual;
+          // Preserva a seleção atual: uma única atribuição de innerHTML (cada `+=`
+          // reparseia o select e destrói `option.selected`) + restauração + sync.
+          const antigos = getMultiValues(elCli);
+          elCli.innerHTML = '<option value="Todos" selected>Todos os Clientes</option>' +
+            Array.from(sClientes).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+          if (!isMultiAll(antigos)) {
+            Array.from(elCli.options).forEach(opt => { opt.selected = antigos.includes(opt.value); });
+          }
+          try { elCli.dispatchEvent(new Event('cb-multi-sync')); } catch (_) {}
         }
       }
 
@@ -1355,11 +1537,11 @@
 
     window.aplicarFiltrosModal = function () {
       let aba = window.visaoAtivaFaturamento;
-      const fCli = document.getElementById('filtro-modal-cliente').value;
-      const fCom = document.getElementById('filtro-modal-comercial').value;
-      const fEmp = document.getElementById('filtro-modal-empresa').value;
-      const fReg = document.getElementById('filtro-modal-regiao').value;
-      const fSer = document.getElementById('filtro-modal-servico').value;
+      const fCli = getMultiValues(document.getElementById('filtro-modal-cliente'));
+      const fCom = getMultiValues(document.getElementById('filtro-modal-comercial'));
+      const fEmp = getMultiValues(document.getElementById('filtro-modal-empresa'));
+      const fReg = getMultiValues(document.getElementById('filtro-modal-regiao'));
+      const fSer = getMultiValues(document.getElementById('filtro-modal-servico'));
       const fIni = document.getElementById('filtro-modal-data-inicio').value;
       const fFim = document.getElementById('filtro-modal-data-fim').value;
 
@@ -1367,14 +1549,26 @@
       // e o botão "Limpar Filtros" permaneçam visíveis e operacionais ao trocar de visão.
       // Antes, o filtro era persistido só em `filtrosPorAba[aba]` (per-aba), então mudar de
       // Soulan p/ Fechamento "perdia" o badge — agora a tag persiste em qualquer aba.
-      const filtroAplicado = { ini: fIni, fim: fFim, cli: fCli, com: fCom, emp: fEmp, reg: fReg, ser: fSer };
-      window.filtrosPorAba.soulan        = { ...filtroAplicado };
-      window.filtrosPorAba.thomas        = { ...filtroAplicado };
-      window.filtrosPorAba.emissoes      = { ...filtroAplicado };
-      window.filtrosPorAba.fechamento    = { ...filtroAplicado };
-      window.filtrosPorAba.contasreceber = { ...filtroAplicado };
+      // Cópia PROFUNDA dos arrays por aba: um spread raso faria as 5 abas compartilharem
+      // a MESMA instância de array (aliasing) — mexer numa mudaria todas.
+      const filtroAplicado = () => ({ ini: fIni, fim: fFim, cli: [...fCli], com: [...fCom], emp: [...fEmp], reg: [...fReg], ser: [...fSer] });
+      window.filtrosPorAba.soulan        = filtroAplicado();
+      window.filtrosPorAba.thomas        = filtroAplicado();
+      window.filtrosPorAba.emissoes      = filtroAplicado();
+      window.filtrosPorAba.fechamento    = filtroAplicado();
+      window.filtrosPorAba.contasreceber = filtroAplicado();
       // Cross-filter "dia" se torna obsoleto ao trocar o período global → reseta.
       if (window._crCrossFilter) window._crCrossFilter.dia = null;
+
+      // Sets pré-computados FORA do predicado — são milhares de notas; construir
+      // Set dentro do .filter() seria O(n·m). `null` = filtro inativo (sentinela "Todos").
+      // `emp` e `ser` comparam em UPPER (o toUpperCase vive aqui, na construção do Set);
+      // `cli`, `com` e `reg` comparam RAW, como sempre compararam.
+      const setCli = isMultiAll(fCli) ? null : new Set(fCli);
+      const setCom = isMultiAll(fCom) ? null : new Set(fCom);
+      const setReg = isMultiAll(fReg) ? null : new Set(fReg);
+      const setSer = isMultiAll(fSer) ? null : new Set(fSer.map(s => String(s).toUpperCase()));
+      const setEmp = isMultiAll(fEmp) ? null : new Set(fEmp.map(s => String(s).toUpperCase()));
 
       let filtrados = window.dadosGlobaisFirestore.filter(d => {
         let cli = String(d['Cliente'] || d['cliente'] || "").trim();
@@ -1388,11 +1582,11 @@
         let empCalc = window.calcEmpresaExcel(ser);
         let emp = String(empCalc || d['empresa_atribuida'] || '').toUpperCase().trim();
 
-        if (fCli && cli !== fCli) return false;
-        if (fCom && com !== fCom) return false;
-        if (fReg && reg !== fReg) return false;
-        if (fSer && ser !== fSer.toUpperCase()) return false;
-        if (fEmp && emp !== fEmp.toUpperCase()) return false;
+        if (setCli && !setCli.has(cli)) return false;
+        if (setCom && !setCom.has(com)) return false;
+        if (setReg && !setReg.has(reg)) return false;
+        if (setSer && !setSer.has(ser)) return false;
+        if (setEmp && !setEmp.has(emp)) return false;
 
         if (fIni || fFim) {
           let dEm = window.parseDataExt(d['data_emissao'] || d['Dt Emissao'] || d['data_criacao']);
@@ -1419,21 +1613,21 @@
       // RESET GLOBAL: zera o filtro em TODAS as abas (par com a `aplicarFiltrosModal`),
       // forçando o badge "Filtros Ativos" a sumir em qualquer visão e re-renderizando
       // todos os componentes a partir do dataset original.
-      const filtroVazio = { ini: '', fim: '', cli: '', com: '', emp: '', reg: '', ser: '' };
-      window.filtrosPorAba.soulan        = { ...filtroVazio };
-      window.filtrosPorAba.thomas        = { ...filtroVazio };
-      window.filtrosPorAba.emissoes      = { ...filtroVazio };
-      window.filtrosPorAba.fechamento    = { ...filtroVazio };
-      window.filtrosPorAba.contasreceber = { ...filtroVazio };
+      // `_filtroNeutro()` já devolve uma instância nova por aba (sem aliasing de arrays).
+      window.filtrosPorAba.soulan        = _filtroNeutro();
+      window.filtrosPorAba.thomas        = _filtroNeutro();
+      window.filtrosPorAba.emissoes      = _filtroNeutro();
+      window.filtrosPorAba.fechamento    = _filtroNeutro();
+      window.filtrosPorAba.contasreceber = _filtroNeutro();
 
       // Limpa filtros cruzados da aba CR (clicks em fatias/barras)
       window._crCrossFilter = { empresa: null, faixa: null, dia: null };
 
-      document.getElementById('filtro-modal-cliente').value = "";
-      document.getElementById('filtro-modal-comercial').value = "";
-      document.getElementById('filtro-modal-empresa').value = "";
-      document.getElementById('filtro-modal-regiao').value = "";
-      document.getElementById('filtro-modal-servico').value = "";
+      setMultiValues(document.getElementById('filtro-modal-cliente'), ['Todos']);
+      setMultiValues(document.getElementById('filtro-modal-comercial'), ['Todos']);
+      setMultiValues(document.getElementById('filtro-modal-empresa'), ['Todos']);
+      setMultiValues(document.getElementById('filtro-modal-regiao'), ['Todos']);
+      setMultiValues(document.getElementById('filtro-modal-servico'), ['Todos']);
       document.getElementById('filtro-modal-data-inicio').value = "";
       document.getElementById('filtro-modal-data-fim').value = "";
 
@@ -2156,16 +2350,18 @@
       }
       window._crChartAnoInad = anoChartInad;
       window._crChartMesSelec = mesSelecChart;
-      const empFilterUpper = filtroAbaCR.emp ? filtroAbaCR.emp.toUpperCase() : null;
-      const cliFilter = filtroAbaCR.cli || '';
+      // Filtros multi do modal: Sets pré-computados (null = inativo). `emp` compara contra
+      // `_crEmpresaDaNota()`, que já devolve UPPER com fallback 'OUTROS'; `cli` compara raw.
+      const setEmpCR = isMultiAll(filtroAbaCR.emp) ? null : new Set(filtroAbaCR.emp.map(s => String(s).toUpperCase()));
+      const setCliCR = isMultiAll(filtroAbaCR.cli) ? null : new Set(filtroAbaCR.cli);
       (window.dadosGlobaisFirestore || []).forEach(data => {
         if (!data) return;
         // Filtros não-date do modal
         const cliNota = String(data['Cliente'] || data['cliente'] || '').trim();
-        if (cliFilter && cliNota !== cliFilter) return;
-        if (empFilterUpper) {
+        if (setCliCR && !setCliCR.has(cliNota)) return;
+        if (setEmpCR) {
           const emp = _crEmpresaDaNota(data);
-          if (emp !== empFilterUpper) return;
+          if (!setEmpCR.has(emp)) return;
         }
         // Cross-filter empresa
         if (cf.empresa) {
@@ -2351,8 +2547,14 @@
       return { id: 'BR-SP', sigla: 'SP', estadoNome: 'São Paulo' };
     };
 
+    // Empresas de fallback: só entram em cena se a base ainda não carregou (Set vazio),
+    // para o filtro nunca ficar sem nenhuma opção. Com base carregada, a lista é derivada
+    // dos dados pela MESMA expressão do predicado de filtro (classificador canônico de
+    // core_rules.js — nunca reimplementar a regra aqui).
+    const _EMPRESAS_FALLBACK = ['SOULAN ADM', 'SOULAN CONSULTORIA', 'NEAT', 'ESTÁGIO'];
+
     window.popularListasFiltro = function (arrayDados) {
-      let sClientes = new Set(), sComerciais = new Set(), sRegioes = new Set(), sServicos = new Set();
+      let sClientes = new Set(), sComerciais = new Set(), sRegioes = new Set(), sServicos = new Set(), sEmpresas = new Set();
       arrayDados.forEach(d => {
         let cli = String(d['Cliente'] || d['cliente'] || "").trim();
 
@@ -2364,17 +2566,35 @@
 
         if (reg) sRegioes.add(reg); if (ser)
           sServicos.add(ser);
+
+        // Mesma expressão do predicado de aplicarFiltrosModal (calc tem prioridade
+        // sobre o override legado `empresa_atribuida`). O predicado passa o serviço
+        // já em UPPER — replicado aqui para as duas listas não poderem divergir.
+        let emp = String(window.calcEmpresaExcel(ser.toUpperCase()) || d['empresa_atribuida'] || '').toUpperCase().trim();
+        if (emp) sEmpresas.add(emp);
       });
-      const preencherSelect = (id, objSet) => {
+
+      // Repopulação PRESERVANDO a seleção: `popularListasFiltro` roda a cada snapshot do
+      // Firestore, então um colega salvando uma nota no Gerenciador não pode zerar o filtro
+      // do diretor no meio da análise. Uma única atribuição de innerHTML — cada `innerHTML +=`
+      // reparseia o select, destrói `option.selected` e dispara o MutationObserver do
+      // componente a cada iteração.
+      const preencherSelect = (id, objSet, rotuloTodos) => {
         const el = document.getElementById(id);
         if (!el) return;
-        el.innerHTML = '<option value="">Todos</option>';
-        Array.from(objSet).sort().forEach(item => { el.innerHTML += `<option value="${item}">${item}</option>`; });
+        const antigos = getMultiValues(el);
+        el.innerHTML = `<option value="Todos" selected>${rotuloTodos}</option>` +
+          Array.from(objSet).sort().map(item => `<option value="${item}">${item}</option>`).join('');
+        if (!isMultiAll(antigos)) {
+          Array.from(el.options).forEach(opt => { opt.selected = antigos.includes(opt.value); });
+        }
+        try { el.dispatchEvent(new Event('cb-multi-sync')); } catch (_) {}
       };
-      preencherSelect('filtro-modal-cliente', sClientes);
-      preencherSelect('filtro-modal-comercial', sComerciais);
-      preencherSelect('filtro-modal-regiao', sRegioes);
-      preencherSelect('filtro-modal-servico', sServicos);
+      preencherSelect('filtro-modal-cliente', sClientes, 'Todos os Clientes');
+      preencherSelect('filtro-modal-comercial', sComerciais, 'Todos os Comerciais');
+      preencherSelect('filtro-modal-regiao', sRegioes, 'Todas as Regiões');
+      preencherSelect('filtro-modal-servico', sServicos, 'Todos os Serviços');
+      preencherSelect('filtro-modal-empresa', sEmpresas.size ? sEmpresas : new Set(_EMPRESAS_FALLBACK), 'Todas');
     };
 
     window.limparFiltroGraficoEmissoes = function () {
