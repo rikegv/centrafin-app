@@ -74,3 +74,8 @@ node_modules/
 
 audit_headcount_maio.cjs
 diag_crf_notas.cjs
+
+# Backups gerados por scripts de manutencao (contem dados reais de producao).
+# NUNCA versionar nem publicar — firebase.json tambem os ignora no hosting.
+scripts/backup-*.json
+backup-*.json

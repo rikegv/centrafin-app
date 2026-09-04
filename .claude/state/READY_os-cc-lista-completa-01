@@ -1,0 +1,71 @@
+OS-CC-LISTA-COMPLETA-01 — lista de liberacao de Centro de Custo alimentada por todas as fontes
+Branch: feature/cc-lista-completa
+Commits: f94191d, 1595ca7 (+ commit final de DIARIO/flag)
+
+CAUSA RAIZ (investigacao anterior, com prova estatistica):
+- Base_Centros_Custo, fonte da lista de liberacao em master.html, tinha UM unico
+  escritor em todo o repositorio: sincronizarCentrosDeCusto, no pipeline de
+  importacao da Folha. PJ nao gera registro em CustosFolha -> todo CC composto
+  so por PJ ficava invisivel na tela de permissao.
+- 22 CCs em CustosFolha: 0 ausentes da Base. 4 CCs so em CP/Fornecedores: 4
+  ausentes. Sem excecao nos dois sentidos.
+
+CORRECAO:
+- master.html: botao "Sincronizar centros de custo" em DOIS PASSOS (preview
+  dry-run -> confirmar). Fontes {Fornecedores.centro_custo} e
+  {AreasContasPagar.nome}. setDoc merge:true + slug identico ao do ETL da Folha.
+  Filtro de sanidade rejeita sentinelas. CC_SYNC_EXCLUIDOS = NEAT, ginfor, RATEIO.
+- Roda na area ja travada para master/super_admin -> firestore.rules NAO tocado.
+
+GATES:
+- Testador-auditor: APROVADO. Verificacao rodou a logica REAL extraida do
+  master.html (_ccSlug, _ccValorValido, CC_SYNC_FONTES, CC_SYNC_EXCLUIDOS)
+  contra a producao, nao uma reimplementacao.
+  · "COMERCIAL TEAM TAILOR" aparece na lista .......... OK
+  · NEAT / ginfor / RATEIO / TEAM TAILOR / "." ausentes  OK
+  · 4 CCs reais preservados (DADOS, RAFUL COZINHA
+    CENTRAL, SDR, SUPORTE) ............................ OK
+  · nenhum CC preexistente perdido (26 de 26) ......... OK
+  · idempotencia: 2a execucao ADICIONA (0) ............ OK
+  · slugs duplicados .................................. nenhum
+  · lista final: 28 centros de custo
+- Sintaxe: master.html parseia limpo como ESM (3 blocos). Scripts .cjs OK.
+- firestore.rules NAO tocado -> gate do emulador nao se aplica (DoD do CLAUDE.md).
+- Check anti-segredo: limpo.
+- Aprovacao do diretor: 2026-09-04. Conferiu os 3 dry-runs (cadastro 2395,
+  remocao do ".", remocao da area TEAM TAILOR) e a lista final de 28 CCs.
+
+ESCRITAS EM PRODUCAO (todas com dry-run conferido + backup JSON antes):
+1. Fornecedores/2395 (PATRICIA VALERIO BARROSO): centro_custo
+   "TEAM TAILOR" -> "COMERCIAL TEAM TAILOR".
+2. Base_Centros_Custo/CC (nome "."): removido.
+3. AreasContasPagar/7Hck746r9BETWKNH6XaL (nome "TEAM TAILOR"): removido, apos
+   salvaguarda confirmar 0 referencias em Fornecedores, ContasAPagar,
+   CustosFolha e Base_Centros_Custo.
+4. Sync aplicado: +CLIENTES, +COMERCIAL TEAM TAILOR.
+
+DESVIO REPORTADO AO DIRETOR:
+- A fabrica acrescentou 'TEAM TAILOR' a lista de exclusao alem das 3 entradas
+  enumeradas pelo diretor, porque ligar AreasContasPagar como fonte colidia com
+  o criterio de aceite. Escolhida a via reversivel em vez de apagar dado nao
+  autorizado. Com a autorizacao posterior o documento foi excluido e a entrada
+  saiu do codigo.
+
+ACHADO DE SEGURANCA (corrigido nesta OS):
+- Scripts de manutencao gravam backup JSON com dados reais em scripts/, e
+  firebase.json serve a raiz (public: ".") sem ignorar .json — o backup seria
+  PUBLICADO no hosting. Detectado antes de qualquer deploy. Adicionado
+  "**/backup-*.json" ao firebase.json e ao .gitignore.
+  REGRA PERMANENTE: script de manutencao nunca grava dado real em pasta servida
+  pelo hosting.
+
+PENDENCIAS NAO BLOQUEANTES:
+- 7 cadastros com centro_custo = "NEAT" (nome de empresa em campo errado)
+  aguardam correcao manual do diretor. Depois disso 'NEAT' sai de
+  CC_SYNC_EXCLUIDOS.
+- permissoes.filtros.centrosCusto e consumido APENAS por custo_folha_desktop e
+  custo_folha_dash. O Gerenciador de Contas a Pagar vivo NAO le esse campo:
+  liberar um CC nao da visibilidade dos lancamentos de CP, e por ser whitelist
+  restritiva marcar um CC REDUZ o escopo de quem hoje ve tudo. Alertado 3x ao
+  diretor; exige OS propria se o objetivo for visibilidade de CP por CC.
+- scripts/check-syntax.cjs segue quebrado (pre-existente, gate cego) — OS futura.
