@@ -2871,7 +2871,40 @@
             // O campo `transferenciasIgnoradas` vem do parser quando ele detecta
             // linhas "TRANSFERÊNCIA DE CONTA CORRENT" e as descarta antes do push.
             stats: null,
+            // Encoding resolvido pela detecção automática (OS-IMPORT-ENCODING-01).
+            // 'UTF-8' ou 'Windows-1252'. Telemetria — não altera o parse.
+            encodingDetectado: '',
         };
+    }
+
+    // ── Leitura de TXT com detecção automática de encoding ─────────────────
+    // OS-IMPORT-ENCODING-01 (2026-09-04). O ERP mudou o layout de exportação:
+    // até maio os arquivos vinham em UTF-8 ("TODAS AS EMPRESAS ..."); de junho
+    // em diante vêm em Windows-1252 ("06 - Despesas MM_2026.txt"). Ler com
+    // `f.text()` — que força UTF-8 por especificação e não aceita parâmetro de
+    // charset — convertia TODO byte acentuado do arquivo Windows-1252 em
+    // U+FFFD (�). A perda é DESTRUTIVA: o decoder descarta o byte original, e
+    // depois de gravado no Firestore não há como reconstruir (217 docs
+    // corrompidos nos lotes de jun/jul/ago 2026).
+    //
+    // Estratégia: tenta UTF-8 ESTRITO primeiro (`fatal: true` lança em byte
+    // inválido). Arquivo UTF-8 válido vence sempre — nenhum lote antigo muda
+    // de comportamento. Se lançar, os bytes não são UTF-8 e caímos para
+    // Windows-1252, que mapeia os 256 valores de byte e portanto NUNCA gera
+    // U+FFFD. Resolve os dois formatos sem depender de o ERP padronizar.
+    async function cpLerTextoAutoEncoding(file) {
+        const buf = await file.arrayBuffer();
+        try {
+            return {
+                texto: new TextDecoder('utf-8', { fatal: true }).decode(buf),
+                encoding: 'UTF-8',
+            };
+        } catch (_) {
+            return {
+                texto: new TextDecoder('windows-1252').decode(buf),
+                encoding: 'Windows-1252',
+            };
+        }
     }
 
     // ── Handler do TXT (Lançamentos / Faturas) ─────────────────────────────
@@ -2888,14 +2921,18 @@
         // Cede a thread pro paint do overlay antes do parse pesado.
         await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
         try {
-            const texto = await f.text();
+            // Detecção automática de encoding (OS-IMPORT-ENCODING-01).
+            // Substitui `await f.text()`, que forçava UTF-8 e corrompia os
+            // arquivos Windows-1252 emitidos pelo ERP a partir de jun/2026.
+            const { texto, encoding: encodingDetectado } = await cpLerTextoAutoEncoding(f);
+            _cpEtlState.encodingDetectado = encodingDetectado;
             // Escudo contra duplicidade (auditoria 2026-05-29). SHA-256 do
             // conteúdo bruto, calculado UMA vez aqui — usado depois no
             // writeBatch (como `arquivo_hash` em cada doc) e no validador
             // pré-batch logo abaixo.
             _cpEtlState.arquivoHash = await _cpHashSHA256(texto);
             const { lancamentos, stats } = cpParsearTXT(texto);
-            console.log('[ETL GerenciadorCP] parser:', { ...stats });
+            console.log('[ETL GerenciadorCP] parser:', { encoding: encodingDetectado, ...stats });
             if (!lancamentos.length) {
                 // Aviso especial quando TODAS as linhas reconhecidas eram
                 // transferências de conta corrente — explica ao operador
@@ -3917,14 +3954,15 @@
         return PREFIXOS_MES[pref3] || '';
     }
 
-    // Lê o arquivo bruto em UTF-8. Promise wrapper sobre FileReader.
-    function _benefLerArquivoUTF8(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onerror = () => reject(reader.error || new Error('Falha ao ler o arquivo.'));
-            reader.onload  = () => resolve(String(reader.result || ''));
-            reader.readAsText(file, 'UTF-8');
-        });
+    // Lê o TXT com detecção automática de encoding (OS-IMPORT-ENCODING-01).
+    // Antes: `readAsText(file, 'UTF-8')`, que forçava UTF-8 e transformava
+    // acento de arquivo Windows-1252 em U+FFFD. O parser sobrevivia porque só
+    // extrai números e resolve o mês por regex frouxa, mas o `nome` do
+    // funcionário é gravado CRU no Firestore — corromperia igual. Correção
+    // preventiva; reaproveita o detector do ETL de faturas.
+    async function _benefLerArquivoTXT(file) {
+        const { texto } = await cpLerTextoAutoEncoding(file);
+        return texto;
     }
 
     // CC "00000000-  ." (ou variações com tracinho/ponto/espaços apenas) é a
@@ -4124,8 +4162,8 @@
         if (window._cpMostrarLoader) window._cpMostrarLoader('Importando Benefícios PJ…', `Lendo ${file.name} · parser TXT analítico.`);
         await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
         try {
-            // 1) FileReader UTF-8.
-            const texto = await _benefLerArquivoUTF8(file);
+            // 1) Leitura com detecção automática de encoding.
+            const texto = await _benefLerArquivoTXT(file);
             if (!texto || !texto.trim()) {
                 throw new Error('Arquivo vazio ou ilegível.');
             }

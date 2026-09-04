@@ -1409,13 +1409,34 @@
         const n = parseFloat(s);
         return isFinite(n) ? n : 0;
     }
-    function _folhaBenefLerArquivoUTF8(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onerror = () => reject(reader.error || new Error('Falha ao ler o arquivo.'));
-            reader.onload  = () => resolve(String(reader.result || ''));
-            reader.readAsText(file, 'UTF-8');
-        });
+    // ── Leitura de TXT com detecção automática de encoding ─────────────────
+    // OS-IMPORT-ENCODING-01 (2026-09-04). Espelha o detector do Gerenciador de
+    // Contas a Pagar. Antes: `readAsText(file, 'UTF-8')`, que força UTF-8 e
+    // converte todo byte acentuado de um arquivo Windows-1252 em U+FFFD (�) —
+    // perda destrutiva. O ERP passou a emitir Windows-1252 a partir de
+    // jun/2026. O parser de benefícios sobrevivia porque só lê números, mas o
+    // `nome` do funcionário é gravado cru no Firestore. Correção preventiva.
+    //
+    // Tenta UTF-8 ESTRITO (`fatal: true`); arquivo UTF-8 válido vence sempre e
+    // nada muda para os lotes antigos. Se lançar, cai para Windows-1252, que
+    // mapeia os 256 valores de byte e nunca gera U+FFFD.
+    async function _folhaLerTextoAutoEncoding(file) {
+        const buf = await file.arrayBuffer();
+        try {
+            return {
+                texto: new TextDecoder('utf-8', { fatal: true }).decode(buf),
+                encoding: 'UTF-8',
+            };
+        } catch (_) {
+            return {
+                texto: new TextDecoder('windows-1252').decode(buf),
+                encoding: 'Windows-1252',
+            };
+        }
+    }
+    async function _folhaBenefLerArquivoTXT(file) {
+        const { texto } = await _folhaLerTextoAutoEncoding(file);
+        return texto;
     }
     function _folhaBenefCcZerado(codigo, nome) {
         const cod = String(codigo || '').trim();
@@ -1639,8 +1660,8 @@
         if (inputBeneficiosTxt) inputBeneficiosTxt.disabled = true;
 
         try {
-            // 1) Lê UTF-8 e roda a máquina de estados.
-            const texto = await _folhaBenefLerArquivoUTF8(file);
+            // 1) Lê com detecção automática de encoding e roda a máquina de estados.
+            const texto = await _folhaBenefLerArquivoTXT(file);
             if (!texto || !texto.trim()) throw new Error('Arquivo TXT vazio ou ilegível.');
             const { competencia, registros } = _folhaBenefParsearTXT(texto);
             if (!registros.length) {
