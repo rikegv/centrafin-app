@@ -1995,18 +1995,40 @@
         // nesta tela de liberação. Prova: 100% dos CCs com folha estavam na base,
         // 100% dos sem folha estavam fora.
         //
-        // Fonte escolhida: /Fornecedores. O ETL de Contas a Pagar HERDA o
-        // `centro_custo` do cadastro do fornecedor, e a auditoria confirmou que
-        // nenhum CC existe em ContasAPagar sem existir em Fornecedores — logo
-        // varrer 794 docs cobre as duas fontes, em vez de ler os ~37 mil de CP.
-        const CC_SYNC_FONTES = ['Fornecedores'];
+        // Fontes (decisão do diretor 2026-09-04). Cada uma expõe o nome do CC em
+        // um CAMPO DIFERENTE — daí o par {colecao, campo}:
+        //
+        //  · Fornecedores.centro_custo — o ETL de Contas a Pagar HERDA o
+        //    `centro_custo` do cadastro do fornecedor, e a auditoria confirmou
+        //    que nenhum CC existe em ContasAPagar sem existir em Fornecedores.
+        //    Varrer 794 docs cobre as duas fontes, em vez dos ~37 mil de CP.
+        //
+        //  · AreasContasPagar.nome — é o registro de CCs que o diretor de fato
+        //    administra (alimenta o dropdown de CC do Banco de Fornecedores).
+        //    Sem esta fonte, um CC recém-criado que ainda não tenha nenhum
+        //    fornecedor alocado continuaria invisível nesta lista — a mesma
+        //    classe de bug, apenas adiada um passo.
+        const CC_SYNC_FONTES = [
+            { colecao: 'Fornecedores',      campo: 'centro_custo' },
+            { colecao: 'AreasContasPagar',  campo: 'nome' },
+        ];
 
-        // TEMPORÁRIO (decisão do diretor 2026-09-04): "NEAT" é NOME DE EMPRESA
-        // preenchido por engano no campo centro_custo de 7 cadastros de fornecedor
-        // — não é centro de custo. Fica de fora da lista até o diretor corrigir
-        // esses cadastros; quando corrigir, esta exclusão deixa de ter efeito e
-        // pode ser removida.
-        const CC_SYNC_EXCLUIDOS = ['NEAT'];
+        // Valores que NÃO são centro de custo e não devem chegar à lista de
+        // liberação (decisão do diretor 2026-09-04):
+        //  · 'NEAT'        — nome de EMPRESA preenchido por engano no campo
+        //                    centro_custo de 7 cadastros de fornecedor.
+        //                    TEMPORÁRIO: quando o diretor corrigir esses
+        //                    cadastros, esta exclusão perde efeito e pode sair.
+        //  · 'ginfor'      — lixo/teste (minúsculo, digitação).
+        //  · 'RATEIO'      — lixo.
+        //  · 'TEAM TAILOR' — duplicata por digitação de "COMERCIAL TEAM TAILOR".
+        //                    A origem no cadastro do fornecedor 2395 foi
+        //                    corrigida, MAS o registro sobrevive em
+        //                    AreasContasPagar; sem esta entrada a segunda fonte
+        //                    o reintroduziria, violando o critério de aceite da
+        //                    OS. Remover daqui quando o doc de AreasContasPagar
+        //                    for excluído.
+        const CC_SYNC_EXCLUIDOS = ['NEAT', 'ginfor', 'RATEIO', 'TEAM TAILOR'];
 
         // Mesmo slug do ETL da Folha (custo_folha_desktop) — garante que os dois
         // escritores convirjam no MESMO docId e o merge:true não duplique.
@@ -2041,24 +2063,27 @@
             if (btnOk) btnOk.disabled = true;
             fornMAbrirModal('modal-cc-sync');
             try {
-                const encontrados = new Map();   // nome → nº de cadastros
+                const encontrados = new Map();   // nome → { qtd, fontes:Set }
                 for (const fonte of CC_SYNC_FONTES) {
-                    const snap = await getDocs(collection(db, fonte));
+                    const snap = await getDocs(collection(db, fonte.colecao));
                     snap.forEach(d => {
-                        const cc = String((d.data() || {}).centro_custo || '').trim();
+                        const cc = String((d.data() || {})[fonte.campo] || '').trim();
                         if (!cc) return;
-                        encontrados.set(cc, (encontrados.get(cc) || 0) + 1);
+                        if (!encontrados.has(cc)) encontrados.set(cc, { qtd: 0, fontes: new Set() });
+                        const e = encontrados.get(cc);
+                        e.qtd++;
+                        e.fontes.add(fonte.colecao);
                     });
                 }
                 const excl = new Set(CC_SYNC_EXCLUIDOS.map(s => s.toUpperCase()));
                 const jaExistem = new Set(_ccDisponiveis.map(_ccSlug));
                 const ignorados = [];
                 const faltantes = [];
-                for (const [nome, qtd] of encontrados) {
+                for (const [nome, info] of encontrados) {
                     if (!_ccValorValido(nome)) { ignorados.push([nome, 'valor inválido/sentinela']); continue; }
                     if (excl.has(nome.toUpperCase())) { ignorados.push([nome, 'na lista de exclusão']); continue; }
                     if (jaExistem.has(_ccSlug(nome))) continue;
-                    faltantes.push({ nome, qtd });
+                    faltantes.push({ nome, qtd: info.qtd, fontes: [...info.fontes].join(' + ') });
                 }
                 faltantes.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
                 _ccSyncPendentes = faltantes.map(f => f.nome);
@@ -2074,7 +2099,7 @@
                     for (const f of faltantes) {
                         html += `<div class="flex items-center justify-between gap-3 px-3 py-2">
                             <span class="text-[12px] font-semibold text-secondary truncate">${f.nome.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>
-                            <span class="text-[10px] font-bold text-slate-400 shrink-0 tabular-nums">${f.qtd} cadastro(s)</span>
+                            <span class="text-[10px] font-bold text-slate-400 shrink-0 tabular-nums">${f.qtd}× · ${f.fontes}</span>
                         </div>`;
                     }
                     html += '</div>';
@@ -2092,7 +2117,7 @@
                 }
                 html += `<p class="text-[10px] text-slate-400 italic mt-4 flex items-start gap-1.5 leading-relaxed">
                     <span class="material-symbols-outlined text-[13px] mt-0.5">info</span>
-                    Nada é removido — a sincronização só ACRESCENTA centros ausentes. Fonte: ${CC_SYNC_FONTES.join(', ')}.</p>`;
+                    Nada é removido — a sincronização só ACRESCENTA centros ausentes. Fontes: ${CC_SYNC_FONTES.map(f => f.colecao).join(', ')}.</p>`;
                 corpo.innerHTML = html;
                 if (btnOk) btnOk.disabled = faltantes.length === 0;
             } catch (err) {

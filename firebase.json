@@ -17,6 +17,7 @@
       "**/clean_*.js",
       "**/*.cjs",
       "adc_tmp.json",
+      "**/backup-*.json",
       "**/*.md",
       "package.json",
       "package-lock.json",
