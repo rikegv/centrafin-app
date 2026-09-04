@@ -1550,6 +1550,42 @@
         </div>
     </div>
 
+        <!-- MODAL: Sincronizar Centros de Custo — OS-CC-LISTA-COMPLETA-01.
+             Dois passos por decisão do diretor: o clique no botão só LÊ e mostra
+             o que seria acrescentado (dry-run); a gravação só ocorre no Confirmar.
+             Reaproveita o esqueleto visual de modal-alterar-cc-massa. -->
+        <div id="modal-cc-sync" class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-overlay="modal-cc-sync"></div>
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100">
+                <div class="px-7 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl bg-tertiary/10 flex items-center justify-center shrink-0 shadow-inner">
+                            <span class="material-symbols-outlined text-tertiary text-2xl">sync</span>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="font-headline text-xl font-extrabold text-secondary tracking-tight">Sincronizar Centros de Custo</h3>
+                            <p class="text-[12px] text-slate-500 font-medium mt-0.5">
+                                Acrescenta à lista os centros usados em cadastros de fornecedor.
+                            </p>
+                        </div>
+                    </div>
+                    <button id="btn-fechar-cc-sync" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="px-7 py-5" id="cc-sync-corpo"></div>
+                <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
+                    <button id="btn-cancelar-cc-sync" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
+                    <button id="btn-cc-sync-confirmar" type="button"
+                            style="background-color:#002443;color:#ffffff;"
+                            class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-lg hover:brightness-125 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined text-base" style="color:#aad12f;">check_circle</span>
+                        <span style="color:#ffffff;">Confirmar e Adicionar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
     <script type="module">
         import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where, orderBy, limit, getDocs, serverTimestamp, setDoc, writeBatch, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -1854,10 +1890,22 @@
                                 </span>
                                 <span class="text-[9px] text-slate-400 font-medium">Vazio ou "Todos" = vê todos os centros (sem restrição lateral)</span>
                             </div>
-                            <label class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 cursor-pointer">
-                                <input type="checkbox" data-cc-todos="${prefixo}" class="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
-                                Todos
-                            </label>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <!-- OS-CC-LISTA-COMPLETA-01: a Base_Centros_Custo só era
+                                     escrita pelo ETL da Folha, então CC que só tem PJ
+                                     (sem CLT) nunca aparecia aqui. Este botão reconcilia
+                                     a lista com os CCs em uso nos cadastros de fornecedor. -->
+                                <button type="button" data-cc-sync="${prefixo}"
+                                    title="Buscar centros de custo usados em cadastros de fornecedor que ainda não estão nesta lista"
+                                    class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-tertiary hover:bg-tertiary/10 transition-colors">
+                                    <span class="material-symbols-outlined text-[13px]">sync</span>
+                                    Sincronizar
+                                </button>
+                                <label class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 cursor-pointer">
+                                    <input type="checkbox" data-cc-todos="${prefixo}" class="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4">
+                                    Todos
+                                </label>
+                            </div>
                         </div>
                         <div class="relative mb-2">
                             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300 text-[14px] pointer-events-none">search</span>
@@ -1934,6 +1982,151 @@
                     _renderListaCC(prefixo);
                 }
             });
+            // OS-CC-LISTA-COMPLETA-01: abre o preview (dry-run) da sincronização.
+            const btnSync = root.querySelector(`[data-cc-sync="${prefixo}"]`);
+            if (btnSync) btnSync.addEventListener('click', () => _ccAbrirSync());
+        }
+
+        // ── SINCRONIZAÇÃO DA LISTA DE CENTROS DE CUSTO ───────────────────────
+        // OS-CC-LISTA-COMPLETA-01 (2026-09-04). Diagnóstico: `Base_Centros_Custo`
+        // tinha UM único escritor em todo o repositório — `sincronizarCentrosDeCusto`
+        // no pipeline de importação da Folha. Como PJ não gera registro em
+        // `CustosFolha`, todo centro de custo composto só por PJ ficava invisível
+        // nesta tela de liberação. Prova: 100% dos CCs com folha estavam na base,
+        // 100% dos sem folha estavam fora.
+        //
+        // Fonte escolhida: /Fornecedores. O ETL de Contas a Pagar HERDA o
+        // `centro_custo` do cadastro do fornecedor, e a auditoria confirmou que
+        // nenhum CC existe em ContasAPagar sem existir em Fornecedores — logo
+        // varrer 794 docs cobre as duas fontes, em vez de ler os ~37 mil de CP.
+        const CC_SYNC_FONTES = ['Fornecedores'];
+
+        // TEMPORÁRIO (decisão do diretor 2026-09-04): "NEAT" é NOME DE EMPRESA
+        // preenchido por engano no campo centro_custo de 7 cadastros de fornecedor
+        // — não é centro de custo. Fica de fora da lista até o diretor corrigir
+        // esses cadastros; quando corrigir, esta exclusão deixa de ter efeito e
+        // pode ser removida.
+        const CC_SYNC_EXCLUIDOS = ['NEAT'];
+
+        // Mesmo slug do ETL da Folha (custo_folha_desktop) — garante que os dois
+        // escritores convirjam no MESMO docId e o merge:true não duplique.
+        function _ccSlug(nome) {
+            return String(nome || '')
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toUpperCase()
+                .replace(/[^A-Z0-9]+/g, '_')
+                .replace(/^_+|_+$/g, '')
+                .slice(0, 120) || 'CC';
+        }
+
+        // Rejeita sentinelas do ERP: vazio, só pontuação/espaço, só zeros. É o
+        // que deixou um CC "." vazar para esta tela vindo da folha.
+        function _ccValorValido(nome) {
+            const s = String(nome || '').trim();
+            if (!s) return false;
+            if (/^[.\-_\s]*$/.test(s)) return false;
+            if (/^0+$/.test(s)) return false;
+            return true;
+        }
+
+        let _ccSyncPendentes = [];   // nomes que o "Confirmar" vai gravar
+
+        // Passo 1 (dry-run): lê as fontes, calcula o que FALTA e mostra no modal.
+        // Nada é gravado aqui — a escrita só ocorre no Confirmar.
+        async function _ccAbrirSync() {
+            const corpo = document.getElementById('cc-sync-corpo');
+            const btnOk = document.getElementById('btn-cc-sync-confirmar');
+            _ccSyncPendentes = [];
+            corpo.innerHTML = '<p class="text-[11px] text-slate-400 italic text-center py-4">Lendo cadastros…</p>';
+            if (btnOk) btnOk.disabled = true;
+            fornMAbrirModal('modal-cc-sync');
+            try {
+                const encontrados = new Map();   // nome → nº de cadastros
+                for (const fonte of CC_SYNC_FONTES) {
+                    const snap = await getDocs(collection(db, fonte));
+                    snap.forEach(d => {
+                        const cc = String((d.data() || {}).centro_custo || '').trim();
+                        if (!cc) return;
+                        encontrados.set(cc, (encontrados.get(cc) || 0) + 1);
+                    });
+                }
+                const excl = new Set(CC_SYNC_EXCLUIDOS.map(s => s.toUpperCase()));
+                const jaExistem = new Set(_ccDisponiveis.map(_ccSlug));
+                const ignorados = [];
+                const faltantes = [];
+                for (const [nome, qtd] of encontrados) {
+                    if (!_ccValorValido(nome)) { ignorados.push([nome, 'valor inválido/sentinela']); continue; }
+                    if (excl.has(nome.toUpperCase())) { ignorados.push([nome, 'na lista de exclusão']); continue; }
+                    if (jaExistem.has(_ccSlug(nome))) continue;
+                    faltantes.push({ nome, qtd });
+                }
+                faltantes.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+                _ccSyncPendentes = faltantes.map(f => f.nome);
+
+                let html = '';
+                if (!faltantes.length) {
+                    html += `<div class="flex items-center gap-2 text-[12px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                        <span class="material-symbols-outlined text-[18px]">task_alt</span>
+                        Lista já está completa — nenhum centro de custo novo a adicionar.</div>`;
+                } else {
+                    html += `<p class="text-[11px] font-bold text-slate-600 mb-2">${faltantes.length} centro(s) de custo serão ADICIONADOS à lista:</p>
+                        <div class="border border-slate-100 rounded-xl divide-y divide-slate-50 max-h-56 overflow-y-auto">`;
+                    for (const f of faltantes) {
+                        html += `<div class="flex items-center justify-between gap-3 px-3 py-2">
+                            <span class="text-[12px] font-semibold text-secondary truncate">${f.nome.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>
+                            <span class="text-[10px] font-bold text-slate-400 shrink-0 tabular-nums">${f.qtd} cadastro(s)</span>
+                        </div>`;
+                    }
+                    html += '</div>';
+                }
+                if (ignorados.length) {
+                    html += `<p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-4 mb-1.5">Ignorados</p>
+                        <div class="space-y-1">`;
+                    for (const [n, motivo] of ignorados) {
+                        html += `<p class="text-[11px] text-slate-400 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[13px]">block</span>
+                            <span class="font-semibold">${String(n).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>
+                            <span class="italic">— ${motivo}</span></p>`;
+                    }
+                    html += '</div>';
+                }
+                html += `<p class="text-[10px] text-slate-400 italic mt-4 flex items-start gap-1.5 leading-relaxed">
+                    <span class="material-symbols-outlined text-[13px] mt-0.5">info</span>
+                    Nada é removido — a sincronização só ACRESCENTA centros ausentes. Fonte: ${CC_SYNC_FONTES.join(', ')}.</p>`;
+                corpo.innerHTML = html;
+                if (btnOk) btnOk.disabled = faltantes.length === 0;
+            } catch (err) {
+                console.error('[CC sync] leitura falhou:', err);
+                corpo.innerHTML = `<p class="text-[12px] font-bold text-red-600">Falha ao ler os cadastros: ${err?.code || err?.message || 'erro desconhecido'}</p>`;
+            }
+        }
+
+        // Passo 2: grava. setDoc merge:true + slug idêntico ao da Folha = idempotente.
+        async function _ccAplicarSync() {
+            const btn = document.getElementById('btn-cc-sync-confirmar');
+            if (!_ccSyncPendentes.length) return;
+            if (btn) btn.disabled = true;
+            let ok = 0, falhas = 0;
+            for (const nome of _ccSyncPendentes) {
+                try {
+                    await setDoc(doc(db, 'Base_Centros_Custo', _ccSlug(nome)), {
+                        nome,
+                        atualizadoEm: serverTimestamp(),
+                    }, { merge: true });
+                    ok++;
+                } catch (err) {
+                    falhas++;
+                    console.warn('[CC sync] falha em', nome, err?.code || err?.message);
+                }
+            }
+            fornMFecharModal('modal-cc-sync');
+            // O onSnapshot de Base_Centros_Custo re-renderiza a lista sozinho.
+            if (falhas) {
+                fornMToast(`${ok} centro(s) adicionado(s), ${falhas} falha(s) — ver console.`, 'warning', true);
+            } else {
+                fornMToast(`${ok} centro(s) de custo adicionado(s) à lista.`, 'check_circle');
+            }
+            _ccSyncPendentes = [];
         }
 
         function lerFiltroCC(prefixo) {
@@ -2157,6 +2350,12 @@
         document.getElementById('filtro-cc-edit').innerHTML = gerarFiltroCC('edit');
         bindFiltroCC('cad');
         bindFiltroCC('edit');
+
+        // Botões do modal de sincronização (OS-CC-LISTA-COMPLETA-01).
+        document.getElementById('btn-fechar-cc-sync')?.addEventListener('click', () => fornMFecharModal('modal-cc-sync'));
+        document.getElementById('btn-cancelar-cc-sync')?.addEventListener('click', () => fornMFecharModal('modal-cc-sync'));
+        document.querySelector('[data-modal-overlay="modal-cc-sync"]')?.addEventListener('click', () => fornMFecharModal('modal-cc-sync'));
+        document.getElementById('btn-cc-sync-confirmar')?.addEventListener('click', () => _ccAplicarSync());
 
         // Listener da Base_Centros_Custo: alimenta a lista visível em ambos
         // os forms. Reaproveita o snapshot já existente em outras telas, mas
