@@ -1,0 +1,57 @@
+OS-IMPORT-ENCODING-01 — deteccao automatica de encoding nos importadores TXT
+Branch: feature/import-encoding
+Commit: 7ce0397
+
+CAUSA RAIZ (diagnostico anterior, confirmado byte a byte):
+- O ERP mudou o layout de exportacao. Ate maio/2026 os TXT vinham em UTF-8
+  ("TODAS AS EMPRESAS ..."); de junho em diante vem em Windows-1252
+  ("06 - Despesas MM_2026.txt").
+- O codigo NAO regrediu: `await f.text()` esta no fonte desde o primeiro commit
+  do modulo (a6a6e8a, 2026-04-30). Nunca existiu TextDecoder/latin1/1252 em
+  nenhum commit do repositorio (git log -S --all).
+- `f.text()` e `readAsText(file,'UTF-8')` forcam UTF-8 por especificacao; byte
+  acentuado de arquivo Windows-1252 vira U+FFFD e o byte original e DESCARTADO.
+- Impacto em producao: 217 docs de /ContasAPagar gravados com "?" nos lotes de
+  jun/jul/ago 2026 (272 docs nos 3 lotes; 217 com corrupcao em campo de texto).
+
+CORRECAO (3 pontos, escopo exato da OS):
+- gerenciador_contas_pagar_desktop/code.html — ETL de faturas (substitui f.text())
+- gerenciador_contas_pagar_desktop/code.html — importador Beneficios PJ (preventivo)
+- custo_folha_desktop/code.html — importador Beneficios PJ (espelho)
+Estrategia: TextDecoder('utf-8',{fatal:true}) e, se lancar, fallback para
+windows-1252 (mapeia os 256 valores de byte -> nunca gera U+FFFD).
+NAO tocado: cpNormalizarTexto, normalizacao NFD de chave de match, calculo,
+firestore.rules.
+
+GATES:
+- Testador-auditor: APROVADO. scripts/test-import-encoding.cjs extrai o parser
+  REAL do fonte de producao (cpParsearTXT + dependencias) e roda contra bytes reais.
+  (b) Regressao: 21 arquivos UTF-8 reais / 38.627 lancamentos -> saida
+      BYTE-IDENTICA ao comportamento antigo. Zero regressao.
+  (a) Windows-1252: fixture reencodado de arquivo real do ERP ->
+      9.959 U+FFFD antes, 0 depois; round-trip identico ao texto original.
+  (c) Das 17 categorias quebradas, 15 existem no arquivo de teste; 15/15 corretas.
+- Sintaxe: ambos os modulos parseiam limpo como ESM (3 blocos <script> cada).
+- firestore.rules NAO tocado -> gate do emulador nao se aplica (DoD do CLAUDE.md).
+- Check anti-segredo: limpo (scripts/check-secrets.cjs).
+- Aprovacao do diretor: 2026-09-04, com base nos testes acima (mudanca sem
+  diferenca visual — altera decodificacao de arquivo, nao a UI).
+
+RESSALVAS REGISTRADAS AO DIRETOR ANTES DA APROVACAO:
+- Os 3 arquivos reais (06 - Despesas 06/07/08_2026.txt) NAO estao no disco;
+  o teste (a) usou fixture Windows-1252 reencodado de arquivo real do ERP.
+- Verificacao feita com o parser de producao em Node, NAO no emulador/browser.
+
+PENDENCIAS NAO BLOQUEANTES (fora de escopo, OS propria):
+- Reimportacao dos 3 lotes vai DUPLICAR se feita direto: o arquivo_hash muda com
+  a correcao (hash e do texto decodificado), o escudo anti-duplicidade nao
+  dispara e o docId e auto-gerado. Os 272 docs precisam ser removidos antes.
+  -> OS-CP-LIMPEZA-LOTES-CORROMPIDOS-01.
+- scripts/check-syntax.cjs quebrado (pre-existente): linha 52 grava bloco
+  <script type="module"> com extensao .cjs, entao node --check rejeita qualquer
+  `import`. Reprova os arquivos INTOCADOS do HEAD identicamente. Gate cego hoje.
+- contas_a_pagar_desktop/code.html:1648 ainda tem `await f.text()` — modulo
+  legado exterminado em 2026-05-14, sem rota no sidebar.js. Nao tocado.
+- Risco latente fechado, nao materializado: em arquivo corrompido a trava de
+  "TRANSFERENCIA DE CONTA CORRENT" falha (nao reconhece TRANSFER?NCIA) e as
+  linhas vazam como faturas. Conferido em producao: 0 vazaram nos 3 lotes reais.
