@@ -5,6 +5,100 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-04 — OS-CC-LISTA-COMPLETA-01: lista de liberação de Centro de Custo alimentada por todas as fontes (deploy em produção)
+
+**Sintoma (diretor):** cadastrou o CC "COMERCIAL TEAM TAILOR", alocou o fornecedor PJ Campus
+Girassol (cod 2399) nele, mas o CC não aparecia na tela onde se libera visualização por usuário.
+Já "COMERCIAL SOULAN", criado do mesmo jeito, apareceu.
+
+### Causa raiz
+`Base_Centros_Custo` — fonte da lista de liberação (`master.html`, seção "3º NÍVEL: FILTRO POR
+CENTRO DE CUSTO") — tinha **um único escritor em todo o repositório**: `sincronizarCentrosDeCusto`
+(`custo_folha_desktop`), dentro do pipeline de importação da **Folha**. Como **PJ não gera
+registro em `CustosFolha`**, todo CC composto só por PJ ficava invisível.
+
+Prova estatística, sem exceção nos dois sentidos:
+```
+CCs em CustosFolha:                    22  → 0 ausentes da Base
+CCs que existem SÓ em CP/Fornecedores:  4  → 4 ausentes da Base
+```
+
+### Três investigações que corrigiram premissas do diretor
+1. **"O CC não tem lançamento."** Falso — havia **24 lançamentos** de Contas a Pagar nesse CC.
+   Ter lançamento não basta: tem que ser lançamento *de folha*.
+2. **"O Fernando Nery gera registro em CustosFolha, o Campus Girassol não."** Falso — **nenhum
+   dos dois** está em `CustosFolha` (0 e 0). As linhas de folha do Fernando vêm do **merge de PJ**:
+   o Gerenciador lê `ContasAPagar where tipo_entidade == 'Fornecedor Interno - PJ'` ao vivo e cruza
+   com `CP_Beneficios_PJ`. Decomposição exata do que o diretor via na tela: 05/2026 R$ 1.671,30 =
+   soma das 13 faturas em CP; 06 e 07/2026 R$ 660 = `valor_vr` do `CP_Beneficios_PJ`. **Não existia
+   "processo pelo qual o Fernando passou" para replicar.** O que pôs "COMERCIAL SOULAN" na lista
+   foram **3 CLTs** (Catarina, Tatiana, Bianca), não o Fernando.
+3. **Terceira coleção descoberta durante a implementação:** `AreasContasPagar` — é ONDE o diretor
+   de fato cria o CC (alimenta o dropdown do Banco de Fornecedores, `master.html:3945`). Distinta
+   de `Base_Centros_Custo`, com sobreposição só parcial. Sem ela como fonte, um CC recém-criado
+   sem fornecedor alocado seguiria invisível — a mesma classe de bug, adiada um passo. Levou à
+   decisão do diretor de incluí-la.
+
+### Correção
+Botão **"Sincronizar centros de custo"** na lista de CC, em dois passos (preview → confirmar),
+reaproveitando o esqueleto de `modal-alterar-cc-massa` e os helpers `fornMAbrirModal`/`fornMToast`.
+- `CC_SYNC_FONTES = [{Fornecedores, centro_custo}, {AreasContasPagar, nome}]` — as fontes expõem o
+  nome em **campos diferentes**, daí o par `{colecao, campo}`.
+- Não varre `ContasAPagar` (~37 mil docs): o ETL de CP **herda** o `centro_custo` do cadastro, e a
+  auditoria confirmou 0 CCs em CP ausentes de Fornecedores. 794 leituras em vez de 37 mil.
+- `setDoc merge:true` + **slug idêntico ao do ETL da Folha** → os dois escritores convergem no
+  mesmo `docId`; idempotência comprovada (2ª execução: `ADICIONA (0)`).
+- `CC_SYNC_EXCLUIDOS = ['NEAT','ginfor','RATEIO']` — NEAT é nome de empresa em campo errado
+  (temporário até o diretor corrigir 7 cadastros); os outros dois são lixo.
+- Filtro de sanidade rejeita sentinelas (vazio, só pontuação, só zeros) — foi o que deixou um CC
+  `"."` vazar da folha para a UI de permissão.
+- Roda na área já travada para `master`/`super_admin`: **zero alteração em `firestore.rules`**,
+  não dispara a Lei da decisão.
+
+### Escritas em produção (todas com dry-run conferido pelo diretor + backup JSON)
+1. Fornecedor 2395 (Patrícia): `centro_custo` "TEAM TAILOR" → "COMERCIAL TEAM TAILOR".
+2. `Base_Centros_Custo`: removido o resíduo `"."` (docId `CC`).
+3. `AreasContasPagar`: removido o doc `TEAM TAILOR` (`7Hck746r9BETWKNH6XaL`) — duplicata eliminada
+   na origem, com salvaguarda verificando 0 referências em 4 coleções antes de apagar.
+4. Sync aplicado: +CLIENTES, +COMERCIAL TEAM TAILOR. Lista final **28 CCs**, nenhum preexistente
+   perdido, sem slugs duplicados.
+
+### Ordem de execução importa (registrado como aprendizado)
+Corrigir o cadastro 2395 **antes** de rodar o sync. Invertido, "TEAM TAILOR" entraria na lista e
+teria de ser removido depois. A fábrica detectou a dependência na simulação e a sequência foi
+imposta na OS.
+
+### Desvio reportado ao diretor
+A fábrica acrescentou `'TEAM TAILOR'` à lista de exclusão além das 3 entradas que o diretor
+enumerou: ligar `AreasContasPagar` como fonte (decisão 3) colidia com o critério de aceite
+(decisão 4), porque o registro sobrevivia lá após a correção do cadastro. Escolhida a via
+reversível (exclusão em código) em vez de apagar dado não autorizado. Com a autorização posterior,
+o documento foi excluído e a entrada saiu do código — estado final tem a duplicata eliminada na
+origem, sem exclusão defensiva.
+
+### 🔒 Achado de segurança — aprendizado permanente
+Os scripts de manutenção gravam **backup JSON com dados reais de produção** em `scripts/`, e
+`firebase.json` serve a raiz (`public: "."`) sem ignorar `.json`. **Esse backup seria publicado no
+hosting e ficaria acessível por URL.** Não chegou a ocorrer — detectado antes de qualquer deploy.
+Adicionado `**/backup-*.json` ao ignore do `firebase.json` e ao `.gitignore`.
+
+**Regra permanente que fica deste episódio: script de manutenção NUNCA deve gravar dado real em
+pasta servida pelo hosting.** O `public: "."` do CentraFin torna a raiz inteira publicável por
+padrão — todo artefato novo com dado de produção precisa entrar no ignore ANTES de existir. Vale
+também para o `purge-lotes-corrompidos-cp.cjs` da OS anterior, que tem o mesmo comportamento e
+ainda não rodou com `--apply`.
+
+### Pendências abertas
+- Os 7 cadastros de fornecedor com `centro_custo = "NEAT"` (nome de empresa em campo errado)
+  seguem para correção manual do diretor. Quando corrigidos, `'NEAT'` sai de `CC_SYNC_EXCLUIDOS`.
+- `permissoes.filtros.centrosCusto` continua sendo consumido **apenas** por `custo_folha_desktop`
+  e `custo_folha_dash`. O Gerenciador de Contas a Pagar vivo **não lê** esse campo. A lista agora
+  está completa, mas liberar um CC não dá visibilidade dos lançamentos de CP — e, por ser whitelist
+  restritiva, marcar um CC para quem hoje vê tudo REDUZ o escopo dessa pessoa na Folha. Se o
+  objetivo for visibilidade de CP por centro de custo, é outra implementação. Alertado 3×.
+
+---
+
 ## 2026-09-04 — OS-IMPORT-ENCODING-01: detecção automática de encoding nos importadores TXT (deploy em produção)
 
 **Sintoma (diretor):** após importar a base de Contas a Pagar, toda palavra acentuada aparecia

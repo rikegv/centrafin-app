@@ -2021,14 +2021,12 @@
         //                    cadastros, esta exclusão perde efeito e pode sair.
         //  · 'ginfor'      — lixo/teste (minúsculo, digitação).
         //  · 'RATEIO'      — lixo.
-        //  · 'TEAM TAILOR' — duplicata por digitação de "COMERCIAL TEAM TAILOR".
-        //                    A origem no cadastro do fornecedor 2395 foi
-        //                    corrigida, MAS o registro sobrevive em
-        //                    AreasContasPagar; sem esta entrada a segunda fonte
-        //                    o reintroduziria, violando o critério de aceite da
-        //                    OS. Remover daqui quando o doc de AreasContasPagar
-        //                    for excluído.
-        const CC_SYNC_EXCLUIDOS = ['NEAT', 'ginfor', 'RATEIO', 'TEAM TAILOR'];
+        //
+        // "TEAM TAILOR" (duplicata por digitação de "COMERCIAL TEAM TAILOR") NÃO
+        // está aqui de propósito: foi eliminado na ORIGEM em 2026-09-04 — o
+        // cadastro do fornecedor 2395 foi corrigido e o documento de
+        // AreasContasPagar foi excluído. Sem fonte, não há o que excluir.
+        const CC_SYNC_EXCLUIDOS = ['NEAT', 'ginfor', 'RATEIO'];
 
         // Mesmo slug do ETL da Folha (custo_folha_desktop) — garante que os dois
         // escritores convirjam no MESMO docId e o merge:true não duplique.
