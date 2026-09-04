@@ -5,6 +5,123 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-04 — OS-IMPORT-ENCODING-01: detecção automática de encoding nos importadores TXT (deploy em produção)
+
+**Sintoma (diretor):** após importar a base de Contas a Pagar, toda palavra acentuada aparecia
+com `�` — "TRANSFER�NCIA DE CONTA CORRENT", "TARIFAS E COMISS�ES BANC�RIAS",
+"PR�MIOS/GRATIFICA��ES/BONIFICA". Reportado como **regressão** ("já funcionava antes").
+
+### Diagnóstico — não era regressão de código
+`git log -S` sobre **todo** o histórico: nunca existiu `TextDecoder`, `latin1`, `iso-8859`,
+`windows-1252`, `unescape` nem `fromCharCode` no repositório. `await f.text()` está no fonte
+desde o **primeiro commit** do módulo (`a6a6e8a`, 2026-04-30) e sobreviveu intacto a todos os
+commits seguintes. Não havia o que ter sido removido.
+
+O que o diretor lembrava como "normalizador" era `cpNormalizarTexto` + os `.normalize('NFD')`,
+que servem **só para montar chave de match** — nunca tocam o valor gravado (`categoria: l.despesa`
+vai cru pro Firestore). O tratamento de Windows-1252 **documentado em comentário** (auditorias
+2026-05-27 e 2026-06-05) é de outro importador (Benefícios PJ) e só afrouxa a regex do nome do
+mês; não decodifica nada.
+
+**A causa real: o ERP mudou o layout de exportação.** Até maio os arquivos vinham em UTF-8
+("TODAS AS EMPRESAS ..."); de junho em diante vêm em Windows-1252 ("06 - Despesas MM_2026.txt").
+`f.text()` e `readAsText(file,'UTF-8')` forçam UTF-8 por especificação (não aceitam charset), e
+byte acentuado de arquivo Windows-1252 vira U+FFFD com o byte original **descartado**.
+
+Prova byte a byte, reconstruída a partir do dado gravado:
+
+| Gravado | Original | Bytes cp1252 | `�` esperados |
+|---|---|---|---|
+| `COMISS�ES` | COMISSÕES | `D5` | 1 |
+| `GRATIFICA��ES` | GRATIFICAÇÕES | `C7 D5` | 2 |
+| `MANUTEN��O` | MANUTENÇÃO | `C7 C3` | 2 |
+
+Corte limpo no tempo, medido nos 37.669 docs de `/ContasAPagar`: **zero** `�` em todos os lotes
+de nome antigo (34 mil docs); **100%** dos docs dos 3 lotes de nome novo corrompidos.
+
+### Correção
+`cpLerTextoAutoEncoding`: `TextDecoder('utf-8', {fatal:true})` e, se lançar, fallback para
+`windows-1252` — que mapeia os 256 valores de byte e por isso **nunca** gera U+FFFD. Resolve os
+dois formatos sem depender de o ERP padronizar. Aplicado em 3 pontos: ETL de faturas do
+Gerenciador de CP, importador de Benefícios PJ do Gerenciador (preventivo — o `nome` do
+funcionário é gravado cru) e o espelho no Custo de Folha. Intocados: normalização de chave de
+match, cálculo e `firestore.rules`.
+
+### Verificação
+`scripts/test-import-encoding.cjs` **extrai o parser real do fonte de produção** (`cpParsearTXT`
++ dependências, por fatiamento do HTML) em vez de reimplementar — testa o código que vai ao ar.
+- Regressão: 21 arquivos UTF-8 reais / 38.627 lançamentos → saída **byte-idêntica** ao
+  comportamento antigo.
+- Windows-1252 (fixture reencodado de arquivo real): 9.959 `�` antes, **0** depois, round-trip
+  idêntico ao texto original.
+- Das 17 categorias quebradas, 15 existem no arquivo de teste: 15/15 corretas.
+
+Ressalvas registradas ao diretor **antes** da aprovação: os 3 arquivos reais não estavam no
+disco (teste (a) usou fixture fiel), e a verificação rodou o parser de produção em Node, **não**
+no emulador/browser. Diretor aprovou nessa base em 2026-09-04 (mudança sem diferença visual).
+
+### Falso PASS no próprio teste (reporte obrigatório)
+A primeira execução do teste (c) passou com `0/0` categorias: o seletor do fixture casou
+`BENEFICIOS PJS - MAIO.txt` (0 lançamentos) em vez de `MAIO TODAS AS EMPRESAS.txt`, e a assertiva
+vazia reportou PASS. Corrigido o seletor e **adicionada guarda anti-vacuidade** que reprova se
+menos de 10 das 17 categorias estiverem presentes. Lição: assertiva sobre conjunto vazio é
+aprovação falsa — todo teste de cobertura precisa de piso mínimo.
+
+### Risco latente fechado, não materializado
+Em arquivo corrompido a trava de "TRANSFERÊNCIA DE CONTA CORRENT" **falha** (não reconhece
+`TRANSFER�NCIA`) e as transferências internas vazam como faturas reais, inflando KPIs. No fixture
+vazaram 15. Conferido em produção: **0 vazaram** nos 3 lotes reais — o relatório "06 - Despesas"
+não traz essas linhas. A correção fecha o buraco de qualquer forma.
+
+### Deploy
+`--only hosting` (rules não tocadas). 2026-09-04 17:49–17:50 UTC, merge `0045e5b`, 1.997 arquivos.
+Verificado em produção: `theme_manager.js`, `assets/checkbox_multi.js`, `core_rules.js`,
+`sidebar.js` e os 2 módulos alterados respondem **200**; `cpLerTextoAutoEncoding` e
+`_folhaLerTextoAutoEncoding` presentes no HTML servido; zero resíduo de `f.text()` /
+`readAsText(...,'UTF-8')` em código executável (as 2 ocorrências restantes são comentário).
+
+### Pendências abertas por esta OS
+- **Os 217 docs corrompidos não são reparáveis pelo importador.** U+FFFD é destrutivo. Exige
+  reimportação — e a reimportação direta **duplicaria** a base: o `arquivo_hash` é do texto
+  decodificado, muda com a correção (`e6e12221…` → `4e689fbe…`), o escudo anti-duplicidade não
+  dispara e o docId é auto-gerado. Os 272 docs dos 3 lotes precisam ser removidos antes.
+  → OS-CP-LIMPEZA-LOTES-CORROMPIDOS-01.
+- **`scripts/check-syntax.cjs` quebrado (pré-existente, gate cego).** A linha 52 grava todo bloco
+  `<script type="module">` com extensão `.cjs`, então `node --check` rejeita qualquer `import`.
+  Reprova os arquivos **intocados do HEAD** identicamente — não é regressão desta OS. Um gate do
+  DoD está cego hoje. Diretor determinou (2026-09-04) **não corrigir nesta OS** — escopo estrito;
+  registrado aqui para OS futura.
+- `contas_a_pagar_desktop/code.html:1648` ainda tem `await f.text()` — módulo legado exterminado
+  em 2026-05-14, sem rota no `sidebar.js`. Não tocado.
+
+---
+
+## 2026-09-04 — OS-CP-LIMPEZA-LOTES-CORROMPIDOS-01: script pronto, AGUARDANDO autorização de execução
+
+**Estado: PREPARADO, NÃO EXECUTADO.** `scripts/purge-lotes-corrompidos-cp.cjs`. Dry-run rodado
+contra produção (só leitura); nada foi alterado.
+
+**Critério de seleção — triplo e conjuntivo** (qualquer um sozinho seria frouxo):
+`arquivo` ∈ os 3 nomes de lote **E** `arquivo_hash` presente (só o ETL grava) **E**
+`origem === 'etl_txt_gerenciador'` (exclui `etl_projetado_fixo` e lançamento manual).
+
+**Resultado do dry-run:** 272 docs · R$ 1.545.678,62 — 96 (jun) + 85 (jul) + 91 (ago),
+1 `arquivo_hash` distinto por lote, 217 com `�` em campo de texto.
+
+**Salvaguardas verificadas:** 0 docs com nome de lote afetado recusados pelas travas (todos os
+272 satisfazem as 3 condições); **0** documentos com vencimento em 2026-06-01..2026-08-31 fora
+dos 3 lotes — ou seja, **não existe lançamento manual em risco**; 37.397 de 37.669 preservados.
+
+**Consequência que o diretor precisa saber:** como não há nenhum outro registro nesses meses,
+entre o `--apply` e a reimportação **Contas a Pagar fica zerado em jun/jul/ago**. Janela
+esperada e temporária, mas real.
+
+O script grava **backup JSON de tudo que vai apagar antes de apagar**, e só remove com `--apply`.
+Sequência acordada: (a) dry-run → diretor confere → (b) `--apply` → (c) diretor reimporta com o
+importador já corrigido.
+
+---
+
 ## 2026-08-26 — OS-FILTROS-MULTI-BLOCO-1: filtros do Dashboard Master em multi-select
 
 **Contexto (diretor):** precisava selecionar mais de uma condição por filtro. Antecedeu esta OS
