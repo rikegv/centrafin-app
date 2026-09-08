@@ -5,6 +5,75 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-08 — OS-CP-ULTIMO-MES-01: Contas a Pagar abre no último mês COM DADOS (deploy em produção)
+
+**Sintoma (diretor):** em setembro, com o fechamento de agosto ainda em andamento e setembro
+ainda não importado, a Central Financeira → Contas a Pagar abria **em branco**. O operador
+precisava clicar repetidamente em "Carregar mês anterior" até chegar onde havia dados.
+
+### Causa raiz
+A janela de carga server-side do CP (introduzida em 2026-06-18 para não travar o browser com
+10k+ docs) era ancorada em `_cpMesCorrenteRange()` → `new Date()`: **mês do calendário, não dado
+existente**. O mesmo default aparecia em mais dois pontos além da abertura — `limparTodosFiltros()`
+e o ramo "Período vazio" do Aplicar. Corrigir só a abertura deixaria "Limpar filtros" devolvendo
+o operador à tela branca.
+
+### Premissa do diretor corrigida antes de implementar
+"O Faturamento já faz isso, replicar o padrão" — **o Faturamento não tem essa lógica**.
+`contas_a_receber_desktop/code.html:4319` faz `onSnapshot(collection(db,"Lancamentos"))` sem
+`where`/`orderBy`/`limit`: carrega a coleção inteira. Nunca abre em branco porque mostra tudo,
+sempre. Replicar isso no CP reintroduziria exatamente a regressão documentada em
+`code.html:1140`. Decisão: **manter a janela, trocar só a âncora**.
+
+### Armadilha de dado que moldou o desenho
+Não se pode usar `max(data_vencimento)`: a recorrência projeta lançamentos **até 120 meses no
+futuro** (`_cpProjetarRecorrencia`). O topo absoluto da coleção cairia em Dez/2026 ou além —
+trocaria uma tela branca por outra. Teto duro = fim do mês corrente.
+
+### Correção (1 arquivo, sem tocar cálculo/valores)
+- `_cpDescobrirMesPadrao()` — varredura descendente do fim do mês corrente, em páginas
+  escalonadas [50,250,500,500], para no primeiro lançamento **não-projetado**. Range + `orderBy`
+  no MESMO campo → sem índice composto novo. Falha de leitura ou base vazia cai no comportamento
+  anterior; a tela nunca quebra.
+- `_cpEhProjecao()` — **decisão do diretor 2026-09-08:** clone de recorrência não ancora a
+  abertura. Discriminante persistido (`origem`/`match_tipo`); doc legado sem esses campos conta
+  como real.
+- `_cpJanelaPadraoAtual()` — "Limpar filtros" e "Aplicar com Período vazio" voltam ao mês
+  resolvido na abertura, não ao do calendário.
+
+### Bug adicional encontrado e corrigido (item 2 da OS)
+O botão "Carregar mês anterior" **nunca esteve quebrado** — recua o piso 1 mês e re-assina o
+listener corretamente. O que o fazia parecer morto: `_cpRestaurarEstadoFiltros()` restaurava o
+Período salvo em `sessionStorage` como filtro **client-side** sem re-sincronizar a janela
+**server-side**. Período Jul + janela no mês default = interseção vazia → tela branca, e o botão
+trazia Ago do servidor mas o filtro de Jul descartava tudo. Agora a janela passa a ser o próprio
+Período restaurado. **Decisão do diretor: MANTER o botão** (navegação rápida mês a mês,
+complementar ao filtro de período).
+
+### Gates
+19 casos no emulador (Firestore + `firestore.rules` de produção), executando o **código-fonte
+real extraído do HTML** e instanciado com `new Function` — não uma reimplementação no teste.
+Cobrem setembro vazio → Agosto; setembro só com projeção → Agosto; setembro importado → Setembro
+(sem regressão); doc legado; 120 projeções estourando a 1ª página; base vazia; virada de ano;
+fevereiro com 28 dias; perfil `consulta` lendo normal; usuário sem menu (fallback sem quebrar);
+e a navegação acumulativa Ago→Jul→Jun. `firestore.rules` **não tocado** → gate do emulador de
+regras não se aplica (DoD). Validação visual do diretor em 2026-09-08 no emulador local com
+cenário semeado. Flag `READY_cp-ultimo-mes`.
+
+### Desvio de escopo reportado
+Além dos pontos da OS, foi alterado o texto-placeholder estático do rodapé
+("Exibindo: mês corrente" → "Carregando…"), porque a frase descrevia justamente o comportamento
+que a OS elimina. É sobrescrito no primeiro snapshot.
+
+### Pendências não bloqueantes (OS própria)
+- **Faturamento carrega `Lancamentos` inteira, sem janela nem limite.** Não é escopo desta OS e
+  não foi tocado, mas é a mesma classe de problema de performance que motivou a janela do CP em
+  2026-06-18. Merece OS própria antes que a base cresça mais.
+- `scripts/check-syntax.cjs` segue quebrado (pré-existente, gate cego) — já registrado em OS
+  anteriores. A verificação de sintaxe desta OS foi feita com extração para `.mjs`.
+
+---
+
 ## 2026-09-04 — OS-CC-LISTA-COMPLETA-01: lista de liberação de Centro de Custo alimentada por todas as fontes (deploy em produção)
 
 **Sintoma (diretor):** cadastrou o CC "COMERCIAL TEAM TAILOR", alocou o fornecedor PJ Campus

@@ -342,12 +342,13 @@
                     </button>
                 </div>
             </div>
-            <!-- Carregar Mais (auditoria 2026-06-18): a tela abre só com o mês
-                 corrente (carga leve). Este botão estende a janela para o mês
-                 anterior sob demanda; para um período específico use os Filtros
-                 Avançados → Período. -->
+            <!-- Carregar Mais (auditoria 2026-06-18): a tela abre só com UM mês
+                 (carga leve) — desde a OS-CP-ULTIMO-MES-01 esse mês é o último
+                 COM DADOS, não o do calendário. Este botão estende a janela para
+                 o mês anterior sob demanda; para um período específico use os
+                 Filtros Avançados → Período. -->
             <div id="cp-carregar-mais-bar" class="hidden items-center justify-between gap-3 px-6 py-3 border-t border-slate-100 bg-white">
-                <span id="cp-janela-info" class="text-[11px] font-medium text-slate-500">Exibindo: mês corrente</span>
+                <span id="cp-janela-info" class="text-[11px] font-medium text-slate-500">Carregando…</span>
                 <button id="cp-btn-carregar-mais" type="button" class="inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold text-secondary bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 active:scale-95 transition-all">
                     <span class="material-symbols-outlined text-[14px]">expand_more</span> Carregar mês anterior
                 </button>
@@ -943,7 +944,9 @@
         writeBatch, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy,
         // Auditoria 2026-05-29: validador de duplicidade de lote precisa de
         // where/limit pra consultar `arquivo_hash` antes do writeBatch.
-        where, limit, connectFirestoreEmulator
+        // OS-CP-ULTIMO-MES-01: `startAfter` pagina a varredura que descobre o
+        // último mês COM DADOS na abertura da tela.
+        where, limit, startAfter, connectFirestoreEmulator
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut, connectAuthEmulator, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { renderSidebar } from "../sidebar.js";
@@ -1159,9 +1162,88 @@
         const fim = `${y}-${String(m + 1).padStart(2, '0')}-${String(ultimo).padStart(2, '0')}`;
         return { ini, fim };
     }
+    // Expande 'YYYY-MM…' no range fechado [1º dia, último dia] daquele mês.
+    function _cpRangeDoMes(yyyymm) {
+        const m = String(yyyymm || '').match(/^(\d{4})-(\d{2})/);
+        if (!m) return _cpMesCorrenteRange();
+        const ultimo = new Date(parseInt(m[1], 10), parseInt(m[2], 10), 0).getDate();
+        return {
+            ini: `${m[1]}-${m[2]}-01`,
+            fim: `${m[1]}-${m[2]}-${String(ultimo).padStart(2, '0')}`,
+        };
+    }
+
+    // ── MÊS PADRÃO DE ABERTURA (OS-CP-ULTIMO-MES-01, 2026-09-08) ────────────
+    // Antes a tela abria SEMPRE no mês do calendário. Em setembro, com o
+    // fechamento de agosto ainda em andamento, isso significava abrir EM
+    // BRANCO e obrigar o operador a clicar "Carregar mês anterior" até achar
+    // os dados. Agora a janela default é ancorada no ÚLTIMO MÊS COM DADOS.
+    //
+    // Duas restrições moldam a busca:
+    //  (a) Não dá pra usar o topo absoluto da coleção: a recorrência projeta
+    //      lançamentos até 120 meses no futuro (_cpProjetarRecorrencia), então
+    //      `max(data_vencimento)` cairia em Dez/2026 ou além — trocaria uma
+    //      tela branca por outra. Teto duro = fim do mês corrente.
+    //  (b) Decisão do diretor (2026-09-08): clone de recorrência NÃO conta
+    //      como "mês importado" — só lançamento real ancora a abertura. O
+    //      discriminante é persistido em `origem`/`match_tipo`; docs legados
+    //      sem esses campos contam como reais.
+    const _CP_ORIGENS_PROJETADAS = new Set(['etl_projetado_fixo', 'edit_projetado_recorrente']);
+    function _cpEhProjecao(reg) {
+        if (_CP_ORIGENS_PROJETADAS.has(String(reg?.origem || ''))) return true;
+        return String(reg?.match_tipo || '') === 'projetado';
+    }
+
+    // Varredura descendente a partir do fim do mês corrente, em páginas
+    // escalonadas — a 1ª é curta de propósito: no caso comum o primeiro doc já
+    // é real e a abertura custa 50 leituras. Para no primeiro lançamento
+    // não-projetado. Teto de 4 páginas; se só houver projeção no intervalo
+    // varrido, usa o mês do doc mais recente encontrado (melhor que branco).
+    const _CP_PAGINAS_BUSCA_MES = [50, 250, 500, 500];
+    async function _cpDescobrirMesPadrao() {
+        const mc = _cpMesCorrenteRange();
+        try {
+            let cursor = null;
+            let vencMaisRecente = '';
+            for (const tamanho of _CP_PAGINAS_BUSCA_MES) {
+                // Range + orderBy no MESMO campo `data_vencimento` — não exige
+                // índice composto novo (mesma forma da query da janela).
+                const constraints = [
+                    where('data_vencimento', '<=', mc.fim),
+                    orderBy('data_vencimento', 'desc'),
+                ];
+                if (cursor) constraints.push(startAfter(cursor));
+                constraints.push(limit(tamanho));
+                const snap = await getDocs(query(collection(db, COLECAO), ...constraints));
+                if (snap.empty) break;
+                for (const d of snap.docs) {
+                    const reg = d.data() || {};
+                    const venc = String(reg.data_vencimento || '');
+                    if (!/^\d{4}-\d{2}/.test(venc)) continue;
+                    if (!vencMaisRecente) vencMaisRecente = venc;
+                    if (!_cpEhProjecao(reg)) return _cpRangeDoMes(venc);
+                }
+                cursor = snap.docs[snap.docs.length - 1];
+                if (snap.size < tamanho) break; // fim da coleção
+            }
+            if (vencMaisRecente) return _cpRangeDoMes(vencMaisRecente);
+        } catch (err) {
+            console.warn('[GerenciadorCP] descoberta do último mês com dados falhou:', err?.code || err?.message);
+        }
+        return mc; // base vazia ou falha de leitura → comportamento anterior
+    }
+
+    // Mês resolvido na abertura. "Limpar filtros" e "Aplicar com Período
+    // vazio" voltam para ESTE mês, não para o do calendário — senão limpar o
+    // filtro jogaria o operador de volta na tela branca que esta OS corrige.
+    let _cpJanelaPadrao = null;
+    function _cpJanelaPadraoAtual() {
+        return _cpJanelaPadrao || _cpMesCorrenteRange();
+    }
+
     // Recua o limite inferior (ini) em N meses, preservando o fim atual.
     function _cpRecuarIniUmMes() {
-        const base = _cpJanelaIni || _cpMesCorrenteRange().ini;
+        const base = _cpJanelaIni || _cpJanelaPadraoAtual().ini;
         const m = base.match(/^(\d{4})-(\d{2})-/);
         if (!m) return base;
         let ano = parseInt(m[1], 10), mes = parseInt(m[2], 10) - 1; // mês 0-index do ini atual
@@ -1313,12 +1395,14 @@
     // Despesa/CC. Agora um único `snap.forEach` alimenta TUDO em paralelo,
     // e a inserção das <option>s vai pra chunks (requestIdleCallback) que
     // cedem o controle ao paint entre lotes — main thread não engasga.
-    function inscreverContasPagar() {
-        // Default na inicialização: mês corrente — carga leve, abre instantâneo.
-        // Outros períodos só via "Carregar Mais" ou Filtros Avançados (Período).
-        const mc = _cpMesCorrenteRange();
-        _cpJanelaIni = mc.ini;
-        _cpJanelaFim = mc.fim;
+    async function inscreverContasPagar() {
+        // Default na inicialização (OS-CP-ULTIMO-MES-01): último mês COM DADOS,
+        // não o mês do calendário. A carga segue leve — a janela continua sendo
+        // de 1 mês; só mudou a âncora. Outros períodos via "Carregar mês
+        // anterior" ou Filtros Avançados (Período).
+        _cpJanelaPadrao = await _cpDescobrirMesPadrao();
+        _cpJanelaIni = _cpJanelaPadrao.ini;
+        _cpJanelaFim = _cpJanelaPadrao.fim;
         _cpAtivarJanela();
     }
 
@@ -1610,6 +1694,21 @@
             const inpFim = document.getElementById('cp-filtro-periodo-fim');
             if (inpIni) inpIni.value = _cpPeriodoComitado.ini;
             if (inpFim) inpFim.value = _cpPeriodoComitado.fim;
+            // Correção OS-CP-ULTIMO-MES-01 (item 2): o Período restaurado é um
+            // filtro CLIENT-SIDE, mas a janela server-side continuava no mês
+            // default. Restaurar Jul/2026 com a janela em Set/2026 dá
+            // interseção vazia → tela em branco; e o "Carregar mês anterior"
+            // parecia morto (trazia Ago do servidor, mas o filtro de Jul
+            // descartava tudo). Re-sincroniza a janela com o Período restaurado.
+            const _perIni = _cpPeriodoComitado.ini;
+            const _perFim = _cpPeriodoComitado.fim;
+            if ((_perIni || _perFim) && (_perIni !== _cpJanelaIni || _perFim !== _cpJanelaFim)) {
+                _cpJanelaIni = _perIni;
+                _cpJanelaFim = _perFim;
+                // Fora do callback do snapshot ativo: trocar o listener de
+                // dentro da própria entrega dele é risco desnecessário.
+                setTimeout(() => _cpAtivarJanela(), 0);
+            }
         }
         // Multi-selects: setMultiValues lida com fantasmas (valores que
         // foram salvos antes de existirem na base atual — `_popularSelect­
@@ -2072,8 +2171,9 @@
         _cpTermoBusca = '';
         if (_btnLimparBuscaCP) _btnLimparBuscaCP.classList.add('hidden');
         _cpLimparEstadoFiltrosSS();
-        // Janela server-side volta ao default (mês corrente) ao limpar tudo.
-        const _mc = _cpMesCorrenteRange();
+        // Janela server-side volta ao default ao limpar tudo — que desde a
+        // OS-CP-ULTIMO-MES-01 é o último mês com dados, não o mês corrente.
+        const _mc = _cpJanelaPadraoAtual();
         _cpJanelaIni = _mc.ini;
         _cpJanelaFim = _mc.fim;
         _cpAtivarJanela();
@@ -2098,13 +2198,13 @@
         };
         // Janela server-side (auditoria 2026-06-18): Período definido dispara uma
         // nova consulta server-side para ESSE intervalo; Período vazio volta ao
-        // default (mês corrente). Demais dimensões seguem client-side sobre a
-        // janela carregada.
+        // default (último mês com dados — OS-CP-ULTIMO-MES-01). Demais dimensões
+        // seguem client-side sobre a janela carregada.
         if (_cpPeriodoComitado.ini || _cpPeriodoComitado.fim) {
             _cpJanelaIni = _cpPeriodoComitado.ini;
             _cpJanelaFim = _cpPeriodoComitado.fim;
         } else {
-            const mc = _cpMesCorrenteRange();
+            const mc = _cpJanelaPadraoAtual();
             _cpJanelaIni = mc.ini;
             _cpJanelaFim = mc.fim;
         }
