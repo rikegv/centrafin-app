@@ -65,12 +65,38 @@ Além dos pontos da OS, foi alterado o texto-placeholder estático do rodapé
 ("Exibindo: mês corrente" → "Carregando…"), porque a frase descrevia justamente o comportamento
 que a OS elimina. É sobrescrito no primeiro snapshot.
 
+### Deploy (2026-09-08) — CONCLUÍDO
+Autorizado pelo diretor após a validação visual. Executado pelo deployer atrás da trava
+(`gate-deploy.js`: working directory limpo + flag `READY_*` presente).
+
+```
+Commits:  1bd6374 (fix) + f0a86d5 (DIARIO/flag) → merge ee135f6 em main
+Push:     rikegv/centrafin-app — main 2155678..ee135f6 + branch feature/cp-ultimo-mes (nova)
+Deploy:   npx firebase deploy --only hosting --project centra-fin — 2.042 arquivos, release complete
+Escopo:   SOMENTE hosting. firestore.rules NÃO alterado e NÃO deployado.
+URL:      https://centra-fin.web.app/gerenciador_contas_pagar_desktop/code.html
+```
+
+Verificação pós-deploy (todos 200): a própria página, `/sidebar.js`, `/theme_manager.js`,
+`/assets/checkbox_multi.js`, `/theme.css`, `/login.html` e o XLSX do CDN. O Tailwind responde
+302 → 200 (redirect normal de resolução de versão para 3.4.17, comportamento pré-existente em
+todas as páginas, não relacionado a este deploy). O HTML servido em produção é **byte-idêntico**
+ao local (314.596 bytes) e contém `_cpDescobrirMesPadrao`, `_cpEhProjecao`, `_cpJanelaPadraoAtual`
+e `startAfter`. Sem risco de cache servir a versão antiga: o `firebase.json` já manda
+`no-cache, no-store, must-revalidate` em todo `**/*.html`.
+
+Emulador de homologação derrubado após o deploy (portas 4000/5000/8080/9099 liberadas); working
+directory limpo; `HEAD` local e `origin/main` no mesmo SHA.
+
 ### Pendências não bloqueantes (OS própria)
 - **Faturamento carrega `Lancamentos` inteira, sem janela nem limite.** Não é escopo desta OS e
   não foi tocado, mas é a mesma classe de problema de performance que motivou a janela do CP em
   2026-06-18. Merece OS própria antes que a base cresça mais.
 - `scripts/check-syntax.cjs` segue quebrado (pré-existente, gate cego) — já registrado em OS
   anteriores. A verificação de sintaxe desta OS foi feita com extração para `.mjs`.
+- Enquanto a âncora resolve (1 roundtrip), o estado vazio "Nenhum lançamento encontrado" fica
+  visível por alguns centésimos a mais que antes. Não há skeleton nessa fase — já era assim para
+  o primeiro snapshot. Só vale OS se incomodar na prática.
 
 ---
 

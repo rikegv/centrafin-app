@@ -91,6 +91,19 @@ GATES:
   recorrencias projetadas em Set-Dez). Confirmou que a tela abre no ultimo mes
   com dados importados, conforme pedido, e autorizou o deploy.
 
+DEPLOY (2026-09-08) — CONCLUIDO:
+- Merge ee135f6 em main; push de main (2155678..ee135f6) e do branch
+  feature/cp-ultimo-mes para rikegv/centrafin-app.
+- firebase deploy --only hosting --project centra-fin: 2.042 arquivos,
+  release complete. firestore.rules NAO deployado.
+- URL: https://centra-fin.web.app/gerenciador_contas_pagar_desktop/code.html
+- Verificacao: pagina, sidebar.js, theme_manager.js, checkbox_multi.js,
+  theme.css, login.html e XLSX do CDN todos 200. Tailwind 302->200 (redirect
+  normal de versao, pre-existente). HTML em producao byte-identico ao local
+  (314.596 bytes) e contendo as funcoes novas. firebase.json ja manda
+  no-store em **/*.html -> sem risco de cache servir a versao antiga.
+- Emulador de homologacao derrubado; portas 4000/5000/8080/9099 liberadas.
+
 DESVIO REPORTADO AO DIRETOR (escopo estrito):
 - Alem dos pontos listados na OS, foi alterado o texto-placeholder estatico do
   rodape da tabela: "Exibindo: mes corrente" -> "Carregando..." (code.html:350).

@@ -41,6 +41,18 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
       do diretor e, de preferência, contra o emulador. Não altera comportamento de deploy
       (já estão no `ignore` do hosting).
 
+## Backlog aberto — levantado durante OS já concluídas
+
+- [ ] **Faturamento sem janela de carga** (levantado na OS-CP-ULTIMO-MES-01, 2026-09-08).
+      `contas_a_receber_desktop/code.html:4319` faz `onSnapshot(collection(db,"Lancamentos"))`
+      sem `where`/`orderBy`/`limit` — carrega a coleção inteira a cada abertura. É a mesma
+      classe de problema que travava o Contas a Pagar antes da janela de 2026-06-18 (10k+ docs).
+      Não foi tocado por estar fora do escopo daquela OS. Piora conforme a base cresce.
+- [ ] **`scripts/check-syntax.cjs` quebrado** (pendência antiga, reconfirmada em 2026-09-08).
+      Grava bloco `<script type="module">` com extensão `.cjs`, então `node --check` rejeita
+      qualquer `import` — reprova identicamente arquivos intocados do HEAD. É um gate cego do
+      DoD hoje; as OS recentes contornam extraindo para `.mjs`.
+
 ## Escalações / decisões aguardando o diretor
 - [!] F0-D1 — Repositório **público vs privado**: regras, modelo de dados e scripts de
       limpeza ficam visíveis no público. Decidir. (Não bloqueia F0-01..F0-06.)
