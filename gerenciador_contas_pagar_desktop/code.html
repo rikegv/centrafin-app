@@ -359,7 +359,7 @@
                 </div>
                 <h4 class="text-sm font-extrabold text-secondary mb-1">Nenhum lançamento encontrado</h4>
                 <p class="text-[12px] text-slate-400 font-medium max-w-md mx-auto">
-                    Ajuste os filtros ou use a <strong>Central de Importações</strong> para carregar a próxima leva de faturas e despesas.
+                    Nada bate com os filtros dentro do período carregado. Se o lançamento é de outro mês, abra <strong>Filtrar Base</strong> e ajuste o <strong>Período</strong>. Se ainda não foi importado, use a <strong>Central de Importações</strong>.
                 </p>
             </div>
         </section>
@@ -760,7 +760,47 @@
         </div>
         <div class="mt-8 flex gap-3">
             <button id="btn-filtros-cp-limpar" type="button" class="flex-1 px-5 py-2.5 text-slate-500 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all">Limpar</button>
-            <button id="btn-filtros-cp-aplicar" type="button" class="flex-1 px-5 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all">Aplicar</button>
+            <!-- disabled:* (OS-CP-FILTROS-BASE-COMPLETA-01): o handler desabilita
+                 este botão durante a contagem de pré-voo do Período; sem estas
+                 duas utilities a pílula continuaria com aparência clicável e o
+                 hover ainda dispararia. Neutras nos dois temas. -->
+            <button id="btn-filtros-cp-aplicar" type="button" class="flex-1 px-5 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Aplicar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: aviso de Período pesado (OS-CP-FILTROS-BASE-COMPLETA-01).
+     Aparece SOBRE o "Filtrar Base" (z-[68]) — daí o z-[84] — quando a
+     contagem server-side da janela pedida passa CP_LIMITE_AVISO_PERIODO.
+     Tom ÂMBAR, não vermelho: nada é destruído nem alterado, é só aviso de
+     desempenho, e a ação é totalmente reversível. Overlay com id próprio
+     (sem data-modal-overlay): o binder genérico só fecharia o visual e
+     deixaria a decisão pendurada em `_cpPeriodoPendente`. -->
+<div id="modal-cp-periodo-pesado" class="fixed inset-0 z-[84] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" id="cp-aviso-periodo-overlay"></div>
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100">
+        <div class="px-7 pt-7 pb-3 flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+                <span class="material-symbols-outlined text-amber-700 text-2xl">hourglass_top</span>
+            </div>
+            <div class="min-w-0">
+                <h3 class="font-headline text-lg font-extrabold text-secondary tracking-tight">Este período traz muitos lançamentos</h3>
+                <p class="text-[12px] text-slate-500 font-medium mt-0.5">Nada será alterado — é só um aviso de desempenho.</p>
+            </div>
+        </div>
+        <div class="px-7 pb-5">
+            <p id="cp-aviso-periodo-corpo" class="text-sm text-slate-700">—</p>
+        </div>
+        <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
+            <!-- Hover em alpha (`hover:bg-primary/10`) e NÃO na variante hover
+                 dos slates: o theme.css remapeia a classe de repouso, mas o
+                 Tailwind gera outro nome de classe para o hover — sem cobertura
+                 no tema escuro. Ali o botão pintaria quase-branco sob texto
+                 claro (~1,5:1) justamente no caminho de cancelar. -->
+            <button id="btn-cp-aviso-periodo-ajustar" type="button"
+                class="px-5 py-2.5 text-slate-500 border border-slate-200 hover:bg-primary/10 rounded-xl text-xs font-bold transition-all">Ajustar período</button>
+            <button id="btn-cp-aviso-periodo-continuar" type="button"
+                class="px-5 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all">Continuar assim mesmo</button>
         </div>
     </div>
 </div>
@@ -946,7 +986,12 @@
         // where/limit pra consultar `arquivo_hash` antes do writeBatch.
         // OS-CP-ULTIMO-MES-01: `startAfter` pagina a varredura que descobre o
         // último mês COM DADOS na abertura da tela.
-        where, limit, startAfter, connectFirestoreEmulator
+        // OS-CP-FILTROS-BASE-COMPLETA-01: `getCountFromServer` é agregação
+        // server-side — conta quantos lançamentos a janela pedida traria SEM
+        // baixar um único documento, pra avisar antes de abrir um Período
+        // pesado. Mesma forma de query do listener (1 desigualdade em
+        // `data_vencimento`) → índice de campo único automático.
+        where, limit, startAfter, getCountFromServer, connectFirestoreEmulator
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut, connectAuthEmulator, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { renderSidebar } from "../sidebar.js";
@@ -991,6 +1036,11 @@
     let _isAdmin = false;
     let _isSuperAdmin = false;
     let _ccDisponiveis = []; // alimentado pelo onSnapshot de AreasContasPagar
+    // OS-CP-FILTROS-BASE-COMPLETA-01: sinaliza que /AreasContasPagar já
+    // entregou. A restauração dos filtros (sticky) é one-shot e precisa
+    // esperar os CADASTROS, senão um filtro salvo que aponta para um CC que
+    // não está no mês carregado é descartado silenciosamente.
+    let _cpAreasCarregadas = false;
     // Map<nome_area, gestor_nome> — Frente 1 (2026-05-20). Mantém o cruzamento
     // entre Centro de Custo da fatura e o gestor responsável (cadastrado em
     // master.html). Atualizado pelo mesmo listener de AreasContasPagar e
@@ -1128,6 +1178,13 @@
             // e força um re-render para que a coluna "Gestor" recalcule.
             _areaGestorMap = mapaGestor;
             if (typeof renderTudo === 'function') renderTudo();
+            // OS-CP-FILTROS-BASE-COMPLETA-01: `renderTudo()` NÃO repopula os
+            // dropdowns. Se as Áreas chegam depois do 1º snapshot de
+            // ContasAPagar, os Centros de Custo de CADASTRO nunca apareceriam
+            // no filtro. Mesmo guard/padrão já usado pelo listener de
+            // /Fornecedores logo abaixo.
+            _cpAreasCarregadas = true;
+            _cpAgendarSnapRefresh();
         }, (err) => console.warn('[AreasContasPagar] listener falhou:', err?.code || err?.message));
     }
 
@@ -1251,12 +1308,34 @@
         if (mes < 0) { mes = 11; ano -= 1; }
         return `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
     }
+    // 'YYYY-MM-DD' → 'Set/2026'. Extraído de dentro de `_cpFmtJanelaLabel`
+    // (OS-CP-FILTROS-BASE-COMPLETA-01) pra ser reusado pelo hint de recorte
+    // vazio sem duplicar lógica de formatação de data.
+    function _cpFmtMesAno(iso) {
+        const m = String(iso || '').match(/^(\d{4})-(\d{2})/);
+        return m ? `${_MESES_PT_CP[parseInt(m[2], 10) - 1]}/${m[1]}` : '—';
+    }
+    // Complemento CURTO que descreve a janela carregada, JÁ COM a preposição —
+    // usado no hint da barra de ferramentas ("Nada encontrado <isto>."), que é
+    // text-[11px] e não pode crescer. Cada variante fica sob ~40 caracteres
+    // contando o prefixo.
+    //
+    // Janela de UMA ponta só é estado alcançável (preencher apenas "Até" no
+    // Filtrar Base, ou restaurar esse Período do sessionStorage): devolver ali
+    // só o mês conhecido fazia o hint AFIRMAR um recorte fechado que não
+    // existe. Espelha o vocabulário que `_cpFmtJanelaLabel` já usa logo abaixo
+    // ("a partir de" / "até"), reusando o mesmo `_cpFmtMesAno`.
+    function _cpFmtJanelaCurto() {
+        const a = _cpJanelaIni ? _cpFmtMesAno(_cpJanelaIni) : '';
+        const b = _cpJanelaFim ? _cpFmtMesAno(_cpJanelaFim) : '';
+        if (a && b) return a === b ? `em ${a}` : `em ${a} → ${b}`;
+        if (a) return `a partir de ${a}`;
+        if (b) return `até ${b}`;
+        return ''; // janela totalmente aberta → chamador usa o texto genérico
+    }
     function _cpFmtJanelaLabel() {
         if (!_cpJanelaIni && !_cpJanelaFim) return 'Exibindo: toda a base';
-        const fmt = (iso) => {
-            const m = String(iso || '').match(/^(\d{4})-(\d{2})/);
-            return m ? `${_MESES_PT_CP[parseInt(m[2], 10) - 1]}/${m[1]}` : '—';
-        };
+        const fmt = _cpFmtMesAno;
         if (_cpJanelaIni && _cpJanelaFim) {
             const a = fmt(_cpJanelaIni), b = fmt(_cpJanelaFim);
             return a === b ? `Exibindo: ${a}` : `Exibindo: ${a} → ${b}`;
@@ -1353,13 +1432,44 @@
     let _cpFornecedoresEmpresaMap = new Map(); // codigoStr → empresa (UPPER)
     let _cpFornecedoresCarregados = false;
     let _cpUltimoSnapRefresh = null; // closure pra re-rodar enrich+populator
+    // OS-CP-FILTROS-BASE-COMPLETA-01: o MESMO listener passa a alimentar as
+    // opções de CADASTRO dos filtros Favorecido e Empresa (união com o mês
+    // carregado). Zero leitura extra no Firestore — só um segundo uso do
+    // snapshot que já chegava.
+    let _cpCadFavorecidos = []; // nomes de /Fornecedores.nome
+    let _cpCadEmpresas = [];    // valores distintos de /Fornecedores.empresa
+
+    // Coalescência (OS-CP-FILTROS-BASE-COMPLETA-01): agora são TRÊS gatilhos
+    // de repopulação (snapshot de ContasAPagar, /Fornecedores e
+    // /AreasContasPagar) e eles chegam quase juntos na abertura da tela. Cada
+    // `innerHTML`/`appendChild` nos selects acorda o MutationObserver do
+    // `assets/checkbox_multi.js`, que reconstrói o painel inteiro — 80 ms de
+    // debounce juntam a rajada num único passe. Higiene de performance.
+    let _cpSnapRefreshTimer = null;
+    function _cpAgendarSnapRefresh() {
+        if (typeof _cpUltimoSnapRefresh !== 'function') return;
+        if (_cpSnapRefreshTimer) clearTimeout(_cpSnapRefreshTimer);
+        _cpSnapRefreshTimer = setTimeout(() => {
+            _cpSnapRefreshTimer = null;
+            if (typeof _cpUltimoSnapRefresh === 'function') _cpUltimoSnapRefresh();
+        }, 80);
+    }
 
     function inscreverFornecedoresEmpresa() {
         onSnapshot(collection(db, COLECAO_FORN), (snap) => {
             const nova = new Map();
+            const nomesCad = [];
+            const empresasCad = new Set();
             snap.forEach(d => {
                 const data = d.data() || {};
+                // ATENÇÃO: a coleta de `nome`/`empresa` para os dropdowns vem
+                // ANTES do early-return de `!emp` — fornecedor cadastrado sem
+                // empresa continua sendo um favorecido válido e não pode
+                // desaparecer silenciosamente do filtro.
+                const nome = String(data.nome || '').trim();
+                if (nome) nomesCad.push(nome);
                 const emp = String(data.empresa || '').trim().toUpperCase();
+                if (emp) empresasCad.add(emp);
                 if (!emp) return;
                 // Chave canônica: codigo (preferencial) | id do doc (fallback).
                 const cod = (data.codigo != null) ? String(data.codigo).trim() : '';
@@ -1368,11 +1478,13 @@
                 if (id && id !== cod) nova.set(id, emp);
             });
             _cpFornecedoresEmpresaMap = nova;
+            _cpCadFavorecidos = nomesCad;
+            _cpCadEmpresas = [...empresasCad];
             _cpFornecedoresCarregados = true;
             // Se o snapshot de ContasAPagar já chegou antes, re-enriquece o
             // cache em memória e re-renderiza + repopula dropdowns. Caso
             // contrário, o próximo snapshot principal já leva o map pronto.
-            if (typeof _cpUltimoSnapRefresh === 'function') _cpUltimoSnapRefresh();
+            _cpAgendarSnapRefresh();
         }, (err) => console.warn('[Fornecedores→Empresa] listener falhou:', err?.code || err?.message));
     }
 
@@ -1406,12 +1518,25 @@
         _cpAtivarJanela();
     }
 
+    // Fonte ÚNICA das constraints de range da janela (OS-CP-FILTROS-BASE-
+    // COMPLETA-01). O listener e a contagem de pré-voo do Período têm de
+    // recortar EXATAMENTE o mesmo intervalo — manter dois pares de `where`
+    // espalhados pelo arquivo é convite a divergência silenciosa entre o
+    // número avisado e o volume realmente carregado.
+    function _cpConstraintsRange(ini, fim) {
+        const c = [];
+        if (ini) c.push(where('data_vencimento', '>=', ini));
+        if (fim) c.push(where('data_vencimento', '<=', fim));
+        return c;
+    }
+
     // Assina o onSnapshot LIMITADO à janela [_cpJanelaIni, _cpJanelaFim].
     // Range + orderBy no mesmo campo `data_vencimento` (sem índice composto).
     function _cpSubscribeJanela() {
-        const constraints = [orderBy('data_vencimento', 'desc')];
-        if (_cpJanelaIni) constraints.push(where('data_vencimento', '>=', _cpJanelaIni));
-        if (_cpJanelaFim) constraints.push(where('data_vencimento', '<=', _cpJanelaFim));
+        const constraints = [
+            orderBy('data_vencimento', 'desc'),
+            ..._cpConstraintsRange(_cpJanelaIni, _cpJanelaFim),
+        ];
         const q = query(collection(db, COLECAO), ...constraints);
         _cpUnsubscribe = onSnapshot(q, (snap) => {
             // ─── Single-pass: regs + Sets de filtros num único loop ───
@@ -1449,13 +1574,11 @@
             // snapshot termina de preencher as <option>s, restaura o estado
             // de filtros do sessionStorage UMA ÚNICA VEZ — depois é só
             // atualização incremental.
-            _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresas, () => {
-                if (!_cpFiltrosRestaurados) {
-                    _cpFiltrosRestaurados = true;
-                    _cpRestaurarEstadoFiltros();
-                    renderTudo();
-                }
-            });
+            // OS-CP-FILTROS-BASE-COMPLETA-01: a tentativa de restauração virou
+            // função própria (`_cpTentarRestaurarFiltros`) porque agora ela
+            // pode ser ADIADA até os cadastros chegarem — e o mesmo onDone é
+            // usado pelo refresh disparado pelos próprios cadastros.
+            _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresas, _cpTentarRestaurarFiltros);
             // Auditoria 2026-05-28: deixa registrada a função que re-roda
             // o enrich + populator usando a cópia mais recente do snapshot.
             // Quando o listener de /Fornecedores atualizar o map, ele chama
@@ -1470,7 +1593,7 @@
                         empresasReenriq.add(e);
                     }
                 }
-                _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresasReenriq, () => {});
+                _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresasReenriq, _cpTentarRestaurarFiltros);
                 renderTudo();
             };
         }, (err) => {
@@ -1485,6 +1608,48 @@
     // abaixo) — agora marca o tempo do último ETL real, não o último
     // disparo de snapshot.
 
+    // ── União "cadastro ∪ janela carregada" (OS-CP-FILTROS-BASE-COMPLETA-01) ─
+    // A tela carrega 1 mês por vez de propósito (/ContasAPagar tem ~52k docs),
+    // então os Sets vindos do snapshot só conhecem o mês em cache — e o
+    // dropdown escondia favorecidos/CCs/empresas que existem em OUTROS meses.
+    // Agora as opções são a união do mês carregado com os CADASTROS já em
+    // memória. O que existe no cadastro mas não tem lançamento na janela
+    // recebe sufixo, para o operador não achar que a opção está quebrada
+    // quando a tabela vier vazia.
+    const _CP_SUFIXO_SEM_DADO = ' (sem dados neste período)';
+
+    // Chave canônica de comparação. NÃO remove acento de propósito: strip de
+    // acento já juntou valores distintos no Faturamento (bug "ESTÁGIO",
+    // 2026-06-19). Também é barata de propósito — roda inline no passe de
+    // filtro, sem `normalize()`.
+    function _cpChaveFiltro(s) {
+        return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toUpperCase();
+    }
+
+    // Retorna [{ v, t, temDado }] — `v` é o value canônico da <option> e `t` o
+    // rótulo visível. O cadastro entra primeiro porque o rótulo curado dele
+    // vence o que vem gravado no lançamento.
+    function _cpUniaoOpcoes(setJanela, listaCadastro) {
+        const m = new Map();
+        for (const raw of (listaCadastro || [])) {
+            const k = _cpChaveFiltro(raw);
+            if (!k) continue;
+            if (!m.has(k)) m.set(k, { v: k, t: String(raw).trim(), temDado: false });
+        }
+        for (const raw of (setJanela || [])) {
+            const k = _cpChaveFiltro(raw);
+            if (!k) continue;
+            const ex = m.get(k);
+            if (ex) ex.temDado = true;
+            else m.set(k, { v: k, t: String(raw).trim(), temDado: true });
+        }
+        const arr = [...m.values()].sort((a, b) => a.t.localeCompare(b.t, 'pt-BR'));
+        // Sufixo DEPOIS de ordenar — se entrasse na comparação, a ordem
+        // alfabética ficaria irregular.
+        for (const it of arr) if (!it.temDado) it.t += _CP_SUFIXO_SEM_DADO;
+        return arr;
+    }
+
     // ── Popula dropdowns em chunks (Frente 2 — 2026-05-20) ──────────────────
     // Ordena cada conjunto e enche os 4 selects em SÉRIE (um após o outro),
     // cada um delegando para `_popularSelectMultiChunked` que insere as
@@ -1495,10 +1660,15 @@
         // com chamadores existentes, mas ignorado — Competência virou range
         // de datas (Período) e não precisa mais ser populado dinamicamente.
         void comps;
-        const favsOrd = [...favs].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        // Favorecido / Centro de Custo / Empresa = união com o cadastro.
+        // `_ccDisponiveis` é lida SOMENTE (ela alimenta selects de ESCRITA que
+        // persistem `centro_custo` no Firestore — normalizar em lugar gravaria
+        // CC em caixa alta no banco). `Despesa` fica fora da união por decisão
+        // do diretor: continua espelhando só o mês carregado.
+        const favsOrd = _cpUniaoOpcoes(favs, _cpCadFavorecidos);
         const despOrd = [...desp].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        const ccsOrd  = [...ccs].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        const empsOrd = [...(empresas || [])].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const ccsOrd  = _cpUniaoOpcoes(ccs, _ccDisponiveis);
+        const empsOrd = _cpUniaoOpcoes(empresas, _cpCadEmpresas);
 
         _popularSelectMultiChunked('cp-filtro-favorecido', favsOrd, 'Todos os Favorecidos', () => {
             _popularSelectMultiChunked('cp-filtro-despesa', despOrd, 'Todas as Despesas', () => {
@@ -1523,6 +1693,15 @@
         const sel = document.getElementById(id);
         if (!sel) { onDone && onDone(); return; }
         const previo = getMultiValues(sel);
+        // OS-CP-FILTROS-BASE-COMPLETA-01: aceita array de strings (legado —
+        // Despesa) OU itens-objeto { v: value canônico, t: rótulo } vindos de
+        // `_cpUniaoOpcoes`. Normalizar aqui mantém os dois chamadores vivos.
+        const itens = (valores || []).map(x => (typeof x === 'string' ? { v: x, t: x } : x));
+        // Token de geração: são TRÊS gatilhos de repopulação (ContasAPagar,
+        // /Fornecedores, /AreasContasPagar). Duas cascatas assíncronas
+        // sobrepostas no MESMO select duplicariam opções — o chunk de uma
+        // geração antiga aborta ao ver o token trocado.
+        const meuGen = (sel._cpGen = (sel._cpGen || 0) + 1);
         // Reset estrutural síncrono (cabeçalho "Todos" + sentinelas fixas).
         sel.innerHTML = `<option value="Todos" class="font-bold border-b pb-1 mb-1">${labelTodos}</option>`;
         if (id === 'cp-filtro-cc') {
@@ -1540,7 +1719,7 @@
             optSemEmp.textContent = '[ ⚠️ MOSTRAR LANÇAMENTOS SEM EMPRESA ]';
             sel.appendChild(optSemEmp);
         }
-        const valoresSet = new Set(valores);
+        const valoresSet = new Set(itens.map(i => i.v));
         // Limiar pra ir direto (sync) sem overhead de chunks. Listas pequenas
         // (< 800 opções) cabem em um único frame sem bloqueio perceptível.
         const SYNC_LIMITE = 800;
@@ -1549,7 +1728,10 @@
         function popularFantasmasEAplicar() {
             // Fantasmas: valores previamente selecionados que sumiram da base.
             // Sentinelas fixas (__SEM_CC__, __SEM_EMPRESA__, __SEM_TIPO__)
-            // são SEMPRE re-injetadas — não viram fantasma "(sem dados)".
+            // são SEMPRE re-injetadas — não viram fantasma "(sem dados…)".
+            // Um valor que é fantasma E de cadastro já entrou na lista
+            // principal (está em `valoresSet`), então não duplica aqui nem
+            // ganha sufixo duas vezes.
             const SENTINELAS = new Set(['Todos', '__SEM_CC__', '__SEM_EMPRESA__', '__SEM_TIPO__']);
             const fantasmas = previo.filter(p => !SENTINELAS.has(p) && !valoresSet.has(p));
             if (fantasmas.length) {
@@ -1557,7 +1739,7 @@
                 for (const v of fantasmas) {
                     const opt = document.createElement('option');
                     opt.value = v;
-                    opt.textContent = `${v} (sem dados)`;
+                    opt.textContent = `${v}${_CP_SUFIXO_SEM_DADO}`;
                     frag.appendChild(opt);
                 }
                 sel.appendChild(frag);
@@ -1566,14 +1748,14 @@
             if (typeof onDone === 'function') onDone();
         }
 
-        if (valores.length <= SYNC_LIMITE) {
+        if (itens.length <= SYNC_LIMITE) {
             // Sync: um único reflow via DocumentFragment (~1 ordem de
             // magnitude mais barato que appendChild N vezes).
             const frag = document.createDocumentFragment();
-            for (const v of valores) {
+            for (const it of itens) {
                 const opt = document.createElement('option');
-                opt.value = v;
-                opt.textContent = v;
+                opt.value = it.v;
+                opt.textContent = it.t;
                 frag.appendChild(opt);
             }
             sel.appendChild(frag);
@@ -1586,17 +1768,19 @@
         // e scroll enquanto a tabela já está pintada e funcional.
         let i = 0;
         function proximoChunk() {
-            const fim = Math.min(i + CHUNK, valores.length);
+            // Repopulação mais nova em curso: aborta esta cascata (ver token).
+            if (sel._cpGen !== meuGen) return;
+            const fim = Math.min(i + CHUNK, itens.length);
             const frag = document.createDocumentFragment();
             for (let j = i; j < fim; j++) {
                 const opt = document.createElement('option');
-                opt.value = valores[j];
-                opt.textContent = valores[j];
+                opt.value = itens[j].v;
+                opt.textContent = itens[j].t;
                 frag.appendChild(opt);
             }
             sel.appendChild(frag);
             i = fim;
-            if (i < valores.length) {
+            if (i < itens.length) {
                 _cpSched(proximoChunk);
             } else {
                 popularFantasmasEAplicar();
@@ -1619,9 +1803,49 @@
     // - `_cpFiltrosRestaurados`: flag que garante restauração UMA única vez
     //   (após o primeiro snapshot popular os dropdowns). Saves subsequentes
     //   sobrescrevem o SS normalmente.
-    const _CP_SS_FILTROS = 'centrafin_cp_filters';
+    // OS-CP-FILTROS-BASE-COMPLETA-01: chave VERSIONADA (_v2). Os values
+    // persistidos mudaram de formato ("Raffoul Ltda" → "RAFFOUL LTDA"); um
+    // estado gravado antes desta versão seria restaurado no formato antigo,
+    // `setMultiValues` não acharia a option e cairia no fallback que marca
+    // "Todos" — seleção perdida em silêncio. Com a chave nova o estado antigo
+    // fica órfão e é ignorado (é sessionStorage: morre ao fechar a aba), sem
+    // precisar de código de migração. Normalizar na restauração NÃO serve:
+    // normalizaria "Todos" → "TODOS" e quebraria as sentinelas.
+    const _CP_SS_FILTROS = 'centrafin_cp_filters_v2';
     let _cpFiltrosRestaurados = false;
     let _cpSaveTimer = null;
+    // Restauração one-shot: só vale depois que os CADASTROS chegaram, senão as
+    // opções que só existem no cadastro ainda não estão no DOM e o filtro
+    // salvo que aponta para elas é descartado — e não volta, porque a
+    // restauração não se repete. `_cpForcarRestauracao` é a válvula de escape:
+    // os handlers de erro dos listeners de cadastro só fazem console.warn, e
+    // um listener com falha de permissão não pode deixar o operador sem
+    // filtros para sempre.
+    let _cpForcarRestauracao = false;
+    let _cpTimerForcarRestauracao = null;
+    function _cpTentarRestaurarFiltros() {
+        if (_cpFiltrosRestaurados) return;
+        const cadastrosProntos = _cpFornecedoresCarregados && _cpAreasCarregadas;
+        if (!cadastrosProntos && !_cpForcarRestauracao) {
+            // Arma o timer de guarda uma única vez, a partir do 1º snapshot
+            // (aqui os dropdowns já foram populados ao menos uma vez).
+            if (!_cpTimerForcarRestauracao) {
+                _cpTimerForcarRestauracao = setTimeout(() => {
+                    _cpTimerForcarRestauracao = null;
+                    _cpForcarRestauracao = true;
+                    _cpTentarRestaurarFiltros();
+                }, 1500);
+            }
+            return;
+        }
+        _cpFiltrosRestaurados = true;
+        if (_cpTimerForcarRestauracao) {
+            clearTimeout(_cpTimerForcarRestauracao);
+            _cpTimerForcarRestauracao = null;
+        }
+        _cpRestaurarEstadoFiltros();
+        renderTudo();
+    }
 
     function _cpSalvarEstadoFiltros() {
         // Debounce 120ms — vários setMultiValues em série (limparTodosFiltros,
@@ -1873,10 +2097,18 @@
                 if (periodoFim && venc > periodoFim) return false;
             }
             if (statusSet && !statusSet.has(statusVisual(r, hoje))) return false;
-            if (favSet && !favSet.has(r.entidade || '')) return false;
+            // OS-CP-FILTROS-BASE-COMPLETA-01: os values de Favorecido/Empresa/
+            // CC agora são canônicos (`_cpChaveFiltro`), então o lado do
+            // REGISTRO precisa ser normalizado na comparação. Só o lado do
+            // registro — jamais os arrays de `getMultiValues`, que contêm a
+            // sentinela 'Todos' ('TODOS' quebraria getMultiValues/isMultiAll/
+            // setMultiValues e a constante do checkbox_multi.js). A chamada é
+            // inline e preguiçosa de propósito: nada é anexado ao objeto do
+            // cache, que é espalhado direto para dentro de writeBatch.
+            if (favSet && !favSet.has(_cpChaveFiltro(r.entidade))) return false;
             if (despSet && !despSet.has(r.categoria || '')) return false;
             if (empSet) {
-                const empReg = String(r.empresa || '').trim();
+                const empReg = _cpChaveFiltro(r.empresa);
                 const passaSemEmp = empFiltraSemEmp && !empReg;
                 const passaEspec  = empSet.has(empReg);
                 if (!passaSemEmp && !passaEspec) return false;
@@ -1888,7 +2120,7 @@
                 if (!passaSemTipo && !passaEspec) return false;
             }
             if (ccSet) {
-                const ccReg = String(r.centro_custo || '').trim();
+                const ccReg = _cpChaveFiltro(r.centro_custo);
                 const passaSemCC = ccFiltraSemCC && !ccReg;
                 const passaCcEspec = ccSet.has(ccReg);
                 if (!passaSemCC && !passaCcEspec) return false;
@@ -1914,6 +2146,16 @@
     // Bases com milhares de lançamentos travavam o browser quando renderizavam
     // tudo de uma vez. _cpPage é resetado para 1 sempre que o recorte muda.
     const PAGE_SIZE_CP = 50;
+    // ── Limiares do aviso de Período pesado (OS-CP-FILTROS-BASE-COMPLETA-01) ─
+    // 15.000 = 3x um mês típico (4.700–5.000), então mês normal NUNCA avisa;
+    // Jan/2026, o pior mês da base (11.094), passa com 35% de folga — e esse
+    // volume já é alcançável hoje sem aviso nenhum clicando "Carregar mês
+    // anterior" duas vezes. Acima de 15.000 o passe de filtro cruza ~40 ms e,
+    // com o debounce de 180 ms da busca textual, a digitação engasga de forma
+    // perceptível. CP_LIMITE_AVISO_MESES é o fallback quando a contagem
+    // server-side falha (offline, permissão) — decide pela amplitude do range.
+    const CP_LIMITE_AVISO_PERIODO = 15000; // lançamentos
+    const CP_LIMITE_AVISO_MESES   = 3;     // meses
     let _cpPage = 1;
     let _cpUltimosFiltrados = [];
     let _renderTudoRaf = 0;
@@ -1962,9 +2204,17 @@
         if (!filtrados.length) {
             corpo.innerHTML = '';
             vazio.classList.remove('hidden');
+            // OS-CP-FILTROS-BASE-COMPLETA-01: com a união cadastro ∪ mês, a
+            // causa mais provável de tabela vazia deixa de ser "filtro errado"
+            // e passa a ser "o lançamento existe, mas em outro mês". O hint
+            // fica CURTO (a explicação mora no #cp-vazio) e nomeia a janela
+            // carregada, que é o recorte real da consulta.
+            // `_janelaCurta` já vem com a preposição correta ("em Set/2026",
+            // "até Set/2026", "a partir de Ago/2026") — não prefixe nada aqui.
+            const _janelaCurta = _cpFmtJanelaCurto();
             hint.textContent = cacheRegistros.length === 0
                 ? 'Sem dados — importe a Base Mestra e um TXT.'
-                : 'Nenhum lançamento bate com os filtros atuais.';
+                : (_janelaCurta ? `Nada encontrado ${_janelaCurta}.` : 'Nada encontrado no período carregado.');
             if (pag) { pag.classList.add('hidden'); pag.classList.remove('flex'); }
             return;
         }
@@ -2186,16 +2436,16 @@
     document.getElementById('btn-limpar-filtros-cp').addEventListener('click', () => {
         limparTodosFiltros();
     });
-    document.getElementById('btn-filtros-cp-aplicar').addEventListener('click', () => {
-        // V3 (2026-05-29): commit do Período. Lê os inputs date e grava na
-        // fonte canônica `_cpPeriodoComitado` ANTES de renderTudo() — assim
-        // aplicarFiltrosCP() já enxerga o novo range no mesmo ciclo.
-        const _inpIni = document.getElementById('cp-filtro-periodo-ini');
-        const _inpFim = document.getElementById('cp-filtro-periodo-fim');
-        _cpPeriodoComitado = {
-            ini: String(_inpIni?.value || ''),
-            fim: String(_inpFim?.value || ''),
-        };
+    // ── Commit do Período (OS-CP-FILTROS-BASE-COMPLETA-01) ─────────────────
+    // Corpo do antigo handler do "Aplicar", extraído sem alteração de regra
+    // para ser reusado pelos DOIS caminhos (aplica direto / aplica depois do
+    // aviso de volume). Zero duplicação: uma única definição de "aplicar um
+    // Período" no arquivo.
+    function _cpComitarPeriodo(ini, fim) {
+        // V3 (2026-05-29): grava na fonte canônica `_cpPeriodoComitado` ANTES
+        // de renderTudo() — assim aplicarFiltrosCP() já enxerga o novo range
+        // no mesmo ciclo.
+        _cpPeriodoComitado = { ini: String(ini || ''), fim: String(fim || '') };
         // Janela server-side (auditoria 2026-06-18): Período definido dispara uma
         // nova consulta server-side para ESSE intervalo; Período vazio volta ao
         // default (último mês com dados — OS-CP-ULTIMO-MES-01). Demais dimensões
@@ -2213,7 +2463,120 @@
         renderTudo();
         _cpSalvarEstadoFiltros(); // sticky filtros (Frente 1)
         fecharModal('modal-filtros-cp');
+    }
+
+    // Janela EFETIVA que um commit produziria: Período vazio NÃO significa
+    // "toda a base", significa "volta ao mês padrão". Sem isso, limpar o
+    // Período dispararia contagem sobre a coleção inteira e o aviso apareceria
+    // justamente no gesto mais leve da tela.
+    function _cpJanelaAlvoDoPeriodo(ini, fim) {
+        if (ini || fim) return { ini, fim };
+        return _cpJanelaPadraoAtual();
+    }
+
+    // Amplitude em meses de um range ISO (inclusive nas pontas). Range aberto
+    // (sem ini ou sem fim) devolve Infinity — não há como limitar.
+    function _cpMesesEntre(ini, fim) {
+        const a = String(ini || '').match(/^(\d{4})-(\d{2})/);
+        const b = String(fim || '').match(/^(\d{4})-(\d{2})/);
+        if (!a || !b) return Infinity;
+        const ma = parseInt(a[1], 10) * 12 + parseInt(a[2], 10);
+        const mb = parseInt(b[1], 10) * 12 + parseInt(b[2], 10);
+        return Math.abs(mb - ma) + 1;
+    }
+
+    // Estado do aviso de Período pesado. `_cpPeriodoPendente` guarda o que o
+    // operador pediu enquanto ele decide; `_cpContagemEmVoo` blinda o
+    // duplo-clique no "Aplicar" durante a contagem.
+    let _cpPeriodoPendente = null;
+    let _cpContagemEmVoo = false;
+
+    function _cpAbrirAvisoPeriodoPesado(n, alvo) {
+        const corpo = document.getElementById('cp-aviso-periodo-corpo');
+        if (corpo) {
+            const fecho = 'Você pode continuar assim mesmo ou voltar e encurtar o intervalo.';
+            const forte = (txt) => `<strong class="font-extrabold tabular-nums text-secondary">${txt}</strong>`;
+            if (n != null) {
+                corpo.innerHTML = `O intervalo escolhido carrega ${forte(Number(n).toLocaleString('pt-BR'))} lançamentos. `
+                    + `Períodos longos deixam a tabela e os KPIs mais lentos para abrir e rolar. ${fecho}`;
+            } else {
+                // Degradação: a contagem falhou, então o aviso sai SEM número e
+                // fala em amplitude — nunca inventa um total.
+                const meses = _cpMesesEntre(alvo.ini, alvo.fim);
+                corpo.innerHTML = Number.isFinite(meses)
+                    ? `Este período abrange ${forte(meses)} meses e pode deixar a tela lenta. ${fecho}`
+                    : `Este período está sem data de início ou de fim e pode deixar a tela lenta. ${fecho}`;
+            }
+        }
+        abrirModal('modal-cp-periodo-pesado');
+    }
+
+    function _cpFecharAvisoPeriodoPesado() {
+        // "Ajustar período" / overlay: NADA é aplicado. `_cpPeriodoComitado` e
+        // a janela ficam como estavam e o "Filtrar Base" continua aberto com
+        // as datas digitadas, para o operador só encurtar o intervalo.
+        fecharModal('modal-cp-periodo-pesado');
+        _cpPeriodoPendente = null;
+        const inpFim = document.getElementById('cp-filtro-periodo-fim');
+        if (inpFim) { try { inpFim.focus(); } catch (_) {} }
+    }
+
+    document.getElementById('btn-filtros-cp-aplicar').addEventListener('click', async () => {
+        const _inpIni = document.getElementById('cp-filtro-periodo-ini');
+        const _inpFim = document.getElementById('cp-filtro-periodo-fim');
+        const novoIni = String(_inpIni?.value || '');
+        const novoFim = String(_inpFim?.value || '');
+        const alvo = _cpJanelaAlvoDoPeriodo(novoIni, novoFim);
+        // A janela server-side não muda (só mexeram nas outras dimensões, que
+        // são client-side): aplica na hora, exatamente como antes desta OS.
+        if (alvo.ini === _cpJanelaIni && alvo.fim === _cpJanelaFim) {
+            _cpComitarPeriodo(novoIni, novoFim);
+            return;
+        }
+        if (_cpContagemEmVoo) return; // guard anti-duplo-clique
+        const btn = document.getElementById('btn-filtros-cp-aplicar');
+        const rotuloOriginal = btn ? btn.textContent : '';
+        _cpContagemEmVoo = true;
+        if (btn) { btn.disabled = true; btn.textContent = 'Conferindo volume…'; }
+        let n = null;
+        try {
+            // Agregação server-side: devolve só a contagem, não baixa doc
+            // nenhum. Mesmo range do listener (`_cpConstraintsRange`), sem
+            // orderBy — desigualdade num único campo, servida pelo índice de
+            // campo único automático.
+            const snapCount = await getCountFromServer(
+                query(collection(db, COLECAO), ..._cpConstraintsRange(alvo.ini, alvo.fim))
+            );
+            n = snapCount.data().count;
+        } catch (err) {
+            // Degradação, nunca travar o filtro do operador.
+            console.warn('[GerenciadorCP] contagem de pré-voo do Período falhou:', err?.code || err?.message);
+            n = null;
+        } finally {
+            _cpContagemEmVoo = false;
+            if (btn) { btn.disabled = false; btn.textContent = rotuloOriginal; }
+        }
+        const pesado = (n != null)
+            ? (n > CP_LIMITE_AVISO_PERIODO)
+            : (_cpMesesEntre(alvo.ini, alvo.fim) > CP_LIMITE_AVISO_MESES);
+        if (!pesado) {
+            _cpComitarPeriodo(novoIni, novoFim);
+            return;
+        }
+        _cpPeriodoPendente = { ini: novoIni, fim: novoFim, n };
+        _cpAbrirAvisoPeriodoPesado(n, alvo);
     });
+
+    // Decisão do aviso de Período pesado. Overlay tem handler PRÓPRIO (não
+    // usa data-modal-overlay) pra sempre limpar `_cpPeriodoPendente`.
+    document.getElementById('btn-cp-aviso-periodo-continuar').addEventListener('click', () => {
+        const pend = _cpPeriodoPendente;
+        _cpPeriodoPendente = null;
+        fecharModal('modal-cp-periodo-pesado');
+        if (pend) _cpComitarPeriodo(pend.ini, pend.fim);
+    });
+    document.getElementById('btn-cp-aviso-periodo-ajustar').addEventListener('click', _cpFecharAvisoPeriodoPesado);
+    document.getElementById('cp-aviso-periodo-overlay').addEventListener('click', _cpFecharAvisoPeriodoPesado);
 
     // Período (Vencimento) V3 — auditoria 2026-05-29. Reincorporado ao modal
     // "Filtrar Base" como seção dedicada full-width. Fluxo:
