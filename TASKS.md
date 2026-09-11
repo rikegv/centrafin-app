@@ -59,6 +59,48 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
 - [!] F0-D2 — Confirmar que o `firebase login` do desktop tem permissão de deploy no projeto
       `centra-fin` (pré-condição do deployer; já em uso hoje, só registrar).
 
+## Em curso — Contas a Pagar: alcance dos filtros e janela de carga (2026-09-10/11)
+
+> Contexto medido: `/ContasAPagar` tem **51.881 docs**. Detalhe completo no DIARIO.md,
+> entrada "2026-09-11 — PONTO DE RETOMADA".
+
+### OS-CP-FILTROS-BASE-COMPLETA-01 — branch `feature/cp-filtros-base`, commit `da6b1c0`
+- [x] Arquiteto — desenho, 9 vetos de implementação
+- [x] Designer — spec de diff visual (`design/specs/cp-filtros-base-completa.md`)
+- [x] Engenheiro — Parte 1 (união das opções) + Parte 2 (guarda do Período)
+- [x] Designer — auditoria de tokens (3 achados, os 3 corrigidos)
+- [x] Testador-auditor — **APROVADO** (emulador real; `getCountFromServer` e perfil `consulta` validados)
+- [!] **Validação visual do diretor** — preview channel no ar, expira **2026-09-17**:
+      `https://centra-fin--cp-filtros-base-ugukuksq.web.app/gerenciador_contas_pagar_desktop/code.html`
+- [ ] Flag `READY_cp-filtros-base` (só após a validação visual)
+- [ ] Deployer — push + deploy **somente hosting**
+
+### OS-CP-JANELA-6M-01 — branch `feature/cp-janela-6m` (empilhado sobre `da6b1c0`)
+- [x] Arquiteto — desenho, 19 vetos, orçamento de performance T1–T7
+- [x] Designer — spec de diff visual (`design/specs/cp-janela-6m.md`)
+- [x] Decisões do diretor: janela em `data_vencimento` · limiar 35.000 / 7 meses com isenção da
+      janela padrão · ordenação de Status por severidade
+- [ ] **Engenheiro-frontend** — Partes 1, 2 e 3. Briefing consolidado:
+      `docs/os-briefings/OS-CP-JANELA-6M-01.md` (**próximo passo ao retomar**)
+- [ ] Designer — auditoria de tokens
+- [ ] Testador-auditor — com as medições T1–T7
+- [ ] Validação visual do diretor → flag `READY_cp-janela-6m` → deployer
+
+### Backlog gerado por estas duas OS (aguarda decisão do diretor)
+- [ ] Trava de deploy furada: aceita qualquer uma das 18 flags `READY_*` acumuladas, logo
+      **nunca bloqueia**; e não cobre `firebase hosting:channel:deploy`
+- [ ] `CP_Base_Despesas` corrompido (42/110 com mojibake) — bloqueia a dimensão Despesa
+- [ ] Variantes `hover:`/`focus:` sem cobertura no tema escuro (sistêmico, 6+ pontos)
+- [ ] Camada 2 — resultados cross-mês por query dirigida (índice composto)
+- [ ] `snap.docChanges()` em vez de reconstruir `cacheRegistros` a cada entrega
+- [ ] `atualizarKPIs` — 2x `normalize('NFD')` por linha em todo render
+- [ ] Blindar "Ações em Massa" para não-super_admin (addDoc sequencial por lançamento)
+- [ ] Furos remanescentes da guarda de Período (F5, "Carregar mês anterior", "Limpar" em voo)
+- [ ] 1 doc com `data_vencimento` `"0026-09"`
+- [ ] `scripts/check-syntax.cjs` não valida `<script type="module">`
+
+---
+
 ## Próximas fases (resumo — detalhar quando F0 fechar)
 - F1 — Primeira tarefa cirúrgica real em módulo de produção, exercitando o fluxo completo
   ponta a ponta (engenheiro → emulador → auditor → validação visual → deploy) como prova

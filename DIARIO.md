@@ -5,6 +5,357 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-11 — PONTO DE RETOMADA (sessão interrompida pelo diretor)
+
+> **Para retomar: leia esta entrada inteira. Ela é autossuficiente.**
+> Duas OS abertas, empilhadas, **nenhuma em produção**. `main` segue em `3440f4a`.
+
+### Estado dos branches
+
+| Branch | Commit | Estado |
+|---|---|---|
+| `main` | `3440f4a` | produção; **não foi tocada** |
+| `feature/cp-filtros-base` | `da6b1c0` | OS-CP-FILTROS-BASE-COMPLETA-01 **completa**, todos os gates técnicos passados. **Aguardando validação visual do diretor.** Não pushada. |
+| `feature/cp-janela-6m` | (sem commits de código) | OS-CP-JANELA-6M-01: arquiteto e designer concluídos, decisões do diretor tomadas. **Próximo passo = despachar o engenheiro-frontend.** Branch ativo no momento da interrupção. |
+
+### O QUE FAZER AO RETOMAR, em ordem
+
+1. **Cobrar do diretor a validação visual da OS-CP-FILTROS-BASE-COMPLETA-01.** Sem ela não
+   há flag e nenhuma das duas OS vai a produção (a segunda está empilhada na primeira).
+   Preview channel: `https://centra-fin--cp-filtros-base-ugukuksq.web.app/gerenciador_contas_pagar_desktop/code.html`
+   — **expira em 2026-09-17**. Se tiver expirado, o deployer recria com
+   `npx firebase hosting:channel:deploy cp-filtros-base --project centra-fin --expires 7d`.
+   O roteiro dos 5 pontos que o diretor deve olhar está na seção "Validação visual pendente" abaixo.
+2. **Despachar o engenheiro-frontend da OS-CP-JANELA-6M-01**, usando
+   `docs/os-briefings/OS-CP-JANELA-6M-01.md` (briefing consolidado, vinculante para lógica)
+   + `design/specs/cp-janela-6m.md` (vinculante para markup/tokens). Nada mais é necessário:
+   os dois documentos já contêm as decisões, os 19 vetos e o checklist.
+3. Depois: designer (auditoria de tokens) → testador-auditor (com as medições T1–T7 do briefing)
+   → validação visual do diretor → flag → deployer.
+
+---
+
+## 2026-09-10 — Investigação: filtros e busca do Contas a Pagar vs. base completa
+
+**Pedido do diretor:** investigar (sem implementar) por que os filtros e a pesquisa do Contas a
+Pagar só alcançam o mês carregado na tela.
+
+### Números medidos em produção (read-only, via token do firebase CLI como ADC)
+
+- `/ContasAPagar` = **51.881 documentos** (5x os "10k+" que motivaram a janela de mês em 2026-06-18).
+- Por mês de `data_vencimento`: Jan/2026 **11.094** · Fev 8.470 · Mar 7.202 · Abr 5.592 ·
+  Mai 5.039 · Jun 4.874 · Jul 4.679 · Ago 4.855 · Set 75. Mais 32 docs com `competencia_ref`
+  12/2025 vencendo em Jan/2026 (regra de competência de PJ funcionando).
+- Crescimento ~4.700–5.000 docs/mês.
+- Peso: 919 B/doc em JSON (45,5 MB a base inteira); **1,83 KB/doc de heap** como objeto JS
+  (~90 MB a base inteira, ~150–250 MB de aba com as cópias internas do SDK).
+- Passe de filtro **com** busca textual: 11–14 ms em 5.000 docs; **110–165 ms em 51.881**.
+  Sem busca textual: 15–19 ms. O gargalo é `_cpNormalizarBusca` montando e normalizando (NFD)
+  um blob de 4 campos por registro **a cada tecla**.
+- Valores distintos: 295 favorecidos · 121 despesas · **12** centros de custo · 817 códigos de
+  fornecedor · 1.176 docs sem CC.
+- Um documento com `data_vencimento` corrompido: `"0026-09"` (e `competencia_ref` `09/0026`).
+  Hoje invisível por estar fora de qualquer janela. **Não tratado — candidato a limpeza.**
+
+### Diagnóstico: o que travava em junho de 2026
+
+**Não existe entrada no DIARIO sobre 2026-06-18** — o diário começa em 2026-07-01. A única
+documentação era o comentário no código. Reconstituição pela sequência de correções:
+
+- **2026-05-18** paginação `PAGE_SIZE_CP = 50` → renderização já estava resolvida ANTES de junho.
+- **2026-05-18** `requestAnimationFrame` coalescendo `renderTudo`.
+- **2026-05-20** inserção das `<option>` em blocos de 500 via `requestIdleCallback`.
+- **2026-06-18** só então entrou a janela de mês.
+
+Logo, o que junho atacou foi **dado em memória + listener em tempo real**, não renderização:
+(a) o SDK Web do Firestore **não suporta projeção de campos** (`select()` não existe), então o
+browser sempre baixa o documento inteiro; (b) cada entrega do `onSnapshot` reconstrói o array
+inteiro + 5 Sets, e o ETL em lotes de 450 dispara ~12 entregas por importação; (c) passes O(n)
+por tecla.
+
+### Achado adicional (não estava na OS)
+
+**O filtro de Período já permitia reproduzir a regressão de junho.** Aplicar um Período de 1 ano
+copiava o range para a janela e reassinava o `onSnapshot` **sem `limit`** → listener ao vivo sobre
+51.881 docs, sem aviso. Foi o que originou a Parte 2 da OS seguinte.
+
+### Correções de premissa registradas
+
+1. **Firestore não tem `DISTINCT`** e não faz busca textual parcial. A opção (b) do diretor
+   ("query pontual levanta só os valores distintos") **não é implementável** como descrita.
+2. **`empresa` não existe no documento** — é derivada no cliente por lookup em
+   `Fornecedores.codigo_fornecedor`. Não há como filtrar por empresa no servidor.
+3. `scripts/check-syntax.cjs` **não está quebrado** como o DIARIO afirmava em 2026-09-08: ele só
+   checa arquivos *staged*. É gate cego por desenho, não por defeito. Para `<script type="module">`
+   ele também falha por gravar o corpo como `.cjs` (o `node --check` rejeita `import`) — limitação
+   preexistente da ferramenta, confirmada idêntica no baseline. Usar `node --check` sobre `.mjs` extraído.
+
+### Proposta aprovada pelo diretor: três camadas
+
+- **Camada 1** — opções completas vindas dos cadastros já carregados. Custo zero. → virou a
+  OS-CP-FILTROS-BASE-COMPLETA-01.
+- **Camada 2** — resultados cross-mês por query dirigida (entidade/categoria/centro_custo), com
+  índice composto. **Não implementada.**
+- **Camada 3** — varredura da base inteira em memória. **Proibida** por decisão permanente.
+
+---
+
+## 2026-09-10/11 — OS-CP-FILTROS-BASE-COMPLETA-01 (COMPLETA, aguardando validação visual)
+
+Branch `feature/cp-filtros-base`, commit **`da6b1c0`**. 4 arquivos, +1466/−48
+(`gerenciador_contas_pagar_desktop/code.html` = +411/−48; o resto é spec e testes).
+
+### Escopo entregue
+
+**Parte 1 — união das opções.** Os dropdowns de **Favorecido**, **Centro de Custo** e **Empresa**
+passam a ofertar a união de (cadastro ∪ mês carregado). Opções sem lançamento na janela recebem o
+sufixo ` (sem dados neste período)`. Zero leitura nova — os cadastros já eram carregados por
+listeners existentes.
+
+**Parte 2 — guarda do Período.** `getCountFromServer` conta antes de abrir o listener; acima de
+`CP_LIMITE_AVISO_PERIODO = 15000`, abre `modal-cp-periodo-pesado` pedindo confirmação. Fallback
+por nº de meses (`CP_LIMITE_AVISO_MESES = 3`) quando a contagem falha.
+
+### Decisões do diretor nesta OS
+
+1. **Despesa ficou FORA.** Medição: `CP_Base_Despesas` tem **42 de 110 registros corrompidos por
+   mojibake** (`"ADIANTAMENTO DE 13Âº SALÃRIO -"`, `origem: seeder_excel`, nunca alcançado pela
+   OS-IMPORT-ENCODING-01) e cobre só **85 dos 121** valores em uso. Reverter o mojibake em memória
+   recupera bem e derruba a lacuna de 72 para 36, mas ainda injetaria nomes estranhos no dropdown.
+   Decisão: não conectar. **A corrupção do cadastro é OS própria**, junto da
+   OS-CP-LIMPEZA-LOTES-CORROMPIDOS-01 que segue aguardando autorização desde 2026-09-04.
+2. **Limiar 15.000**, não os ~5.000 do exemplo do diretor. Jan/2026 (11.094, o pior mês) **não é
+   lento** (~25–36 ms/passe) e esse volume já era alcançável sem aviso clicando "Carregar mês
+   anterior" 2x. Avisar à toa treina o operador a ignorar o modal.
+3. **Fonte da dimensão Empresa corrigida pelo coordenador:** `Fornecedores.empresa` (17 valores
+   reais) e **não** `Base_Empresas` (5 docs, 3 nomes úteis, alguns `_id` são hash). É o mesmo campo
+   de onde `_cpResolverEmpresaDoReg` já deriva a empresa — sem divergência de regra.
+4. **Validação visual em preview channel com dados reais**, não em emulador com dados sintéticos.
+
+### Cobertura real dos cadastros (medida, não presumida)
+
+| Dimensão | Fonte | Cobertura |
+|---|---|---|
+| Favorecido | `Fornecedores.nome` | **perfeita** — 306 nomes cobrem os 295 em uso, zero lacunas |
+| Centro de Custo | `AreasContasPagar.nome` | cobre 11 de 12; "COMERCIAL" existe só nos lançamentos (a união resolve) |
+| Empresa | `Fornecedores.empresa` | universo completo (17 distintos) |
+| Despesa | `CP_Base_Despesas` | **inadequada** — ver decisão 1 |
+
+### O veto que evitou contaminar produção
+
+A saída natural para economizar CPU seria pré-calcular chaves de comparação **dentro** de cada
+registro em memória. O arquiteto rastreou que esses objetos são espalhados por
+**dois caminhos independentes** até escritas reais: `code.html:5077` (`cacheRegistros.find`) →
+`5123-5129` → `5024` (até 120 clones de recorrência) → `5042` (`const {_id, ...payload}`, remove
+**só** `_id`) → `5044` (`batch.set` em `/ContasAPagar`); e `5086` → `1052-1066`
+(`/CP_SolicitacoesAprovacao`). Campo sintético seria **persistido em produção sem nenhum sinal na
+UI**. Vetado; a normalização é inline, dentro dos `if` que já existiam.
+
+### Gates
+
+| Gate | Resultado |
+|---|---|
+| Arquiteto | aprovado, 9 vetos de implementação, todos respeitados |
+| Designer (spec) | `design/specs/cp-filtros-base-completa.md` |
+| Engenheiro | +411/−48 em 1 arquivo de produção |
+| Designer (auditoria de tokens) | 3 achados, os 3 corrigidos |
+| Testador-auditor | **APROVADO** — emulador real com as `firestore.rules` de produção; confirmou ao vivo `getCountFromServer` (contagem exata, contagem com `where`, degradação em `permission-denied`) e o perfil `consulta` |
+| Sintaxe | 3 blocos de `<script>`, parse limpo |
+| Regressão | `scripts/test-cp-filtros-base-completa-logica.cjs` → **57/57** |
+| Segredos | `check-secrets.cjs` limpo |
+| `firestore.rules` / `firestore.indexes.json` | **intocados** — a contagem herda o `allow read` de `/ContasAPagar` e usa índice de campo único automático. Gate de emulador de regras não acionado (DoD). |
+
+### Achados do designer (os 3 corrigidos)
+
+1. **`theme.css` não cobre variantes `hover:` do Tailwind.** Os seletores são
+   `html.dark .bg-slate-50`, e o Tailwind gera `.hover\:bg-slate-50` — nome diferente, não casa.
+   Há exatamente 2 regras com `:hover` no arquivo inteiro. No botão novo isso dava contraste
+   ~1,5:1 no tema escuro (flash branco com o rótulo apagando). Corrigido com `hover:bg-primary/10`
+   (alpha funciona nos dois temas). **O designer corrigiu a própria spec, que afirmava o contrário.**
+   **Defeito sistêmico preexistente em outros 6 pontos do arquivo** (incluindo
+   `btn-filtros-cp-limpar`, de onde o molde foi copiado) — **não corrigidos, OS própria.**
+2. **`_cpFmtJanelaCurto` mentia sobre o recorte** quando a janela tinha só uma ponta (ex.: só
+   "Até" preenchido): afirmava "Nada encontrado em Set/2026" quando a janela real era "tudo até
+   Set/2026", e mandava ajustar um Período que já estava sem piso. Corrigido espelhando o
+   vocabulário de `_cpFmtJanelaLabel` ("até Set/2026" / "a partir de Ago/2026").
+3. **Estado `disabled` invisível** no botão "Aplicar" durante a contagem. Corrigido com
+   `disabled:opacity-50 disabled:cursor-not-allowed`. **Autorizado pelo coordenador** por ser a
+   metade visual de um comportamento já aprovado, apesar de a spec marcar a linha como intocada.
+
+### Erro do coordenador, pego pelo engenheiro (reporte obrigatório)
+
+O briefing mandava comparar o Período novo com a janela **literal**. Assim, **limpar o Período**
+daria `janelaMuda = true` e a contagem rodaria com range vazio = **coleção inteira** → o gesto mais
+leve da tela abriria o modal de aviso. O engenheiro implementou `_cpJanelaAlvoDoPeriodo`
+(Período vazio = mês padrão) e reportou a divergência. Erro de desenho do coordenador, corrigido
+antes de virar bug.
+
+### Consequências aceitas (vão para a validação visual)
+
+- **Chip de filtros em CAIXA ALTA** para Favorecido (o chip usa o `value`, que é a chave canônica).
+  CC e Empresa não mudam (a tabela já renderiza em caixa alta e a empresa já era UPPER).
+  Instruído a **não** "consertar" — é ajuste de 1 linha se incomodar.
+- **Divergência de vocabulário:** este módulo usa "(sem dados neste período)"; `master.html` e
+  `custo_folha_desktop` seguem com "(sem dados)". Deliberado.
+- **Ausência de botão "X" no modal novo** está correta: a convenção do arquivo é que modal que
+  devolve decisão não tem X (os dois moldes existentes também não têm).
+
+### Validação visual pendente — roteiro para o diretor
+
+1. Dropdowns de Favorecido/CC/Empresa com a tela em Set/2026: devem ofertar toda a base, com
+   sufixo nos sem-dado. **Despesa deve continuar curta** (ficou fora por decisão).
+2. Período `01/01/2026 → 31/12/2026` → modal com **51.881** formatado em pt-BR.
+   **Olhar no tema escuro e passar o mouse nos dois botões** (pedido expresso do designer).
+3. Período de 1 mês → carrega direto, sem modal.
+4. Abrir o dropdown de Favorecido e, **com ele aberto**, clicar em Aplicar com período pesado:
+   o painel (`z-[200]` em portal) deve sumir no mesmo gesto e o modal aparecer limpo.
+5. Chip de filtros em caixa alta (consequência aceita acima).
+
+**Expectativa a calibrar:** escolher um fornecedor que só existe em outro mês traz a **tabela
+vazia**, com o texto novo explicando que o dado pode estar em outro período. É o comportamento
+correto desta OS — trazer resultado de fora da janela é a Camada 2.
+
+---
+
+## 2026-09-11 — OS-CP-JANELA-6M-01 (gates de desenho concluídos, pronta para o engenheiro)
+
+Branch `feature/cp-janela-6m`, empilhado sobre `da6b1c0`. **Nenhum código escrito ainda.**
+
+**Briefing consolidado (vinculante para lógica):** `docs/os-briefings/OS-CP-JANELA-6M-01.md`
+**Spec visual (vinculante para markup/tokens):** `design/specs/cp-janela-6m.md`
+
+### Escopo
+Parte 1: janela de 6 meses na abertura (mantendo `PAGE_SIZE_CP` 50 e o "Carregar mês anterior") +
+blob de busca pré-computado. Parte 2: busca e filtros sobre os 6 meses carregados. Parte 3:
+ordenação por coluna em 7 colunas.
+
+### Decisão de empilhamento (coordenador)
+`feature/cp-janela-6m` foi criado **sobre** `feature/cp-filtros-base`, porque a Parte 2 da OS nova
+assume a Camada 1 implementada e as duas OS mexem nas mesmas funções. **Risco declarado ao
+diretor:** se a validação visual pedir mudança na Camada 1, ela vem por baixo do trabalho novo.
+
+### Decisões do diretor (confirmadas nominalmente)
+
+1. **A janela opera em `data_vencimento`, não em competência.** Aplicada a regra do "conceito
+   diferente" do CLAUDE.md. Impedimentos para competência: exigiria índice composto novo, e
+   `competencia_ref` é gravado em dois formatos, num dos quais a comparação é **anticronológica
+   entre anos** (`"12/2025" > "01/2026"`). **Consequência confirmada como aceitável:** a competência
+   mais antiga visível será tipicamente 1 mês mais antiga que o início da janela (nota de serviço
+   PJ recua 1 mês). **Não é bug.**
+2. **Recalibragem do aviso de Período:** isentar a janela padrão por igualdade exata +
+   `CP_LIMITE_AVISO_PERIODO` 15.000 → **35.000** + `CP_LIMITE_AVISO_MESES` 3 → **7**.
+   Motivo: a janela de 6 meses (~25.114 a 32.241) ficaria **1,7x a 2,1x acima** do limiar que a OS
+   anterior acabou de instalar — avisaríamos de um volume que já entregamos calados. Subir o número
+   sozinho não resolvia: a pior janela de 6 meses da base é Jan–Jun = **42.271**, e um limiar à
+   prova dela ficaria em 87% da base, virando código morto.
+3. **Ordenação de Status por severidade** (asc = VENCIDO → A PAGAR → PROVISIONADO → PAGO →
+   CANCELADO), não alfabética. Status é **derivado** por `statusVisual`, não existe no banco.
+
+### Decisões do coordenador
+
+- **`aria-sort` no `<th>` ativo: USAR** (o arquiteto era a favor, o designer contra por
+  consistência). A spec já introduz `role="button"` + `tabindex`, ou seja, já estamos fazendo
+  acessibilidade no elemento; `aria-sort` é o atributo que torna a interação legível, custa 1
+  atributo e não tem efeito visual.
+- **Collator cacheado em `_cpUniaoOpcoes` e `despOrd`: AUTORIZADO.** `localeCompare` sem collator
+  custaria 50–300 ms por dropdown, 3x na abertura. Cai no item 3 da Parte 1 da OS ("otimizações
+  necessárias para não engasgar com esse volume").
+- **Estado de carregamento: APROVADO.** `#cp-vazio` **não nasce oculto** hoje — é pintado no
+  primeiro frame. Com 1 mês dura centésimos; com 6 meses a tela **afirmaria "Nenhum lançamento
+  encontrado" durante vários segundos a cada abertura**. Defeito preexistente que esta OS é
+  obrigada a corrigir. Usa o spinner já existente no arquivo; **recusado** o loader de tela cheia
+  (`z-[90]`, cobre a sidebar, diz "Mantenha esta aba aberta").
+
+### Decisões técnicas do arquiteto (detalhe no briefing)
+
+- **Blob de busca em `WeakMap<regObj, blob>`**, populado no próprio `forEach` do snapshot.
+  Escolhido não por memória (~4,5 MB, irrelevante) mas por **correção**: é a única opção que torna
+  o veto de contaminação **impossível por construção** em vez de evitado por disciplina. Invalidação
+  = zero código (os objetos antigos morrem em `cacheRegistros = regs`).
+  **Array paralelo vetado** (a ordenação da Parte 3 desalinha o índice → busca casa o registro
+  errado, em silêncio). **`Map<docId>` vetado** (cresce sem teto e serve blob velho para doc editado).
+- **`onSnapshot` MANTIDO.** `getDocs` mataria o auto-refresh em **6 caminhos de escrita** que não
+  têm re-render próprio (edição, exclusão, massa, exclusão em massa, KPIs do ETL), e cada re-fetch
+  custaria 25 MB. `Metadados/UltimaImportacao_CP` não serve de gatilho: é best-effort com falha
+  engolida, não cobre edição/exclusão/massa, e entrega uma vez ao assinar.
+  **Custo assumido:** ~200–400 ms de main thread por entrega, e 2,5–5 s de churn durante um ETL
+  (o loop de `_cpFinalizarImportacao` não cede a thread entre chunks). A correção certa
+  (`snap.docChanges()` em vez de reconstruir) é **OS sucessora** — fazê-la junto destruiria a
+  capacidade de atribuir causa se a performance regredir.
+- **`CP_MESES_JANELA_PADRAO = 6` como constante única** — é o botão de voltar atrás. Escada de
+  recuo: 6 → 4 meses (~20k) → 3 meses (~15k, que restaura a coerência com o limiar original) → 1 mês
+  mantendo só a Parte 3. Gatilhos objetivos de recuo: abertura > 12 s, heap > 600 MB, freeze de ETL
+  > 10 s, ou crash de aba.
+- **Off-by-one:** 6 meses inclusive da âncora = recuar **5**. Recuar 6 entregaria 7 meses (~20% de
+  volume a mais).
+- **`_cpJanelaPadrao` guarda os 6 meses, não o mês âncora** — senão "Limpar Filtros" jogaria o
+  operador de volta em 1 mês, regressão da própria feature.
+- **Meses de calendário, não "meses com dado"** — mês vazio conta. "6 meses com dado" exigiria 6
+  queries e uma camada de merge/dedup.
+- **Ordenação client-side sobre o conjunto filtrado**, antes de `_cpUltimosFiltrados` — com isso
+  **a exportação Excel passa a sair na ordem da tela** (ela lê essa variável e promete espelhar o
+  recorte visível). Comportamento correto, registrado aqui.
+- **19 vetos de implementação** no briefing, incluindo: não ordenar `cacheRegistros` in place;
+  `localeCompare` com opções dentro de comparador (415k reconstruções de collator = 2–8 s por
+  clique); `new Date()` em comparador; negativo tratado como zero na ordenação de Valor
+  (**Estornos — Regra Brendon Costa Vital**); `onclick` inline (o módulo é `type="module"`).
+
+### Orçamento de performance (limites que o testador vai medir)
+
+| Métrica | Aceitável | Reprovado |
+|---|---|---|
+| T1 abertura até a 1ª linha pintada | ≤ 8 s (bom ≤ 5 s) | > 12 s |
+| T2 render com termo de busca (3 chars) | ≤ 80 ms | > 120 ms |
+| T4 clique de ordenação → repaint | ≤ 400 ms | > 800 ms |
+| T5 heap estabilizado | ≤ 400 MB | > 600 MB |
+| T7 freeze percebido durante ETL | ≤ 5 s | > 10 s |
+
+**T2 deve ser medido COM e SEM o blob** — o diretor pediu o blob por causa de uma projeção; a
+entrega tem de virar número. **T6** (`atualizarKPIs` isolado) registrado mesmo sendo termo cercado
+pela restrição "não alterar KPIs": é o **maior custo restante por tecla** (30–50 ms) e a candidata
+nº 1 a OS sucessora.
+
+**Fato dominante:** a abertura passa a ser limitada pela **rede** (25 MB), não por CPU — 2–4 s a
+50 Mbps, 8–20 s a 10 Mbps. Nenhuma otimização de JS muda isso.
+
+### Fatos comunicados ao diretor, sem decisão pedida
+
+1. Abertura em segundos, limitada pela rede (acima).
+2. **Cota:** 28.000 leituras por abertura ≈ US$ 0,017; de ~US$ 1,3 para **~US$ 7,4/mês por
+   operador**. Cada "Carregar mês anterior" **recobra a janela inteira** (o listener é reassinado).
+3. **Risco preexistente agravado:** para perfil não-super_admin, "selecionar todos → Ações em
+   Massa" faz **um `addDoc` sequencial por lançamento** (`code.html:2858-2865`). Com 6 meses,
+   "selecionar todos" passa a marcar ~28.000. Fora de escopo; **testador proibido de exercitar esse
+   caminho contra produção**. Candidato a OS de blindagem.
+
+---
+
+## Backlog gerado por estas duas OS (aguardando decisão do diretor)
+
+- [ ] **Trava de deploy furada.** `scripts/gate-deploy.js` só verifica se existe **alguma** flag
+      `READY_*` em `.claude/state/` — e há **18 flags acumuladas desde julho**. Com qualquer uma
+      presente, o check passa sempre: a proteção que deveria exigir uma flag nova por feature
+      **nunca bloqueia**. Deveria exigir a flag da feature do branch corrente.
+      Além disso, o padrão `/(git\s+push|firebase\s+deploy|…)/` **não cobre**
+      `firebase hosting:channel:deploy` — preview passa livre (conveniente, mas acidental).
+- [ ] **`CP_Base_Despesas` corrompido** — 42/110 docs com mojibake (`origem: seeder_excel`), e
+      cobre só 85 dos 121 valores em uso. Bloqueia a dimensão Despesa na Camada 1.
+      Casa com a OS-CP-LIMPEZA-LOTES-CORROMPIDOS-01, pendente desde 2026-09-04.
+- [ ] **Variantes `hover:`/`focus:` sem cobertura no tema escuro** — sistêmico, 6+ pontos no
+      `gerenciador_contas_pagar_desktop/code.html` (inclusive `btn-filtros-cp-limpar`).
+- [ ] **Camada 2** — resultados cross-mês por query dirigida com índice composto.
+- [ ] **`snap.docChanges()`** em vez de reconstruir `cacheRegistros` a cada entrega do snapshot.
+- [ ] **`atualizarKPIs`** — 2x `normalize('NFD')` por linha em todo render, inclusive a cada tecla.
+- [ ] **Blindar "Ações em Massa"** para não-super_admin (addDoc sequencial por lançamento).
+- [ ] **Furos da guarda de Período que a OS anterior não fechou:** F5 após confirmar um Período
+      longo recarrega sem aviso; "Carregar mês anterior" sem guarda; e o risco residual de clicar
+      "Limpar" durante a contagem em voo (~200–600 ms) — o testador julgou **não bloqueante**
+      (client-side, sem escrita, recuperável com um segundo clique).
+- [ ] **1 doc com `data_vencimento` `"0026-09"`** em `/ContasAPagar`.
+- [ ] `scripts/check-syntax.cjs` não valida `<script type="module">` (grava como `.cjs`).
+
+---
+
 ## 2026-09-08 — OS-CP-ULTIMO-MES-01: Contas a Pagar abre no último mês COM DADOS (deploy em produção)
 
 **Sintoma (diretor):** em setembro, com o fechamento de agosto ainda em andamento e setembro
