@@ -1040,6 +1040,11 @@
     async function _cpLimparCacheLocal() {
         try { await terminate(db); await clearIndexedDbPersistence(db); } catch (e) {}
     }
+    // C1 (LGPD): expoe a limpeza para o sidebar.js chamar em QUALQUER caminho de
+    // logout (botao Sair, guarda de inatividade), nao so nos guard-rails de auth
+    // desta pagina. Sem isso os ~52k docs de ContasAPagar ficariam no IndexedDB
+    // da estacao apos a saida.
+    if (typeof window !== 'undefined') window.__cfLogoutCleanup = _cpLimparCacheLocal;
 
     const CHAVE_PAGINA = 'gerenciador_contas_pagar';
     const COLECAO = 'ContasAPagar';
@@ -1099,9 +1104,9 @@
             const cred = JSON.parse(sessionStorage.getItem('_emu_cred') || 'null');
             if (cred) {
               try { const r = await signInWithEmailAndPassword(auth, cred.e, cred.s); user = r.user; }
-              catch(e) { window.location.href = "../login.html"; return; }
-            } else { window.location.href = "../login.html"; return; }
-          } else { window.location.href = "../login.html"; return; }
+              catch(e) { await _cpLimparCacheLocal(); window.location.href = "../login.html"; return; }
+            } else { await _cpLimparCacheLocal(); window.location.href = "../login.html"; return; }
+          } else { await _cpLimparCacheLocal(); window.location.href = "../login.html"; return; }
         }
         try {
             let docRef = doc(db, "Usuarios", user.email.toLowerCase());
@@ -1163,6 +1168,7 @@
             const isSuperAdm = _isAdmin;
             const menusUser = Array.isArray(dadosUser.menus_permitidos) ? dadosUser.menus_permitidos : [];
             if (!isSuperAdm && !menusUser.includes(CHAVE_PAGINA)) {
+                await _cpLimparCacheLocal(); // C1: limpa cache de sessao anterior (acesso revogado)
                 window.location.href = "../login.html";
                 return;
             }
@@ -1231,16 +1237,13 @@
     const _cpBlobBusca = new Map(); // _id → blob normalizado de busca
 
     // ── JANELA DE CARGA SERVER-SIDE (auditoria 2026-06-18) ──────────────────
-    // Antes: onSnapshot SEM limite carregava TODA a base histórica de uma vez
-    // (10k+ docs) → travava o browser. Agora a query é LIMITADA por uma janela
-    // de `data_vencimento` (range + orderBy no MESMO campo, sem índice composto).
-    // Default = mês corrente (abre instantâneo e leve). "Carregar Mais" estende
-    // a janela para meses anteriores sob demanda; os Filtros Avançados (Período)
-    // disparam uma nova janela server-side. As demais dimensões (status,
-    // favorecido, CC, etc.) seguem filtrando client-side sobre a janela em cache.
-    // Mantemos onSnapshot (tempo real) — toda escrita (import/edição/exclusão)
-    // continua auto-refrescando sem reload manual.
-    let _cpUnsubscribe = null;     // legado: unsubscribe do antigo listener por janela
+    // OS-CP-CARGA-TOTAL-01: a base inteira de /ContasAPagar (~52k docs) e
+    // carregada de uma vez via getDocs one-shot (cache-first) e mantida em
+    // memoria; NAO ha mais janela server-side nem "Carregar Mais". Filtros,
+    // busca, ordenacao e Periodo operam client-side sobre o conjunto completo;
+    // a tabela pagina so o recorte (PAGE_SIZE_CP). Como nao ha listener ao vivo,
+    // cada escrita (import/edicao/exclusao) chama _cpRecarregar() para refletir.
+    let _cpUnsubscribe = null;     // vestigial: nao ha mais listener por janela
     let _cpCargaAberta = false;    // guarda one-shot da carga total (A2)
     let _cpJanelaIni = '';         // 'YYYY-MM-DD' inclusive — '' = sem limite inferior
     let _cpJanelaFim = '';         // 'YYYY-MM-DD' inclusive — '' = sem limite superior
@@ -1681,12 +1684,10 @@
     // abaixo) — agora marca o tempo do último ETL real, não o último
     // disparo de snapshot.
 
-    // ── União "cadastro ∪ janela carregada" (OS-CP-FILTROS-BASE-COMPLETA-01) ─
-    // A tela carrega 1 mês por vez de propósito (/ContasAPagar tem ~52k docs),
-    // então os Sets vindos do snapshot só conhecem o mês em cache — e o
-    // dropdown escondia favorecidos/CCs/empresas que existem em OUTROS meses.
-    // Agora as opções são a união do mês carregado com os CADASTROS já em
-    // memória. O que existe no cadastro mas não tem lançamento na janela
+    // ── União "cadastro ∪ base carregada" (OS-CP-FILTROS-BASE-COMPLETA-01) ─
+    // Com a carga total, os Sets vindos dos dados já conhecem todo favorecido/
+    // CC/empresa com lançamento na base. As opções são a união desses dados com
+    // os CADASTROS já em memória. O que existe no cadastro mas não tem lançamento nenhum
     // recebe sufixo, para o operador não achar que a opção está quebrada
     // quando a tabela vier vazia.
     const _CP_SUFIXO_SEM_DADO = ' (sem dados neste período)';
@@ -3888,6 +3889,10 @@
     async function _cpFinalizarImportacao() {
         const expandido = _cpExpandirProjecaoFixo(_cpEtlState.lancamentos);
         if (!expandido.length) {
+            // Se um "Substituir Lote" apagou docs antes deste ponto, a tela
+            // precisa refletir a exclusao mesmo sem nada a gravar (sem listener
+            // ao vivo, so _cpRecarregar reflete). Reread e raro (import vazio).
+            try { await _cpRecarregar(); } catch (_) {}
             mostrarToast('Nada para gravar.', 'warning', true);
             return;
         }

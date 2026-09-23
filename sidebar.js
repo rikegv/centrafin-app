@@ -202,6 +202,7 @@ export function renderSidebar(userProfile = 'comum', menusPermitidos = []) {
                 const auth = getAuth();
                 await signOut(auth);
             } catch (err) { console.error("Erro ao deslogar:", err); }
+            await _cfLimparCacheLocalPagina(); // C1 (LGPD): limpa cache local antes de sair
             window.location.href = prefix + "login.html";
         });
 
@@ -418,6 +419,18 @@ function installPresenceGuard() {
 // redireciona para login.html. Idempotente — se renderSidebar for chamada de
 // novo na mesma página (defensivo), o guard antigo é desmontado primeiro.
 const TIMEOUT_INATIVIDADE_MS = 60 * 60 * 1000; // 1 hora exata = 3.600.000 ms
+
+// C1 (LGPD): antes de redirecionar em QUALQUER logout, limpa o cache local
+// (IndexedDB) que a pagina tenha registrado em window.__cfLogoutCleanup.
+// Paginas com persistentLocalCache (ex.: Contas a Pagar, ~52k docs financeiros)
+// registram a limpeza; nas demais e no-op. Best-effort, nunca trava a saida.
+async function _cfLimparCacheLocalPagina() {
+    try {
+        if (typeof window !== 'undefined' && typeof window.__cfLogoutCleanup === 'function') {
+            await window.__cfLogoutCleanup();
+        }
+    } catch (_) {}
+}
 const THROTTLE_MOUSEMOVE_MS  = 5000;            // mousemove dispara no máx. 1x/5s
 
 let _inactivityHandle = null;
@@ -449,6 +462,7 @@ function installInactivityGuard(prefix) {
         } catch (err) {
             console.error('[InactivityGuard] falha no signOut:', err);
         } finally {
+            await _cfLimparCacheLocalPagina(); // C1 (LGPD): limpa cache local antes de sair
             window.location.replace(prefix + "login.html");
         }
     };
