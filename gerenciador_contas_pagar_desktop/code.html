@@ -342,17 +342,9 @@
                     </button>
                 </div>
             </div>
-            <!-- Carregar Mais (auditoria 2026-06-18): a tela abre só com UM mês
-                 (carga leve) — desde a OS-CP-ULTIMO-MES-01 esse mês é o último
-                 COM DADOS, não o do calendário. Este botão estende a janela para
-                 o mês anterior sob demanda; para um período específico use os
-                 Filtros Avançados → Período. -->
-            <div id="cp-carregar-mais-bar" class="hidden items-center justify-between gap-3 px-6 py-3 border-t border-slate-100 bg-white">
-                <span id="cp-janela-info" class="text-[11px] font-medium text-slate-500">Carregando…</span>
-                <button id="cp-btn-carregar-mais" type="button" class="inline-flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold text-secondary bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 active:scale-95 transition-all">
-                    <span class="material-symbols-outlined text-[14px]">expand_more</span> Carregar mês anterior
-                </button>
-            </div>
+            <!-- OS-CP-CARGA-TOTAL-01 (F1): a barra "Carregar mês anterior" foi
+                 removida. Com a carga total cache-first, a base inteira já está
+                 em memória na abertura; não há mais janela de mês para estender. -->
             <div id="cp-vazio" class="px-8 py-16 text-center">
                 <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-4">
                     <span class="material-symbols-outlined text-3xl text-slate-300">inbox</span>
@@ -769,41 +761,9 @@
     </div>
 </div>
 
-<!-- MODAL: aviso de Período pesado (OS-CP-FILTROS-BASE-COMPLETA-01).
-     Aparece SOBRE o "Filtrar Base" (z-[68]) — daí o z-[84] — quando a
-     contagem server-side da janela pedida passa CP_LIMITE_AVISO_PERIODO.
-     Tom ÂMBAR, não vermelho: nada é destruído nem alterado, é só aviso de
-     desempenho, e a ação é totalmente reversível. Overlay com id próprio
-     (sem data-modal-overlay): o binder genérico só fecharia o visual e
-     deixaria a decisão pendurada em `_cpPeriodoPendente`. -->
-<div id="modal-cp-periodo-pesado" class="fixed inset-0 z-[84] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" id="cp-aviso-periodo-overlay"></div>
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl z-10 transform scale-95 transition-transform duration-300 relative border border-slate-100">
-        <div class="px-7 pt-7 pb-3 flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
-                <span class="material-symbols-outlined text-amber-700 text-2xl">hourglass_top</span>
-            </div>
-            <div class="min-w-0">
-                <h3 class="font-headline text-lg font-extrabold text-secondary tracking-tight">Este período traz muitos lançamentos</h3>
-                <p class="text-[12px] text-slate-500 font-medium mt-0.5">Nada será alterado — é só um aviso de desempenho.</p>
-            </div>
-        </div>
-        <div class="px-7 pb-5">
-            <p id="cp-aviso-periodo-corpo" class="text-sm text-slate-700">—</p>
-        </div>
-        <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
-            <!-- Hover em alpha (`hover:bg-primary/10`) e NÃO na variante hover
-                 dos slates: o theme.css remapeia a classe de repouso, mas o
-                 Tailwind gera outro nome de classe para o hover — sem cobertura
-                 no tema escuro. Ali o botão pintaria quase-branco sob texto
-                 claro (~1,5:1) justamente no caminho de cancelar. -->
-            <button id="btn-cp-aviso-periodo-ajustar" type="button"
-                class="px-5 py-2.5 text-slate-500 border border-slate-200 hover:bg-primary/10 rounded-xl text-xs font-bold transition-all">Ajustar período</button>
-            <button id="btn-cp-aviso-periodo-continuar" type="button"
-                class="px-5 py-2.5 bg-primary text-[#341100] rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:brightness-105 active:scale-95 transition-all">Continuar assim mesmo</button>
-        </div>
-    </div>
-</div>
+<!-- OS-CP-CARGA-TOTAL-01 (F2): o modal de aviso de "Período pesado" foi
+     removido. Com a carga total, escolher um Período não dispara consulta ao
+     servidor — é só recorte client-side sobre a memória, sem custo a avisar. -->
 
 <!-- Inputs file ocultos. -->
 <input id="file-cp-txt" type="file" accept=".txt" class="hidden" />
@@ -972,6 +932,15 @@
 </div>
 
 <!-- Toast premium (sucesso/erro/aviso). -->
+<!-- HUD de diagnóstico (OS-CP-CARGA-TOTAL-01, F3). Nasce OCULTO; só aparece
+     com ?diag=1 na URL. Exibe SOMENTE métricas agregadas de desempenho
+     (tempos de carga, contagem, heap, média por tecla) — nunca dado de
+     lançamento. É passivo (pointer-events-none) pra não atrapalhar a tela. -->
+<div id="cp-diag-hud" class="hidden fixed bottom-3 left-3 z-[95] px-3 py-2 rounded-lg bg-slate-900/90 text-slate-100 text-[10px] font-mono leading-relaxed shadow-xl pointer-events-none select-none" style="white-space:pre">
+    <div class="font-bold text-primary mb-0.5">Diagnóstico De Carga</div>
+    <div id="cp-diag-body">medindo…</div>
+</div>
+
 <div id="toast-cp" class="hidden fixed bottom-6 right-6 z-[80] flex items-center gap-3 bg-secondary text-white px-5 py-3 rounded-xl shadow-2xl text-xs font-bold opacity-0 translate-y-2 transition-all duration-300">
     <span id="toast-cp-icon" class="material-symbols-outlined text-primary">check_circle</span>
     <span id="toast-cp-text">—</span>
@@ -980,18 +949,17 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import {
-        getFirestore, collection, addDoc, doc, getDoc, getDocs, onSnapshot,
+        initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+        collection, addDoc, doc, getDoc, getDocs, getDocsFromCache, onSnapshot,
         writeBatch, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy,
         // Auditoria 2026-05-29: validador de duplicidade de lote precisa de
         // where/limit pra consultar `arquivo_hash` antes do writeBatch.
         // OS-CP-ULTIMO-MES-01: `startAfter` pagina a varredura que descobre o
         // último mês COM DADOS na abertura da tela.
-        // OS-CP-FILTROS-BASE-COMPLETA-01: `getCountFromServer` é agregação
-        // server-side — conta quantos lançamentos a janela pedida traria SEM
-        // baixar um único documento, pra avisar antes de abrir um Período
-        // pesado. Mesma forma de query do listener (1 desigualdade em
-        // `data_vencimento`) → índice de campo único automático.
-        where, limit, startAfter, getCountFromServer, connectFirestoreEmulator
+        // OS-CP-CARGA-TOTAL-01 (C1): `terminate` + `clearIndexedDbPersistence`
+        // zeram a persistência local (IndexedDB, ~51k lançamentos) no logout,
+        // pra não deixar dado pessoal de fornecedor no disco da estação.
+        where, limit, startAfter, terminate, clearIndexedDbPersistence, connectFirestoreEmulator
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut, connectAuthEmulator, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { renderSidebar } from "../sidebar.js";
@@ -1006,12 +974,71 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // OS-CP-CARGA-TOTAL-01 (A1): cache local PERSISTENTE (IndexedDB) com
+    // gerenciador multi-aba. Multi-aba de propósito — o `persistentSingleTabManager`
+    // lança failed-precondition na 2ª aba do CP (o operador costuma abrir vários
+    // módulos). Habilita a abertura cache-first (getDocsFromCache) da carga total.
+    const db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
     const auth = getAuth(app);
     // Emulador local (detecção automática — seguro em produção)
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
       try { connectFirestoreEmulator(db, 'localhost', 8080); } catch(e) {}
       try { connectAuthEmulator(auth, 'http://localhost:9099'); } catch(e) {}
+    }
+
+    // ── Instrumentação de carga (OS-CP-CARGA-TOTAL-01) ──────────────────────
+    // A camada de dados PRODUZ os tempos; o HUD do frontend só os LÊ. Todos em
+    // ms via performance.now(): t_cold = módulo→1º render usável; t_cachePaint =
+    // render vindo do getDocsFromCache; t_server = duração do getDocs de servidor;
+    // docs = nº de lançamentos carregados.
+    const _cpT0 = performance.now();
+    window._cpDiag = { t0: _cpT0, t_cold: null, t_cachePaint: null, t_server: null, docs: 0, t_tecla: null };
+
+    // ── HUD de diagnóstico (OS-CP-CARGA-TOTAL-01, F3) ───────────────────────
+    // Nasce OCULTO; só liga com `?diag=1` na URL. Exibe SOMENTE métricas
+    // agregadas de desempenho — nenhum campo de lançamento (favorecido, valor,
+    // observação, código). Condição C3 da Segurança: proibido logar/exibir dado
+    // pessoal, então o HUD lê apenas números de tempo, contagem e heap.
+    const _cpDiagLigado = new URLSearchParams(location.search).get('diag') === '1';
+    // Amostras da latência de filtro no caminho da busca; média em _cpDiag.t_tecla.
+    let _cpTeclaSamples = [];
+    let _cpMedirFiltro = false; // sinalizado pelo handler da busca antes de renderTudo()
+    function _cpFmtMsDiag(v) { return v == null ? 'n/d' : `${Math.round(v)} ms`; }
+    function _cpAtualizarHUD() {
+        if (!_cpDiagLigado) return;
+        const el = document.getElementById('cp-diag-body');
+        if (!el) return;
+        const d = window._cpDiag || {};
+        const linhas = [
+            `cold:   ${_cpFmtMsDiag(d.t_cold)}`,
+            `cache:  ${_cpFmtMsDiag(d.t_cachePaint)}`,
+            `server: ${_cpFmtMsDiag(d.t_server)}`,
+            `docs:   ${(d.docs || 0).toLocaleString('pt-BR')}`,
+            `tecla:  ${d.t_tecla == null ? 'n/d' : d.t_tecla.toFixed(1) + ' ms'}`,
+        ];
+        // performance.memory só existe em Chrome/Edge; guarda contra ausência.
+        const mem = performance.memory;
+        if (mem && mem.usedJSHeapSize) {
+            const mb = (b) => (b / 1048576).toFixed(0);
+            linhas.push(`heap:   ${mb(mem.usedJSHeapSize)}/${mb(mem.jsHeapSizeLimit)} MB`);
+        }
+        el.textContent = linhas.join('\n');
+    }
+    if (_cpDiagLigado) {
+        const _hud = document.getElementById('cp-diag-hud');
+        if (_hud) _hud.classList.remove('hidden');
+        setInterval(_cpAtualizarHUD, 1000);
+        _cpAtualizarHUD();
+    }
+
+    // ── C1 (OS-CP-CARGA-TOTAL-01, LGPD) ─────────────────────────────────────
+    // A carga total deixa ~51k lançamentos (dado pessoal de fornecedor) no
+    // IndexedDB da estação. Ao sair, zera a persistência local ANTES do
+    // redirect. try/catch pra o logout NUNCA travar se a limpeza falhar.
+    async function _cpLimparCacheLocal() {
+        try { await terminate(db); await clearIndexedDbPersistence(db); } catch (e) {}
     }
 
     const CHAVE_PAGINA = 'gerenciador_contas_pagar';
@@ -1081,7 +1108,8 @@
             let docSnap = await getDoc(docRef);
             if (!docSnap.exists()) { docRef = doc(db, "Usuarios", user.uid); docSnap = await getDoc(docRef); }
             if (!docSnap.exists()) {
-                await signOut(auth);
+                try { await signOut(auth); } catch (e) {}
+                await _cpLimparCacheLocal(); // C1: não deixa cache pessoal na estação
                 window.location.href = "../login.html";
                 return;
             }
@@ -1126,7 +1154,8 @@
             } catch (_) {}
 
             if (dadosUser.status === 'inativo') {
-                await signOut(auth);
+                try { await signOut(auth); } catch (e) {}
+                await _cpLimparCacheLocal(); // C1: não deixa cache pessoal na estação
                 window.location.href = "../login.html";
                 return;
             }
@@ -1195,6 +1224,11 @@
     // e atualizarKPIs() rodam sobre a fatia. Ordenação: data_vencimento desc.
 
     let cacheRegistros = [];
+    // A3 (OS-CP-CARGA-TOTAL-01): blob de busca textual PRÉ-COMPUTADO uma vez por
+    // ingestão, em Map PARALELO chaveado por `reg._id`. NUNCA gravar o blob no
+    // objeto de `cacheRegistros`: ele é espalhado com spread direto pra dentro de
+    // writeBatch (edição/recorrência) e o blob vazaria pro Firestore.
+    const _cpBlobBusca = new Map(); // _id → blob normalizado de busca
 
     // ── JANELA DE CARGA SERVER-SIDE (auditoria 2026-06-18) ──────────────────
     // Antes: onSnapshot SEM limite carregava TODA a base histórica de uma vez
@@ -1206,7 +1240,8 @@
     // favorecido, CC, etc.) seguem filtrando client-side sobre a janela em cache.
     // Mantemos onSnapshot (tempo real) — toda escrita (import/edição/exclusão)
     // continua auto-refrescando sem reload manual.
-    let _cpUnsubscribe = null;     // unsubscribe do listener ativo (troca de janela)
+    let _cpUnsubscribe = null;     // legado: unsubscribe do antigo listener por janela
+    let _cpCargaAberta = false;    // guarda one-shot da carga total (A2)
     let _cpJanelaIni = '';         // 'YYYY-MM-DD' inclusive — '' = sem limite inferior
     let _cpJanelaFim = '';         // 'YYYY-MM-DD' inclusive — '' = sem limite superior
 
@@ -1298,16 +1333,6 @@
         return _cpJanelaPadrao || _cpMesCorrenteRange();
     }
 
-    // Recua o limite inferior (ini) em N meses, preservando o fim atual.
-    function _cpRecuarIniUmMes() {
-        const base = _cpJanelaIni || _cpJanelaPadraoAtual().ini;
-        const m = base.match(/^(\d{4})-(\d{2})-/);
-        if (!m) return base;
-        let ano = parseInt(m[1], 10), mes = parseInt(m[2], 10) - 1; // mês 0-index do ini atual
-        mes -= 1; // um mês antes
-        if (mes < 0) { mes = 11; ano -= 1; }
-        return `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
-    }
     // 'YYYY-MM-DD' → 'Set/2026'. Extraído de dentro de `_cpFmtJanelaLabel`
     // (OS-CP-FILTROS-BASE-COMPLETA-01) pra ser reusado pelo hint de recorte
     // vazio sem duplicar lógica de formatação de data.
@@ -1343,21 +1368,27 @@
         if (_cpJanelaIni) return `Exibindo: a partir de ${fmt(_cpJanelaIni)}`;
         return `Exibindo: até ${fmt(_cpJanelaFim)}`;
     }
-    function _cpAtualizarUICarregarMais() {
-        const bar  = document.getElementById('cp-carregar-mais-bar');
-        const info = document.getElementById('cp-janela-info');
-        const btn  = document.getElementById('cp-btn-carregar-mais');
-        if (info) info.textContent = `${_cpFmtJanelaLabel()} · ${cacheRegistros.length} lançamento(s) em cache`;
-        if (bar)  { bar.classList.remove('hidden'); bar.classList.add('flex'); }
-        // Sem limite inferior = já está em "toda a base"; não há mais o que recuar.
-        if (btn)  btn.classList.toggle('hidden', !_cpJanelaIni);
-    }
+    // OS-CP-CARGA-TOTAL-01 (F1): a UI de janela / "Carregar mês anterior" foi
+    // removida com a carga total. Mantido como no-op porque a camada de dados
+    // ainda o invoca em pontos do ciclo de ingestão/render.
+    function _cpAtualizarUICarregarMais() {}
 
     // (Re)assina o listener para a janela atual. Desinscreve o anterior pra não
     // vazar listeners ao trocar de janela (Carregar Mais / Filtros / Limpar).
     function _cpAtivarJanela() {
         if (typeof _cpUnsubscribe === 'function') { try { _cpUnsubscribe(); } catch (_) {} _cpUnsubscribe = null; }
-        _cpSubscribeJanela();
+        // OS-CP-CARGA-TOTAL-01: a base inteira é carregada UMA vez (cache-first).
+        // A 1ª ativação dispara a carga total; as seguintes (Período/Limpar/
+        // Carregar Mais) são só re-filtragem client-side sobre o que já está em
+        // memória — nada a re-buscar no servidor.
+        if (!_cpCargaAberta) {
+            _cpCargaAberta = true;
+            _cpAbrirCargaTotal();
+        } else {
+            _cpPage = 1;
+            renderTudo();
+            _cpAtualizarUICarregarMais();
+        }
     }
 
     // Formatadores BRL e datas pt-BR.
@@ -1507,14 +1538,15 @@
     // Despesa/CC. Agora um único `snap.forEach` alimenta TUDO em paralelo,
     // e a inserção das <option>s vai pra chunks (requestIdleCallback) que
     // cedem o controle ao paint entre lotes — main thread não engasga.
-    async function inscreverContasPagar() {
-        // Default na inicialização (OS-CP-ULTIMO-MES-01): último mês COM DADOS,
-        // não o mês do calendário. A carga segue leve — a janela continua sendo
-        // de 1 mês; só mudou a âncora. Outros períodos via "Carregar mês
-        // anterior" ou Filtros Avançados (Período).
-        _cpJanelaPadrao = await _cpDescobrirMesPadrao();
-        _cpJanelaIni = _cpJanelaPadrao.ini;
-        _cpJanelaFim = _cpJanelaPadrao.fim;
+    function inscreverContasPagar() {
+        // B2 (OS-CP-CARGA-TOTAL-01, decisão do diretor 2026-09-23): recorte
+        // default = BASE INTEIRA, não mais a janela de 1 mês. A query não leva
+        // range; abre cache-first. `_cpDescobrirMesPadrao`/`_cpJanelaPadrao`
+        // ficam órfãos de propósito (o frontend remove a UI de janela). Sem
+        // limite inferior/superior → "Carregar Mais" nasce oculto.
+        _cpJanelaIni = '';
+        _cpJanelaFim = '';
+        _cpJanelaPadrao = { ini: '', fim: '' };
         _cpAtivarJanela();
     }
 
@@ -1530,78 +1562,119 @@
         return c;
     }
 
-    // Assina o onSnapshot LIMITADO à janela [_cpJanelaIni, _cpJanelaFim].
-    // Range + orderBy no mesmo campo `data_vencimento` (sem índice composto).
-    function _cpSubscribeJanela() {
-        const constraints = [
-            orderBy('data_vencimento', 'desc'),
-            ..._cpConstraintsRange(_cpJanelaIni, _cpJanelaFim),
-        ];
-        const q = query(collection(db, COLECAO), ...constraints);
-        _cpUnsubscribe = onSnapshot(q, (snap) => {
-            // ─── Single-pass: regs + Sets de filtros num único loop ───
-            // Frente 1 (2026-05-20): extrai também `empresa` (string vazia
-            // tolerada — vira `__SEM_EMPRESA__` no filtro) — base do novo
-            // dropdown "Empresa" no modal "Filtrar Base".
-            // Auditoria 2026-05-28: enriquecimento via lookup em
-            // /Fornecedores.empresa pelo `codigo_fornecedor`, já que o ETL
-            // não grava `empresa` na fatura. Resultado escrito de volta em
-            // `reg.empresa` (string em UPPER) — pipeline de filtro/render
-            // segue lendo `r.empresa` sem mudança.
-            const regs = [];
-            const comps = new Set(), favs = new Set(), desp = new Set(),
-                  ccs = new Set(), empresas = new Set();
-            snap.forEach(d => {
-                const reg = { _id: d.id, ...d.data() };
-                const empResolvida = _cpResolverEmpresaDoReg(reg);
-                if (empResolvida) reg.empresa = empResolvida;
-                regs.push(reg);
-                const comp = fmtCompetenciaBR(reg);
-                if (comp) comps.add(comp);
-                if (reg.entidade)     favs.add(reg.entidade);
-                if (reg.categoria)    desp.add(reg.categoria);
-                if (reg.centro_custo) ccs.add(reg.centro_custo);
-                if (empResolvida) empresas.add(empResolvida);
-            });
-            cacheRegistros = regs;
-            // Renderiza JÁ — os filtros atuais (ou os restaurados via
-            // sessionStorage) operam sobre cacheRegistros independente de
-            // qual <option> está renderizada nos dropdowns. A paginação
-            // estrita de 50 (PAGE_SIZE_CP) limita o DOM ao recorte visível.
-            renderTudo();
-            _cpAtualizarUICarregarMais();
-            // Popula os dropdowns em chunks assíncronos. Quando o primeiro
-            // snapshot termina de preencher as <option>s, restaura o estado
-            // de filtros do sessionStorage UMA ÚNICA VEZ — depois é só
-            // atualização incremental.
-            // OS-CP-FILTROS-BASE-COMPLETA-01: a tentativa de restauração virou
-            // função própria (`_cpTentarRestaurarFiltros`) porque agora ela
-            // pode ser ADIADA até os cadastros chegarem — e o mesmo onDone é
-            // usado pelo refresh disparado pelos próprios cadastros.
-            _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresas, _cpTentarRestaurarFiltros);
-            // Auditoria 2026-05-28: deixa registrada a função que re-roda
-            // o enrich + populator usando a cópia mais recente do snapshot.
-            // Quando o listener de /Fornecedores atualizar o map, ele chama
-            // esta closure pra repopular o dropdown Empresa sem precisar
-            // esperar uma nova mutação no ContasAPagar.
-            _cpUltimoSnapRefresh = () => {
-                const empresasReenriq = new Set();
-                for (const r of cacheRegistros) {
-                    const e = _cpResolverEmpresaDoReg(r);
-                    if (e) {
-                        r.empresa = e;
-                        empresasReenriq.add(e);
-                    }
-                }
-                _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresasReenriq, _cpTentarRestaurarFiltros);
-                renderTudo();
-            };
-        }, (err) => {
-            console.error('[ContasAPagar] listener falhou:', err);
-            cacheRegistros = [];
-            renderTudo();
-            _cpAtualizarUICarregarMais();
+    // ── Ingestão (OS-CP-CARGA-TOTAL-01, A2/A3) ─────────────────────────────
+    // Corpo do antigo callback do onSnapshot, extraído para função pura de
+    // ingestão. Recebe um QuerySnapshot (de getDocsFromCache OU getDocs) e faz
+    // o single-pass: monta cacheRegistros + os 5 Sets de filtro + o Map paralelo
+    // de blob de busca (A3) + render + populator de dropdowns.
+    // Frente 1 (2026-05-20): extrai também `empresa` (vazia tolerada). Auditoria
+    // 2026-05-28: enriquecimento via lookup /Fornecedores.empresa pelo
+    // `codigo_fornecedor`; resultado escrito de volta em `reg.empresa` (UPPER).
+    function _cpIngerir(snap) {
+        const regs = [];
+        const comps = new Set(), favs = new Set(), desp = new Set(),
+              ccs = new Set(), empresas = new Set();
+        // A3: recomputa o índice de busca do zero a cada ingestão (Map paralelo,
+        // nunca no objeto do cache — ele é espalhado pra dentro de writeBatch).
+        _cpBlobBusca.clear();
+        snap.forEach(d => {
+            const reg = { _id: d.id, ...d.data() };
+            const empResolvida = _cpResolverEmpresaDoReg(reg);
+            if (empResolvida) reg.empresa = empResolvida;
+            regs.push(reg);
+            _cpBlobBusca.set(reg._id, _cpNormalizarBusca(
+                (reg.entidade || '') + ' ' +
+                (reg.codigo_fornecedor != null ? reg.codigo_fornecedor : '') + ' ' +
+                (reg.categoria || '') + ' ' +
+                (reg.observacao || '')
+            ));
+            const comp = fmtCompetenciaBR(reg);
+            if (comp) comps.add(comp);
+            if (reg.entidade)     favs.add(reg.entidade);
+            if (reg.categoria)    desp.add(reg.categoria);
+            if (reg.centro_custo) ccs.add(reg.centro_custo);
+            if (empResolvida) empresas.add(empResolvida);
         });
+        cacheRegistros = regs;
+        window._cpDiag.docs = regs.length;
+        // Renderiza JÁ — os filtros atuais (ou os restaurados via sessionStorage)
+        // operam sobre cacheRegistros independente de qual <option> está no DOM.
+        // A paginação estrita de 50 (PAGE_SIZE_CP) limita o DOM ao recorte visível.
+        renderTudo();
+        _cpAtualizarUICarregarMais();
+        // OS-CP-FILTROS-BASE-COMPLETA-01: a restauração de filtros virou função
+        // própria (`_cpTentarRestaurarFiltros`), adiável até os cadastros chegarem.
+        _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresas, _cpTentarRestaurarFiltros);
+        // Auditoria 2026-05-28: closure que re-roda enrich + populator sobre a
+        // cópia mais recente do cache. O listener leve de /Fornecedores a chama
+        // (via _cpAgendarSnapRefresh) pra repopular o dropdown Empresa sem
+        // precisar de uma nova leitura de ContasAPagar.
+        _cpUltimoSnapRefresh = () => {
+            const empresasReenriq = new Set();
+            for (const r of cacheRegistros) {
+                const e = _cpResolverEmpresaDoReg(r);
+                if (e) {
+                    r.empresa = e;
+                    empresasReenriq.add(e);
+                }
+            }
+            _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresasReenriq, _cpTentarRestaurarFiltros);
+            renderTudo();
+        };
+        return regs.length;
+    }
+
+    // ── Carga total cache-first (A2) ───────────────────────────────────────
+    // Query = coleção inteira ordenada por `data_vencimento` desc, SEM range
+    // (índice de campo único automático — nenhum índice composto novo).
+    // Fase 1: getDocsFromCache (IndexedDB) → pintura instantânea e gratuita.
+    // Fase 2: getDocs server em background → reconcilia (fonte da verdade).
+    // Cache frio: fase 1 vazia/erro → fase 2 resolve. Offline: fase 2 falha no
+    // try/catch e mantém o que veio do cache.
+    function _cpQueryBase() {
+        return query(collection(db, COLECAO), orderBy('data_vencimento', 'desc'));
+    }
+    async function _cpAbrirCargaTotal() {
+        const q = _cpQueryBase();
+        let pintouDoCache = false;
+        try {
+            const snapCache = await getDocsFromCache(q);
+            if (!snapCache.empty) {
+                _cpIngerir(snapCache);
+                pintouDoCache = true;
+                const agora = performance.now() - _cpT0;
+                window._cpDiag.t_cachePaint = agora;
+                window._cpDiag.t_cold = agora; // 1º render usável veio do cache
+            }
+        } catch (_) { /* cache frio/indisponível → segue direto pro servidor */ }
+        try {
+            const tS = performance.now();
+            const snapServer = await getDocs(q);
+            _cpIngerir(snapServer);
+            window._cpDiag.t_server = performance.now() - tS;
+            if (window._cpDiag.t_cold == null) window._cpDiag.t_cold = performance.now() - _cpT0;
+        } catch (err) {
+            console.error('[ContasAPagar] carga server falhou:', err?.code || err?.message);
+            if (!pintouDoCache) {
+                cacheRegistros = [];
+                _cpBlobBusca.clear();
+                renderTudo();
+                _cpAtualizarUICarregarMais();
+            }
+            if (window._cpDiag.t_cold == null) window._cpDiag.t_cold = performance.now() - _cpT0;
+        }
+    }
+
+    // ── Refresh pós-escrita (A4) ───────────────────────────────────────────
+    // Sem listener ao vivo, cada caminho de ESCRITA em ContasAPagar re-busca do
+    // servidor pra reconciliar a tela. Chamada ao fim de cada escritor real.
+    async function _cpRecarregar() {
+        try {
+            const snap = await getDocs(_cpQueryBase());
+            _cpIngerir(snap);
+        } catch (err) {
+            console.error('[ContasAPagar] recarregar pós-escrita falhou:', err?.code || err?.message);
+        }
     }
     // Nota auditoria 2026-05-18: o relógio "Última atualização" foi
     // substituído pelo listener em Metadados/UltimaImportacao_CP (mais
@@ -1977,6 +2050,7 @@
                     _btnLimparBuscaCP.classList.toggle('hidden', !_cpTermoBusca);
                 }
                 _cpPage = 1; // recorte mudou → volta pra pág 1.
+                _cpMedirFiltro = true; // F3: cronometra o passe de filtro desta tecla
                 renderTudo();
                 _cpSalvarEstadoFiltros(); // sticky filtros (Frente 1)
             }, 180);
@@ -2129,7 +2203,10 @@
             // Match parcial (case-insensitive + sem acento) em 4 campos:
             // Favorecido, Código, Despesa, Observação. Match em QUALQUER um.
             if (termo) {
-                const blob = _cpNormalizarBusca(
+                // A3 (OS-CP-CARGA-TOTAL-01): blob pré-computado em `_cpBlobBusca`
+                // (Map paralelo), populado uma vez por ingestão. Fallback inline
+                // só se o registro não estiver no Map (defesa; não deve ocorrer).
+                const blob = _cpBlobBusca.get(r._id) ?? _cpNormalizarBusca(
                     (r.entidade || '') + ' ' +
                     (r.codigo_fornecedor != null ? r.codigo_fornecedor : '') + ' ' +
                     (r.categoria || '') + ' ' +
@@ -2146,16 +2223,10 @@
     // Bases com milhares de lançamentos travavam o browser quando renderizavam
     // tudo de uma vez. _cpPage é resetado para 1 sempre que o recorte muda.
     const PAGE_SIZE_CP = 50;
-    // ── Limiares do aviso de Período pesado (OS-CP-FILTROS-BASE-COMPLETA-01) ─
-    // 15.000 = 3x um mês típico (4.700–5.000), então mês normal NUNCA avisa;
-    // Jan/2026, o pior mês da base (11.094), passa com 35% de folga — e esse
-    // volume já é alcançável hoje sem aviso nenhum clicando "Carregar mês
-    // anterior" duas vezes. Acima de 15.000 o passe de filtro cruza ~40 ms e,
-    // com o debounce de 180 ms da busca textual, a digitação engasga de forma
-    // perceptível. CP_LIMITE_AVISO_MESES é o fallback quando a contagem
-    // server-side falha (offline, permissão) — decide pela amplitude do range.
-    const CP_LIMITE_AVISO_PERIODO = 15000; // lançamentos
-    const CP_LIMITE_AVISO_MESES   = 3;     // meses
+    // OS-CP-CARGA-TOTAL-01 (F2): o aviso de Período pesado e seus limiares
+    // (CP_LIMITE_AVISO_*) foram removidos. Com a base inteira em memória, o
+    // Período é só um recorte client-side — nenhuma nova consulta ao servidor,
+    // nada de pré-contar volume para avisar.
     let _cpPage = 1;
     let _cpUltimosFiltrados = [];
     let _renderTudoRaf = 0;
@@ -2173,7 +2244,17 @@
         });
     }
     function _renderTudoSync() {
+        // F3: no caminho da busca, cronometra só o passe de filtro (não o
+        // render inteiro) e mantém a média por tecla em _cpDiag.t_tecla.
+        const _tf = _cpMedirFiltro ? performance.now() : 0;
         const filtrados = aplicarFiltrosCP(cacheRegistros);
+        if (_cpMedirFiltro) {
+            _cpMedirFiltro = false;
+            _cpTeclaSamples.push(performance.now() - _tf);
+            if (_cpTeclaSamples.length > 20) _cpTeclaSamples.shift();
+            window._cpDiag.t_tecla = _cpTeclaSamples.reduce((a, b) => a + b, 0) / _cpTeclaSamples.length;
+            _cpAtualizarHUD();
+        }
         atualizarKPIs(filtrados);
         // Reseta página só quando o recorte mudou tamanho (ou nunca renderizou).
         // Snapshots que não afetam a contagem preservam a página corrente —
@@ -2436,147 +2517,25 @@
     document.getElementById('btn-limpar-filtros-cp').addEventListener('click', () => {
         limparTodosFiltros();
     });
-    // ── Commit do Período (OS-CP-FILTROS-BASE-COMPLETA-01) ─────────────────
-    // Corpo do antigo handler do "Aplicar", extraído sem alteração de regra
-    // para ser reusado pelos DOIS caminhos (aplica direto / aplica depois do
-    // aviso de volume). Zero duplicação: uma única definição de "aplicar um
-    // Período" no arquivo.
+    // ── Commit do Período (OS-CP-CARGA-TOTAL-01, F2) ───────────────────────
+    // Com a carga total, o Período é um recorte PURAMENTE client-side sobre a
+    // base já em memória: grava a fonte canônica `_cpPeriodoComitado`, re-renderiza
+    // (aplicarFiltrosCP lê o novo range no mesmo ciclo, bloco `usaPeriodo`),
+    // persiste o sticky e fecha o modal. Sem re-consultar o servidor, sem tocar
+    // `_cpJanelaIni/Fim` (que só alimentam o rótulo do hint de recorte vazio).
     function _cpComitarPeriodo(ini, fim) {
-        // V3 (2026-05-29): grava na fonte canônica `_cpPeriodoComitado` ANTES
-        // de renderTudo() — assim aplicarFiltrosCP() já enxerga o novo range
-        // no mesmo ciclo.
         _cpPeriodoComitado = { ini: String(ini || ''), fim: String(fim || '') };
-        // Janela server-side (auditoria 2026-06-18): Período definido dispara uma
-        // nova consulta server-side para ESSE intervalo; Período vazio volta ao
-        // default (último mês com dados — OS-CP-ULTIMO-MES-01). Demais dimensões
-        // seguem client-side sobre a janela carregada.
-        if (_cpPeriodoComitado.ini || _cpPeriodoComitado.fim) {
-            _cpJanelaIni = _cpPeriodoComitado.ini;
-            _cpJanelaFim = _cpPeriodoComitado.fim;
-        } else {
-            const mc = _cpJanelaPadraoAtual();
-            _cpJanelaIni = mc.ini;
-            _cpJanelaFim = mc.fim;
-        }
-        _cpAtivarJanela(); // re-assina o listener com a nova janela
         _cpPage = 1; // mudança explícita de recorte → volta pra pág 1.
         renderTudo();
         _cpSalvarEstadoFiltros(); // sticky filtros (Frente 1)
         fecharModal('modal-filtros-cp');
     }
 
-    // Janela EFETIVA que um commit produziria: Período vazio NÃO significa
-    // "toda a base", significa "volta ao mês padrão". Sem isso, limpar o
-    // Período dispararia contagem sobre a coleção inteira e o aviso apareceria
-    // justamente no gesto mais leve da tela.
-    function _cpJanelaAlvoDoPeriodo(ini, fim) {
-        if (ini || fim) return { ini, fim };
-        return _cpJanelaPadraoAtual();
-    }
-
-    // Amplitude em meses de um range ISO (inclusive nas pontas). Range aberto
-    // (sem ini ou sem fim) devolve Infinity — não há como limitar.
-    function _cpMesesEntre(ini, fim) {
-        const a = String(ini || '').match(/^(\d{4})-(\d{2})/);
-        const b = String(fim || '').match(/^(\d{4})-(\d{2})/);
-        if (!a || !b) return Infinity;
-        const ma = parseInt(a[1], 10) * 12 + parseInt(a[2], 10);
-        const mb = parseInt(b[1], 10) * 12 + parseInt(b[2], 10);
-        return Math.abs(mb - ma) + 1;
-    }
-
-    // Estado do aviso de Período pesado. `_cpPeriodoPendente` guarda o que o
-    // operador pediu enquanto ele decide; `_cpContagemEmVoo` blinda o
-    // duplo-clique no "Aplicar" durante a contagem.
-    let _cpPeriodoPendente = null;
-    let _cpContagemEmVoo = false;
-
-    function _cpAbrirAvisoPeriodoPesado(n, alvo) {
-        const corpo = document.getElementById('cp-aviso-periodo-corpo');
-        if (corpo) {
-            const fecho = 'Você pode continuar assim mesmo ou voltar e encurtar o intervalo.';
-            const forte = (txt) => `<strong class="font-extrabold tabular-nums text-secondary">${txt}</strong>`;
-            if (n != null) {
-                corpo.innerHTML = `O intervalo escolhido carrega ${forte(Number(n).toLocaleString('pt-BR'))} lançamentos. `
-                    + `Períodos longos deixam a tabela e os KPIs mais lentos para abrir e rolar. ${fecho}`;
-            } else {
-                // Degradação: a contagem falhou, então o aviso sai SEM número e
-                // fala em amplitude — nunca inventa um total.
-                const meses = _cpMesesEntre(alvo.ini, alvo.fim);
-                corpo.innerHTML = Number.isFinite(meses)
-                    ? `Este período abrange ${forte(meses)} meses e pode deixar a tela lenta. ${fecho}`
-                    : `Este período está sem data de início ou de fim e pode deixar a tela lenta. ${fecho}`;
-            }
-        }
-        abrirModal('modal-cp-periodo-pesado');
-    }
-
-    function _cpFecharAvisoPeriodoPesado() {
-        // "Ajustar período" / overlay: NADA é aplicado. `_cpPeriodoComitado` e
-        // a janela ficam como estavam e o "Filtrar Base" continua aberto com
-        // as datas digitadas, para o operador só encurtar o intervalo.
-        fecharModal('modal-cp-periodo-pesado');
-        _cpPeriodoPendente = null;
-        const inpFim = document.getElementById('cp-filtro-periodo-fim');
-        if (inpFim) { try { inpFim.focus(); } catch (_) {} }
-    }
-
-    document.getElementById('btn-filtros-cp-aplicar').addEventListener('click', async () => {
+    document.getElementById('btn-filtros-cp-aplicar').addEventListener('click', () => {
         const _inpIni = document.getElementById('cp-filtro-periodo-ini');
         const _inpFim = document.getElementById('cp-filtro-periodo-fim');
-        const novoIni = String(_inpIni?.value || '');
-        const novoFim = String(_inpFim?.value || '');
-        const alvo = _cpJanelaAlvoDoPeriodo(novoIni, novoFim);
-        // A janela server-side não muda (só mexeram nas outras dimensões, que
-        // são client-side): aplica na hora, exatamente como antes desta OS.
-        if (alvo.ini === _cpJanelaIni && alvo.fim === _cpJanelaFim) {
-            _cpComitarPeriodo(novoIni, novoFim);
-            return;
-        }
-        if (_cpContagemEmVoo) return; // guard anti-duplo-clique
-        const btn = document.getElementById('btn-filtros-cp-aplicar');
-        const rotuloOriginal = btn ? btn.textContent : '';
-        _cpContagemEmVoo = true;
-        if (btn) { btn.disabled = true; btn.textContent = 'Conferindo volume…'; }
-        let n = null;
-        try {
-            // Agregação server-side: devolve só a contagem, não baixa doc
-            // nenhum. Mesmo range do listener (`_cpConstraintsRange`), sem
-            // orderBy — desigualdade num único campo, servida pelo índice de
-            // campo único automático.
-            const snapCount = await getCountFromServer(
-                query(collection(db, COLECAO), ..._cpConstraintsRange(alvo.ini, alvo.fim))
-            );
-            n = snapCount.data().count;
-        } catch (err) {
-            // Degradação, nunca travar o filtro do operador.
-            console.warn('[GerenciadorCP] contagem de pré-voo do Período falhou:', err?.code || err?.message);
-            n = null;
-        } finally {
-            _cpContagemEmVoo = false;
-            if (btn) { btn.disabled = false; btn.textContent = rotuloOriginal; }
-        }
-        const pesado = (n != null)
-            ? (n > CP_LIMITE_AVISO_PERIODO)
-            : (_cpMesesEntre(alvo.ini, alvo.fim) > CP_LIMITE_AVISO_MESES);
-        if (!pesado) {
-            _cpComitarPeriodo(novoIni, novoFim);
-            return;
-        }
-        _cpPeriodoPendente = { ini: novoIni, fim: novoFim, n };
-        _cpAbrirAvisoPeriodoPesado(n, alvo);
+        _cpComitarPeriodo(String(_inpIni?.value || ''), String(_inpFim?.value || ''));
     });
-
-    // Decisão do aviso de Período pesado. Overlay tem handler PRÓPRIO (não
-    // usa data-modal-overlay) pra sempre limpar `_cpPeriodoPendente`.
-    document.getElementById('btn-cp-aviso-periodo-continuar').addEventListener('click', () => {
-        const pend = _cpPeriodoPendente;
-        _cpPeriodoPendente = null;
-        fecharModal('modal-cp-periodo-pesado');
-        if (pend) _cpComitarPeriodo(pend.ini, pend.fim);
-    });
-    document.getElementById('btn-cp-aviso-periodo-ajustar').addEventListener('click', _cpFecharAvisoPeriodoPesado);
-    document.getElementById('cp-aviso-periodo-overlay').addEventListener('click', _cpFecharAvisoPeriodoPesado);
 
     // Período (Vencimento) V3 — auditoria 2026-05-29. Reincorporado ao modal
     // "Filtrar Base" como seção dedicada full-width. Fluxo:
@@ -2597,19 +2556,6 @@
             if (inpIni) inpIni.value = _cpPeriodoComitado.ini || '';
             if (inpFim) inpFim.value = _cpPeriodoComitado.fim || '';
         });
-    }
-
-    // ── Carregar Mais (auditoria 2026-06-18): estende a janela 1 mês p/ trás ─
-    {
-        const _btnCarregarMais = document.getElementById('cp-btn-carregar-mais');
-        if (_btnCarregarMais) {
-            _btnCarregarMais.addEventListener('click', () => {
-                // Recua o limite inferior em 1 mês e mantém o teto atual.
-                // Se não havia teto (já era "toda a base"), nada a fazer.
-                _cpJanelaIni = _cpRecuarIniUmMes();
-                _cpAtivarJanela(); // re-assina o listener com a janela ampliada
-            });
-        }
     }
 
     // ── Paginação CP — handlers (auditoria 2026-05-18, V5 ganhou First/Last) ─
@@ -2851,6 +2797,7 @@
                 mostrarToast(`${aplicados} lançamento(s) atualizados com sucesso.`, 'check_circle');
                 _cpSelecao.clear();
                 _cpAtualizarUIBulk();
+                await _cpRecarregar(); // A4: sem listener ao vivo, re-busca pós-escrita
             } else {
                 // Não-super_admin (master/comum): 1 solicitação UPDATE por fatura.
                 // As rules da /CP_SolicitacoesAprovacao exigem solicitado_por_email
@@ -4207,6 +4154,9 @@
                 partes.push(`📉 ${deducoes} dedução(ões) negativa(s) aplicada(s) algébricamente`);
             }
             mostrarToast(partes.join(' · '), 'check_circle');
+            // A4: importação (e o "Substituir Lote" que deleta antes) grava em
+            // ContasAPagar; sem listener ao vivo, re-busca pra refletir na tela.
+            await _cpRecarregar();
         } catch (err) {
             console.error('[GerenciadorCP] gravação falhou:', err);
             const motivo = err?.code === 'permission-denied'
@@ -5173,6 +5123,9 @@
             mostrarToast(msgFinal, 'check_circle');
             fecharModal('modal-editar-fatura-cp');
             _cpEditFaturaId = null;
+            // A4: updateDoc + projeção de recorrência gravaram em ContasAPagar;
+            // sem listener ao vivo, re-busca pra refletir na tela.
+            await _cpRecarregar();
             } // fim else _isSuperAdmin
         } catch (err) {
             console.error('[CP editar] updateDoc falhou:', err);
@@ -5240,6 +5193,7 @@
                     _cpSelecao.clear();
                     _cpAtualizarUIBulk();
                     mostrarToast(`${apagados} lançamento(s) excluído(s).`, 'check_circle');
+                    await _cpRecarregar(); // A4: re-busca pós-exclusão em massa
                 }
             } else {
                 if (!_isSuperAdmin) {
@@ -5257,6 +5211,7 @@
                 } else {
                     await deleteDoc(doc(db, COLECAO, _cpDeleteFaturaId));
                     mostrarToast('Lançamento excluído.', 'check_circle');
+                    await _cpRecarregar(); // A4: re-busca pós-exclusão individual
                 }
             }
             fecharModal('modal-confirmar-delete-fatura-cp');
