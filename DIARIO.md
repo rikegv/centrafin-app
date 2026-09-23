@@ -5,6 +5,34 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-23 — PONTO DE RETOMADA (fim de sessao, tudo validado e em producao)
+
+> Sessao encerrada pelo diretor com tudo certo. Estado autossuficiente abaixo.
+
+**Em producao (https://centra-fin.web.app), deployado hoje pelo gate:**
+- **OS-CP-CARGA-RECENCIA-01** (Contas a Pagar): carga por recencia + cache proprio
+  em IndexedDB. Validada no preview pelo diretor (onda1 <~5s, refresh quase
+  instantaneo). Ver a entrada "saga da carga" abaixo. Arquivos 200 conferidos.
+- **OS-GATE-DEPLOY-01**: o gate de deploy passou a funcionar de verdade (hook
+  PreToolUse). Este foi o 1o deploy real que passou por ele, e liberou correto.
+
+**Branch de trabalho:** `feature/cp-carga-total` (pushado em origin). Contem, alem
+da carga do CP: o gate (OS-GATE-DEPLOY-01), o modelo de 6 agentes + CLAUDE.md nova,
+e a base CP filtros (da6b1c0). A flag `READY_cp-carga-total` ja foi removida (commit
+`75c8adc`, LOCAL: o gate barra push sem flag, entao sincroniza no proximo push
+gated/merge; origin ainda tem o arquivo da flag, nao levar no merge).
+
+**Pendencias para o diretor decidir (nada bloqueado):**
+1. **Mergear `feature/cp-carga-total` -> `main`** quando quiser: producao serve o
+   codigo desse branch, mas `main` nao reflete. E um merge grande (gate + agentes +
+   CP filtros + saga de carga). Decisao do diretor.
+2. **Faturamento** tem a MESMA pendencia de carga (base grande). Aplicar o padrao
+   que resolveu o CP: memory cache + recencia (`limit`) + cache proprio em IndexedDB
+   (NAO `persistentLocalCache`). Ver a entrada da saga e a regra permanente abaixo.
+3. `main`/`master` estrito no gate: OS separada ja registrada (OS-GATE-DEPLOY-01).
+
+---
+
 ## 2026-09-23 — Contas a Pagar: a saga da carga (total → duas ondas → RECENCIA + cache proprio)
 
 Frente longa, em tres OS encadeadas na branch `feature/cp-carga-total`, sobre a
