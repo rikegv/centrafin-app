@@ -5,6 +5,70 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-23 — OS-GATE-DEPLOY-01: o gate de deploy amarrado de verdade
+
+**Achado que originou a OS:** o gate de deploy NUNCA esteve amarrado. Nao havia
+hook `PreToolUse` no `.claude/settings.json`, e o `.claude/settings.local.json`
+tinha `firebase deploy *`, `git push *`, `npx firebase *` e 3x
+`PowerShell(firebase deploy ...)` na allowlist. Ou seja, apesar de a constituicao
+afirmar o contrario, o deploy estava LIBERADO, nao travado. A constituicao
+descrevia uma trava que nunca existiu na pratica.
+
+**O que foi feito (branch `feature/gate-deploy`):**
+1. Hook `PreToolUse` registrado no `.claude/settings.json`, matcher `Bash|PowerShell`
+   -> `node scripts/gate-deploy.js`. Cobre a rota de escape via ferramenta PowerShell.
+2. Allowlist do `settings.local.json` limpa (removidas as entradas de deploy/push).
+   Observacao: `settings.local.json` e gitignored (config local de maquina), entao a
+   limpeza vive localmente e nao e versionada; o hook roda independente da allowlist.
+3. `scripts/gate-deploy.js` reescrito: cabecalho migrado para o modelo de 6 papeis
+   (sem `deployer`/`testador-auditor`); passou a exigir flag `READY_*`
+   CORRESPONDENTE ao branch (nao qualquer flag acumulada); cobre
+   `firebase hosting:channel:deploy`.
+4. 28 flags `READY_*` antigas acumuladas foram APAGADAS (o fluxo manda remover apos
+   o push; nunca eram removidas, e por isso o gate de "qualquer flag" nunca barrava).
+
+**As 8 rotas de escape que a seguranca fechou (auditoria adversarial, veto + re-audit):**
+- G1: `git -C <dir> push` e `git --work-tree=... push` furavam o regex de adjacencia.
+  Corrigido para `\bgit\b[^\n]*\bpush\b` / `\bfirebase\b[^\n]*\bdeploy\b`.
+- G2: crash do proprio hook = fail-open (deploy passava). Corrigido: `main()` em
+  try/catch com `process.exit(2)` (fail-closed).
+- G3: se `git` falhava, caia no modo permissivo (qualquer flag). Corrigido: branch
+  indetectavel/HEAD destacado/slug curto agora BLOQUEIA (fail-closed).
+- G4: verbo escondido dentro de arquivo (`bash deploy.sh`) nao e interceptado.
+  RESIDUAL DOCUMENTADO e aceito (fora do threat model; deploy do CentraFin e sempre
+  firebase CLI + git direto). Documentado no cabecalho do script.
+- G5: deploy via REST (`firebasehosting.googleapis.com`) e `gh workflow/release`
+  nao eram cobertos. Adicionados ao padrao.
+- G6: match de slug bidirecional afrouxava (flag curta `READY_gate` liberava branch
+  `gate-deploy`). Corrigido: `fs2 === slug || fs2.includes(slug)` (a flag tem que
+  ser tao especifica quanto o branch).
+- G7: quebra de linha (`firebase \<nl> deploy`) furava. Corrigido: normaliza
+  continuacao de linha antes do teste.
+- G8: o hook dispara em Bash de SUBAGENTE? PROVADO empiricamente (um subagente rodou
+  `echo "... firebase deploy ..."` e foi bloqueado). Subagente nao e rota de escape.
+
+**Prova (tester 7/7 independente + regressao pos-patch, repo git temporario isolado):**
+A (suja+sem flag)=BLOQ; B (limpa+sem flag / so flag de outra frente)=BLOQ;
+C (limpa+flag correspondente)=LIBERA; D (`hosting:channel:deploy` sem flag)=BLOQ,
+com flag=LIBERA; benigno=LIBERA sempre. Sem ReDoS.
+
+**Decisoes do diretor (2026-09-23):**
+1. Limpeza das 28 flags antigas: APROVADA (feita nesta OS).
+2. `main`/`master` estrito: DEFERIDO para OS separada (hoje, em `main`/`master`, o gate
+   fica permissivo e qualquer flag existente libera; corretamente cercado e documentado).
+3. Atrito fail-closed (comando read-only que so CITA "git...push"/"firebase...deploy"
+   na mesma linha e bloqueado): ACEITO como esta (ruido seguro, direcao correta).
+
+**PENDENCIA REGISTRADA:** OS futura para apertar o deploy a partir de `main`/`master`
+(unico buraco conhecido remanescente, hoje contido e documentado). Recomendacao adicional
+surgida na execucao: avaliar tornar `.claude/state/` gitignored, para a flag ser estado
+local (nasce/morre sem commit) e nunca mais acumular no versionado.
+
+**Primeiro teste real do gate:** o proprio `git push` desta OS passou pelo gate novo
+(arvore limpa + flag `READY_gate-deploy` = liberou). Gate provado no uso real.
+
+---
+
 ## 2026-09-11 — PONTO DE RETOMADA (sessão interrompida pelo diretor)
 
 > **Para retomar: leia esta entrada inteira. Ela é autossuficiente.**
