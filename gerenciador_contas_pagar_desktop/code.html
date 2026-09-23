@@ -279,12 +279,13 @@
                 <span>Aguardando sincronização…</span>
             </span>
             <span id="cp-hint-recorte" class="text-[11px] font-bold text-slate-400">Mostrando todos os registros</span>
-            <!-- Aviso discreto da 2ª onda (OS-CP-CARGA-DUAS-ONDAS-01, F1). Nasce
-                 oculto; um poller leve o mostra enquanto window._cpOnda2EmCurso
-                 for true e o esconde ao concluir. Frase de apoio, minúscula. -->
+            <!-- Aviso discreto da carga de fundo (OS-CP-CARGA-RECENCIA-01). Nasce
+                 oculto; um poller leve o mostra enquanto window._cpBackgroundEmCurso
+                 for true (carrega o restante da base em background) e o esconde ao
+                 concluir. Frase de apoio, minúscula. -->
             <span id="cp-onda2-aviso" class="hidden inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
                 <span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
-                <span>carregando anos anteriores...</span>
+                <span>carregando restante...</span>
             </span>
         </section>
 
@@ -956,17 +957,17 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import {
-        initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-        collection, addDoc, doc, getDoc, getDocs, getDocsFromCache, onSnapshot,
+        initializeFirestore, memoryLocalCache,
+        collection, addDoc, doc, getDoc, getDocs, onSnapshot,
         writeBatch, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy,
         // Auditoria 2026-05-29: validador de duplicidade de lote precisa de
         // where/limit pra consultar `arquivo_hash` antes do writeBatch.
-        // OS-CP-ULTIMO-MES-01: `startAfter` pagina a varredura que descobre o
-        // último mês COM DADOS na abertura da tela.
-        // OS-CP-CARGA-TOTAL-01 (C1): `terminate` + `clearIndexedDbPersistence`
-        // zeram a persistência local (IndexedDB, ~51k lançamentos) no logout,
-        // pra não deixar dado pessoal de fornecedor no disco da estação.
-        where, limit, startAfter, terminate, clearIndexedDbPersistence, connectFirestoreEmulator
+        // OS-CP-CARGA-RECENCIA-01: `startAfter` pagina a carga do RESTANTE da base
+        // (recência desc) em chunks; `limit` recorta cada fatia. A persistência do
+        // Firestore (IndexedDB) foi trocada por memoryLocalCache — o cache próprio
+        // da app (centrafin_cp_cache) substitui o cache-first do SDK, então
+        // `terminate`/`clearIndexedDbPersistence`/`getDocsFromCache` saíram.
+        where, limit, startAfter, connectFirestoreEmulator
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut, connectAuthEmulator, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { renderSidebar } from "../sidebar.js";
@@ -981,13 +982,12 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    // OS-CP-CARGA-TOTAL-01 (A1): cache local PERSISTENTE (IndexedDB) com
-    // gerenciador multi-aba. Multi-aba de propósito — o `persistentSingleTabManager`
-    // lança failed-precondition na 2ª aba do CP (o operador costuma abrir vários
-    // módulos). Habilita a abertura cache-first (getDocsFromCache) da carga total.
-    const db = initializeFirestore(app, {
-        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-    });
+    // OS-CP-CARGA-RECENCIA-01: cache local EM MEMÓRIA. O cache persistente do
+    // Firestore (IndexedDB) foi abandonado — com 51.864 docs 100% do ano vigente,
+    // a hidratação cache-first do SDK deixou de compensar. Em seu lugar, a app tem
+    // um cache PRÓPRIO (centrafin_cp_cache, item 7) que guarda o snapshot já
+    // processado e o blob de busca, hidrata na abertura e reconcilia em background.
+    const db = initializeFirestore(app, { localCache: memoryLocalCache() });
     const auth = getAuth(app);
     // Emulador local (detecção automática — seguro em produção)
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
@@ -995,18 +995,19 @@
       try { connectAuthEmulator(auth, 'http://localhost:9099'); } catch(e) {}
     }
 
-    // ── Instrumentação de carga (OS-CP-CARGA-TOTAL-01) ──────────────────────
+    // ── Instrumentação de carga (OS-CP-CARGA-RECENCIA-01) ───────────────────
     // A camada de dados PRODUZ os tempos; o HUD do frontend só os LÊ. Todos em
-    // ms via performance.now(): t_cold = módulo→1º render usável; t_cachePaint =
-    // render vindo do getDocsFromCache; t_server = duração do getDocs de servidor;
-    // docs = nº de lançamentos carregados.
+    // ms via performance.now():
+    //   t_onda1     = módulo→render usável da carga por recência (limit N mais
+    //                 recentes) numa abertura SEM cache próprio;
+    //   t_background = duração da carga do RESTANTE da base (chunks startAfter);
+    //   t_refresh   = módulo→render usável quando o cache PRÓPRIO hidratou (2º
+    //                 acesso), medido antes do reconcile de servidor;
+    //   docs_onda1  = nº de docs da 1ª leitura por recência;
+    //   docs        = total de docs em memória (atualizado ao fim do background);
+    //   t_tecla     = latência média do filtro no caminho da busca.
     const _cpT0 = performance.now();
-    // OS-CP-CARGA-DUAS-ONDAS-01: t_onda1 = módulo→render usável da onda 1 (ano
-    // vigente); t_onda2 = fim-onda1→onda 2 mergeada (anos anteriores); t_refresh =
-    // duração do refresh de servidor quando o cache já pintou (2º acesso);
-    // mecanismo = 'firestore-cache' | 'server' (origem do 1º render). A camada de
-    // dados PRODUZ os números; o HUD do frontend só os LÊ.
-    window._cpDiag = { t0: _cpT0, t_cold: null, t_cachePaint: null, t_server: null, docs: 0, t_tecla: null, t_onda1: null, t_onda2: null, t_refresh: null, mecanismo: null };
+    window._cpDiag = { t0: _cpT0, t_onda1: null, t_background: null, t_refresh: null, docs_onda1: 0, docs: 0, t_tecla: null };
 
     // ── HUD de diagnóstico (OS-CP-CARGA-TOTAL-01, F3) ───────────────────────
     // Nasce OCULTO; só liga com `?diag=1` na URL. Exibe SOMENTE métricas
@@ -1031,15 +1032,19 @@
         const el = document.getElementById('cp-diag-body');
         if (!el) return;
         const d = window._cpDiag || {};
-        // F3: os 5 números que o diretor mede + docs. SOMENTE tempo, contagem,
-        // heap e mecanismo — nenhum campo de lançamento (condição C-LOG da
-        // Segurança). Placeholder n/d (sem travessão).
+        // Os números que o diretor mede. SOMENTE tempo, contagem e heap —
+        // nenhum campo de lançamento (condição C-LOG da Segurança). Placeholder
+        // n/d (sem travessão).
+        //   onda1      = 1ª pintura por recência (sem cache);
+        //   background = duração da carga do restante da base;
+        //   refresh    = 1ª pintura quando hidratou do cache próprio (2º acesso);
+        //   docs       = docs da 1ª leitura / total em memória.
         const linhas = [
-            `onda1:   ${_cpFmtMsDiag(d.t_onda1)}`,
-            `onda2:   ${_cpFmtMsDiag(d.t_onda2)}`,
-            `refresh: ${_cpFmtMsDiag(d.t_refresh)} ${d.mecanismo || 'n/d'}`,
-            `tecla:   ${d.t_tecla == null ? 'n/d' : d.t_tecla.toFixed(1) + ' ms'}`,
-            `docs:    ${(d.docs || 0).toLocaleString('pt-BR')}`,
+            `onda1:      ${_cpFmtMsDiag(d.t_onda1)}`,
+            `background: ${_cpFmtMsDiag(d.t_background)}`,
+            `refresh:    ${_cpFmtMsDiag(d.t_refresh)}`,
+            `docs:       ${(d.docs_onda1 || 0).toLocaleString('pt-BR')} / ${(d.docs || 0).toLocaleString('pt-BR')}`,
+            `tecla:      ${d.t_tecla == null ? 'n/d' : d.t_tecla.toFixed(1) + ' ms'}`,
         ];
         // performance.memory só existe em Chrome/Edge; guarda contra ausência.
         const mem = performance.memory;
@@ -1056,18 +1061,18 @@
         _cpAtualizarHUD();
     }
 
-    // ── F1: aviso discreto da 2ª onda (OS-CP-CARGA-DUAS-ONDAS-01) ────────────
-    // O backend expõe só o boolean fire-and-forget `window._cpOnda2EmCurso`.
+    // ── aviso discreto da carga de fundo (OS-CP-CARGA-RECENCIA-01) ───────────
+    // O backend expõe só o boolean fire-and-forget `window._cpBackgroundEmCurso`.
     // Um poller leve liga/desliga a visibilidade do aviso e PARA de checar
-    // quando a onda 2 conclui — detectada por `_cpDiag.t_onda2 != null`, que o
-    // backend grava no finally de _cpDispararOnda2 (sinal durável, imune a
-    // perder a janela do boolean se a onda for muito rápida).
-    (function _cpVigiarOnda2() {
+    // quando a carga do restante conclui — detectada por `_cpDiag.t_background
+    // != null`, que o backend grava no finally da carga de fundo (sinal
+    // durável, imune a perder a janela do boolean se a carga for muito rápida).
+    (function _cpVigiarBackground() {
         const aviso = document.getElementById('cp-onda2-aviso');
         if (!aviso) return;
         const timer = setInterval(() => {
-            const emCurso = window._cpOnda2EmCurso === true;
-            const concluida = window._cpDiag && window._cpDiag.t_onda2 != null;
+            const emCurso = window._cpBackgroundEmCurso === true;
+            const concluida = window._cpDiag && window._cpDiag.t_background != null;
             if (emCurso) {
                 aviso.classList.remove('hidden');
             } else {
@@ -1077,12 +1082,14 @@
         }, 300);
     })();
 
-    // ── C1 (OS-CP-CARGA-TOTAL-01, LGPD) ─────────────────────────────────────
-    // A carga total deixa ~51k lançamentos (dado pessoal de fornecedor) no
-    // IndexedDB da estação. Ao sair, zera a persistência local ANTES do
-    // redirect. try/catch pra o logout NUNCA travar se a limpeza falhar.
+    // ── C1 (OS-CP-CARGA-RECENCIA-01, LGPD) ──────────────────────────────────
+    // A carga por recência deixa ~52k lançamentos (dado pessoal de fornecedor) no
+    // cache PRÓPRIO da app (centrafin_cp_cache, IndexedDB). Ao sair, apaga esse DB
+    // ANTES do redirect. O cache do SDK agora é só em memória (memoryLocalCache),
+    // então não sobra nada dele no disco. try/catch pra o logout NUNCA travar se a
+    // limpeza falhar (_cpCacheApagar já é blindado, mas dobra a guarda aqui).
     async function _cpLimparCacheLocal() {
-        try { await terminate(db); await clearIndexedDbPersistence(db); } catch (e) {}
+        try { await _cpCacheApagar(); } catch (e) {}
     }
     // C1 (LGPD): expoe a limpeza para o sidebar.js chamar em QUALQUER caminho de
     // logout (botao Sair, guarda de inatividade), nao so nos guard-rails de auth
@@ -1098,6 +1105,13 @@
     // query da onda 2 e atualizarKPIs(). NÃO usar Date/parseDataLocal para este corte.
     const CP_ANO_VIGENTE = new Date().getFullYear();
     const CP_LIMIAR_ANO = `${CP_ANO_VIGENTE}-01-01`;
+    // OS-CP-CARGA-RECENCIA-01: a base é 100% do ano vigente, então o corte por ano
+    // deixou de particionar nada. A carga passa a ser por RECÊNCIA: a 1ª leitura
+    // traz os N docs mais recentes (data_vencimento desc) para render imediato, e o
+    // RESTANTE vem em chunks de N via startAfth em background. N é calibrável — o
+    // tester ajusta pela medição (t_onda1 × volume pintado).
+    const CP_LIMIT_RECENCIA = 5000;   // 1ª onda: docs mais recentes p/ render usável
+    const CP_CHUNK_RESTANTE = 5000;   // tamanho de cada fatia da carga de fundo
     const COLECAO_FORN = 'Fornecedores';
     // Auditoria 2026-05-15: CP_Base_Despesas substitui CP_BaseMestra como
     // dicionário "Despesa → Per.Evento + Per.Valor". A classificação agora
@@ -1286,6 +1300,18 @@
     // writeBatch (edição/recorrência) e o blob vazaria pro Firestore.
     const _cpBlobBusca = new Map(); // _id → blob normalizado de busca
 
+    // OS-CP-CARGA-RECENCIA-01: cursor do startAfter para paginar o RESTANTE da
+    // base. É o ÚLTIMO QueryDocumentSnapshot da leitura mais recente (NÃO o objeto
+    // reg do cache), atualizado por _cpIngerir e por cada chunk de _cpCarregarRestante.
+    let _cpUltimoDocRecencia = null;
+    // Millis do último ETL (Metadados/UltimaImportacao_CP), alimentado pelo listener
+    // via .toMillis(). Gravado como `stamp` no cache próprio (diagnóstico/versão).
+    // NÃO faz short-circuit: a hidratação do cache é SEMPRE seguida de reconcile
+    // server-autoritativo, de propósito, porque edições/exclusões pontuais de
+    // outros usuários NÃO bumpam o stamp do ETL, e só o reconcile as pega.
+    // Fallback Date.now() se o listener ainda não emitiu.
+    let _cpEtlStamp = null;
+
     // OS-CP-CARGA-DUAS-ONDAS-01: sinal para o frontend. Quando o merge da onda 2
     // (append) muda o tamanho de `filtrados`, `_renderTudoSync` normalmente zera
     // `_cpPage`. Para não jogar o operador pra página 1 no meio da navegação, a
@@ -1443,7 +1469,7 @@
         // memória — nada a re-buscar no servidor.
         if (!_cpCargaAberta) {
             _cpCargaAberta = true;
-            _cpAbrirDuasOndas();
+            _cpAbrirCargaRecencia();
         } else {
             _cpPage = 1;
             renderTudo();
@@ -1624,7 +1650,7 @@
 
     // ── Ingestão (OS-CP-CARGA-TOTAL-01, A2/A3) ─────────────────────────────
     // Corpo do antigo callback do onSnapshot, extraído para função pura de
-    // ingestão. Recebe um QuerySnapshot (de getDocsFromCache OU getDocs) e faz
+    // ingestão. Recebe um QuerySnapshot (de qualquer getDocs de recência) e faz
     // o single-pass: monta cacheRegistros + os 5 Sets de filtro + o Map paralelo
     // de blob de busca (A3) + render + populator de dropdowns.
     // Frente 1 (2026-05-20): extrai também `empresa` (vazia tolerada). Auditoria
@@ -1659,6 +1685,12 @@
                 (reg.observacao || '')
             ));
         });
+        // OS-CP-CARGA-RECENCIA-01: guarda o ÚLTIMO snapshot desta leitura como
+        // cursor do próximo startAfter. É o QueryDocumentSnapshot (não o `reg`), o
+        // único aceito por startAfter. Snapshot vazio preserva o cursor anterior.
+        if (snap && snap.docs && snap.docs.length) {
+            _cpUltimoDocRecencia = snap.docs[snap.docs.length - 1] || _cpUltimoDocRecencia;
+        }
         cacheRegistros = ehAppend ? cacheRegistros.concat(regs) : regs;
         // Recomputa os 5 Sets sobre o cache INTEIRO (obrigatório no append; no
         // replace o cache == regs, então é o mesmo resultado). A resolução de
@@ -1706,104 +1738,204 @@
         return regs.length;
     }
 
-    // ── Carga em DUAS ONDAS cache-first (OS-CP-CARGA-DUAS-ONDAS-01) ─────────
-    // O corte é `data_vencimento` (string ISO) contra CP_LIMIAR_ANO. As duas
-    // queries usam RANGE + orderBy no MESMO campo → índice de campo único
-    // automático, NENHUM índice composto novo. Ranges DISJUNTAS ('>=' e '<').
-    //   Onda 1 = ano vigente (data_vencimento >= CP_LIMIAR_ANO) — pinta primeiro.
-    //   Onda 2 = anos anteriores (data_vencimento <  CP_LIMIAR_ANO) — background.
-    function _cpQueryAno() {
+    // ── Carga por RECÊNCIA (OS-CP-CARGA-RECENCIA-01) ───────────────────────
+    // A base é 100% ano vigente → o corte por ano deixou de particionar. Ordena
+    // por `data_vencimento desc` e pagina: 1ª leitura = N mais recentes (render
+    // usável); RESTANTE = chunks de N via startAfter, em background. orderBy +
+    // limit + startAfter no MESMO campo → índice de campo único automático,
+    // NENHUM índice composto novo.
+    function _cpQueryRecencia() {
         return query(collection(db, COLECAO),
-            where('data_vencimento', '>=', CP_LIMIAR_ANO),
-            orderBy('data_vencimento', 'desc'));
+            orderBy('data_vencimento', 'desc'),
+            limit(CP_LIMIT_RECENCIA));
     }
-    function _cpQueryResto() {
+    function _cpQueryRestante(cursor) {
         return query(collection(db, COLECAO),
-            where('data_vencimento', '<', CP_LIMIAR_ANO),
-            orderBy('data_vencimento', 'desc'));
+            orderBy('data_vencimento', 'desc'),
+            startAfter(cursor),
+            limit(CP_CHUNK_RESTANTE));
     }
-    // Onda 2: anos anteriores, cache-first própria, em modo APPEND e em background
-    // (não bloqueia o render da onda 1). `window._cpOnda2EmCurso` é o sinal que o
-    // frontend lê para mostrar/esconder o aviso discreto de 2ª onda.
-    async function _cpDispararOnda2() {
-        window._cpOnda2EmCurso = true;
-        const tO2 = performance.now(); // início = fim da onda 1
+
+    // ── Cache PRÓPRIO da app (OS-CP-CARGA-RECENCIA-01, IndexedDB) ───────────
+    // Guarda o snapshot JÁ PROCESSADO (cacheRegistros) + o blob de busca sob
+    // CHAVE FIXA, para hidratar a tela em ~1 render no acesso seguinte sem tocar
+    // o servidor. DB próprio, separado do cache do SDK (agora só em memória).
+    // Chave fixa → `put` sempre sobrescreve, nunca duplica. `stamp` = millis do
+    // último ETL; o reconcile/recarga regrava com o stamp corrente. Cache é
+    // otimização: TODA falha é engolida, nunca quebra a tela nem o logout.
+    const CP_CACHE_DB = 'centrafin_cp_cache';
+    const CP_CACHE_STORE = 'snapshot';
+    const CP_CACHE_KEY = 'contasapagar';
+    function _cpCacheAbrir() {
+        return new Promise((resolve, reject) => {
+            let req;
+            try { req = indexedDB.open(CP_CACHE_DB, 1); }
+            catch (e) { return reject(e); }
+            req.onupgradeneeded = () => {
+                const dbc = req.result;
+                if (!dbc.objectStoreNames.contains(CP_CACHE_STORE)) dbc.createObjectStore(CP_CACHE_STORE);
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+    async function _cpCacheLer() {
         try {
+            const dbc = await _cpCacheAbrir();
+            const val = await new Promise((resolve) => {
+                let r;
+                try { r = dbc.transaction(CP_CACHE_STORE, 'readonly').objectStore(CP_CACHE_STORE).get(CP_CACHE_KEY); }
+                catch (_) { return resolve(null); }
+                r.onsuccess = () => resolve(r.result || null);
+                r.onerror = () => resolve(null);
+            });
+            try { dbc.close(); } catch (_) {}
+            return val;
+        } catch (_) { return null; }
+    }
+    async function _cpCacheGravar(stamp, registros, blob) {
+        try {
+            const dbc = await _cpCacheAbrir();
+            await new Promise((resolve) => {
+                let tx;
+                try { tx = dbc.transaction(CP_CACHE_STORE, 'readwrite'); }
+                catch (_) { return resolve(); }
+                try { tx.objectStore(CP_CACHE_STORE).put({ stamp, registros, blob }, CP_CACHE_KEY); }
+                catch (_) { return resolve(); }
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => resolve();
+                tx.onabort = () => resolve();
+            });
+            try { dbc.close(); } catch (_) {}
+        } catch (_) { /* cache é otimização — falha nunca quebra a tela */ }
+    }
+    function _cpCacheApagar() {
+        return new Promise((resolve) => {
             try {
-                const snapCache = await getDocsFromCache(_cpQueryResto());
-                if (!snapCache.empty) _cpIngerir(snapCache, 'append');
-            } catch (_) { /* cache frio → segue pro servidor */ }
-            const snapServer = await getDocs(_cpQueryResto());
-            _cpIngerir(snapServer, 'append');
-        } catch (err) {
-            // Offline/erro: mantém o que veio do cache da própria onda 2 (se veio).
-            console.error('[ContasAPagar] onda 2 server falhou:', err?.code || err?.message);
-        } finally {
-            window._cpDiag.t_onda2 = performance.now() - tO2;
-            window._cpOnda2EmCurso = false;
+                const req = indexedDB.deleteDatabase(CP_CACHE_DB);
+                req.onsuccess = () => resolve();
+                req.onerror = () => resolve();
+                req.onblocked = () => resolve();
+            } catch (_) { resolve(); }
+        });
+    }
+    // Snapshot serializado do estado atual (mesma forma em toda gravação).
+    function _cpCachePersistir() {
+        return _cpCacheGravar(_cpEtlStamp || Date.now(), cacheRegistros, Array.from(_cpBlobBusca));
+    }
+
+    // Cede o controle entre chunks para o main thread pintar/responder à UI.
+    function _cpCederControle() {
+        return new Promise((resolve) => {
+            if (typeof requestIdleCallback === 'function') requestIdleCallback(() => resolve(), { timeout: 200 });
+            else setTimeout(resolve, 0);
+        });
+    }
+
+    // Pagina o RESTANTE da base a partir de `_cpUltimoDocRecencia`. Cada chunk é
+    // ingerido em APPEND (dedup por _id) e ATUALIZA o cursor (via _cpIngerir).
+    // Para quando um chunk vier < CP_CHUNK_RESTANTE (fim) ou sem cursor.
+    async function _cpPaginarRestante() {
+        while (_cpUltimoDocRecencia) {
+            const chunk = await getDocs(_cpQueryRestante(_cpUltimoDocRecencia));
+            if (chunk.empty) break;
+            _cpIngerir(chunk, 'append'); // atualiza _cpUltimoDocRecencia p/ o próximo
+            if (chunk.size < CP_CHUNK_RESTANTE) break; // última fatia
+            await _cpCederControle();
         }
     }
-    // Onda 1 cache-first; ao resolver o getDocs de SERVIDOR (não o cache-paint),
-    // dispara a onda 2. Offline: o getDocs server falha no try/catch e mantém o
-    // que veio do cache; a onda 2 ainda tenta seu próprio cache.
-    async function _cpAbrirDuasOndas() {
-        let pintouDoCache = false;
+
+    // Carga do RESTANTE em background após a 1ª onda (recência). Sinaliza
+    // `window._cpBackgroundEmCurso` (o frontend lê para o aviso). Ao fim, GRAVA o
+    // store próprio (base completa em memória).
+    async function _cpCarregarRestante() {
+        window._cpBackgroundEmCurso = true;
+        const tBg = performance.now();
         try {
-            const snapCache = await getDocsFromCache(_cpQueryAno());
-            if (!snapCache.empty) {
-                _cpIngerir(snapCache, 'replace');
-                pintouDoCache = true;
-                const agora = performance.now() - _cpT0;
-                window._cpDiag.t_cachePaint = agora;
-                window._cpDiag.t_cold = agora; // 1º render usável veio do cache
-                window._cpDiag.mecanismo = 'firestore-cache';
-            }
-        } catch (_) { /* cache frio/indisponível → segue direto pro servidor */ }
-        try {
-            const tS = performance.now();
-            const snapServer = await getDocs(_cpQueryAno());
-            _cpIngerir(snapServer, 'replace');
-            window._cpDiag.t_server = performance.now() - tS;
-            // 2º acesso: houve cache-paint antes, logo este getDocs é o "refresh".
-            if (pintouDoCache) window._cpDiag.t_refresh = performance.now() - tS;
-            else window._cpDiag.mecanismo = 'server';
-            if (window._cpDiag.t_cold == null) window._cpDiag.t_cold = performance.now() - _cpT0;
-            window._cpDiag.t_onda1 = performance.now() - _cpT0;
+            await _cpPaginarRestante();
         } catch (err) {
-            console.error('[ContasAPagar] onda 1 server falhou:', err?.code || err?.message);
-            if (!pintouDoCache) {
-                cacheRegistros = [];
+            console.error('[ContasAPagar] carga do restante falhou:', err?.code || err?.message);
+        } finally {
+            window._cpDiag.t_background = performance.now() - tBg;
+            window._cpDiag.docs = cacheRegistros.length;
+            window._cpBackgroundEmCurso = false;
+        }
+        await _cpCachePersistir();
+    }
+
+    // Reconcile server-autoritativo após HIDRATAR do cache próprio: recarrega
+    // recência (replace) + restante (append), re-renderiza e regrava o store.
+    async function _cpReconciliar() {
+        window._cpBackgroundEmCurso = true;
+        const tBg = performance.now();
+        try {
+            const snap = await getDocs(_cpQueryRecencia());
+            _cpIngerir(snap, 'replace');
+            await _cpPaginarRestante();
+        } catch (err) {
+            console.error('[ContasAPagar] reconcile falhou:', err?.code || err?.message);
+        } finally {
+            window._cpDiag.t_background = performance.now() - tBg;
+            window._cpDiag.docs = cacheRegistros.length;
+            window._cpBackgroundEmCurso = false;
+        }
+        await _cpCachePersistir();
+    }
+
+    // Abertura: 1) tenta o cache PRÓPRIO (hidrata sem servidor) → reconcilia em
+    // background. 2) Sem cache → carga por recência (render usável) → restante em
+    // background. Offline sem cache: mantém o que tiver, tela renderizável.
+    async function _cpAbrirCargaRecencia() {
+        let hidratou = false;
+        try {
+            const c = await _cpCacheLer();
+            if (c && Array.isArray(c.registros) && c.registros.length) {
+                cacheRegistros = c.registros;
                 _cpBlobBusca.clear();
+                if (Array.isArray(c.blob)) for (const par of c.blob) { if (par) _cpBlobBusca.set(par[0], par[1]); }
                 renderTudo();
                 _cpAtualizarUICarregarMais();
+                window._cpDiag.t_refresh = performance.now() - _cpT0;
+                window._cpDiag.docs = cacheRegistros.length;
+                hidratou = true;
             }
-            if (window._cpDiag.t_cold == null) window._cpDiag.t_cold = performance.now() - _cpT0;
+        } catch (_) { /* cache indisponível/corrompido → carga do zero */ }
+
+        if (hidratou) { _cpReconciliar(); return; }
+
+        try {
+            const snap = await getDocs(_cpQueryRecencia());
+            _cpIngerir(snap, 'replace');
+            window._cpDiag.t_onda1 = performance.now() - _cpT0;
+            window._cpDiag.docs_onda1 = snap.size;
+        } catch (err) {
+            console.error('[ContasAPagar] carga por recência falhou:', err?.code || err?.message);
+            // Offline sem cache: tela renderizável (vazia), sem cursor → sem restante.
+            cacheRegistros = [];
+            _cpBlobBusca.clear();
+            renderTudo();
+            _cpAtualizarUICarregarMais();
             if (window._cpDiag.t_onda1 == null) window._cpDiag.t_onda1 = performance.now() - _cpT0;
+            return;
         }
-        // Onda 2 em background — fire-and-forget, disparada após a onda 1 resolver.
-        _cpDispararOnda2();
+        _cpCarregarRestante();
     }
 
     // ── Refresh pós-escrita (A4) ───────────────────────────────────────────
     // Sem listener ao vivo, cada caminho de ESCRITA em ContasAPagar re-busca do
-    // servidor pra reconciliar a tela. Chamada ao fim de cada escritor real.
-    // OS-CP-CARGA-DUAS-ONDAS-01: recarrega a BASE INTEIRA, server-autoritativo, nas
-    // duas ondas — onda 1 (ano vigente) em REPLACE, onda 2 (anos anteriores) em
-    // APPEND. Recarregar só o ano vigente apagaria todos os anos anteriores do
-    // cacheRegistros a cada edição/exclusão/import.
+    // servidor pra reconciliar a tela. Chamada (await) ao fim de cada escritor.
+    // OS-CP-CARGA-RECENCIA-01: server-autoritativo — recência (replace) + restante
+    // (append chunked) e regrava o store próprio. Cobre os 6 escritores sem
+    // alterá-los.
     async function _cpRecarregar() {
         try {
-            const snapAno = await getDocs(_cpQueryAno());
-            _cpIngerir(snapAno, 'replace');
+            const snap = await getDocs(_cpQueryRecencia());
+            _cpIngerir(snap, 'replace');
+            await _cpPaginarRestante();
         } catch (err) {
-            console.error('[ContasAPagar] recarregar (ano vigente) pós-escrita falhou:', err?.code || err?.message);
+            console.error('[ContasAPagar] recarregar pós-escrita falhou:', err?.code || err?.message);
         }
-        try {
-            const snapResto = await getDocs(_cpQueryResto());
-            _cpIngerir(snapResto, 'append');
-        } catch (err) {
-            console.error('[ContasAPagar] recarregar (anos anteriores) pós-escrita falhou:', err?.code || err?.message);
-        }
+        await _cpCachePersistir();
     }
     // Nota auditoria 2026-05-18: o relógio "Última atualização" foi
     // substituído pelo listener em Metadados/UltimaImportacao_CP (mais
@@ -5424,6 +5556,15 @@
                     return;
                 }
                 const data = snap.data() || {};
+                // OS-CP-CARGA-RECENCIA-01: millis do último ETL viram o `stamp` do
+                // cache próprio. serverTimestamp() chega como Firestore Timestamp
+                // (.toMillis()); tolera seconds/Date por segurança.
+                try {
+                    const ts = data.timestamp;
+                    if (ts && typeof ts.toMillis === 'function') _cpEtlStamp = ts.toMillis();
+                    else if (ts && typeof ts.seconds === 'number') _cpEtlStamp = ts.seconds * 1000;
+                    else if (ts instanceof Date) _cpEtlStamp = ts.getTime();
+                } catch (_) {}
                 const quando = _cpFmtUltimaImp(data.timestamp);
                 const tipo = data.tipo ? ` · <span class="uppercase tracking-wider text-[10px] font-bold">${escHTML(data.tipo)}</span>` : '';
                 el.innerHTML =
