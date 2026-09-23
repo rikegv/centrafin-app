@@ -279,6 +279,13 @@
                 <span>Aguardando sincronização…</span>
             </span>
             <span id="cp-hint-recorte" class="text-[11px] font-bold text-slate-400">Mostrando todos os registros</span>
+            <!-- Aviso discreto da 2ª onda (OS-CP-CARGA-DUAS-ONDAS-01, F1). Nasce
+                 oculto; um poller leve o mostra enquanto window._cpOnda2EmCurso
+                 for true e o esconde ao concluir. Frase de apoio, minúscula. -->
+            <span id="cp-onda2-aviso" class="hidden inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                <span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                <span>carregando anos anteriores...</span>
+            </span>
         </section>
 
         <!-- TABELA principal -->
@@ -994,14 +1001,27 @@
     // render vindo do getDocsFromCache; t_server = duração do getDocs de servidor;
     // docs = nº de lançamentos carregados.
     const _cpT0 = performance.now();
-    window._cpDiag = { t0: _cpT0, t_cold: null, t_cachePaint: null, t_server: null, docs: 0, t_tecla: null };
+    // OS-CP-CARGA-DUAS-ONDAS-01: t_onda1 = módulo→render usável da onda 1 (ano
+    // vigente); t_onda2 = fim-onda1→onda 2 mergeada (anos anteriores); t_refresh =
+    // duração do refresh de servidor quando o cache já pintou (2º acesso);
+    // mecanismo = 'firestore-cache' | 'server' (origem do 1º render). A camada de
+    // dados PRODUZ os números; o HUD do frontend só os LÊ.
+    window._cpDiag = { t0: _cpT0, t_cold: null, t_cachePaint: null, t_server: null, docs: 0, t_tecla: null, t_onda1: null, t_onda2: null, t_refresh: null, mecanismo: null };
 
     // ── HUD de diagnóstico (OS-CP-CARGA-TOTAL-01, F3) ───────────────────────
     // Nasce OCULTO; só liga com `?diag=1` na URL. Exibe SOMENTE métricas
     // agregadas de desempenho — nenhum campo de lançamento (favorecido, valor,
     // observação, código). Condição C3 da Segurança: proibido logar/exibir dado
     // pessoal, então o HUD lê apenas números de tempo, contagem e heap.
-    const _cpDiagLigado = new URLSearchParams(location.search).get('diag') === '1';
+    // F3: o round-trip do login (login.html → volta) perde o `?diag=1` da URL,
+    // então ler só a query no retorno desligava o HUD. Persiste em
+    // sessionStorage o mais cedo possível: sobrevive ao retorno same-origin na
+    // mesma aba, e no retorno o HUD ainda liga.
+    if (new URLSearchParams(location.search).get('diag') === '1') {
+        try { sessionStorage.setItem('cp_diag', '1'); } catch (_) {}
+    }
+    const _cpDiagLigado = new URLSearchParams(location.search).get('diag') === '1'
+        || (() => { try { return sessionStorage.getItem('cp_diag') === '1'; } catch (_) { return false; } })();
     // Amostras da latência de filtro no caminho da busca; média em _cpDiag.t_tecla.
     let _cpTeclaSamples = [];
     let _cpMedirFiltro = false; // sinalizado pelo handler da busca antes de renderTudo()
@@ -1011,12 +1031,15 @@
         const el = document.getElementById('cp-diag-body');
         if (!el) return;
         const d = window._cpDiag || {};
+        // F3: os 5 números que o diretor mede + docs. SOMENTE tempo, contagem,
+        // heap e mecanismo — nenhum campo de lançamento (condição C-LOG da
+        // Segurança). Placeholder n/d (sem travessão).
         const linhas = [
-            `cold:   ${_cpFmtMsDiag(d.t_cold)}`,
-            `cache:  ${_cpFmtMsDiag(d.t_cachePaint)}`,
-            `server: ${_cpFmtMsDiag(d.t_server)}`,
-            `docs:   ${(d.docs || 0).toLocaleString('pt-BR')}`,
-            `tecla:  ${d.t_tecla == null ? 'n/d' : d.t_tecla.toFixed(1) + ' ms'}`,
+            `onda1:   ${_cpFmtMsDiag(d.t_onda1)}`,
+            `onda2:   ${_cpFmtMsDiag(d.t_onda2)}`,
+            `refresh: ${_cpFmtMsDiag(d.t_refresh)} ${d.mecanismo || 'n/d'}`,
+            `tecla:   ${d.t_tecla == null ? 'n/d' : d.t_tecla.toFixed(1) + ' ms'}`,
+            `docs:    ${(d.docs || 0).toLocaleString('pt-BR')}`,
         ];
         // performance.memory só existe em Chrome/Edge; guarda contra ausência.
         const mem = performance.memory;
@@ -1033,6 +1056,27 @@
         _cpAtualizarHUD();
     }
 
+    // ── F1: aviso discreto da 2ª onda (OS-CP-CARGA-DUAS-ONDAS-01) ────────────
+    // O backend expõe só o boolean fire-and-forget `window._cpOnda2EmCurso`.
+    // Um poller leve liga/desliga a visibilidade do aviso e PARA de checar
+    // quando a onda 2 conclui — detectada por `_cpDiag.t_onda2 != null`, que o
+    // backend grava no finally de _cpDispararOnda2 (sinal durável, imune a
+    // perder a janela do boolean se a onda for muito rápida).
+    (function _cpVigiarOnda2() {
+        const aviso = document.getElementById('cp-onda2-aviso');
+        if (!aviso) return;
+        const timer = setInterval(() => {
+            const emCurso = window._cpOnda2EmCurso === true;
+            const concluida = window._cpDiag && window._cpDiag.t_onda2 != null;
+            if (emCurso) {
+                aviso.classList.remove('hidden');
+            } else {
+                aviso.classList.add('hidden');
+                if (concluida) clearInterval(timer);
+            }
+        }, 300);
+    })();
+
     // ── C1 (OS-CP-CARGA-TOTAL-01, LGPD) ─────────────────────────────────────
     // A carga total deixa ~51k lançamentos (dado pessoal de fornecedor) no
     // IndexedDB da estação. Ao sair, zera a persistência local ANTES do
@@ -1048,6 +1092,12 @@
 
     const CHAVE_PAGINA = 'gerenciador_contas_pagar';
     const COLECAO = 'ContasAPagar';
+    // OS-CP-CARGA-DUAS-ONDAS-01: fonte ÚNICA do corte "ano vigente". `data_vencimento`
+    // é string ISO "YYYY-MM-DD", comparada LEXICOGRAFICAMENTE em toda a tela (a ordem
+    // de string ISO já é cronológica e imune a UTC). Consumido por: query da onda 1,
+    // query da onda 2 e atualizarKPIs(). NÃO usar Date/parseDataLocal para este corte.
+    const CP_ANO_VIGENTE = new Date().getFullYear();
+    const CP_LIMIAR_ANO = `${CP_ANO_VIGENTE}-01-01`;
     const COLECAO_FORN = 'Fornecedores';
     // Auditoria 2026-05-15: CP_Base_Despesas substitui CP_BaseMestra como
     // dicionário "Despesa → Per.Evento + Per.Valor". A classificação agora
@@ -1236,6 +1286,13 @@
     // writeBatch (edição/recorrência) e o blob vazaria pro Firestore.
     const _cpBlobBusca = new Map(); // _id → blob normalizado de busca
 
+    // OS-CP-CARGA-DUAS-ONDAS-01: sinal para o frontend. Quando o merge da onda 2
+    // (append) muda o tamanho de `filtrados`, `_renderTudoSync` normalmente zera
+    // `_cpPage`. Para não jogar o operador pra página 1 no meio da navegação, a
+    // camada de dados LEVANTA esta flag antes do render de append; o frontend, que
+    // é dono de `_renderTudoSync`, deve PULAR o reset de página e ZERAR a flag.
+    let _cpPreservarPagina = false;
+
     // ── JANELA DE CARGA SERVER-SIDE (auditoria 2026-06-18) ──────────────────
     // OS-CP-CARGA-TOTAL-01: a base inteira de /ContasAPagar (~52k docs) e
     // carregada de uma vez via getDocs one-shot (cache-first) e mantida em
@@ -1386,7 +1443,7 @@
         // memória — nada a re-buscar no servidor.
         if (!_cpCargaAberta) {
             _cpCargaAberta = true;
-            _cpAbrirCargaTotal();
+            _cpAbrirDuasOndas();
         } else {
             _cpPage = 1;
             renderTudo();
@@ -1573,17 +1630,27 @@
     // Frente 1 (2026-05-20): extrai também `empresa` (vazia tolerada). Auditoria
     // 2026-05-28: enriquecimento via lookup /Fornecedores.empresa pelo
     // `codigo_fornecedor`; resultado escrito de volta em `reg.empresa` (UPPER).
-    function _cpIngerir(snap) {
+    // OS-CP-CARGA-DUAS-ONDAS-01: `modo` ∈ {'replace','append'} (default 'replace').
+    //   replace = comportamento original (onda 1 / recarga do ano vigente):
+    //             cacheRegistros := regs, limpa o blob, remonta tudo.
+    //   append  = onda 2 (anos anteriores): concatena os `regs` novos ao FIM do
+    //             cache com DEDUP por `_id` (rede de segurança — as ranges >= e <
+    //             são disjuntas), adiciona ao blob SÓ os novos, PRESERVA a página.
+    // Em ambos os modos os 5 Sets de filtro são RECOMPUTADOS sobre o cacheRegistros
+    // INTEIRO, e `_cpPopularDropdownsAsync` recebe a união ampliada.
+    function _cpIngerir(snap, modo = 'replace') {
+        const ehAppend = modo === 'append';
         const regs = [];
-        const comps = new Set(), favs = new Set(), desp = new Set(),
-              ccs = new Set(), empresas = new Set();
-        // A3: recomputa o índice de busca do zero a cada ingestão (Map paralelo,
-        // nunca no objeto do cache — ele é espalhado pra dentro de writeBatch).
-        _cpBlobBusca.clear();
+        // Append: dedup contra os _id já presentes (as ranges são disjuntas, mas a
+        // rede de segurança evita duplicar se um doc de borda escapar).
+        const idsExistentes = ehAppend ? new Set(cacheRegistros.map(r => r._id)) : null;
+        // A3: no replace recomputa o índice de busca do zero; no append preserva o
+        // que já existe e só adiciona os docs novos (Map paralelo, nunca no objeto
+        // do cache — ele é espalhado pra dentro de writeBatch).
+        if (!ehAppend) _cpBlobBusca.clear();
         snap.forEach(d => {
+            if (idsExistentes && idsExistentes.has(d.id)) return; // dedup no append
             const reg = { _id: d.id, ...d.data() };
-            const empResolvida = _cpResolverEmpresaDoReg(reg);
-            if (empResolvida) reg.empresa = empResolvida;
             regs.push(reg);
             _cpBlobBusca.set(reg._id, _cpNormalizarBusca(
                 (reg.entidade || '') + ' ' +
@@ -1591,15 +1658,27 @@
                 (reg.categoria || '') + ' ' +
                 (reg.observacao || '')
             ));
+        });
+        cacheRegistros = ehAppend ? cacheRegistros.concat(regs) : regs;
+        // Recomputa os 5 Sets sobre o cache INTEIRO (obrigatório no append; no
+        // replace o cache == regs, então é o mesmo resultado). A resolução de
+        // empresa (lookup /Fornecedores) escreve de volta em `reg.empresa` (UPPER),
+        // idêntico ao enriquecimento original e ao de `_cpUltimoSnapRefresh`.
+        const comps = new Set(), favs = new Set(), desp = new Set(),
+              ccs = new Set(), empresas = new Set();
+        for (const reg of cacheRegistros) {
+            const empResolvida = _cpResolverEmpresaDoReg(reg);
+            if (empResolvida) { reg.empresa = empResolvida; empresas.add(empResolvida); }
             const comp = fmtCompetenciaBR(reg);
             if (comp) comps.add(comp);
             if (reg.entidade)     favs.add(reg.entidade);
             if (reg.categoria)    desp.add(reg.categoria);
             if (reg.centro_custo) ccs.add(reg.centro_custo);
-            if (empResolvida) empresas.add(empResolvida);
-        });
-        cacheRegistros = regs;
-        window._cpDiag.docs = regs.length;
+        }
+        window._cpDiag.docs = cacheRegistros.length;
+        // Append não pode jogar o operador pra página 1: sinaliza ao frontend
+        // (dono de `_renderTudoSync`) que preserve `_cpPage` neste render.
+        if (ehAppend) _cpPreservarPagina = true;
         // Renderiza JÁ — os filtros atuais (ou os restaurados via sessionStorage)
         // operam sobre cacheRegistros independente de qual <option> está no DOM.
         // A paginação estrita de 50 (PAGE_SIZE_CP) limita o DOM ao recorte visível.
@@ -1627,37 +1706,71 @@
         return regs.length;
     }
 
-    // ── Carga total cache-first (A2) ───────────────────────────────────────
-    // Query = coleção inteira ordenada por `data_vencimento` desc, SEM range
-    // (índice de campo único automático — nenhum índice composto novo).
-    // Fase 1: getDocsFromCache (IndexedDB) → pintura instantânea e gratuita.
-    // Fase 2: getDocs server em background → reconcilia (fonte da verdade).
-    // Cache frio: fase 1 vazia/erro → fase 2 resolve. Offline: fase 2 falha no
-    // try/catch e mantém o que veio do cache.
-    function _cpQueryBase() {
-        return query(collection(db, COLECAO), orderBy('data_vencimento', 'desc'));
+    // ── Carga em DUAS ONDAS cache-first (OS-CP-CARGA-DUAS-ONDAS-01) ─────────
+    // O corte é `data_vencimento` (string ISO) contra CP_LIMIAR_ANO. As duas
+    // queries usam RANGE + orderBy no MESMO campo → índice de campo único
+    // automático, NENHUM índice composto novo. Ranges DISJUNTAS ('>=' e '<').
+    //   Onda 1 = ano vigente (data_vencimento >= CP_LIMIAR_ANO) — pinta primeiro.
+    //   Onda 2 = anos anteriores (data_vencimento <  CP_LIMIAR_ANO) — background.
+    function _cpQueryAno() {
+        return query(collection(db, COLECAO),
+            where('data_vencimento', '>=', CP_LIMIAR_ANO),
+            orderBy('data_vencimento', 'desc'));
     }
-    async function _cpAbrirCargaTotal() {
-        const q = _cpQueryBase();
+    function _cpQueryResto() {
+        return query(collection(db, COLECAO),
+            where('data_vencimento', '<', CP_LIMIAR_ANO),
+            orderBy('data_vencimento', 'desc'));
+    }
+    // Onda 2: anos anteriores, cache-first própria, em modo APPEND e em background
+    // (não bloqueia o render da onda 1). `window._cpOnda2EmCurso` é o sinal que o
+    // frontend lê para mostrar/esconder o aviso discreto de 2ª onda.
+    async function _cpDispararOnda2() {
+        window._cpOnda2EmCurso = true;
+        const tO2 = performance.now(); // início = fim da onda 1
+        try {
+            try {
+                const snapCache = await getDocsFromCache(_cpQueryResto());
+                if (!snapCache.empty) _cpIngerir(snapCache, 'append');
+            } catch (_) { /* cache frio → segue pro servidor */ }
+            const snapServer = await getDocs(_cpQueryResto());
+            _cpIngerir(snapServer, 'append');
+        } catch (err) {
+            // Offline/erro: mantém o que veio do cache da própria onda 2 (se veio).
+            console.error('[ContasAPagar] onda 2 server falhou:', err?.code || err?.message);
+        } finally {
+            window._cpDiag.t_onda2 = performance.now() - tO2;
+            window._cpOnda2EmCurso = false;
+        }
+    }
+    // Onda 1 cache-first; ao resolver o getDocs de SERVIDOR (não o cache-paint),
+    // dispara a onda 2. Offline: o getDocs server falha no try/catch e mantém o
+    // que veio do cache; a onda 2 ainda tenta seu próprio cache.
+    async function _cpAbrirDuasOndas() {
         let pintouDoCache = false;
         try {
-            const snapCache = await getDocsFromCache(q);
+            const snapCache = await getDocsFromCache(_cpQueryAno());
             if (!snapCache.empty) {
-                _cpIngerir(snapCache);
+                _cpIngerir(snapCache, 'replace');
                 pintouDoCache = true;
                 const agora = performance.now() - _cpT0;
                 window._cpDiag.t_cachePaint = agora;
                 window._cpDiag.t_cold = agora; // 1º render usável veio do cache
+                window._cpDiag.mecanismo = 'firestore-cache';
             }
         } catch (_) { /* cache frio/indisponível → segue direto pro servidor */ }
         try {
             const tS = performance.now();
-            const snapServer = await getDocs(q);
-            _cpIngerir(snapServer);
+            const snapServer = await getDocs(_cpQueryAno());
+            _cpIngerir(snapServer, 'replace');
             window._cpDiag.t_server = performance.now() - tS;
+            // 2º acesso: houve cache-paint antes, logo este getDocs é o "refresh".
+            if (pintouDoCache) window._cpDiag.t_refresh = performance.now() - tS;
+            else window._cpDiag.mecanismo = 'server';
             if (window._cpDiag.t_cold == null) window._cpDiag.t_cold = performance.now() - _cpT0;
+            window._cpDiag.t_onda1 = performance.now() - _cpT0;
         } catch (err) {
-            console.error('[ContasAPagar] carga server falhou:', err?.code || err?.message);
+            console.error('[ContasAPagar] onda 1 server falhou:', err?.code || err?.message);
             if (!pintouDoCache) {
                 cacheRegistros = [];
                 _cpBlobBusca.clear();
@@ -1665,18 +1778,31 @@
                 _cpAtualizarUICarregarMais();
             }
             if (window._cpDiag.t_cold == null) window._cpDiag.t_cold = performance.now() - _cpT0;
+            if (window._cpDiag.t_onda1 == null) window._cpDiag.t_onda1 = performance.now() - _cpT0;
         }
+        // Onda 2 em background — fire-and-forget, disparada após a onda 1 resolver.
+        _cpDispararOnda2();
     }
 
     // ── Refresh pós-escrita (A4) ───────────────────────────────────────────
     // Sem listener ao vivo, cada caminho de ESCRITA em ContasAPagar re-busca do
     // servidor pra reconciliar a tela. Chamada ao fim de cada escritor real.
+    // OS-CP-CARGA-DUAS-ONDAS-01: recarrega a BASE INTEIRA, server-autoritativo, nas
+    // duas ondas — onda 1 (ano vigente) em REPLACE, onda 2 (anos anteriores) em
+    // APPEND. Recarregar só o ano vigente apagaria todos os anos anteriores do
+    // cacheRegistros a cada edição/exclusão/import.
     async function _cpRecarregar() {
         try {
-            const snap = await getDocs(_cpQueryBase());
-            _cpIngerir(snap);
+            const snapAno = await getDocs(_cpQueryAno());
+            _cpIngerir(snapAno, 'replace');
         } catch (err) {
-            console.error('[ContasAPagar] recarregar pós-escrita falhou:', err?.code || err?.message);
+            console.error('[ContasAPagar] recarregar (ano vigente) pós-escrita falhou:', err?.code || err?.message);
+        }
+        try {
+            const snapResto = await getDocs(_cpQueryResto());
+            _cpIngerir(snapResto, 'append');
+        } catch (err) {
+            console.error('[ContasAPagar] recarregar (anos anteriores) pós-escrita falhou:', err?.code || err?.message);
         }
     }
     // Nota auditoria 2026-05-18: o relógio "Última atualização" foi
@@ -2260,7 +2386,12 @@
         // Reseta página só quando o recorte mudou tamanho (ou nunca renderizou).
         // Snapshots que não afetam a contagem preservam a página corrente —
         // evita "jump back to 1" quando o usuário está navegando.
-        if (_cpUltimosFiltrados.length !== filtrados.length) {
+        // F2 (OS-CP-CARGA-DUAS-ONDAS-01): o merge da onda 2 muda o tamanho de
+        // `filtrados`. Quando o backend levanta `_cpPreservarPagina`, PULA o
+        // reset para não jogar o operador de volta à página 1, e zera a flag.
+        if (_cpPreservarPagina) {
+            _cpPreservarPagina = false;
+        } else if (_cpUltimosFiltrados.length !== filtrados.length) {
             _cpPage = 1;
         }
         _cpUltimosFiltrados = filtrados;
@@ -2399,6 +2530,11 @@
         let cTotal = 0, cPago = 0, cAPagar = 0, cVencido = 0;
         let tarifas = 0, cTarifas = 0;
         for (const r of filtrados) {
+            // OS-CP-CARGA-DUAS-ONDAS-01: os KPIs macro somam SÓ o ano vigente
+            // (interseção filtrado ∩ ano corrente). A tabela/busca/ordenação/
+            // paginação seguem sobre TODO o `filtrados` (as duas ondas). Comparação
+            // lexicográfica de string ISO — mesmo corte da query da onda 1.
+            if (String(r.data_vencimento || '') < CP_LIMIAR_ANO) continue;
             const v = Number(r.valor_original) || 0;
 
             // Regra Contábil de Identificação de Tarifa/Comissão Bancária.
