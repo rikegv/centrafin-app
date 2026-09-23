@@ -1,0 +1,3 @@
+OS-CP-CARGA-TOTAL-01 gate-verde 2026-09-23
+Sintaxe OK (backend+frontend), seguranca APROVADO com condicoes (C1 sidebar pendente),
+tester PASS. Flag para o ciclo de homologacao (preview) e publicacao. Remover apos o push.
