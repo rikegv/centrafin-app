@@ -2529,12 +2529,15 @@
         let total = 0, pago = 0, aPagar = 0, vencido = 0, opex = 0, cliente = 0;
         let cTotal = 0, cPago = 0, cAPagar = 0, cVencido = 0;
         let tarifas = 0, cTarifas = 0;
+        // OS-CP-CARGA-DUAS-ONDAS-01 (ajuste do diretor): os KPIs ACOMPANHAM o
+        // filtro de Periodo. Sem filtro de Periodo, o padrao de abertura e o ano
+        // vigente (exclui anos anteriores dos cards). Com filtro de Periodo ativo
+        // (mesmo um ano anterior, ex.: 2025), os KPIs somam exatamente o recorte
+        // filtrado e NUNCA zeram por causa do filtro. Comparacao lexicografica de
+        // string ISO, mesmo corte da query da onda 1.
+        const _cpPeriodoAtivo = !!(_cpPeriodoComitado.ini || _cpPeriodoComitado.fim);
         for (const r of filtrados) {
-            // OS-CP-CARGA-DUAS-ONDAS-01: os KPIs macro somam SÓ o ano vigente
-            // (interseção filtrado ∩ ano corrente). A tabela/busca/ordenação/
-            // paginação seguem sobre TODO o `filtrados` (as duas ondas). Comparação
-            // lexicográfica de string ISO — mesmo corte da query da onda 1.
-            if (String(r.data_vencimento || '') < CP_LIMIAR_ANO) continue;
+            if (!_cpPeriodoAtivo && String(r.data_vencimento || '') < CP_LIMIAR_ANO) continue;
             const v = Number(r.valor_original) || 0;
 
             // Regra Contábil de Identificação de Tarifa/Comissão Bancária.
