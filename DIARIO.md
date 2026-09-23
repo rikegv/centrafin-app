@@ -5,6 +5,70 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-23 — Contas a Pagar: a saga da carga (total → duas ondas → RECENCIA + cache proprio)
+
+Frente longa, em tres OS encadeadas na branch `feature/cp-carga-total`, sobre a
+tela viva `gerenciador_contas_pagar_desktop/code.html` (o `contas_a_pagar_desktop/`
+e legado exterminado). Registro como APRENDIZADO porque o caminho ensinou mais que
+o destino.
+
+**1. OS-CP-CARGA-TOTAL-01 (rejeitada):** carregar TODOS os ~51.864 docs de uma vez
+via getDocs + persistentLocalCache. Mediu 16,72s de cold start no preview. O
+diretor rejeitou (inaceitavel para o time). A rede de seguranca (medicao
+obrigatoria antes de "pronto") funcionou.
+
+**2. OS-CP-CARGA-DUAS-ONDAS-01 (nao servia):** dividir em onda 1 = ano vigente,
+onda 2 = anos anteriores. NAO reduziu nada, e a investigacao explicou por que:
+**99,998% da base tem vencimento em 2026** (51.863 de 51.864 docs; so 1 doc de ano
+anterior; zero futuro). "Ano vigente" = a base inteira. Distribuicao por mes de
+2026: jan 11.094, fev 8.470, mar 7.202, abr 5.592, mai 5.039, jun 4.864, jul 4.678,
+ago 4.835, set 89. A contagem foi feita por aggregation (getCountFromServer via REST
+com o token do firebase CLI, sem baixar docs). Alem disso, o
+**`persistentLocalCache` do Firebase PIORA:** com a base ja no IndexedDB, o cache
+"quente" ficou MAIS lento (48s) que o cold sem cache (16s), e o refresh nao acelerou
+(bate com o alerta publico de leitura ate 20x mais lenta em certas versoes do SDK).
+Ele e o freio, nao a solucao.
+
+**3. OS-CP-CARGA-RECENCIA-01 (a solucao, em producao 2026-09-23):**
+- **Removido o `persistentLocalCache`** do init do Firestore (`initializeFirestore`
+  com `memoryLocalCache()`; cache do SDK so em memoria, zero disco do SDK).
+- **1a onda por RECENCIA:** `orderBy('data_vencimento','desc') + limit(5000)` pinta
+  a tela em <~5s (os ~2 meses mais recentes). O restante carrega em background via
+  `startAfter(cursor)` em chunks, com aviso discreto "carregando restante..." e sem
+  travar a interacao. Cursor = ultimo `QueryDocumentSnapshot`, nunca o objeto reg.
+- **Cache PROPRIO da aplicacao em IndexedDB** (`centrafin_cp_cache`, store
+  `snapshot`, 1 registro `{stamp, registros, blob}`): guarda o array JA PROCESSADO +
+  o blob de busca e hidrata de uma vez com um `get` unico no 2o acesso (refresh
+  quase instantaneo, medido pelo diretor), seguido de reconcile server-autoritativo
+  em background. O reconcile e INCONDICIONAL de proposito (edicoes/exclusoes de
+  outros usuarios NAO bumpam o stamp do ETL, so o reconcile as pega).
+- **LGPD (GAP #5 estendido):** a store propria e apagada no logout
+  (`indexedDB.deleteDatabase`) em TODOS os caminhos de saida (btn-logout e guarda de
+  inatividade no `sidebar.js`, + os 6 redirects de auth do code.html). Dado
+  financeiro/pessoal de fornecedor nao fica no disco da estacao apos sair.
+- **KPIs do topo acompanham o filtro de Periodo** (ajuste do diretor): sem filtro,
+  somam o ano vigente (na pratica quase tudo); com filtro de Periodo ativo, somam o
+  recorte filtrado e nunca zeram. `atualizarKPIs` (calculo) ficou intacto; prova
+  numerica confirmou os 7 cards identicos ao estado anterior.
+- Preservados: uniao cadastro∪dados nos filtros, rotulos curados, populacao chunked,
+  filtro salvo `_v2`, paginacao (50), blob pre-computado. Botao "carregar mes
+  anterior" removido. `firestore.rules`/indices intocados (orderBy+limit+startAfter =
+  campo unico).
+
+**REGRA UTIL (permanente): NAO usar `persistentLocalCache` do Firebase para base
+grande.** Ele degrada com a base ja em cache e nao entrega refresh rapido. O padrao
+que resolveu: `memoryLocalCache` + 1a pintura por recencia (`limit`) + resto em
+`startAfter` background + **cache proprio em IndexedDB** (array processado, hidratado
+por `get` unico) + reconcile em background + limpeza no logout. **Faturamento tem o
+mesmo problema de carga pendente (base grande) e deve seguir este mesmo padrao.**
+
+Auditoria por OS: arquiteto → backend → frontend → seguranca (APROVADO: init sem
+persistencia, limpeza da store em todo logout, C-LOG do HUD) → tester (PASS: prova
+numerica dos KPIs, cursor/dedup, sem loop). Deploy isolado pelo gate novo
+(OS-GATE-DEPLOY-01), so `--only hosting` (rules nao mudaram).
+
+---
+
 ## 2026-09-23 — OS-GATE-DEPLOY-01: o gate de deploy amarrado de verdade
 
 **Achado que originou a OS:** o gate de deploy NUNCA esteve amarrado. Nao havia
