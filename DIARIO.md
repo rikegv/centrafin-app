@@ -5,6 +5,49 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-24 — OS-CP-CORRIGE-NOMES-01: correcao IN-PLACE dos nomes com "�" (sem apagar nada)
+
+Nomes corrompidos por U+FFFD ("�", char de substituicao) por importacao anterior a
+correcao de encoding. Diretor exigiu correcao NO LUGAR, sem apagar/reimportar/duplicar
+(a base esta validada pelo time desde janeiro). Branch `feature/cp-corrige-nomes`.
+
+**Fase 1 (investigacao, read-only):** scanner `scripts/scan-mojibake-cp.cjs` varreu as
+duas colecoes e montou o de-para por dicionario (para cada nome com "�", achou o nome
+INTEGRO que casa por comprimento + wildcard nas posicoes do "�", usando os nomes ja
+integros em outros registros/meses como fonte da verdade). Resultado: **22 valores
+distintos, TODOS resolviveis, ZERO ambiguos**. Contagem atual de "�": 2 docs em
+`CP_Base_Despesas` (campo `despesa`) + 178 em `ContasAPagar` (`categoria` 170,
+`observacao` 17, `entidade_txt` 8).
+
+**Fase 2 (correcao in-place):** `scripts/fix-mojibake-cp.cjs`, dry-run por padrao,
+`--apply` so apos o diretor conferir o de-para e o dry-run. Corrigiu **197 campos**
+(2 em `CP_Base_Despesas` + 195 em `ContasAPagar`) via `update()` de campo unico
+(`str_replace` do valor corrompido pelo correto). **Zero docs apagados, zero criados:
+contagem 51.181 (ContasAPagar) e 112 (CP_Base_Despesas) identica antes e depois.**
+"�" restante = 0. Backup do estado anterior (180 docs integrais) salvo LOCAL em
+`scripts/backup-cp-corrige-nomes-apply-*.json` (gitignored + hosting ignore, fora do
+Hosting). Validado visualmente pelo diretor (nomes com acento, zero "�" na tela).
+Sem deploy de Hosting: nenhum arquivo servido mudou, so dado + os `.cjs` (que o
+Hosting ignora).
+
+**REGRA PERMANENTE (nova):** correcao de encoding em base JA VALIDADA pelo time e
+sempre **IN-PLACE por dicionario** (update do campo com o nome correto, achado nos
+registros integros), **nunca apagar/reimportar**. Isso **invalida a
+OS-CP-LIMPEZA-LOTES-CORROMPIDOS-01** antiga (que apagava os 272 docs e reimportava):
+NAO usar aquela abordagem.
+
+**Fase 3 (garantir daqui pra frente): ja verde.** O importador do CP usa um
+decodificador unico `cpLerTextoAutoEncoding` (UTF-8 estrito -> Windows-1252, nunca
+gera "�") nos DOIS caminhos que gravam texto (ETL de faturas `code.html:3609` e ETL
+de Beneficios PJ `code.html:4653`). Nada a corrigir; a OS-IMPORT-ENCODING-01 ja cobriu.
+
+**Distincao registrada:** o "42/110" de 04/09 em `CP_Base_Despesas` NAO era "�", e a
+OUTRA corrupcao (mojibake "Ã/Â" do `seeder_excel`, ex.: `ASSESSORIA CONTÃBIL` =
+CONTÁBIL), reversivel por re-decodificacao. Fica FORA desta OS (escopo era so "�"),
+registrada como OS futura separada se o diretor priorizar.
+
+---
+
 ## 2026-09-24 — Merge de `feature/cp-carga-total` -> `main` (pendencia #1 FECHADA) + gate destravado
 
 Diretor autorizou sincronizar a `main` com o que ja rodava em producao (a carga por
