@@ -117,7 +117,7 @@
              - botão lightbulb (data-kpi) → modal explicativo (comportamento legado)
              - body do card (data-kpi-card) → toggle de filtro
              Quando ativo, o card recebe ring-2 + cor próxima ao seu acento. -->
-        <section id="kpi-grid-cp" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+        <section id="kpi-grid-cp" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <!-- 1. Total Geral (DESTAQUE) — Toggle = limpa todos os filtros. -->
             <div data-kpi-card="total" role="button" tabindex="0" title="Limpar filtros e ver tudo"
                  class="relative bg-surface-container-lowest p-4 rounded-xl border border-secondary/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all ring-1 ring-secondary/10 cursor-pointer select-none">
@@ -186,21 +186,7 @@
                 <h3 id="kpi-cliente" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Repasses a clientes</p>
             </div>
-            <!-- 6. Vencidos — Toggle filtro Status = atrasado -->
-            <div data-kpi-card="vencido" role="button" tabindex="0" title="Filtrar somente lançamentos VENCIDOS"
-                 class="relative bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer select-none">
-                <button type="button" data-kpi="vencido" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
-                    <span class="material-symbols-outlined text-[14px]">lightbulb</span>
-                </button>
-                <span class="p-1 bg-red-50 text-red-600 rounded-lg inline-flex mb-1.5">
-                    <span class="material-symbols-outlined text-base">warning</span>
-                </span>
-                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Vencidos</p>
-                <h3 id="kpi-vencido" class="text-base font-extrabold font-manrope text-red-600 leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1"><span id="kpi-vencido-count">0</span> atrasados</p>
-            </div>
-
-            <!-- 7. Tarifas & Comissões Bancárias (APARTADO — auditoria 2026-05-28).
+            <!-- 6. Tarifas & Comissões Bancárias (APARTADO — auditoria 2026-05-28).
                  Métrica isolada por governança: TARIFA / COMISSÃO BANCÁRIA são
                  expurgadas de Total Geral / Pago / A Pagar / Vencidos / OPEX /
                  Custo Cliente — concentradas aqui. Sem `data-kpi-card` (não
@@ -303,8 +289,7 @@
                             <th class="px-4 py-3 text-center w-10">
                                 <input type="checkbox" id="cp-selecionar-todos" class="rounded border-slate-300 text-primary focus:ring-primary/30" title="Selecionar todos os lançamentos do filtro atual (todas as páginas)">
                             </th>
-                            <th class="px-4 py-3 text-center font-bold text-on-surface-variant uppercase tracking-widest w-28">Status</th>
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-28">Vencimento</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-28">Mês de Referência</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-20">Código</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Favorecido</th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Despesa</th>
@@ -315,7 +300,7 @@
                                  gestor_nome cadastrado na Área correspondente
                                  (master.html → Regras de Classificação →
                                  Áreas & Gestores). Sem leituras extras ao DB. -->
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Gestor</th>
+                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Responsável</th>
                             <th class="px-4 py-3 text-right font-bold text-secondary uppercase tracking-widest">Valor</th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest w-24">Ações</th>
                         </tr>
@@ -2596,9 +2581,6 @@
         const linhas = new Array(pagina.length);
         for (let i = 0; i < pagina.length; i++) {
             const r = pagina[i];
-            const visual = statusVisual(r, hoje);
-            const b = BADGE_MAP[visual] || BADGE_MAP.a_vencer;
-            const statusBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${b.bg} ${b.txt} text-[10px] font-extrabold border ${b.bd}"><span class="material-symbols-outlined text-[12px]">${b.ico}</span>${b.lbl}</span>`;
             const idAttr = escHTML(r._id);
             const marcado = _cpSelecao.has(r._id) ? 'checked' : '';
             linhas[i] = `
@@ -2606,10 +2588,9 @@
                     <td class="px-4 py-3 text-center">
                         <input type="checkbox" class="cp-row-checkbox rounded border-slate-300 text-primary focus:ring-primary/30" data-id="${idAttr}" ${marcado}>
                     </td>
-                    <td class="px-4 py-3 text-center">${statusBadge}</td>
                     <td class="px-4 py-3 text-xs font-mono font-bold text-secondary">${escHTML(fmtDataBR(r.data_vencimento))}</td>
                     <td class="px-4 py-3 text-xs font-mono text-tertiary tabular-nums">${r.codigo_fornecedor != null ? r.codigo_fornecedor : '—'}</td>
-                    <td class="px-4 py-3 text-xs font-bold text-slate-800">${escHTML(r.entidade || '—')}</td>
+                    <td class="px-4 py-3 text-xs font-bold text-slate-800">${escHTML(r.observacao || '—')}</td>
                     <td class="px-4 py-3 text-xs text-slate-600">${escHTML(r.categoria || '—')}</td>
                     <td class="px-4 py-3 text-xs text-slate-500">
                         ${r.codigo_titulo_ord
@@ -2705,7 +2686,10 @@
                 if (c) c.textContent = (count || 0).toLocaleString('pt-BR');
             }
         };
-        setKPI('kpi-total',    total,   cTotal,  'kpi-total-count');
+        // OS-CP-LAYOUT-01 (item 8): Total Geral = Total Pago + Tarifas e Comissoes.
+        // Reusa os valores JA calculados (pago, tarifas), sem logica nova. Total Pago
+        // (item 9) segue so o pago, ja expurgado de tarifas acima.
+        setKPI('kpi-total',    pago + tarifas, cPago + cTarifas, 'kpi-total-count');
         setKPI('kpi-pago',     pago,    cPago,   'kpi-pago-count');
         setKPI('kpi-a-pagar',  aPagar,  cAPagar, 'kpi-a-pagar-count');
         setKPI('kpi-opex',     opex);
@@ -5726,7 +5710,7 @@
     const KPI_EXPLICACOES = {
         total: {
             titulo: 'Total Geral',
-            texto: 'Representa a soma de todos os compromissos financeiros listados na tela. É o tamanho total das contas que você filtrou.',
+            texto: 'Soma o Total Pago com as Tarifas e Comissões Bancárias apartadas, ou seja, tudo que efetivamente saiu, incluindo o custo bancário isolado nos demais cards.',
         },
         pago: {
             titulo: 'Total Pago',
@@ -5743,10 +5727,6 @@
         cliente: {
             titulo: 'Custo Cliente',
             texto: 'É o dinheiro gasto diretamente para atender, produzir ou entregar os serviços aos seus clientes finais (Custos Diretos).',
-        },
-        vencido: {
-            titulo: 'Vencidos',
-            texto: 'Atenção: Este é o sinal de alerta. São as contas que já passaram da data limite de pagamento e continuam em aberto.',
         },
         tarifas: {
             titulo: 'Tarifas & Comissões Bancárias',
@@ -5786,7 +5766,6 @@
     const _KPI_FILTRO_MAP = {
         pago:    { selId: 'cp-filtro-status',        valor: 'pago' },
         a_pagar: { selId: 'cp-filtro-status',        valor: 'a_vencer' },
-        vencido: { selId: 'cp-filtro-status',        valor: 'atrasado' },
         opex:    { selId: 'cp-filtro-classificacao', valor: 'OPEX' },
         cliente: { selId: 'cp-filtro-classificacao', valor: 'Cliente' },
     };
