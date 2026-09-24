@@ -5,6 +5,54 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-24 — OS-CP-LAYOUT-01: ajustes de colunas, KPIs, ordenacao e travessao no Contas a Pagar
+
+Frente de UI na tela viva `gerenciador_contas_pagar_desktop/code.html`. Validada
+visualmente pelo diretor no preview channel antes do deploy. Branch `feature/cp-layout`.
+
+**Colunas da tabela:**
+- Removida a coluna "Status" (todo lancamento sobe pago; nao ha vencido).
+- "Vencimento" renomeada para "Mes de Referencia" (mesmo dado, data completa dd/mm/aaaa).
+- "Favorecido" passou a exibir o favorecido REAL (`observacao`, a pessoa) no lugar da
+  empresa (`entidade`). Investigacao provou 0 de 51.181 com `observacao` vazia, entao a
+  coluna nunca fica em branco na pratica (fallback inerte usa "nao informado").
+- "Gestor" renomeada para "Responsavel" (mesmo dado e regra CC->gestor via `_areaGestorMap`).
+- Centro de Custo mantido.
+
+**KPIs (cards do topo):**
+- Removido o card "Vencidos" (grid 7->6 colunas).
+- "Total Geral" passou a somar **Total Pago + Tarifas e Comissoes** (reusa os valores ja
+  calculados `pago` e `tarifas`, sem logica nova).
+- "Total Pago" mostra so o pago, sem tarifas (ja era o comportamento; tarifas seguem
+  expurgadas so na matematica dos KPIs, nunca na tabela).
+- "Custo Cliente" mantido.
+
+**Ordenacao por clique (regra permanente "toda tabela ordena por clique"):** 7 colunas
+ordenaveis (Mes de Referencia, Codigo, Favorecido, Despesa, CC, Responsavel, Valor), 1o
+clique asc, 2o desc, seta indicadora na coluna ativa. Mesmo idioma do Faturamento
+(`window.ordenarTabelaCP`, espelho de `ordenarTabelaCRF`): ordena o array-mestre
+`cacheRegistros` in place e re-renderiza respeitando filtros/busca. Detalhe/Obs e Acoes
+nao ordenam.
+
+**Travessao (em dash U+2014) removido de TODA a UI do CP** (regra permanente): marcador
+de celula vazia virou "nao informado" (tabela, export Excel, fallbacks de data); modais,
+toasts, paginacao, labels, tooltip, opcoes de select e wizard/quarentena de importacao
+tiveram o travessao trocado por pontuacao. Comentarios de codigo (nao sao UI) ficaram
+intactos.
+
+**MAPA versionado:** `docs/MAPA-CP-REFATORACAO.md` (mapa do que ja existe pronto para a
+futura refatoracao do CP, modelo Soulan) entrou no git.
+
+**Deploy:** `--only hosting` (firestore.rules nao mudaram). Nenhuma mudanca de calculo
+alem dos KPIs 8/9. Carga por recencia, filtros, busca e cache proprio preservados.
+
+**Ondas futuras registradas (fora desta OS):** Detalhe/Obs vira "Empresa" (Onda 3);
+coluna "Grupo de Contas" (Onda 4); destrinchar OPEX em Interno (CLT+PJ) x Externo,
+dependente do tipo preenchido (Onda 2). Higiene do travessao em COMENTARIOS de codigo
+fica como passe opcional futuro.
+
+---
+
 ## 2026-09-24 — OS-CP-CORRIGE-NOMES-01: correcao IN-PLACE dos nomes com "�" (sem apagar nada)
 
 Nomes corrompidos por U+FFFD ("�", char de substituicao) por importacao anterior a
