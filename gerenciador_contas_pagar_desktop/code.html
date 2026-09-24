@@ -289,19 +289,23 @@
                             <th class="px-4 py-3 text-center w-10">
                                 <input type="checkbox" id="cp-selecionar-todos" class="rounded border-slate-300 text-primary focus:ring-primary/30" title="Selecionar todos os lançamentos do filtro atual (todas as páginas)">
                             </th>
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-28">Mês de Referência</th>
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-20">Código</th>
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Favorecido</th>
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Despesa</th>
+                            <!-- OS-CP-LAYOUT-01: ordenação por clique (regra permanente).
+                                 1o clique asc, 2o desc; seta indica a coluna ativa.
+                                 Mesmo idioma do Faturamento (window.ordenarTabelaCP).
+                                 Detalhe/Obs e Ações não ordenam. -->
+                            <th onclick="window.ordenarTabelaCP('data')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-28 cursor-pointer select-none hover:text-secondary transition-colors">Mês de Referência <span id="icone-sort-data" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <th onclick="window.ordenarTabelaCP('codigo')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-20 cursor-pointer select-none hover:text-secondary transition-colors">Código <span id="icone-sort-codigo" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <th onclick="window.ordenarTabelaCP('favorecido')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Favorecido <span id="icone-sort-favorecido" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <th onclick="window.ordenarTabelaCP('despesa')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Despesa <span id="icone-sort-despesa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Detalhe / Obs.</th>
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">CC</th>
-                            <!-- Coluna GESTOR (Frente 1 — 2026-05-20).
+                            <th onclick="window.ordenarTabelaCP('cc')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">CC <span id="icone-sort-cc" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <!-- Coluna RESPONSÁVEL (ex-Gestor, Frente 1 — 2026-05-20).
                                  Cruzamento em memória: cada linha procura o
                                  gestor_nome cadastrado na Área correspondente
-                                 (master.html → Regras de Classificação →
-                                 Áreas & Gestores). Sem leituras extras ao DB. -->
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Responsável</th>
-                            <th class="px-4 py-3 text-right font-bold text-secondary uppercase tracking-widest">Valor</th>
+                                 (master.html, Regras de Classificação,
+                                 Áreas e Gestores). Sem leituras extras ao DB. -->
+                            <th onclick="window.ordenarTabelaCP('responsavel')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Responsável <span id="icone-sort-responsavel" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <th onclick="window.ordenarTabelaCP('valor')" class="px-4 py-3 text-right font-bold text-secondary uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Valor <span id="icone-sort-valor" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest w-24">Ações</th>
                         </tr>
                     </thead>
@@ -2518,6 +2522,62 @@
         if (typeof _cpAtualizarKPIsAtivos === 'function') _cpAtualizarKPIsAtivos();
     }
 
+    // ── Ordenação por clique no cabeçalho (OS-CP-LAYOUT-01) ──────────────────
+    // Regra permanente ("toda tabela ordena por clique"). Mesmo idioma do
+    // Faturamento (ordenarTabelaCRF): 1o clique asc, 2o desc; seta na coluna
+    // ativa. Ordena o array-mestre `cacheRegistros` IN PLACE e re-renderiza via
+    // renderTudo(), que reaplica filtros/busca e a carga por recência (a ordem
+    // sai preservada porque aplicarFiltrosCP usa .filter, que mantém a ordem).
+    // Colunas Detalhe/Obs e Ações não ordenam.
+    function obterValorSortCP(r, coluna) {
+        switch (coluna) {
+            case 'data':        return { tipo: 'texto',  valor: String(r.data_vencimento || '') }; // ISO ordena cronologicamente
+            case 'favorecido':  return { tipo: 'texto',  valor: String(r.observacao || '') };
+            case 'codigo':      return { tipo: 'numero', valor: Number(r.codigo_fornecedor) };
+            case 'despesa':     return { tipo: 'texto',  valor: String(r.categoria || '') };
+            case 'cc':          return { tipo: 'texto',  valor: String(r.centro_custo || '') };
+            case 'responsavel': { const cc = String(r.centro_custo || '').trim(); return { tipo: 'texto', valor: String((cc && _areaGestorMap.get(cc)) || '') }; }
+            case 'valor':       return { tipo: 'numero', valor: Number(r.valor_original) || 0 };
+            default:            return { tipo: 'texto',  valor: '' };
+        }
+    }
+    window.colunaAtualSortCP = null;
+    window.direcaoSortCP = 'asc';
+    window.ordenarTabelaCP = function (coluna) {
+        if (!coluna) return;
+        if (window.colunaAtualSortCP === coluna) {
+            window.direcaoSortCP = window.direcaoSortCP === 'asc' ? 'desc' : 'asc';
+        } else {
+            window.colunaAtualSortCP = coluna;
+            window.direcaoSortCP = 'asc';
+        }
+        // Indicador visual: reseta todas as setas e destaca a coluna ativa.
+        document.querySelectorAll('[id^="icone-sort-"]').forEach(el => {
+            el.textContent = 'unfold_more';
+            el.classList.add('text-slate-300');
+        });
+        const ic = document.getElementById('icone-sort-' + coluna);
+        if (ic) {
+            ic.textContent = window.direcaoSortCP === 'asc' ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
+            ic.classList.remove('text-slate-300');
+        }
+        const fator = window.direcaoSortCP === 'asc' ? 1 : -1;
+        if (Array.isArray(cacheRegistros)) {
+            cacheRegistros.sort((a, b) => {
+                const va = obterValorSortCP(a, coluna);
+                const vb = obterValorSortCP(b, coluna);
+                if (va.tipo === 'numero') {
+                    const na = Number.isFinite(va.valor) ? va.valor : -Infinity;
+                    const nb = Number.isFinite(vb.valor) ? vb.valor : -Infinity;
+                    return (na - nb) * fator;
+                }
+                return String(va.valor).localeCompare(String(vb.valor), 'pt-BR', { numeric: true, sensitivity: 'base' }) * fator;
+            });
+        }
+        _cpPage = 1; // volta ao topo do recorte ordenado
+        renderTudo();
+    };
+
     const BADGE_MAP = {
         pago:         { bg: 'bg-emerald-50',  txt: 'text-emerald-700', bd: 'border-emerald-100', ico: 'check_circle', lbl: 'PAGO' },
         provisionado: { bg: 'bg-tertiary/10', txt: 'text-tertiary',    bd: 'border-tertiary/30', ico: 'savings',       lbl: 'PROVISIONADO' },
@@ -2543,7 +2603,7 @@
             // "até Set/2026", "a partir de Ago/2026") — não prefixe nada aqui.
             const _janelaCurta = _cpFmtJanelaCurto();
             hint.textContent = cacheRegistros.length === 0
-                ? 'Sem dados — importe a Base Mestra e um TXT.'
+                ? 'Sem dados. Importe a Base Mestra e um TXT.'
                 : (_janelaCurta ? `Nada encontrado ${_janelaCurta}.` : 'Nada encontrado no período carregado.');
             if (pag) { pag.classList.add('hidden'); pag.classList.remove('flex'); }
             return;
@@ -2588,24 +2648,24 @@
                     <td class="px-4 py-3 text-center">
                         <input type="checkbox" class="cp-row-checkbox rounded border-slate-300 text-primary focus:ring-primary/30" data-id="${idAttr}" ${marcado}>
                     </td>
-                    <td class="px-4 py-3 text-xs font-mono font-bold text-secondary">${escHTML(fmtDataBR(r.data_vencimento))}</td>
-                    <td class="px-4 py-3 text-xs font-mono text-tertiary tabular-nums">${r.codigo_fornecedor != null ? r.codigo_fornecedor : '—'}</td>
-                    <td class="px-4 py-3 text-xs font-bold text-slate-800">${escHTML(r.observacao || '—')}</td>
-                    <td class="px-4 py-3 text-xs text-slate-600">${escHTML(r.categoria || '—')}</td>
+                    <td class="px-4 py-3 text-xs font-mono font-bold text-secondary">${r.data_vencimento ? escHTML(fmtDataBR(r.data_vencimento)) : 'não informado'}</td>
+                    <td class="px-4 py-3 text-xs font-mono text-tertiary tabular-nums">${r.codigo_fornecedor != null ? r.codigo_fornecedor : 'não informado'}</td>
+                    <td class="px-4 py-3 text-xs font-bold text-slate-800">${escHTML(r.observacao || 'não informado')}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600">${escHTML(r.categoria || 'não informado')}</td>
                     <td class="px-4 py-3 text-xs text-slate-500">
                         ${r.codigo_titulo_ord
                             ? `<span class="font-mono bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold mr-1.5 align-middle tabular-nums" title="Nº do Título / Ordenamento">${escHTML(r.codigo_titulo_ord)}</span>`
                             : ''}
-                        <span class="italic align-middle">${escHTML(r.observacao || '—')}</span>
+                        <span class="italic align-middle">${escHTML(r.observacao || 'não informado')}</span>
                     </td>
-                    <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${escHTML(r.centro_custo || '—')}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${escHTML(r.centro_custo || 'não informado')}</td>
                     <td class="px-4 py-3 text-xs text-slate-700 font-semibold">${
                         (() => {
                             const cc = String(r.centro_custo || '').trim();
                             const gestor = cc ? _areaGestorMap.get(cc) : '';
                             return gestor
                                 ? escHTML(gestor)
-                                : '<span class="text-slate-500 italic text-xs">— sem alocação —</span>';
+                                : '<span class="text-slate-500 italic text-xs">não informado</span>';
                         })()
                     }</td>
                     <td class="px-4 py-3 text-xs text-right font-extrabold text-secondary tabular-nums">${fmtBRL.format(Number(r.valor_original) || 0)}</td>
