@@ -1,6 +1,9 @@
 # Claude Code — sessão local (worktrees de agentes + config da máquina)
 .claude/worktrees/
 .claude/settings.local.json
+# Flags READY_* do gate: estado LOCAL de disco (nascem e morrem no push),
+# nunca versionadas. Resolve o acumulo de flags e o travamento de merge.
+.claude/state/
 
 # Logs
 logs
