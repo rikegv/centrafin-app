@@ -5,6 +5,38 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-24 — Merge de `feature/cp-carga-total` -> `main` (pendencia #1 FECHADA) + gate destravado
+
+Diretor autorizou sincronizar a `main` com o que ja rodava em producao (a carga por
+recencia do Contas a Pagar). Objetivo: eliminar o risco de um deploy futuro a partir
+da `main` derrubar a versao no ar.
+
+**O que foi feito:**
+- **Fast-forward de `feature/cp-carga-total` -> `main`.** A `main` era ancestral
+  direto do branch (merge-base = `3440f4a`), entao o merge foi FF puro: `main` avancou
+  para o tip do branch (`53a22da`). Os 14 commits da carga (recencia, cache proprio,
+  KPIs, filtros base, gate, modelo de 6 agentes) agora estao na `main`.
+- **A flag `READY_cp-carga-total` NAO entrou na `main`** (o branch ja a removera).
+- **Producao inalterada:** o merge nao muda nada no ar (producao ja servia esse
+  codigo). Arquivos servidos conferidos em 200 depois do push.
+
+**Pendencia do gate (acumulo de flags) RESOLVIDA DE VEZ:** o branch removia as 28
+flags `READY_*` historicas da `main`, e sem flag no disco o proprio gate travava o
+push da `main` (chicken-egg). Correcao: **`.claude/state/` foi para o `.gitignore`**
+(commit `53a22da`). As flags do gate passam a ser ESTADO LOCAL DE DISCO (nascem e
+morrem no push, nunca versionadas). Isso conserta o acumulo de flags no git e o
+travamento de merge de uma so vez. E a correcao que a propria fabrica ja recomendara
+ao ligar o gate. Hosting ja ignora `**/.*`, entao `.claude/` nunca foi servido.
+
+**Estado apos esta sessao:** `main` = producao (codigo servido identico); nenhuma
+flag no git; `.claude/state/` fora do versionamento. A pendencia #1 abaixo esta
+fechada. Segue aberto: Faturamento com carga sem limite (mesma classe do CP),
+`main`/`master` estrito no gate, `CP_Base_Despesas` corrompido, limpeza dos 272 docs
+corrompidos (OS-CP-LIMPEZA-LOTES-CORROMPIDOS-01, preparada desde 2026-09-04) e os 7
+cadastros com `NEAT` em centro de custo.
+
+---
+
 ## 2026-09-23 — PONTO DE RETOMADA (fim de sessao, tudo validado e em producao)
 
 > Sessao encerrada pelo diretor com tudo certo. Estado autossuficiente abaixo.
