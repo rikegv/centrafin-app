@@ -193,7 +193,7 @@
                  vira toggle de filtro) porque a classificação é cruzada
                  textual e não há filtro de "tipo bancário" no sistema.
                  Lightbulb (data-kpi) explica a regra ao usuário. -->
-            <div title="Tarifas e Comissões Bancárias — métrica apartada"
+            <div title="Tarifas e Comissões Bancárias, métrica apartada"
                  class="relative bg-surface-container-lowest p-4 rounded-xl border border-slate-200 shadow-sm select-none">
                 <button type="button" data-kpi="tarifas" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
                     <span class="material-symbols-outlined text-[14px]">lightbulb</span>
@@ -316,7 +316,7 @@
                  Renderiza no máximo PAGE_SIZE_CP linhas no DOM para evitar
                  travamento em bases com centenas/milhares de registros. -->
             <div id="cp-paginacao" class="hidden items-center justify-between gap-3 px-6 py-3 border-t border-slate-100 bg-slate-50/40">
-                <span id="cp-pag-info" class="text-[11px] font-medium text-slate-500 tabular-nums">—</span>
+                <span id="cp-pag-info" class="text-[11px] font-medium text-slate-500 tabular-nums">não informado</span>
                 <div class="flex items-center gap-2">
                     <!-- Botão "Primeira página" (auditoria 2026-05-18 V5 — Item 3, simétrico ao ">|"). -->
                     <button id="cp-pag-first" type="button" title="Primeira página" class="inline-flex items-center gap-0.5 px-2 py-1.5 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-all">
@@ -379,7 +379,7 @@
                 </div>
                 <div class="min-w-0">
                     <h3 class="font-headline text-xl font-extrabold text-secondary tracking-tight">Editar Lançamento</h3>
-                    <p id="ef-cp-subtitulo" class="text-[12px] text-slate-500 font-medium mt-0.5 truncate">—</p>
+                    <p id="ef-cp-subtitulo" class="text-[12px] text-slate-500 font-medium mt-0.5 truncate">não informado</p>
                 </div>
             </div>
             <button id="btn-fechar-editar-fatura-cp" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
@@ -408,7 +408,7 @@
                     <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Centro de Custo</label>
                     <select id="ef-cp-centro-custo"
                             class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
-                        <option value="">— sem CC —</option>
+                        <option value="">sem CC</option>
                     </select>
                 </div>
                 <div>
@@ -433,7 +433,7 @@
                             <p class="text-xs font-extrabold text-secondary leading-tight">Definir como Lançamento Recorrente</p>
                             <p class="text-[10.5px] text-slate-500 mt-1 leading-relaxed">
                                 Ao salvar, o sistema clona esta fatura nos próximos meses (respeitando a data de fim de contrato, se houver).
-                                Use quando o valor e o evento são previsíveis — folha de PJ, aluguel, mensalidade de sistema etc.
+                                Use quando o valor e o evento são previsíveis: folha de PJ, aluguel, mensalidade de sistema etc.
                             </p>
                             <!-- Quantidade de meses customizável (auditoria 2026-05-18 V4) —
                                  antes era 60 fixo; contratos têm durações variadas (12, 24, 36, 120).
@@ -498,7 +498,7 @@
                 <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">O que você deseja alterar nos registros selecionados?</label>
                 <select id="acoes-massa-campo"
                         class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white font-medium text-secondary focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
-                    <option value="">— escolha um campo —</option>
+                    <option value="">escolha um campo</option>
                     <option value="empresa">Empresa</option>
                     <option value="tipo_entidade">Tipo de Lançamento</option>
                     <option value="centro_custo">Centro de Custo</option>
@@ -506,7 +506,7 @@
             </div>
             <!-- Sub-painel dinâmico — só um fica visível conforme a escolha. -->
             <div id="acoes-massa-painel-empresa" class="hidden">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo valor — Empresa</label>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo valor: Empresa</label>
                 <select id="acoes-massa-valor-empresa"
                         class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
                     <option value="">Selecione a empresa…</option>
@@ -514,7 +514,7 @@
                 <p class="text-[11px] text-slate-400 italic mt-1">Lista oficial vinda de Base_Empresas.</p>
             </div>
             <div id="acoes-massa-painel-tipo" class="hidden">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo valor — Tipo de Lançamento</label>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo valor: Tipo de Lançamento</label>
                 <select id="acoes-massa-valor-tipo"
                         class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
                     <option value="">Selecione o tipo…</option>
@@ -525,7 +525,7 @@
                 </select>
             </div>
             <div id="acoes-massa-painel-cc" class="hidden">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo valor — Centro de Custo / Área</label>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Novo valor: Centro de Custo / Área</label>
                 <select id="acoes-massa-valor-cc"
                         class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all">
                     <option value="">Selecione a área…</option>
@@ -596,7 +596,7 @@
                     <span class="material-symbols-outlined text-amber-500 text-2xl">lightbulb</span>
                 </div>
                 <div class="min-w-0">
-                    <h3 id="ek-titulo" class="font-headline text-xl font-extrabold text-secondary tracking-tight truncate">—</h3>
+                    <h3 id="ek-titulo" class="font-headline text-xl font-extrabold text-secondary tracking-tight truncate">não informado</h3>
                 </div>
             </div>
             <button id="btn-fechar-explicacao-kpi" type="button" class="text-slate-400 hover:text-secondary transition-colors shrink-0">
@@ -604,7 +604,7 @@
             </button>
         </div>
         <div class="px-7 py-5 overflow-y-auto">
-            <p id="ek-corpo" class="text-sm text-slate-700 leading-relaxed">—</p>
+            <p id="ek-corpo" class="text-sm text-slate-700 leading-relaxed">não informado</p>
             <div id="ek-detalhes" class="mt-4 hidden p-3 rounded-xl bg-slate-50 border border-slate-100 text-[12px] text-slate-500"></div>
         </div>
         <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
@@ -659,7 +659,7 @@
             <div class="flex items-center gap-2 mb-3">
                 <span class="material-symbols-outlined text-primary text-base">calendar_month</span>
                 <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Período de Vencimento</span>
-                <span class="text-[10px] text-slate-400 italic ml-1">opcional — deixe em branco para "sem limite"</span>
+                <span class="text-[10px] text-slate-400 italic ml-1">opcional, deixe em branco para "sem limite"</span>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
@@ -785,7 +785,7 @@
         </div>
         <div class="rounded-xl bg-amber-50/60 border border-amber-200 px-4 py-3 mb-5 text-[12px] text-amber-900 leading-relaxed">
             Encontramos <span id="cp-duplic-count" class="font-extrabold">0</span> registro(s) na base com a mesma assinatura (SHA-256) deste arquivo
-            <span id="cp-duplic-arquivo" class="font-mono text-[10px] text-amber-700 block mt-1 truncate">—</span>
+            <span id="cp-duplic-arquivo" class="font-mono text-[10px] text-amber-700 block mt-1 truncate">não informado</span>
             <span class="block mt-2">Escolha como prosseguir:</span>
         </div>
         <div class="space-y-2">
@@ -885,7 +885,7 @@
             <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3">
                 <span class="material-symbols-outlined text-amber-500 mt-0.5">info</span>
                 <p class="text-[12px] leading-relaxed font-medium">
-                    A importação foi <strong>pausada</strong>. Para cada despesa nova, preencha <strong>Periodicidade do Evento</strong> e <strong>Periodicidade do Valor</strong> — o sistema memoriza em <code>CP_Base_Despesas</code> e aplicará automaticamente nas próximas importações via <em>fuzzy match</em>. Quando o <strong>Fornecedor</strong> não estiver cadastrado, o lançamento será gravado com classificação vazia — atualize a Base de Fornecedores e reimporte para herdar a classificação.
+                    A importação foi <strong>pausada</strong>. Para cada despesa nova, preencha <strong>Periodicidade do Evento</strong> e <strong>Periodicidade do Valor</strong>. O sistema memoriza em <code>CP_Base_Despesas</code> e aplicará automaticamente nas próximas importações via <em>fuzzy match</em>. Quando o <strong>Fornecedor</strong> não estiver cadastrado, o lançamento será gravado com classificação vazia. Atualize a Base de Fornecedores e reimporte para herdar a classificação.
                 </p>
             </div>
 
@@ -907,7 +907,7 @@
                     <tbody id="cp-quar-corpo" class="divide-y divide-slate-100 bg-white"></tbody>
                 </table>
             </div>
-            <p id="cp-quar-vazio" class="hidden text-[11px] text-slate-400 italic text-center py-6">Nenhuma combinação pendente — pronto para importar.</p>
+            <p id="cp-quar-vazio" class="hidden text-[11px] text-slate-400 italic text-center py-6">Nenhuma combinação pendente, pronto para importar.</p>
         </div>
 
         <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-slate-50/50">
@@ -940,7 +940,7 @@
 
 <div id="toast-cp" class="hidden fixed bottom-6 right-6 z-[80] flex items-center gap-3 bg-secondary text-white px-5 py-3 rounded-xl shadow-2xl text-xs font-bold opacity-0 translate-y-2 transition-all duration-300">
     <span id="toast-cp-icon" class="material-symbols-outlined text-primary">check_circle</span>
-    <span id="toast-cp-text">—</span>
+    <span id="toast-cp-text">não informado</span>
 </div>
 
 <script type="module">
@@ -1203,7 +1203,7 @@
                             mostrarToast(
                                 _isAdmin
                                     ? `Sessão Master ativa (${usuarioLogadoEmail})`
-                                    : `Sessão Operacional ativa — ações restritas via Esteira (${usuarioLogadoEmail})`,
+                                    : `Sessão Operacional ativa, ações restritas via Esteira (${usuarioLogadoEmail})`,
                                 _isAdmin ? 'verified_user' : 'info'
                             );
                         }
@@ -1413,7 +1413,7 @@
     // vazio sem duplicar lógica de formatação de data.
     function _cpFmtMesAno(iso) {
         const m = String(iso || '').match(/^(\d{4})-(\d{2})/);
-        return m ? `${_MESES_PT_CP[parseInt(m[2], 10) - 1]}/${m[1]}` : '—';
+        return m ? `${_MESES_PT_CP[parseInt(m[2], 10) - 1]}/${m[1]}` : 'não informado';
     }
     // Complemento CURTO que descreve a janela carregada, JÁ COM a preposição —
     // usado no hint da barra de ferramentas ("Nada encontrado <isto>."), que é
@@ -1470,7 +1470,7 @@
     const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     function fmtDataBR(yyyymmdd) {
         const m = String(yyyymmdd || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-        return m ? `${m[3]}/${m[2]}/${m[1]}` : '—';
+        return m ? `${m[3]}/${m[2]}/${m[1]}` : 'não informado';
     }
     function fmtCompetenciaBR(reg) {
         const ref = String(reg?.competencia_ref || '').trim();
@@ -2948,7 +2948,7 @@
             // selecionou a página corrente.
             if (filtrados.length > PAGE_SIZE_CP) {
                 mostrarToast(
-                    `${filtrados.length} lançamento(s) selecionado(s) — recorte completo do filtro atual.`,
+                    `${filtrados.length} lançamento(s) selecionado(s), recorte completo do filtro atual.`,
                     'check_circle'
                 );
             }
@@ -3665,7 +3665,7 @@
                 // por que o lote ficou vazio (não é falha de formato).
                 if (stats.transferenciasIgnoradas > 0) {
                     mostrarToast(
-                        `Nenhum lançamento válido — ${stats.transferenciasIgnoradas} linha(s) de transferência interna foram descartadas.`,
+                        `Nenhum lançamento válido, ${stats.transferenciasIgnoradas} linha(s) de transferência interna foram descartadas.`,
                         'warning', true);
                 } else {
                     mostrarToast('Nenhum lançamento detectado no arquivo. Verifique o formato.', 'warning', true);
@@ -3775,7 +3775,7 @@
                     arquivo: _cpEtlState.arquivoNome,
                 });
                 if (decisao === 'cancelar') {
-                    mostrarToast('Importação cancelada — nada foi gravado.', 'warning', true);
+                    mostrarToast('Importação cancelada, nada foi gravado.', 'warning', true);
                     return; // finally limpa estado; outras chamadas de
                             // _cpRegistrarUltimaImportacao não disparam.
                 }
@@ -3822,7 +3822,7 @@
 
         const totalLanc = _cpEtlState.lancamentos.length;
         const semForn = pend.filter(p => p.faltaFornecedor).length;
-        _cpQuarResumo.textContent = `${pend.length} combinação(ões) pendente(s) — ${totalLanc} lançamentos no arquivo${semForn ? ` · ${semForn} sem fornecedor cadastrado` : ''}.`;
+        _cpQuarResumo.textContent = `${pend.length} combinação(ões) pendente(s), ${totalLanc} lançamentos no arquivo${semForn ? ` · ${semForn} sem fornecedor cadastrado` : ''}.`;
         if (pend.length === 0) {
             _cpQuarCorpo.innerHTML = '';
             _cpQuarVazio.classList.remove('hidden');
@@ -3831,19 +3831,19 @@
             _cpQuarCorpo.innerHTML = pend.map((p) => {
                 const codCell = p.faltaFornecedor
                     ? `<div class="flex flex-col gap-1">
-                         <span class="font-mono font-bold text-tertiary tabular-nums">${p.codigo != null ? p.codigo : '—'}</span>
+                         <span class="font-mono font-bold text-tertiary tabular-nums">${p.codigo != null ? p.codigo : 'não informado'}</span>
                          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200 w-fit">
                             <span class="material-symbols-outlined text-[10px]">error</span>
                             Fornecedor não cadastrado
                          </span>
                        </div>`
-                    : `<span class="font-mono font-bold text-tertiary tabular-nums">${p.codigo != null ? p.codigo : '—'}</span>`;
+                    : `<span class="font-mono font-bold text-tertiary tabular-nums">${p.codigo != null ? p.codigo : 'não informado'}</span>`;
                 const fornDisabled = !p.faltaDespesa;  // se só faltava fornecedor, libera o save (despesa já matchou)
                 return `
                 <tr class="hover:bg-slate-50/60 transition-colors">
                     <td class="px-4 py-2.5 text-[12px] align-top">${codCell}</td>
-                    <td class="px-4 py-2.5 text-[12px] font-bold text-slate-800 align-top">${cpEscape(p.entidade || '—')}</td>
-                    <td class="px-4 py-2.5 text-[12px] text-slate-600 align-top">${cpEscape(p.despesa || '—')}</td>
+                    <td class="px-4 py-2.5 text-[12px] font-bold text-slate-800 align-top">${cpEscape(p.entidade || 'não informado')}</td>
+                    <td class="px-4 py-2.5 text-[12px] text-slate-600 align-top">${cpEscape(p.despesa || 'não informado')}</td>
                     <td class="px-4 py-2.5 align-top">
                         <select data-quar-campo="per_evento" data-quar-chave="${cpEscape(p.chave)}" ${fornDisabled ? 'disabled' : ''}
                                 class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400">
@@ -3860,7 +3860,7 @@
                     </td>
                     <td class="px-4 py-2.5 align-top">
                         <input type="month" data-quar-campo="data_fim_contrato" data-quar-chave="${cpEscape(p.chave)}"
-                               placeholder="—" disabled
+                               placeholder="não informado" disabled
                                class="w-full border border-slate-200 rounded-lg py-1.5 px-2 text-xs bg-slate-50 text-slate-400 cursor-not-allowed focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
                     </td>
                 </tr>`;
@@ -3894,7 +3894,7 @@
         } else {
             inp.value = '';
             inp.disabled = true;
-            inp.placeholder = '—';
+            inp.placeholder = 'não informado';
             inp.classList.add('bg-slate-50', 'text-slate-400', 'cursor-not-allowed');
             inp.classList.remove('bg-white', 'text-slate-700');
         }
@@ -3921,7 +3921,7 @@
         const tudoOk = total > 0 && preenchidasOuNa === total;
         _cpQuarBtnAplicar.disabled = !tudoOk;
         if (tudoOk) {
-            _cpQuarStatus.innerHTML = `<span class="text-emerald-600 font-bold">✓ Pronto para importar — ${totalEditaveis} despesa(s) serão aprendidas em CP_Base_Despesas.</span>`;
+            _cpQuarStatus.innerHTML = `<span class="text-emerald-600 font-bold">✓ Pronto para importar, ${totalEditaveis} despesa(s) serão aprendidas em CP_Base_Despesas.</span>`;
         } else {
             const faltam = totalEditaveis - (preenchidasOuNa - (total - totalEditaveis));
             _cpQuarStatus.innerHTML = `Faltam <strong class="text-red-600">${faltam}</strong> de <strong>${totalEditaveis}</strong> classificações de despesa.`;
@@ -3968,7 +3968,7 @@
         await _cpSalvarBaseDespesas(_cpEtlState.mapeamentos);
         fecharModal('modal-cp-quarentena');
         // Loader volta enquanto persiste (writeBatch em chunks pode demorar).
-        if (window._cpMostrarLoader) window._cpMostrarLoader('Gravando lançamentos…', 'Persistindo em ContasAPagar — pode levar alguns segundos.');
+        if (window._cpMostrarLoader) window._cpMostrarLoader('Gravando lançamentos…', 'Persistindo em ContasAPagar, pode levar alguns segundos.');
         try {
             await _cpFinalizarImportacao();
             if (window._cpRegistrarUltimaImportacao) {
@@ -4029,7 +4029,7 @@
             console.log(`[CP_Base_Despesas] ${gravados} despesa(s) gravada(s) via quarentena.`);
         } catch (err) {
             console.error('[CP_Base_Despesas] falha ao gravar:', err);
-            mostrarToast('Os aprendizados de despesa não foram salvos — a importação continuará mesmo assim.', 'warning', true);
+            mostrarToast('Os aprendizados de despesa não foram salvos, a importação continuará mesmo assim.', 'warning', true);
         }
     }
 
@@ -4165,7 +4165,7 @@
             const elCount = document.getElementById('cp-duplic-count');
             if (elCount) elCount.textContent = (count >= 50 ? '50+' : String(count));
             const elArq = document.getElementById('cp-duplic-arquivo');
-            if (elArq) elArq.textContent = arquivo || '—';
+            if (elArq) elArq.textContent = arquivo || 'não informado';
             // Esconder o overlay de loading durante a decisão pra não competir
             // visualmente com o modal (loader fica empilhado em cima).
             if (window._cpEsconderLoader) window._cpEsconderLoader();
@@ -4504,7 +4504,7 @@
         const buf = await file.arrayBuffer();
         const wb = XLSX.read(buf, { type: "array" });
         const sheetName = wb.SheetNames[0];
-        if (!sheetName) throw new Error("Planilha vazia — sem abas no arquivo.");
+        if (!sheetName) throw new Error("Planilha vazia, sem abas no arquivo.");
         const ws = wb.Sheets[sheetName];
         return XLSX.utils.sheet_to_json(ws, { defval: "" });
     }
@@ -4980,7 +4980,7 @@
                 });
             }
             if (!docsParaGravar.length) {
-                mostrarToast('Nenhum funcionário válido após o parsing — confira o arquivo.', 'warning', true);
+                mostrarToast('Nenhum funcionário válido após o parsing, confira o arquivo.', 'warning', true);
                 return;
             }
 
@@ -5098,12 +5098,12 @@
     }
     async function cpExecutarExportacaoExcel() {
         if (typeof XLSX === 'undefined') {
-            mostrarToast('Biblioteca SheetJS não carregou — recarregue a página.', 'error', true);
+            mostrarToast('Biblioteca SheetJS não carregou, recarregue a página.', 'error', true);
             return;
         }
         const fonte = Array.isArray(_cpUltimosFiltrados) ? _cpUltimosFiltrados : [];
         if (!fonte.length) {
-            mostrarToast('Nada para exportar — o recorte atual está vazio.', 'warning', true);
+            mostrarToast('Nada para exportar, o recorte atual está vazio.', 'warning', true);
             return;
         }
         const btn = document.getElementById('btn-cp-exportar-excel');
@@ -5154,19 +5154,19 @@
                 const valor = Number(r.valor_original || r.valor || 0);
                 linhas[i] = {
                     // Empresa — fallbacks múltiplos pra schemas legados.
-                    'Empresa':              r.empresa || r.empresa_nome || r.nome_empresa || r.filial || '—',
-                    'Fornecedor/Favorecido': r.entidade || r.fornecedor_nome || r.favorecido || '—',
+                    'Empresa':              r.empresa || r.empresa_nome || r.nome_empresa || r.filial || 'não informado',
+                    'Fornecedor/Favorecido': r.entidade || r.fornecedor_nome || r.favorecido || 'não informado',
                     // Despesa — campo que estava OMITIDO. Usa a mesma variável
                     // que `renderTabela` (r.categoria) com fallbacks legados.
-                    'Despesa':              r.categoria || r.despesa || r.historico || r.descricao || '—',
-                    'Tipo de Lançamento':   r.tipo_entidade || r.tipo || r.classificacao || '—',
-                    'CC (Centro de Custo)': cc || '—',
-                    'Gestor Responsável':   gestor || '—',
-                    'Código Título/Ord':    r.codigo_titulo_ord || '—',
+                    'Despesa':              r.categoria || r.despesa || r.historico || r.descricao || 'não informado',
+                    'Tipo de Lançamento':   r.tipo_entidade || r.tipo || r.classificacao || 'não informado',
+                    'CC (Centro de Custo)': cc || 'não informado',
+                    'Gestor Responsável':   gestor || 'não informado',
+                    'Código Título/Ord':    r.codigo_titulo_ord || 'não informado',
                     'Valor (R$)':           valor,
-                    'Data de Vencimento':   fmtDataBR(r.data_vencimento) || '—',
-                    'Status':               statusLbl || '—',
-                    'Detalhe / Observação': r.observacao || r.detalhe || '—',
+                    'Data de Vencimento':   fmtDataBR(r.data_vencimento) || 'não informado',
+                    'Status':               statusLbl || 'não informado',
+                    'Detalhe / Observação': r.observacao || r.detalhe || 'não informado',
                 };
             }
             const worksheet = XLSX.utils.json_to_sheet(linhas, {
@@ -5228,7 +5228,7 @@
     function _cpCarregarCcNoSelect(selectEl, valorAtual) {
         if (!selectEl) return;
         const valorNorm = String(valorAtual || '').trim();
-        selectEl.innerHTML = '<option value="">— sem CC —</option>';
+        selectEl.innerHTML = '<option value="">sem CC</option>';
         for (const nome of (_ccDisponiveis || [])) {
             const opt = document.createElement('option');
             opt.value = nome;
@@ -5258,7 +5258,7 @@
         // Código do Fornecedor (readonly) — auditoria 2026-05-18 V6 Item 6.
         document.getElementById('ef-cp-codigo-forn').value = reg.codigo_fornecedor != null && reg.codigo_fornecedor !== ''
             ? String(reg.codigo_fornecedor)
-            : '— sem vínculo —';
+            : 'sem vínculo';
         document.getElementById('ef-cp-favorecido').value  = reg.entidade || '';
         _cpCarregarCcNoSelect(document.getElementById('ef-cp-centro-custo'), reg.centro_custo);
         document.getElementById('ef-cp-vencimento').value  = String(reg.data_vencimento || '').slice(0, 10);
@@ -5269,7 +5269,7 @@
         // (apenas a transição dispara a projeção dos 60 meses futuros).
         document.getElementById('ef-cp-recorrente').dataset.previo = reg.is_recorrente === true ? '1' : '0';
         document.getElementById('ef-cp-subtitulo').textContent =
-            `${reg.entidade || '—'} · ${reg.categoria || 'sem despesa'} · ${fmtDataBR(reg.data_vencimento)}`;
+            `${reg.entidade || 'não informado'} · ${reg.categoria || 'sem despesa'} · ${fmtDataBR(reg.data_vencimento)}`;
         abrirModal('modal-editar-fatura-cp');
     }
 
@@ -5363,7 +5363,7 @@
                     is_recorrente: recorrente,
                 };
                 await _criarSolicitacaoAprovacao('UPDATE', COLECAO, _cpEditFaturaId, dadosAntigos, dadosNovos,
-                    `Edição de fatura: ${favorecido || '—'} · ${venc}`, 'CP');
+                    `Edição de fatura: ${favorecido || 'não informado'} · ${venc}`, 'CP');
                 mostrarToast('Lançamento atualizado.', 'check_circle');
                 fecharModal('modal-editar-fatura-cp');
                 _cpEditFaturaId = null;
@@ -5466,7 +5466,7 @@
         if (!id) return;
         const reg = cacheRegistros.find(r => r._id === id);
         const desc = reg
-            ? `${reg.entidade || '—'} · ${reg.categoria || 'sem despesa'} · ${fmtDataBR(reg.data_vencimento)} · ${fmtBRL.format(Number(reg.valor_original) || 0)}`
+            ? `${reg.entidade || 'não informado'} · ${reg.categoria || 'sem despesa'} · ${fmtDataBR(reg.data_vencimento)} · ${fmtBRL.format(Number(reg.valor_original) || 0)}`
             : `este lançamento (id ${id})`;
         _cpDeleteFaturaId = id;
         document.getElementById('dl-fcp-descricao').textContent = desc;
@@ -5526,7 +5526,7 @@
                         data_vencimento: reg.data_vencimento || null,
                     } : null;
                     await _criarSolicitacaoAprovacao('DELETE', COLECAO, _cpDeleteFaturaId, dadosAntigos, null,
-                        `Exclusão: ${reg?.entidade || '—'} · ${reg?.categoria || '—'}`, 'CP');
+                        `Exclusão: ${reg?.entidade || 'não informado'} · ${reg?.categoria || 'não informado'}`, 'CP');
                     mostrarToast('Lançamento excluído.', 'check_circle');
                 } else {
                     await deleteDoc(doc(db, COLECAO, _cpDeleteFaturaId));
@@ -5613,7 +5613,7 @@
                 const tipo = data.tipo ? ` · <span class="uppercase tracking-wider text-[10px] font-bold">${escHTML(data.tipo)}</span>` : '';
                 el.innerHTML =
                     `<span class="material-symbols-outlined text-[14px] text-emerald-500">cloud_done</span>` +
-                    `<span>Última base importada em: <strong class="font-bold text-slate-600 tabular-nums">${quando || '—'}</strong>${tipo}</span>`;
+                    `<span>Última base importada em: <strong class="font-bold text-slate-600 tabular-nums">${quando || 'não informado'}</strong>${tipo}</span>`;
             }, (err) => console.warn('[Metadados/UltimaImportacao_CP] listener falhou:', err?.code || err?.message));
         } catch (err) {
             console.warn('[Metadados/UltimaImportacao_CP] inscrição falhou:', err?.message);
@@ -5754,7 +5754,7 @@
         try {
             setTimeout(() => {
                 if (typeof mostrarToast === 'function') {
-                    mostrarToast('Sessão em modo CONSULTA — alterações desabilitadas.', 'visibility');
+                    mostrarToast('Sessão em modo CONSULTA, alterações desabilitadas.', 'visibility');
                 }
             }, 900);
         } catch (_) {}
