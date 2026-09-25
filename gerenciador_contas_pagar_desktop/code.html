@@ -806,6 +806,56 @@
         </div>
     </div>
 </div>
+<!-- MODAL: Classificação Obrigatória de Favorecidos (OS-CP-CLASSIFICACAO-IMPORT-01,
+     Onda 2). Abre ao FIM do parse quando o arquivo traz favorecido SEM TIPO
+     (código novo ou cadastrado sem tipo). Trava a importação até tudo classificado.
+     Modal de PREENCHIMENTO: NÃO fecha ao clicar fora (overlay sem data-modal-overlay);
+     fecha por Cancelar/Salvar; Escape cancela (gesto deliberado). Fluxo via Promise
+     em _cpAbrirModalClassificacao. -->
+<div id="modal-cp-classificacao" class="fixed inset-0 z-[82] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+    <div class="bg-white w-full max-w-4xl mx-4 rounded-2xl shadow-2xl z-10 flex flex-col max-h-[88vh] transform scale-95 transition-transform duration-300 relative border border-slate-100">
+        <div class="flex items-start gap-3 p-6 pb-4 border-b border-slate-100">
+            <div class="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 shadow-inner">
+                <span class="material-symbols-outlined text-primary text-2xl">rule</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="font-headline text-lg font-extrabold text-secondary tracking-tight">Classificar Favorecidos Da Importação</h3>
+                <p class="text-[12px] text-slate-500 font-medium mt-0.5"><span id="cp-class-resumo">Detectamos favorecidos sem tipo neste arquivo.</span></p>
+            </div>
+        </div>
+        <div class="px-6 py-4 overflow-y-auto flex-1">
+            <table class="w-full text-left border-separate border-spacing-0">
+                <thead>
+                    <tr class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+                        <th class="px-3 py-2 text-center">Código</th>
+                        <th class="px-3 py-2">Favorecido</th>
+                        <th class="px-3 py-2 text-center">Tipo</th>
+                        <th class="px-3 py-2 text-center">Centro De Custo</th>
+                        <th class="px-3 py-2 text-center">Empresa</th>
+                    </tr>
+                </thead>
+                <tbody id="cp-class-corpo" class="divide-y divide-slate-100"></tbody>
+            </table>
+            <p id="cp-class-vazio" class="hidden text-[11px] text-slate-400 italic text-center py-6">Nenhum favorecido pendente, pronto para importar.</p>
+        </div>
+        <div class="flex items-center justify-between gap-3 p-6 pt-4 border-t border-slate-100">
+            <div class="text-[11px] text-slate-500 font-medium" id="cp-class-status">
+                Classifique tipo, centro de custo e empresa de cada favorecido.
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button id="btn-cp-class-cancelar" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                    Cancelar
+                </button>
+                <button id="btn-cp-class-salvar" type="button" disabled
+                    class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-xs font-extrabold shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+                    <span class="material-symbols-outlined text-base">task_alt</span>
+                    <span>Salvar E Importar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- file-fornecedores-xlsx removido (auditoria 2026-05-18): governança migrada pra master.html -->
 <!-- file-despesas-xlsx removido (auditoria 2026-05-21): card de Despesas
      migrou pra Benefícios PJ. CP_Base_Despesas continua sendo alimentado
@@ -3591,6 +3641,14 @@
             fornecedoresMap: null,    // codigo → registro de /Fornecedores
             despesasLista: null,       // lista pré-normalizada de /CP_Base_Despesas
             pendentes: [],
+            // OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2): favorecidos que cairiam
+            // SEM TIPO neste arquivo (código novo OU código já cadastrado com
+            // tipo vazio), agrupados por CÓDIGO (dedup) para o modal de
+            // classificação obrigatória. `classAplicadas` guarda o que o operador
+            // classificou (código → {tipo, centro_custo, empresa}) para aplicar
+            // ao lote e barrar o auto-cadastro mudo.
+            classPendentes: new Map(),  // codigoStr → {codigo, nome, jaExiste}
+            classAplicadas: null,       // codigoStr → {tipo, centro_custo, empresa}
             mapeamentos: new Map(),    // chave (codigo|despesa_norm) → {per_evento, per_valor, data_fim_contrato}
             // Telemetria do parser (2026-05-20). Resetada a cada importação
             // pra não misturar contagens de lotes anteriores no toast final.
@@ -3744,6 +3802,26 @@
                 (a.entidade || '').localeCompare(b.entidade || '', 'pt-BR')
             );
 
+            // ── OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2): favorecidos SEM TIPO ──
+            // Um favorecido cai aqui quando o match não resolveu um tipo útil:
+            // código inexistente em /Fornecedores, OU código já cadastrado mas
+            // com `tipo` vazio (o buraco do auto-cadastro mudo). Agrupa por
+            // CÓDIGO (dedup) — o mesmo favorecido repetido em N linhas do arquivo
+            // aparece UMA única vez no modal (reforço #1 do diretor).
+            const _classPend = new Map();
+            for (const lanc of lancamentos) {
+                if (lanc.codigo == null) continue;
+                if (lanc._tipo_entidade) continue;   // já tem tipo útil (match ok)
+                const codStr = String(lanc.codigo);
+                if (_classPend.has(codStr)) continue;
+                _classPend.set(codStr, {
+                    codigo: lanc.codigo,
+                    nome: lanc._nomeOficial || lanc.entidade || '',
+                    jaExiste: !!lanc._fornecedor,   // true = cadastrado sem tipo
+                });
+            }
+            _cpEtlState.classPendentes = _classPend;
+
             console.log('[ETL GerenciadorCP] match:', {
                 total: lancamentos.length,
                 okCompleto,
@@ -3751,6 +3829,7 @@
                 pendApenasDespesa: pendDespesa,
                 pendAmbos,
                 pendenciasAgrupadas: _cpEtlState.pendentes.length,
+                favorecidosSemTipo: _cpEtlState.classPendentes.size,
             });
 
             // Auditoria 2026-05-20 (Frente 1 — ETL Fluido): o bloqueio
@@ -3763,6 +3842,35 @@
             // para o sanesamento posterior em lote — `_cpFinalizarImportacao`
             // detecta as combinações inéditas e cuida da alimentação de
             // retaguarda.
+
+            // ── GATE de classificação obrigatória (OS-CP-CLASSIFICACAO-IMPORT-01) ──
+            // ANTES de qualquer escrita de lançamento: se há favorecido SEM TIPO,
+            // abre o modal e NÃO grava nada enquanto a classificação não estiver
+            // resolvida. Evita deixar lançamento "SEM TIPO" entrar e ter que
+            // corrigir depois (reforço #2 do diretor). O modal, ao salvar, já
+            // aplica a classificação ao lote em memória e a persiste em
+            // /Fornecedores (admin) ou na esteira de aprovação (não-admin).
+            if (_cpEtlState.classPendentes.size > 0) {
+                // Guarda de robustez (OS-CP-CLASSIFICACAO-IMPORT-01): sem os
+                // catálogos de Centro de Custo (AreasContasPagar) e Empresa
+                // (Base_Empresas) carregados, o modal não teria opções e o botão
+                // Salvar ficaria travado para sempre. Aborta a importação com
+                // aviso claro em vez de deixar o operador preso (nada é gravado).
+                if (!(_ccDisponiveis && _ccDisponiveis.length) || !(_cpEmpresasOficiais && _cpEmpresasOficiais.length)) {
+                    mostrarToast('Não foi possível classificar: os cadastros de Centro de Custo e/ou Empresa ainda não carregaram. Aguarde alguns segundos e importe novamente.', 'warning', true);
+                    return;
+                }
+                const decisaoClass = await _cpAbrirModalClassificacao();
+                if (decisaoClass === 'cancelar') {
+                    mostrarToast('Importação cancelada, nada foi gravado.', 'warning', true);
+                    return; // finally limpa estado; nada foi escrito.
+                }
+                // 'ok': segue para a persistência do lote (agora com tipo/CC).
+                if (window._cpMostrarLoader) window._cpMostrarLoader(
+                    'Gravando lançamentos…',
+                    'Classificação concluída, persistindo o lote em ContasAPagar.'
+                );
+            }
 
             // Escudo de duplicidade (auditoria 2026-05-29). Consulta leve
             // pelo fingerprint SHA-256 antes do writeBatch. Se já há lote
@@ -4200,6 +4308,264 @@
         });
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    // OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2) — Modal de classificação obrigatória
+    // ════════════════════════════════════════════════════════════════════════
+    // Enforce single-select num componente checkbox_multi (que é multi por
+    // natureza). Ao marcar um segundo valor, mantém só o recém-marcado — dá
+    // comportamento de "rádio" sem trocar o componente do design system (a regra
+    // proíbe <select> cru do navegador, que abre o dropdown do SO fora do tema).
+    function _cpSelectSingleGuard(sel) {
+        let prev = new Set(Array.from(sel.options).filter(o => o.selected).map(o => o.value));
+        sel.addEventListener('change', () => {
+            const marcados = Array.from(sel.options).filter(o => o.selected);
+            if (marcados.length > 1) {
+                const novos = marcados.filter(o => !prev.has(o.value));
+                const manter = novos[0] || marcados[marcados.length - 1];
+                Array.from(sel.options).forEach(o => { o.selected = (o === manter); });
+                // Re-render do painel do checkbox_multi para refletir a seleção única.
+                sel.dispatchEvent(new Event('cb-multi-sync'));
+            }
+            prev = new Set(Array.from(sel.options).filter(o => o.selected).map(o => o.value));
+            _cpRevalidarClassificacao();
+        });
+    }
+
+    function _cpClassValor(tr, campo) {
+        const s = tr.querySelector(`select[data-class-campo="${campo}"]`);
+        if (!s) return '';
+        const sel = Array.from(s.options).filter(o => o.selected).map(o => o.value).filter(Boolean);
+        return sel[0] || '';
+    }
+
+    function _cpRevalidarClassificacao() {
+        const corpo = document.getElementById('cp-class-corpo');
+        const linhas = [...corpo.querySelectorAll('tr[data-class-codigo]')];
+        let ok = 0;
+        for (const tr of linhas) {
+            if (_cpClassValor(tr, 'tipo') && _cpClassValor(tr, 'cc') && _cpClassValor(tr, 'empresa')) ok++;
+        }
+        const total = linhas.length;
+        const btn = document.getElementById('btn-cp-class-salvar');
+        const done = total > 0 && ok === total;
+        if (btn) btn.disabled = !done;
+        const status = document.getElementById('cp-class-status');
+        if (!status) return;
+        if (done) {
+            status.innerHTML = `<span class="text-emerald-600 font-bold">Tudo classificado, ${total} favorecido(s) prontos para importar.</span>`;
+        } else {
+            status.innerHTML = `Faltam <strong class="text-red-600">${total - ok}</strong> de <strong>${total}</strong> favorecido(s) a classificar.`;
+        }
+    }
+
+    // Abre o modal e devolve 'ok' | 'cancelar' via Promise (mesmo padrão de
+    // _cpAbrirModalDuplicidade). Ao salvar, já aplicou a classificação ao lote
+    // em memória e persistiu (admin) ou enfileirou (não-admin).
+    function _cpAbrirModalClassificacao() {
+        return new Promise((resolve) => {
+            const m = document.getElementById('modal-cp-classificacao');
+            if (!m) { resolve('cancelar'); return; }
+
+            // Limpa painéis-portal órfãos de aberturas anteriores nesta sessão
+            // (o checkbox_multi em modo portal anexa o painel ao <body>).
+            document.querySelectorAll('.cb-multi-panel[data-cp-class-panel]').forEach(p => p.remove());
+
+            const pend = [..._cpEtlState.classPendentes.values()]
+                .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+            const corpo = document.getElementById('cp-class-corpo');
+            const vazio = document.getElementById('cp-class-vazio');
+            const TIPOS = ['Cliente', 'Fornecedor Externo', 'Fornecedor Interno', 'Fornecedor Interno - PJ'];
+            const optsHtml = (arr) => (arr || []).map(v => `<option value="${cpEscape(v)}">${cpEscape(v)}</option>`).join('');
+
+            const resumo = document.getElementById('cp-class-resumo');
+            if (resumo) resumo.textContent = `${pend.length} favorecido(s) sem tipo neste arquivo. Classifique todos para concluir a importação.`;
+
+            if (!pend.length) {
+                corpo.innerHTML = '';
+                if (vazio) vazio.classList.remove('hidden');
+            } else if (vazio) {
+                vazio.classList.add('hidden');
+            }
+
+            corpo.innerHTML = pend.map((p, i) => {
+                const badge = p.jaExiste
+                    ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 w-fit mt-1"><span class="material-symbols-outlined text-[10px]">edit_note</span>Cadastrado Sem Tipo</span>`
+                    : `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-50 text-sky-700 border border-sky-200 w-fit mt-1"><span class="material-symbols-outlined text-[10px]">person_add</span>Novo Favorecido</span>`;
+                return `
+                <tr data-class-codigo="${cpEscape(String(p.codigo))}" data-class-idx="${i}" class="align-top">
+                    <td class="px-3 py-3 text-center">
+                        <div class="flex flex-col items-center">
+                            <span class="font-mono font-bold text-tertiary tabular-nums text-[12px]">${p.codigo != null ? cpEscape(String(p.codigo)) : 'não informado'}</span>
+                            ${badge}
+                        </div>
+                    </td>
+                    <td class="px-3 py-3 text-[12px] font-bold text-slate-800">${cpEscape(p.nome || 'não informado')}</td>
+                    <td class="px-3 py-3 w-48">
+                        <select id="cp-class-tipo-${i}" multiple data-checkbox-multi data-cb-portal data-class-campo="tipo" data-placeholder="Selecione o tipo…">${optsHtml(TIPOS)}</select>
+                    </td>
+                    <td class="px-3 py-3 w-48">
+                        <select id="cp-class-cc-${i}" multiple data-checkbox-multi data-cb-portal data-class-campo="cc" data-placeholder="Selecione o CC…">${optsHtml(_ccDisponiveis)}</select>
+                    </td>
+                    <td class="px-3 py-3 w-48">
+                        <select id="cp-class-empresa-${i}" multiple data-checkbox-multi data-cb-portal data-class-campo="empresa" data-placeholder="Selecione a empresa…">${optsHtml(_cpEmpresasOficiais)}</select>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            // Upgrade dos selects para o componente do design system + trava single.
+            const panelsAntes = new Set(document.querySelectorAll('.cb-multi-panel'));
+            corpo.querySelectorAll('select[data-class-campo]').forEach(sel => {
+                if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(sel);
+                _cpSelectSingleGuard(sel);
+            });
+            // Marca os painéis-portal recém-criados para limpeza na próxima abertura.
+            document.querySelectorAll('.cb-multi-panel').forEach(p => {
+                if (!panelsAntes.has(p)) p.setAttribute('data-cp-class-panel', '1');
+            });
+
+            _cpRevalidarClassificacao();
+
+            // Esconde o loader para não competir com o modal (padrão da duplicidade).
+            if (window._cpEsconderLoader) window._cpEsconderLoader();
+            m.classList.remove('opacity-0', 'pointer-events-none');
+            const card = m.querySelector('div.bg-white');
+            if (card) card.classList.remove('scale-95');
+
+            const btnSalvar = document.getElementById('btn-cp-class-salvar');
+            const btnCancel = document.getElementById('btn-cp-class-cancelar');
+
+            const cleanup = (dec) => {
+                m.classList.add('opacity-0', 'pointer-events-none');
+                if (card) card.classList.add('scale-95');
+                document.querySelectorAll('.cb-multi-panel[data-cp-class-panel]').forEach(p => p.remove());
+                btnSalvar.removeEventListener('click', onSalvar);
+                btnCancel.removeEventListener('click', onCancel);
+                document.removeEventListener('keydown', onKey);
+                resolve(dec);
+            };
+
+            const onSalvar = async () => {
+                if (btnSalvar.disabled) return;
+                const mapClass = new Map();
+                [...corpo.querySelectorAll('tr[data-class-codigo]')].forEach(tr => {
+                    const codStr = tr.getAttribute('data-class-codigo');
+                    mapClass.set(codStr, {
+                        tipo: _cpClassValor(tr, 'tipo'),
+                        centro_custo: _cpClassValor(tr, 'cc'),
+                        empresa: _cpClassValor(tr, 'empresa'),
+                    });
+                });
+                btnSalvar.disabled = true;
+                if (window._cpMostrarLoader) window._cpMostrarLoader(
+                    'Salvando classificação…',
+                    _isAdmin ? 'Gravando em /Fornecedores e aplicando ao lote.' : 'Enviando para a esteira e aplicando ao lote.'
+                );
+                try {
+                    await _cpAplicarClassificacoes(mapClass);
+                } catch (e) {
+                    console.error('[Classificação] falha ao persistir:', e);
+                    mostrarToast('Falha ao salvar a classificação: ' + (e.message || 'erro'), 'error', true);
+                    if (window._cpEsconderLoader) window._cpEsconderLoader();
+                    btnSalvar.disabled = false;
+                    return; // mantém o modal aberto para nova tentativa
+                }
+                const aviso = _isAdmin
+                    ? `${mapClass.size} favorecido(s) classificado(s) e cadastrado(s).`
+                    : `${mapClass.size} favorecido(s) enviados para aprovação, classificação aplicada a este lote.`;
+                cleanup('ok');
+                mostrarToast(aviso, _isAdmin ? 'check_circle' : 'info', false);
+            };
+            const onCancel = () => cleanup('cancelar');
+            // Escape cancela (gesto deliberado); clique fora NÃO fecha (sem handler no overlay).
+            const onKey = (e) => { if (e.key === 'Escape') onCancel(); };
+
+            btnSalvar.addEventListener('click', onSalvar);
+            btnCancel.addEventListener('click', onCancel);
+            document.addEventListener('keydown', onKey);
+        });
+    }
+
+    // Aplica a classificação ao lote em memória (para o writeBatch gravar
+    // tipo/CC agora) e persiste no cadastro /Fornecedores (fonte da verdade das
+    // PRÓXIMAS importações): admin grava direto; não-admin gera solicitação na
+    // esteira. Empresa NÃO é gravada no lançamento (Desenho B: empresa é padrão
+    // do cadastro; override por lote fica na Onda 3).
+    async function _cpAplicarClassificacoes(mapClass) {
+        // 1) Aplica ao lote em memória.
+        for (const lanc of _cpEtlState.lancamentos) {
+            if (lanc.codigo == null) continue;
+            const c = mapClass.get(String(lanc.codigo));
+            if (!c) continue;
+            lanc._tipo_entidade = c.tipo || null;
+            const nome = lanc._nomeOficial || lanc.entidade || '';
+            lanc._nomeOficial = nome;
+            lanc._fornecedor = {
+                ...(lanc._fornecedor || {}),
+                codigo: lanc.codigo,
+                nome,
+                tipo: c.tipo || '',
+                centro_custo: c.centro_custo || '',
+                empresa: c.empresa || '',
+            };
+        }
+        _cpEtlState.classAplicadas = mapClass;
+
+        // 2) Persiste no cadastro.
+        const entradas = [...mapClass.entries()];
+        if (_isAdmin) {
+            for (let i = 0; i < entradas.length; i += CHUNK_SIZE) {
+                const fatia = entradas.slice(i, i + CHUNK_SIZE);
+                const b = writeBatch(db);
+                for (const [codStr, c] of fatia) {
+                    const info = _cpEtlState.classPendentes.get(codStr) || {};
+                    const nome = String(info.nome || '').trim().toUpperCase() || `FORNECEDOR ${codStr}`;
+                    const payload = {
+                        codigo: Number(codStr) || codStr,
+                        nome,
+                        tipo: c.tipo || '',
+                        centro_custo: c.centro_custo || '',
+                        empresa: c.empresa || '',
+                        origem: 'classificacao_import_etl',
+                        updated_at: serverTimestamp(),
+                        updated_by: usuarioLogadoNome,
+                    };
+                    if (!info.jaExiste) {
+                        payload.created_at = serverTimestamp();
+                        payload.criado_por = usuarioLogadoNome;
+                    }
+                    b.set(doc(db, COLECAO_FORN, codStr), payload, { merge: true });
+                }
+                await b.commit();
+                await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+            }
+        } else {
+            for (const [codStr, c] of entradas) {
+                const info = _cpEtlState.classPendentes.get(codStr) || {};
+                const nome = String(info.nome || '').trim().toUpperCase() || `FORNECEDOR ${codStr}`;
+                await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
+                    tipo_operacao: info.jaExiste ? 'UPDATE' : 'CREATE',
+                    colecao_alvo: COLECAO_FORN,
+                    doc_id_alvo: codStr,
+                    dados_antigos: null,
+                    dados_novos: {
+                        codigo: Number(codStr) || codStr,
+                        nome,
+                        tipo: c.tipo || '',
+                        centro_custo: c.centro_custo || '',
+                        empresa: c.empresa || '',
+                        origem: 'classificacao_import_etl',
+                    },
+                    resumo: `Classificação via importação: ${nome} (#${codStr}) como ${c.tipo || 'não informado'}`,
+                    modulo_origem: 'CP',
+                    status: 'Pendente',
+                    solicitado_por: usuarioLogadoNome,
+                    solicitado_por_email: usuarioLogadoEmail,
+                    criado_em: serverTimestamp(),
+                });
+            }
+        }
+    }
+
     // ── Gravação final em ContasAPagar ─────────────────────────────────────
     async function _cpFinalizarImportacao() {
         const expandido = _cpExpandirProjecaoFixo(_cpEtlState.lancamentos);
@@ -4323,6 +4689,12 @@
                 for (const l of expandido) {
                     if (l._fornecedor) continue;        // já existe
                     if (l.codigo == null) continue;     // sem PK
+                    // OS-CP-CLASSIFICACAO-IMPORT-01 (reforço #3): código já tratado
+                    // pelo modal de classificação (persistido/enfileirado com tipo
+                    // REAL) NÃO volta a ser auto-cadastrado mudo com tipo:''/
+                    // empresa:''. Defesa explícita, além do `_fornecedor` já setado
+                    // em memória pela aplicação da classificação.
+                    if (_cpEtlState.classAplicadas && _cpEtlState.classAplicadas.has(String(l.codigo))) continue;
                     const codStr = String(l.codigo);
                     if (novosMap.has(codStr)) continue; // dedup interno
                     novosMap.set(codStr, {
