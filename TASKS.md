@@ -43,6 +43,20 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
 
 ## Backlog aberto — levantado durante OS já concluídas
 
+- [ ] **"Responsável não informado" nos lançamentos do CP** (perdida numa queda de sessão,
+      re-registrada em 2026-09-24). Centro de custo aparece com Responsável "não informado"
+      mesmo com o gestor JÁ cadastrado na tela de Áreas & Gestores.
+      **Caso concreto:** CATARINA APARECIDA DOS SANTOS, centro de custo "Comercial",
+      responsável cadastrado e mesmo assim exibido como "não informado".
+      **Hipótese a investigar quando a frente abrir:** o Responsável não é campo gravado, é
+      DERIVADO em runtime do cruzamento `lancamento.centro_custo` × `AreasContasPagar.nome`
+      → `gestor_nome`. O match é EXATO e sensível a caixa/acento/espaço interno: o mapa é
+      chaveado por `String(data.nome).trim()` (`gerenciador_contas_pagar_desktop/code.html:1257-1261`)
+      e consultado por `String(r.centro_custo).trim()` (`code.html:2539` e `code.html:5151`),
+      sem `toUpperCase`/`normalize('NFD')` dos dois lados. Qualquer divergência de grafia
+      entre o CC gravado no lançamento e o nome cadastrado na Área faz o lookup falhar em
+      silêncio e cair no marcador "não informado".
+      **Status: NO RADAR.** Entra em frente própria DEPOIS das Ondas 2/3/4. Não iniciar agora.
 - [ ] **Faturamento sem janela de carga** (levantado na OS-CP-ULTIMO-MES-01, 2026-09-08).
       `contas_a_receber_desktop/code.html:4319` faz `onSnapshot(collection(db,"Lancamentos"))`
       sem `where`/`orderBy`/`limit` — carrega a coleção inteira a cada abertura. É a mesma
@@ -59,37 +73,42 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
 - [!] F0-D2 — Confirmar que o `firebase login` do desktop tem permissão de deploy no projeto
       `centra-fin` (pré-condição do deployer; já em uso hoje, só registrar).
 
-## Em curso — Contas a Pagar: alcance dos filtros e janela de carga (2026-09-10/11)
+## Contas a Pagar — refatoração em Ondas (frente corrente)
 
-> Contexto medido: `/ContasAPagar` tem **51.881 docs**. Detalhe completo no DIARIO.md,
-> entrada "2026-09-11 — PONTO DE RETOMADA".
+> Base medida: `/ContasAPagar` com **51.181 docs**. Mapa do que já existe e do que a
+> refatoração pretende: `docs/MAPA-CP-REFATORACAO.md`. Tela viva:
+> `gerenciador_contas_pagar_desktop/code.html` (confirmada pelo `sidebar.js`).
 
-### OS-CP-FILTROS-BASE-COMPLETA-01 — branch `feature/cp-filtros-base`, commit `da6b1c0`
-- [x] Arquiteto — desenho, 9 vetos de implementação
-- [x] Designer — spec de diff visual (`design/specs/cp-filtros-base-completa.md`)
-- [x] Engenheiro — Parte 1 (união das opções) + Parte 2 (guarda do Período)
-- [x] Designer — auditoria de tokens (3 achados, os 3 corrigidos)
-- [x] Testador-auditor — **APROVADO** (emulador real; `getCountFromServer` e perfil `consulta` validados)
-- [!] **Validação visual do diretor** — preview channel no ar, expira **2026-09-17**:
-      `https://centra-fin--cp-filtros-base-ugukuksq.web.app/gerenciador_contas_pagar_desktop/code.html`
-- [ ] Flag `READY_cp-filtros-base` (só após a validação visual)
-- [ ] Deployer — push + deploy **somente hosting**
+- [x] **Onda 1 — OS-CP-CORRIGE-NOMES-01 (corrigir nomes).** CONCLUÍDA e em produção.
+      Correção IN-PLACE por dicionário dos 197 campos com U+FFFD ("�"), zero doc apagado
+      ou criado. Validada pelo diretor. Mergeada em `main` (`7d93e37`). DIARIO 2026-09-24.
+- [x] **Onda Layout — OS-CP-LAYOUT-01.** CONCLUÍDA e em produção. Colunas, KPIs, ordenação
+      por clique nas 7 colunas e remoção do travessão de toda a UI do CP. Validada pelo
+      diretor no preview channel, deploy `--only hosting`. Mergeada em `main` (`47e4b59`).
+      DIARIO 2026-09-24.
+- [ ] **Onda 2 — OS-CP-CLASSIFICACAO-IMPORT-01 (classificação na importação). PRÓXIMA.**
+      Destrinchar OPEX em Interno (CLT+PJ) × Externo, dependente do tipo preenchido na
+      importação. Branch `feature/cp-classificacao-import` criado e VAZIO (nenhum commit,
+      nenhuma investigação rodada). Ao abrir: Fase 1 é investigação de alcance, e inclui o
+      esclarecimento de como "empresa no cadastro" convive com "empresa na importação"
+      da Onda 3.
+- [ ] **Onda 3 — empresa na importação.** FUTURA. A coluna Detalhe/Obs vira "Empresa".
+- [ ] **Onda 4 — grupos de despesa / DRE.** FUTURA. Coluna "Grupo de Contas".
 
-### OS-CP-JANELA-6M-01 — branch `feature/cp-janela-6m` (empilhado sobre `da6b1c0`)
-- [x] Arquiteto — desenho, 19 vetos, orçamento de performance T1–T7
-- [x] Designer — spec de diff visual (`design/specs/cp-janela-6m.md`)
-- [x] Decisões do diretor: janela em `data_vencimento` · limiar 35.000 / 7 meses com isenção da
-      janela padrão · ordenação de Status por severidade
-- [ ] **Engenheiro-frontend** — Partes 1, 2 e 3. Briefing consolidado:
-      `docs/os-briefings/OS-CP-JANELA-6M-01.md` (**próximo passo ao retomar**)
-- [ ] Designer — auditoria de tokens
-- [ ] Testador-auditor — com as medições T1–T7
-- [ ] Validação visual do diretor → flag `READY_cp-janela-6m` → deployer
+### OS do CP encerradas sem entrega (superadas)
+- [x] ~~OS-CP-FILTROS-BASE-COMPLETA-01~~ e ~~OS-CP-JANELA-6M-01~~ — **ENCERRADAS, superadas
+      pela carga por recência + cache próprio em IndexedDB** (OS-CP-CARGA-RECENCIA-01), que já
+      está em produção e resolveu o problema de carga que as duas atacavam. Os branches
+      `feature/cp-filtros-base` e `feature/cp-janela-6m` ficam como histórico; as specs
+      (`design/specs/`) e os briefings (`docs/os-briefings/`) permanecem para consulta.
 
-### Backlog gerado por estas duas OS (aguarda decisão do diretor)
-- [ ] Trava de deploy furada: aceita qualquer uma das 18 flags `READY_*` acumuladas, logo
-      **nunca bloqueia**; e não cobre `firebase hosting:channel:deploy`
-- [ ] `CP_Base_Despesas` corrompido (42/110 com mojibake) — bloqueia a dimensão Despesa
+### Backlog técnico do CP (gerado pelas OS anteriores, aguarda priorização)
+- [ ] Gate de deploy não cobre `firebase hosting:channel:deploy`. (O acúmulo de flags
+      `READY_*` já foi resolvido em `53a22da`: `.claude/state/` virou estado local.)
+- [ ] `CP_Base_Despesas` com mojibake **"Ã/Â" do `seeder_excel`** (ex.: `ASSESSORIA CONTÃBIL`
+      = CONTÁBIL), 42/110 docs. É corrupção DIFERENTE do "�" da Onda 1 e é reversível por
+      re-decodificação. Ficou fora da Onda 1 por escopo.
+- [ ] 7 cadastros com `NEAT` em centro de custo
 - [ ] Variantes `hover:`/`focus:` sem cobertura no tema escuro (sistêmico, 6+ pontos)
 - [ ] Camada 2 — resultados cross-mês por query dirigida (índice composto)
 - [ ] `snap.docChanges()` em vez de reconstruir `cacheRegistros` a cada entrega
@@ -97,7 +116,7 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
 - [ ] Blindar "Ações em Massa" para não-super_admin (addDoc sequencial por lançamento)
 - [ ] Furos remanescentes da guarda de Período (F5, "Carregar mês anterior", "Limpar" em voo)
 - [ ] 1 doc com `data_vencimento` `"0026-09"`
-- [ ] `scripts/check-syntax.cjs` não valida `<script type="module">`
+- [ ] Higiene do travessão em COMENTÁRIOS de código do CP (passe opcional; a UI já está limpa)
 
 ---
 

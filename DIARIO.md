@@ -5,6 +5,56 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## 2026-09-24 — Queda de energia: reorientacao, pendencia recuperada e TASKS.md sincronizado
+
+Sessao caiu por queda de energia. **Nenhum trabalho foi perdido**, confirmado no estado
+real do git: working tree limpo, zero untracked, zero stash, e o branch
+`feature/cp-classificacao-import` existia mas estava VAZIO (criado por checkout de `main`
+em `47e4b59`, sem nenhum commit). A **Onda 2 nao tinha comecado**: nao havia briefing em
+`docs/os-briefings/`, nao havia spec em `design/specs/` e nao havia relatorio do arquiteto
+sobre o esclarecimento da empresa. Nenhuma linha de codigo escrita.
+
+**Pendencia RECUPERADA (existia so na sessao perdida, agora registrada):**
+**"Responsavel nao informado" nos lancamentos do Contas a Pagar.** Centro de custo aparece
+com Responsavel "nao informado" mesmo com o gestor JA cadastrado na tela de Areas & Gestores.
+Caso concreto do diretor: **CATARINA APARECIDA DOS SANTOS, centro de custo "Comercial"**,
+responsavel cadastrado e ainda assim exibido como "nao informado".
+
+*Hipotese a investigar quando a frente abrir (levantada pelo diretor, conferida no codigo
+nesta sessao, sem nenhuma correcao aplicada):* o Responsavel nao e campo gravado no
+lancamento, e **derivado em runtime** do cruzamento `lancamento.centro_custo` x
+`AreasContasPagar.nome` -> `gestor_nome`. O match e **exato e sensivel a caixa, acento e
+espaco interno**: o mapa e chaveado por `String(data.nome || '').trim()`
+(`gerenciador_contas_pagar_desktop/code.html:1257-1261`) e consultado por
+`String(r.centro_custo || '').trim()` (`code.html:2539` e `code.html:5151`), sem
+`toUpperCase()` nem `normalize('NFD')` em nenhum dos dois lados. Qualquer divergencia de
+grafia entre o CC gravado no lancamento e o nome cadastrado na Area faz o lookup **falhar em
+silencio** e cair no marcador "nao informado" (marcador que a OS-CP-LAYOUT-01 padronizou).
+**Status: NO RADAR. Entra em frente propria DEPOIS das Ondas 2/3/4.** Nao investigada, nao
+iniciada.
+
+**TASKS.md sincronizado com o estado real** (estava desatualizado desde 2026-09-11):
+1. **OS-CP-FILTROS-BASE-COMPLETA-01 e OS-CP-JANELA-6M-01 saem de "em curso" e viram
+   ENCERRADAS POR SUPERACAO.** As duas atacavam o problema de carga do CP, que a
+   OS-CP-CARGA-RECENCIA-01 (recencia + cache proprio em IndexedDB) ja resolveu em producao.
+   Decisao do diretor. Branches, specs e briefings ficam como historico, nao como trabalho
+   pendente.
+2. **As Ondas da refatoracao do CP entram no TASKS.md** com o status real: Onda 1 (corrigir
+   nomes) CONCLUIDA, Onda Layout CONCLUIDA, **Onda 2 (classificacao na importacao) EM ABERTO
+   e PROXIMA**, Onda 3 (empresa na importacao) e Onda 4 (grupos de despesa / DRE) FUTURAS.
+   Antes disso elas viviam so aqui no DIARIO, o que foi exatamente o que se perdeu na queda.
+3. O backlog tecnico ja levantado foi PRESERVADO, com dois ajustes de fato: o item do gate
+   agora registra so o que sobrou (nao cobre `hosting:channel:deploy`; o acumulo de flags foi
+   resolvido em `53a22da`), e o item do `CP_Base_Despesas` deixa explicito que e o mojibake
+   **"Ã/Â" do `seeder_excel`**, corrupcao diferente do "�" ja corrigido na Onda 1.
+
+**Aprendizado de processo:** pendencia que vive so na conversa morre na queda de energia.
+Item levantado em sessao vai para o TASKS.md no mesmo turno em que aparece, nem que seja uma
+linha com "NO RADAR". Esta entrada e so registro: nenhum codigo de tela, nenhum dado e nenhum
+deploy foi tocado.
+
+---
+
 ## 2026-09-24 — OS-CP-LAYOUT-01: ajustes de colunas, KPIs, ordenacao e travessao no Contas a Pagar
 
 Frente de UI na tela viva `gerenciador_contas_pagar_desktop/code.html`. Validada
