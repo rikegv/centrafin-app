@@ -5,6 +5,101 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## PONTO DE RETOMADA (2026-09-25) — Onda 2 do CP aguardando validacao visual
+
+**Onde parou:** OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2) esta CONSTRUIDA, AUDITADA e no
+PREVIEW, faltando SO a validacao visual do diretor. Nada foi para producao nem para a `main`.
+
+- **Branch:** `feature/cp-classificacao-import`, commit de codigo `ae857a5` (+ este commit de docs).
+  Branch ja esta 1 commit a frente da `main` na parte de codigo; a `main` segue = producao.
+- **Preview channel (expira 2026-10-02):**
+  `https://centra-fin--cp-onda2-classif-xo63x99l.web.app/gerenciador_contas_pagar_desktop/code.html`
+  (confirmado servindo a Onda 2). Producao intacta.
+- **Auditorias:** seguranca APROVADO (sem veto); tester PASSA nos reforcos 1 a 5. Detalhe na
+  entrada da OS abaixo.
+
+**Proximo passo ao retomar (apos o diretor validar na tela):**
+1. Deploy de producao: `firebase deploy --only hosting` (firestore.rules NAO mudou).
+2. Merge `feature/cp-classificacao-import` -> `main` (ff), confirmar arquivos servidos em 200.
+3. Flag `READY_cp-classificacao-import` real (nasce so apos validacao), push, remover flag.
+4. Fechar esta OS no DIARIO/TASKS.
+
+**Duas decisoes do diretor ainda ABERTAS (nao travam o deploy, mas confirmar na validacao):**
+1. Gatilho do gate: hoje dispara so por TIPO ausente. Favorecido que ja tem tipo mas esta SEM
+   centro de custo no cadastro NAO e puxado ao modal (lancamento grava CC nulo). Recomendacao da
+   fabrica: manter so por tipo nesta Onda; CC legado pelo "Alterar CC em Massa". Aguarda aval.
+2. Higiene fora de escopo: handler morto `btn-aplicar-cp-quarentena` (code.html) tem um caminho de
+   `_cpFinalizarImportacao` que nao passa pelo gate, mas e INALCANCAVEL (sem chamador). Deixado
+   intacto. Sugestao: remover numa OS de higiene separada.
+
+**Como usar o preview (o que o diretor testa):** importar TXT com favorecido de codigo novo ou
+cadastrado sem tipo -> modal de classificacao abre listando cada favorecido UMA vez (dedup por
+codigo); Tipo/CC/Empresa via seletor do design system; "Salvar E Importar" so habilita com os tres
+campos de todos preenchidos; clicar fora nao fecha, Cancelar/Escape abortam sem gravar; arquivo com
+todos os codigos ja com tipo nao abre modal (importa direto).
+
+---
+
+## 2026-09-25 — OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2): classificacao obrigatoria de favorecidos na importacao
+
+Frente na tela viva `gerenciador_contas_pagar_desktop/code.html`. Branch
+`feature/cp-classificacao-import`, commit de codigo `ae857a5` (+372/-0, 100% aditivo).
+**Estado: em PREVIEW, aguardando validacao visual do diretor. Nada em producao/`main`.**
+
+**O problema (Fase 1, investigado pelo arquiteto):** o ETL ja classificava por codigo (match
+`/Fornecedores` -> `tipo_entidade`), mas codigo NOVO entrava SILENCIOSO como SEM TIPO, e o
+auto-cadastro criava o fornecedor com `tipo:''`/`empresa:''` mudo, perpetuando o SEM TIPO nas
+importacoes seguintes.
+
+**Decisoes do diretor (Fase 1, validadas antes de implementar):**
+1. **Empresa = Desenho B.** `/Fornecedores.empresa` e o PADRAO do favorecido; override por lote fica
+   para a Onda 3 (grava no lancamento e vence o lookup `_cpResolverEmpresaDoReg`). Nesta Onda a
+   empresa vai SO para o cadastro, nunca para o lancamento (o `batch.set` do ETL nao grava `empresa`).
+2. **Trava por CODIGO distinto** (nao por linha): favorecido repetido em N linhas aparece 1x no modal.
+   Concilia a trava obrigatoria com o "ETL Fluido" que removera o bloqueio por causa de arquivos
+   massivos (poucos codigos distintos mesmo em 12k linhas).
+3. **Admin grava direto em `/Fornecedores`; nao-admin gera solicitacao na esteira**
+   `CP_SolicitacoesAprovacao` e a importacao libera com aviso. Nos dois casos a classificacao e
+   aplicada ao lote atual em memoria (o lote nao entra SEM TIPO).
+
+**O que foi implementado (Fase 2):**
+- Coleta de favorecidos SEM TIPO agrupada por codigo (`classPendentes`, dedup) apos o match.
+- GATE antes de qualquer escrita de lancamento: se ha pendente, abre o modal
+  `#modal-cp-classificacao` e nao grava nada ate resolver; `cancelar` -> return sem escrever.
+- Modal exige Tipo + Centro de Custo + Empresa por favorecido. Seletores do design system
+  (`checkbox_multi` em modo single-enforcado; Empresa de `Base_Empresas`, CC de `AreasContasPagar`),
+  NAO fecha ao clicar fora, Escape cancela, sem travessao, title case, "nao informado" para vazio.
+- `_cpAplicarClassificacoes`: aplica ao lote (grava `tipo_entidade` e herda CC) e persiste no
+  cadastro (admin: `writeBatch set merge` em `/Fornecedores`; nao-admin: `addDoc` na esteira).
+- Auto-cadastro barrado de gravar `tipo:''`/`empresa:''` mudo (guard `classAplicadas` + `_fornecedor`
+  ja setado em memoria).
+- Guarda de robustez (gap do tester): catalogos de CC/Empresa vazios abortam a importacao com aviso
+  em vez de travar o botao Salvar.
+
+**Regra de dominio confirmada no codigo (Fase 1):** empresa nao vivia "so" no cadastro, ja podia ser
+carimbada no lancamento pela cascata do master (`master.html:cpCascataCampoFornecedor`), que reescreve
+TODAS as faturas do codigo. Por isso o cenario 1:N (favorecido faturando por empresas diferentes)
+exige o override por lote da Onda 3, e a cascata precisara de guarda quando a Onda 3 chegar.
+
+**Auditorias:**
+- **Seguranca (Plan, read-only): APROVADO, sem veto.** Provou: rules cobrem admin->/Fornecedores e
+  nao-admin->esteira; nao-admin NUNCA escreve `/Fornecedores` direto; sem XSS (tudo via `cpEscape`);
+  sem dado pessoal em log (so contagens); fornecedor JA classificado nunca e sobrescrito (so entram
+  codigos com tipo falsy). `firestore.rules` NAO mudou (mesmo padrao do auto-cadastro legado).
+- **Tester (independente): PASSA nos reforcos 1-5.** Harness real provou dedup por codigo (503
+  lancamentos/2 codigos -> 2 entradas). `node --check` verde. Diff 100% aditivo; SHA-256/encoding/
+  writeBatch de lancamentos intactos.
+
+**Decisoes ainda abertas do diretor:** ver PONTO DE RETOMADA no topo (gatilho so-por-tipo; codigo
+morto da quarentena antiga).
+
+**Nota de processo:** o `arquiteto` e o `seguranca` da constituicao nao existem como tipo de agente
+neste runtime; o papel read-only (sem escrita) foi cumprido pelo agente `Plan`. Dono unico do
+`code.html` = coordenador (regra da constituicao); implementacao integrada por ele, com as duas
+auditorias obrigatorias (seguranca + tester) despachadas depois.
+
+---
+
 ## 2026-09-24 — Queda de energia: reorientacao, pendencia recuperada e TASKS.md sincronizado
 
 Sessao caiu por queda de energia. **Nenhum trabalho foi perdido**, confirmado no estado

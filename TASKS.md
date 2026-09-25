@@ -86,12 +86,22 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
       por clique nas 7 colunas e remoção do travessão de toda a UI do CP. Validada pelo
       diretor no preview channel, deploy `--only hosting`. Mergeada em `main` (`47e4b59`).
       DIARIO 2026-09-24.
-- [ ] **Onda 2 — OS-CP-CLASSIFICACAO-IMPORT-01 (classificação na importação). PRÓXIMA.**
-      Destrinchar OPEX em Interno (CLT+PJ) × Externo, dependente do tipo preenchido na
-      importação. Branch `feature/cp-classificacao-import` criado e VAZIO (nenhum commit,
-      nenhuma investigação rodada). Ao abrir: Fase 1 é investigação de alcance, e inclui o
-      esclarecimento de como "empresa no cadastro" convive com "empresa na importação"
-      da Onda 3.
+- [~] **Onda 2 — OS-CP-CLASSIFICACAO-IMPORT-01 (classificação na importação). EM PREVIEW,
+      aguardando validação visual do diretor.** Branch `feature/cp-classificacao-import`,
+      commit de código `ae857a5` (+372/-0). Gate de classificação obrigatória de favorecidos
+      SEM TIPO no ETL: modal exige Tipo+CC+Empresa por favorecido (dedup por código), antes do
+      commit; admin grava direto em /Fornecedores, não-admin vai pra esteira; empresa só no
+      cadastro (Desenho B, override por lote fica na Onda 3). Segurança APROVADO, tester PASSA.
+      Preview (expira 2026-10-02): `https://centra-fin--cp-onda2-classif-xo63x99l.web.app/gerenciador_contas_pagar_desktop/code.html`
+      Detalhe e próximos passos no DIARIO.md (PONTO DE RETOMADA + entrada 2026-09-25).
+      - [x] Fase 1 (arquiteto/Plan) — investigação + esclarecimento da empresa (Desenho B)
+      - [x] Decisões do diretor: Desenho B · trava por código distinto · admin direto/não-admin esteira
+      - [x] Fase 2 — implementação (coordenador, dono do code.html)
+      - [x] Segurança (veto) — APROVADO; Tester (independente) — PASSA reforços 1-5
+      - [ ] **Validação visual do diretor no preview** (próximo passo)
+      - [ ] Deploy produção `--only hosting` → merge em `main` → flag `READY` real → push → registro
+      - [ ] Decisões abertas do diretor: gatilho só-por-tipo (recomendado manter); remover código
+            morto da quarentena antiga em OS de higiene separada
 - [ ] **Onda 3 — empresa na importação.** FUTURA. A coluna Detalhe/Obs vira "Empresa".
 - [ ] **Onda 4 — grupos de despesa / DRE.** FUTURA. Coluna "Grupo de Contas".
 
