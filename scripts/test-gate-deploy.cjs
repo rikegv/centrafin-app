@@ -26,26 +26,16 @@
  *   29d95d2 abriu a excecao. O tester achou 5 furos por sonda adversarial e o
  *           commit 9e35c83 os fechou  ->  GRUPO F.
  *   O seguranca VETOU e provou mais 2 classes; 5f7bf7d as fechou  ->  GRUPO G.
- * Versao do gate conferida por ultimo: 5f7bf7d.
+ *   O tester provou que a SEGMENTACAO era a causa de um furo novo (verbo partido
+ *           pelo separador sumia de todos os segmentos); 9017410 removeu a
+ *           segmentacao inteira, deixando UMA regra sobre o comando todo, e
+ *           acrescentou send-pack a deteccao  ->  GRUPO H.
+ * Versao do gate conferida por ultimo: 9017410.
  *
- * GAPS ABERTOS DO GATE (conferencia independente do tester sobre 5f7bf7d; NAO
- * corrigidos aqui, quem testa nao conserta o codigo de producao). Nao entram como
- * casos abaixo para o teste nao nascer vermelho nem carimbar o furo como
- * comportamento esperado. Todos precisam dar exit 2 em sandbox limpo SEM flag:
- *   H1 verbo PARTIDO por separador, junto de um preview. E o furo que sobrou, e
- *      e EXECUTAVEL de verdade (publica em producao / faz push sem flag):
- *        <preview> x && git $(echo push) origin main
- *        <preview> x && firebase $(echo deploy) --only hosting
- *        <preview> x && firebase `echo deploy` --only hosting
- *      Causa: a DETECCAO por segmento nao ve o verbo partido, nenhum segmento
- *      casa o padrao, e o segmento de preview leva o comando inteiro para a
- *      excecao (gate-deploy.js:140-141). A regra geral de 5f7bf7d
- *      (gate-deploy.js:164-165) nao pega, porque o resto do verbo esta em OUTRO
- *      segmento, nao no segmento do preview. Duas das tres variantes eram
- *      BLOQUEADAS em 29d95d2: entrou junto com os separadores novos.
- *   H2 guarda do canal live e textual, qualquer indirecao escapa:
- *        <preview> $(echo live) | <preview> \l\i\v\e | CANAL=live; <preview> $CANAL
- *   H3 caminho de push fora do padrao: git send-pack origin refs/heads/main
+ * RESIDUAIS ACEITOS, caracterizados no GRUPO I: tres formas de indirecao de shell
+ * que a leitura TEXTUAL do comando nao alcanca. Ficam registradas como caso
+ * rotulado, com o veredito ATUAL, para que qualquer mudanca futura apareca no
+ * teste. NAO sao o comportamento desejado; sao o limite conhecido da tecnica.
  */
 const fs = require('fs');
 const os = require('os');
@@ -57,7 +47,8 @@ const REPO_REAL = path.resolve(__dirname, '..');
 
 // ── Comandos de teste (strings, nunca executadas) ──────────────────────────
 const FB = 'firebase';
-const PREVIEW = FB + ' hosting:channel:deploy';
+const VERBO = 'hosting:channel:deploy';   // o verbo que a regra unica retira
+const PREVIEW = FB + ' ' + VERBO;
 const PROD = FB + ' deploy';
 const CLONE = FB + ' hosting:clone';
 
@@ -348,6 +339,91 @@ function main() {
   caso('G8 fora de repo git, preview BLOQUEIA', PREVIEW + ' cp-onda2-classif', sForaDeGit, 2, 'NAO se aplica sem essa conferencia');
   caso('G9 fora de repo git, producao BLOQUEIA', PROD + ' --only hosting', sForaDeGit, 2, SEM_FLAG);
   caso('G10 fora de repo git, push BLOQUEIA', 'git push origin HEAD', sForaDeGit, 2, SEM_FLAG);
+
+  // ══ H. SEGMENTACAO REMOVIDA, REGRA UNICA (9017410) ══════════════════════
+  // H1 foi o furo que a propria correcao anterior abriu: com avaliacao por
+  // SEGMENTO, um verbo PARTIDO pelo separador ("git $(echo push)") sumia de
+  // todos os segmentos, nenhum casava o padrao, e o segmento de preview levava o
+  // comando inteiro para a excecao. Tres variantes publicavam em producao ou
+  // faziam push, sem flag, em arvore limpa. 9017410 tirou a segmentacao: a
+  // deteccao voltou a olhar o comando INTEIRO e a excecao virou uma regra so
+  // (tirado o verbo de preview, se sobra match de DEPLOY_PATTERN, nao e preview).
+  // Se alguem reintroduzir a segmentacao, os casos H1 a H7 morrem.
+  grupo('H. REGRA UNICA SOB ATAQUE (sandbox: limpo, SEM flag)');
+  const SUB = ' && git $(echo push) origin main';
+  caso('H1 push partido por $( ) junto de preview', PREVIEW + ' x' + SUB, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H2 prod partida por $( ) junto de preview', PREVIEW + ' x && firebase $(echo deploy) --only hosting', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H3 prod partida por acento grave', PREVIEW + ' x && firebase ' + BT + 'echo deploy' + BT, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H4 prod partida em duas substituicoes', PREVIEW + ' x && fire$(echo base) $(echo deploy)', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H5 prod atras de & simples', PREVIEW + ' x & firebase $(echo deploy)', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H6 prod em process substitution', PREVIEW + ' x < <(firebase $(echo deploy))', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H7 push por pipe e subshell aninhado', PREVIEW + ' x | ( git $(echo push) origin main )', sLimpoSemFlag, 2, SEM_FLAG);
+  // send-pack: push de plumbing que nao usa a palavra push (achado do tester).
+  caso('H8 git send-pack', 'git send-pack origin refs/heads/main', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H9 git -C dir send-pack', 'git -C /c/tmp/repo send-pack origin main', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H10 send-pack junto de preview', PREVIEW + ' x && git send-pack origin main', sLimpoSemFlag, 2, SEM_FLAG);
+  // A regra unica retira do comando TODAS as ocorrencias do verbo de preview.
+  // Estes casos atacam essa retirada: o verbo aparecendo em string, caminho,
+  // nome de branch ou mensagem NAO pode virar passe livre, e a retirada nao pode
+  // destruir um match de publicacao que deveria existir.
+  caso('H11 push para branch com nome do verbo', 'firebase --version && git push origin ' + VERBO, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H12 prod com mensagem citando o verbo', PROD + ' --message "' + VERBO + '"', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H13 clone com o verbo no nome do canal', CLONE + ' a:' + VERBO + ' b:live', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H14 REST com o verbo na querystring', 'curl https://firebasehosting.googleapis.com/v1?x=' + VERBO, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H15 git e push separados pelo verbo', 'firebase x; git ' + VERBO + ' push origin main', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H16 firebase e deploy separados pelo verbo', 'firebase ' + VERBO + ' deploy --only hosting', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H17 REST junto do preview', PREVIEW + ' x && curl https://firebasehosting.googleapis.com/v1', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H18 kubectl apply junto do preview', PREVIEW + ' x && kubectl apply -f m.yaml', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H19 docker push junto do preview', PREVIEW + ' x && docker push reg/img', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H20 gh release junto do preview', PREVIEW + ' x && gh release create v1', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H21 prod grudada no verbo de preview', PREVIEW + ' x && firebase deploy' + VERBO, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H22 verbo de preview partido ao meio', 'firebase hosting:channel:$(echo deploy) x && ' + PROD, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H23 dois previews, um deles no canal live', PREVIEW + ' a && ' + PREVIEW + ' live', sLimpoSemFlag, 2, SEM_FLAG);
+  // Nao-regressao do legitimo depois de tirar a segmentacao.
+  caso('H24 preview com aspas no canal, LIBERA', PREVIEW + ' "cp-onda2-classif"', sLimpoSemFlag, 0, 'preview channel');
+  caso('H25 preview com projeto e token, LIBERA', PREVIEW + ' cp-onda2 --project centra-fin --token $(cat t.txt)', sLimpoSemFlag, 0, 'preview channel');
+  caso('H26 comando que so CITA o verbo, LIBERA', 'grep -rn "' + VERBO + '" scripts/', sLimpoSemFlag, 0);
+  // Efeito colateral BOM de tirar a segmentacao: o token live dentro de uma
+  // substituicao passou a ser visto. Com segmentacao (5f7bf7d) a quebra em "$("
+  // tirava o "live" do pedaco avaliado e este comando LIBERAVA.
+  caso('H27 canal live dentro de substituicao', PREVIEW + ' $(echo live)', sLimpoSemFlag, 2, SEM_FLAG);
+  // O verbo de preview dentro de ref, arquivo, tag ou titulo de outro verbo de
+  // publicacao. Provam que a retirada do verbo nao apaga a alternativa do
+  // DEPLOY_PATTERN que disparou o gate. (Foi assim que se mostrou que exigir a
+  // palavra "firebase" em temPreview e defesa REDUNDANTE: sem ela, estes seis
+  // comandos continuam bloqueados, porque o residuo ainda casa o padrao.)
+  caso('H28 send-pack com o verbo no ref', 'git send-pack origin refs/heads/' + VERBO, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H29 kubectl apply com o verbo no arquivo', 'kubectl apply -f ' + VERBO + '.yaml', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H30 docker push com o verbo na tag', 'docker push reg/img:' + VERBO, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H31 gh release com o verbo no titulo', 'gh release create v1 -t ' + VERBO, sLimpoSemFlag, 2, SEM_FLAG);
+
+  // ══ I. RESIDUAIS ACEITOS, CARACTERIZACAO ROTULADA ═══════════════════════
+  // ATENCAO, leia antes de "consertar" um caso deste grupo: o veredito esperado
+  // aqui e o veredito ATUAL, nao o desejado. Sao tres formas de indirecao de
+  // shell que a leitura TEXTUAL do comando nao alcanca. Se um destes casos
+  // FALHAR, o gate provavelmente MELHOROU: confira e atualize o esperado, nunca
+  // afrouxe o gate para o caso voltar a passar.
+  //
+  // (i) Nome do BINARIO por variavel: a deteccao nem chega a acontecer, porque
+  //     "firebase" e "deploy" nunca aparecem na mesma linha. Nao tem nada a ver
+  //     com a excecao de preview; e o mesmo limite ja documentado no cabecalho do
+  //     gate para verbo escondido dentro de arquivo (bash deploy.sh).
+  // (ii) Palavra do VERBO partida por substituicao ("git p$(echo ush)"): idem,
+  //     a deteccao nao ve push nenhum, com ou sem preview no comando.
+  // (iii) Canal live por indirecao: a guarda do live e textual. Residual ACEITO
+  //     (avaliacao do tester, 2026-09-27): quem consegue escrever $(echo live)
+  //     consegue escrever $F deploy e nem passa pela excecao, entao endurecer so
+  //     esta guarda nao muda o pior caso. O modo de falha realista, que e atalho
+  //     ou engano de agente, usa a forma literal, e essa esta coberta no grupo F.
+  grupo('I. RESIDUAIS ACEITOS, caracterizacao (esperado = comportamento ATUAL)');
+  caso('I1 binario por variavel, producao', 'F=firebase\n$F deploy --only hosting', sLimpoSemFlag, 0);
+  caso('I2 binario por variavel, push', 'G=git\n$G push origin main', sLimpoSemFlag, 0);
+  caso('I3 palavra do verbo partida por $( )', PREVIEW + ' x && git p$(echo ush) origin main', sLimpoSemFlag, 0);
+  caso('I4 canal live por variavel', 'CANAL=live; ' + PREVIEW + ' $CANAL', sLimpoSemFlag, 0);
+  caso('I5 canal live por escape de caractere', PREVIEW + ' \\l\\i\\v\\e', sLimpoSemFlag, 0);
+  // Artefato da retirada do verbo: verbo DOBRADO se consome inteiro. Nao e
+  // executavel (a CLI do firebase nao tem esse comando), fica registrado.
+  caso('I6 verbo dobrado se consome (nao executavel)', PREVIEW + ' x && firebase ' + VERBO + VERBO, sLimpoSemFlag, 0);
 
   // ══ Repositorio real intocado ═══════════════════════════════════════════
   grupo('REPOSITORIO REAL INTOCADO');
