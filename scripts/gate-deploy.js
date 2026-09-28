@@ -91,9 +91,12 @@ function main() {
     command = raw || '';
   }
 
-  // Remove continuacoes de linha (barra + quebra) para o padrao nao ser furado
-  // por "firebase \<nl> deploy".
-  command = command.replace(/\\\r?\n/g, ' ');
+  // Remove continuacoes de linha para o padrao nao ser furado por
+  // "firebase \<nl> deploy". Cobre os DOIS estilos, porque o hook roda tanto
+  // para Bash (barra invertida) quanto para PowerShell (acento grave): sem o
+  // segundo caso, "firebase `<nl> deploy" nao era interceptado por ninguem
+  // (furo antigo, achado pelo tester em 2026-09-27).
+  command = command.replace(/[\\`]\r?\n/g, ' ');
 
   // Verbos de publicacao interceptados. Os pares verbo/objeto aceitam qualquer
   // coisa no meio (mesma linha), para nao serem furados por flags intermediarias
@@ -110,13 +113,30 @@ function main() {
   // Avaliacao por SEGMENTO: um comando composto so e tratado como preview se
   // TODOS os segmentos que disparam o gate forem preview. Assim
   // "firebase deploy && firebase hosting:channel:deploy x" cai no gate cheio.
-  const segmentos = command.split(/&&|\|\||;|\||\r?\n/);
+  //
+  // A DETECCAO (DEPLOY_PATTERN acima) roda sempre no comando INTEIRO; a
+  // segmentacao decide apenas se a EXCECAO se aplica. Por isso quebrar em mais
+  // pedacos so pode APERTAR: se a quebra fizer nenhum segmento casar o padrao,
+  // `segmentosDeploy` fica vazio e `soPreview` e false, caindo no gate cheio.
+  // Separadores cobertos, todos achados pelo tester em 2026-09-27:
+  // `&&` `||` `;` `|` nova linha, o `&` SIMPLES (background no bash) e as
+  // fronteiras de substituicao de comando `$(` `)` e acento grave, que
+  // escondiam um "firebase deploy" dentro de um segmento de preview.
+  const segmentos = command.split(/&&|&|\|\||\||;|\r?\n|\$\(|\)|`/);
   const segmentosDeploy = segmentos.filter((s) => DEPLOY_PATTERN.test(s));
   const ehSegmentoPreview = (s) => {
     if (!/\bfirebase\b/i.test(s)) return false;
     if (!/\bhosting:channel:deploy\b/i.test(s)) return false;
-    // Canal "live" nao e preview: seria publicar em producao.
-    if (/\bhosting:channel:deploy\s+live\b/i.test(s)) return false;
+    // Canal "live" nao e preview: seria publicar em producao. As aspas sao
+    // removidas antes do teste porque "live" entre aspas driblava o casamento,
+    // e o teste procura o token em qualquer posicao depois do verbo (o nome do
+    // canal pode vir depois de flags como --expires 7d).
+    const semAspas = s.replace(/["']/g, '');
+    const depoisDoVerbo = semAspas.split(/hosting:channel:deploy/i).slice(1).join(' ');
+    // Conservador de proposito: um canal como "live-teste" tambem cai aqui e e
+    // barrado. Falso positivo custa trocar o nome do canal; falso negativo
+    // custaria publicar em producao pela porta do preview.
+    if (/\blive\b/i.test(depoisDoVerbo)) return false;
     // Qualquer outro verbo de publicacao no mesmo segmento desqualifica.
     if (/\bfirebase\b[^\n]*\bhosting:clone\b/i.test(s)) return false;
     if (/\bgit\b[^\n]*\bpush\b/i.test(s)) return false;
