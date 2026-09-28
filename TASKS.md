@@ -92,16 +92,23 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
       SEM TIPO no ETL: modal exige Tipo+CC+Empresa por favorecido (dedup por código), antes do
       commit; admin grava direto em /Fornecedores, não-admin vai pra esteira; empresa só no
       cadastro (Desenho B, override por lote fica na Onda 3). Segurança APROVADO, tester PASSA.
-      Preview (expira 2026-10-02): `https://centra-fin--cp-onda2-classif-xo63x99l.web.app/gerenciador_contas_pagar_desktop/code.html`
-      Detalhe e próximos passos no DIARIO.md (PONTO DE RETOMADA + entrada 2026-09-25).
+      Preview (expira 2026-10-04): `https://centra-fin--cp-onda2-classif-xo63x99l.web.app/gerenciador_contas_pagar_desktop/code.html`
+      Detalhe e próximos passos no DIARIO.md (PONTO DE RETOMADA + entradas 2026-09-25 e 2026-09-27).
       - [x] Fase 1 (arquiteto/Plan) — investigação + esclarecimento da empresa (Desenho B)
       - [x] Decisões do diretor: Desenho B · trava por código distinto · admin direto/não-admin esteira
       - [x] Fase 2 — implementação (coordenador, dono do code.html)
       - [x] Segurança (veto) — APROVADO; Tester (independente) — PASSA reforços 1-5
-      - [ ] **Validação visual do diretor no preview** (próximo passo)
+      - [x] **Ajuste Tipo = Cliente** (2026-09-27, commit `0a2b37c`, +79/-14). Cliente não usa a
+            segmentação interna de CC: o cliente É o próprio centro de custo. O campo CC some do
+            modal quando o tipo é Cliente e o `centro_custo` gravado passa a ser o nome canônico do
+            cliente (CAIXA ALTA, idêntico a `/Fornecedores.nome`, confirmado pelo diretor). Empresa
+            segue obrigatória; os outros 3 tipos não mudaram. Fecha a Lacuna 4 do
+            `docs/MAPA-CP-REFATORACAO.md`. Segurança APROVADO sem veto; tester PASSA 26/26.
+      - [ ] **Validação visual do diretor no preview** (próximo passo, inclui o caso Cliente)
       - [ ] Deploy produção `--only hosting` → merge em `main` → flag `READY` real → push → registro
       - [ ] Decisões abertas do diretor: gatilho só-por-tipo (recomendado manter); remover código
-            morto da quarentena antiga em OS de higiene separada
+            morto da quarentena antiga em OS de higiene separada; ciência de que `tipo_entidade` =
+            Cliente joga a despesa para o bucket CUSTOS do DRE (`dre_gerencial_desktop/code.html:329-331`)
 - [ ] **Onda 3 — empresa na importação.** FUTURA. A coluna Detalhe/Obs vira "Empresa".
 - [ ] **Onda 4 — grupos de despesa / DRE.** FUTURA. Coluna "Grupo de Contas".
 
@@ -113,8 +120,27 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
       (`design/specs/`) e os briefings (`docs/os-briefings/`) permanecem para consulta.
 
 ### Backlog técnico do CP (gerado pelas OS anteriores, aguarda priorização)
-- [ ] Gate de deploy não cobre `firebase hosting:channel:deploy`. (O acúmulo de flags
-      `READY_*` já foi resolvido em `53a22da`: `.claude/state/` virou estado local.)
+- [x] ~~Gate de deploy não cobre `firebase hosting:channel:deploy`~~ — **ITEM ESTAVA ERRADO e foi
+      RESOLVIDO em 2026-09-27 (OS-CP-GATE-PREVIEW-01).** O gate SEMPRE cobriu o comando de canal de
+      preview; o problema real era o oposto, ele cobria DEMAIS e criava impasse circular (a flag
+      `READY_*` só nasce depois da validação do diretor, mas é o preview que permite validar).
+      Corrigido: preview passa sem flag, produção e push continuam exigindo. No caminho, a auditoria
+      adversarial achou **7 furos** no gate, incluindo dois ANTIGOS (continuação de linha do
+      PowerShell deixava passar produção e push sem interceptação alguma), `firebase hosting:clone`,
+      `firebase hosting:disable` e `git send-pack`, todos fechados. Criada a suíte permanente
+      `scripts/test-gate-deploy.cjs` (108 casos, com prova de mutação) que o gate nunca teve desde a
+      fase F0. Detalhe no DIARIO.md, entrada 2026-09-27.
+- [ ] **Gate: modo permissivo em `main`/`master`.** Fora de branch de frente não há slug para casar,
+      então QUALQUER flag `READY_*` libera qualquer deploy a partir de `main`. O agente segurança
+      elevou a prioridade disso na auditoria de 2026-09-27, com evidência viva: o repositório
+      vizinho `CENTRA DASH` está em `main` com **25 flags `READY_*` acumuladas**. Recomendação dele:
+      fazer esta OS ANTES de mais endurecimento da exceção de preview.
+- [ ] **Gate: verbos de produção ainda não interceptados** (levantado em 2026-09-27, aguarda a lista
+      final do tester): verificar `hosting:sites:delete`, `functions:delete`, `firestore:delete`,
+      `target:apply` e afins. `hosting:clone`, `hosting:disable` e `git send-pack` já entraram.
+- [ ] **Gate: contrato de entrada do hook.** Payload vazio ou malformado libera (o padrão não casa).
+      Sugestão do segurança: bloquear quando o stdin não é vazio e o parse falha ou
+      `tool_input.command` não existe. Residual aceito hoje, não urgente.
 - [ ] `CP_Base_Despesas` com mojibake **"Ã/Â" do `seeder_excel`** (ex.: `ASSESSORIA CONTÃBIL`
       = CONTÁBIL), 42/110 docs. É corrupção DIFERENTE do "�" da Onda 1 e é reversível por
       re-decodificação. Ficou fora da Onda 1 por escopo.
@@ -126,6 +152,13 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
 - [ ] Blindar "Ações em Massa" para não-super_admin (addDoc sequencial por lançamento)
 - [ ] Furos remanescentes da guarda de Período (F5, "Carregar mês anterior", "Limpar" em voo)
 - [ ] 1 doc com `data_vencimento` `"0026-09"`
+- [ ] **`entidade` bruto vs `centro_custo` canônico no mesmo documento** (achado do tester em
+      2026-09-27). `gerenciador_contas_pagar_desktop/code.html:4565` grava `entidade` com o nome sem
+      trim nem caixa alta, enquanto `/Fornecedores.nome` e o `centro_custo` ficam canônicos. Para
+      favorecido do tipo Cliente isso expõe duas grafias do mesmo nome na mesma linha da tela.
+- [ ] **Guarda de catálogos aborta lote 100% Cliente** (`code.html:3859`). A importação é abortada
+      quando `AreasContasPagar` não carregou, mas um lote em que todos os pendentes seriam Cliente
+      não precisa do catálogo de CC. Falso bloqueio, direção segura.
 - [ ] Higiene do travessão em COMENTÁRIOS de código do CP (passe opcional; a UI já está limpa)
 
 ---

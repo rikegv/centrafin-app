@@ -5,38 +5,153 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
-## PONTO DE RETOMADA (2026-09-25) — Onda 2 do CP aguardando validacao visual
+## PONTO DE RETOMADA (2026-09-27) — Onda 2 do CP + ajuste do Cliente aguardando validacao visual
 
-**Onde parou:** OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2) esta CONSTRUIDA, AUDITADA e no
-PREVIEW, faltando SO a validacao visual do diretor. Nada foi para producao nem para a `main`.
+**Onde parou:** OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2) mais o ajuste de Tipo = Cliente estao
+CONSTRUIDOS, AUDITADOS e no PREVIEW, faltando SO a validacao visual do diretor. Nada foi para
+producao nem para a `main`. Confirmado por leitura do arquivo servido: producao NAO tem o modal da
+Onda 2 (zero ocorrencias de `modal-cp-classificacao`), preview tem.
 
-- **Branch:** `feature/cp-classificacao-import`, commit de codigo `ae857a5` (+ este commit de docs).
-  Branch ja esta 1 commit a frente da `main` na parte de codigo; a `main` segue = producao.
-- **Preview channel (expira 2026-10-02):**
+- **Branch:** `feature/cp-classificacao-import`, 6 commits a frente da `main`.
+  - `ae857a5` Onda 2 (classificacao obrigatoria na importacao)
+  - `0a2b37c` ajuste Tipo = Cliente (cliente e o proprio centro de custo)
+  - `29d95d2`, `9e35c83`, `5f7bf7d`, `9017410`, `02c5310` frente do gate de deploy (abaixo)
+  - `a94e1bb` suite permanente do gate
+- **Preview channel (expira 2026-10-04):**
   `https://centra-fin--cp-onda2-classif-xo63x99l.web.app/gerenciador_contas_pagar_desktop/code.html`
-  (confirmado servindo a Onda 2). Producao intacta.
-- **Auditorias:** seguranca APROVADO (sem veto); tester PASSA nos reforcos 1 a 5. Detalhe na
-  entrada da OS abaixo.
+- **Auditorias:** seguranca APROVADO sem veto no CP e APROVADO no gate (depois de UM VETO que a
+  fabrica aceitou e corrigiu); tester PASSA 26/26 no CP e 108/108 no gate.
 
 **Proximo passo ao retomar (apos o diretor validar na tela):**
 1. Deploy de producao: `firebase deploy --only hosting` (firestore.rules NAO mudou).
 2. Merge `feature/cp-classificacao-import` -> `main` (ff), confirmar arquivos servidos em 200.
 3. Flag `READY_cp-classificacao-import` real (nasce so apos validacao), push, remover flag.
-4. Fechar esta OS no DIARIO/TASKS.
+4. Fechar as OS no DIARIO/TASKS.
 
-**Duas decisoes do diretor ainda ABERTAS (nao travam o deploy, mas confirmar na validacao):**
-1. Gatilho do gate: hoje dispara so por TIPO ausente. Favorecido que ja tem tipo mas esta SEM
-   centro de custo no cadastro NAO e puxado ao modal (lancamento grava CC nulo). Recomendacao da
-   fabrica: manter so por tipo nesta Onda; CC legado pelo "Alterar CC em Massa". Aguarda aval.
-2. Higiene fora de escopo: handler morto `btn-aplicar-cp-quarentena` (code.html) tem um caminho de
-   `_cpFinalizarImportacao` que nao passa pelo gate, mas e INALCANCAVEL (sem chamador). Deixado
-   intacto. Sugestao: remover numa OS de higiene separada.
+**O que o diretor testa no preview (ajuste do Cliente):** no modal de classificacao, escolher
+Tipo = Cliente numa linha, o campo Centro de Custo SOME e no lugar aparece o aviso com o nome que
+sera gravado como centro de custo; trocar para outro tipo, o campo volta e volta a ser obrigatorio;
+"Salvar E Importar" habilita quando cada linha estiver completa pela regra do tipo dela (Cliente
+precisa de Tipo + Empresa, os outros de Tipo + CC + Empresa).
 
-**Como usar o preview (o que o diretor testa):** importar TXT com favorecido de codigo novo ou
-cadastrado sem tipo -> modal de classificacao abre listando cada favorecido UMA vez (dedup por
-codigo); Tipo/CC/Empresa via seletor do design system; "Salvar E Importar" so habilita com os tres
-campos de todos preenchidos; clicar fora nao fecha, Cancelar/Escape abortam sem gravar; arquivo com
-todos os codigos ja com tipo nao abre modal (importa direto).
+**Decisoes do diretor ja tomadas nesta sessao (nao reperguntar):**
+1. CC do cliente gravado em CAIXA ALTA, identico a `/Fornecedores.nome`. CONFIRMADO pelo diretor.
+2. Gate de deploy corrigido para nao barrar preview (em vez de criar flag prematura). CONFIRMADO.
+
+**Decisoes do diretor ainda ABERTAS (nao travam o deploy):**
+1. Gatilho do gate de classificacao: hoje dispara so por TIPO ausente. Favorecido que ja tem tipo
+   mas esta SEM centro de custo NAO e puxado ao modal. Recomendacao: manter so por tipo nesta Onda.
+2. Handler morto `btn-aplicar-cp-quarentena`: caminho inalcancavel, remover em OS de higiene.
+3. Ciencia de que classificar como Cliente joga a despesa para o bucket CUSTOS no DRE Gerencial
+   (`dre_gerencial_desktop/code.html:329-331`). Nenhum lancamento antigo muda; vale so para os
+   classificados de agora em diante.
+
+---
+
+## 2026-09-27 — OS-CP-CLASSIFICACAO-IMPORT-01, ajuste Tipo = Cliente (cliente e o proprio CC)
+
+Frente na tela viva `gerenciador_contas_pagar_desktop/code.html`, commit `0a2b37c` (+79/-14).
+Fecha a LACUNA 4 do `docs/MAPA-CP-REFATORACAO.md` ("cliente sem tratamento proprio"), que estava
+registrada como lacuna de modelo e NAO como pendencia da Onda 2.
+
+**Regra de negocio (decisao do diretor):** Cliente nao usa a segmentacao interna de centro de custo
+(ADM/Marketing/Financeiro). O cliente E o proprio centro de custo. No modal de classificacao,
+Tipo = Cliente esconde o campo Centro de Custo e grava como `centro_custo` o NOME CANONICO do
+cliente. Empresa continua pedida e obrigatoria. Os outros 3 tipos nao mudam.
+
+**Implementacao (o desenho que sustenta a regra):**
+- `_cpNomeCanonicoClass(codStr)` e FONTE UNICA do nome: alimenta `cadastro.nome`,
+  `cadastro.centro_custo` e o `centro_custo` que o lancamento herda. Antes o calculo existia
+  duplicado inline em dois pontos; foi unificado. Uma segunda normalizacao faria as tres strings
+  divergirem, e o tester provou a igualdade caractere por caractere (23 codepoints identicos).
+- `_cpClassCC(tr)` e o UNICO leitor do CC: se o tipo e Cliente devolve o nome canonico, senao o
+  valor do select. A regra vive num lugar so, inclusive para o caminho da esteira (nao-admin).
+- `_cpClassSincronizarCC(tr)` esconde o wrapper do componente (mantendo o `<select>` no DOM),
+  zera a selecao e fecha o painel-portal, que vive no `<body>` e nao fecharia junto.
+- CAIXA ALTA por decisao confirmada do diretor: o cadastro ja grava o nome assim, e as duas strings
+  precisam ser identicas.
+
+**Auditorias:** seguranca APROVADO sem veto (XSS coberto por `cpEscape` nas 2 interpolacoes novas,
+inclusive no atributo `title`; nao-admin nunca escreve `/Fornecedores`; `firestore.rules` intacta;
+nenhum log novo com dado pessoal; fornecedor JA classificado nunca entra nesse caminho). Tester
+independente PASSA 26/26 com Firestore interceptado e payload inspecionado.
+
+**Regressao que a propria frente introduziu e foi corrigida:** a primeira versao movia a varredura
+de paineis para DENTRO do laco de upgrade dos selects, deixando a abertura do modal QUADRATICA
+(medido: 360.000 nos visitados com 200 favorecidos, 1.201 varreduras de documento). Corrigida pelo
+coordenador para custo linear (600 nos, 3 varreduras fixas, 600x menos trabalho). O tester tambem
+pegou, na prova visual, que a primeira versao do aviso usava `truncate` e empurrava a coluna
+Empresa para fora do card; trocado por `break-words`, largura de tabela identica ao baseline.
+
+**Consequencias conhecidas e aceitas da regra (nao sao defeito):** o CC do cliente nao existe em
+`AreasContasPagar`, entao o Responsavel fica vazio para ele e a edicao do lancamento mostra o
+rotulo "(nao cadastrado)"; e `tipo_entidade` = Cliente joga a despesa para o bucket CUSTOS do DRE
+Gerencial (`dre_gerencial_desktop/code.html:329-331`).
+
+**Gaps abertos que o tester deixou registrados, fora do escopo desta frente:** `code.html:4565`
+grava `entidade` com o nome BRUTO enquanto `centro_custo` fica canonico, o que para Cliente expoe
+duas grafias do mesmo nome no mesmo documento; e a guarda de catalogos (`code.html:3859`) aborta a
+importacao mesmo num lote em que todos os pendentes seriam Cliente e o catalogo de CC nao seria
+necessario.
+
+---
+
+## 2026-09-27 — OS-CP-GATE-PREVIEW-01: o gate de deploy deixa de barrar o preview
+
+Frente de infraestrutura nascida de um IMPASSE REAL, nao de um pedido de feature. Ao tentar subir o
+preview para o diretor validar, o gate bloqueou. Investigando: o gate SEMPRE cobriu
+`firebase hosting:channel:deploy` (o item do backlog que dizia o contrario estava ERRADO, corrigido
+no TASKS.md), e exige flag `READY_*` casando com o branch. Como a flag so nasce DEPOIS da validacao
+do diretor, e e o preview que permite validar, o impasse era circular. Ficou visivel agora porque
+`53a22da` tornou `.claude/state/` estado local e as flags acumuladas deixaram de existir: o gate
+passou a morder o preview de verdade pela primeira vez.
+
+**Decisao do diretor:** corrigir o gate (em vez de criar flag prematura ou contornar a trava).
+Preview passa SEM flag; producao e push continuam exigindo a flag da frente.
+
+**O que esta frente ensinou, e e o registro mais importante dela:** ao endurecer uma trava de
+seguranca, ACRESCENTAR defesa especifica foi o que gerou furo novo; a correcao que funcionou foi
+TIRAR mecanismo. A sequencia, toda provada com comando executavel:
+1. `29d95d2` primeira versao, com avaliacao por SEGMENTO do comando. **Tester achou 5 furos**
+   (canal `live` entre aspas, `&` simples, subshell, e dois furos ANTIGOS do gate: a limpeza de
+   continuacao de linha so cobria o estilo Bash, entao com a continuacao do PowerShell o verbo
+   NUNCA era interceptado, nem para producao nem para push).
+2. `9e35c83` fecha os 5. **Seguranca VETOU**: a desqualificacao dentro do segmento era uma LISTA
+   enumerada que esquecia o verbo principal, e ele provou com `< <(...)`, separador que nao estava
+   previsto. Veto aceito sem discussao.
+3. `5f7bf7d` troca a lista por REGRA GERAL (retirado o verbo de preview, se sobra match de
+   publicacao, nao e preview) e torna FAIL-CLOSED a conferencia de arvore limpa no caminho do
+   preview (era a unica trava que sobrava ali, e falhava aberta: fora de repositorio git o preview
+   era liberado direto). **Tester achou o furo mais grave da frente (H1)**: com a segmentacao, um
+   verbo PARTIDO (`firebase $(echo deploy)`) sumia de todos os segmentos e pegava carona no
+   segmento de preview. Duas dessas strings eram BLOQUEADAS antes dos separadores que a propria
+   fabrica adicionou. A premissa "mais separador so aperta" era FALSA: a segmentacao nao decide so
+   a excecao, decide tambem ONDE a deteccao olha.
+4. `9017410` REMOVE a segmentacao inteira. A excecao vira uma regra unica sobre o comando inteiro,
+   e a classe do H1 deixa de existir por construcao. Fecha tambem `git send-pack`.
+5. `02c5310` fecha `firebase hosting:disable`, achado do seguranca na auditoria final: derruba o
+   hosting de PRODUCAO e nao usa a palavra deploy, mesmo raciocinio do `hosting:clone`.
+
+**Vereditos finais:** seguranca APROVADO em `9017410` (com teste de AMPLIFICACAO: 18 cargas de
+producao medidas sozinhas e acompanhadas de preview, ZERO amplificacao, ou seja a excecao nao
+ampliou o limite conhecido de deteccao). Tester PASSA 108/108.
+
+**`scripts/test-gate-deploy.cjs` criado:** o gate existia desde a fase F0 e NUNCA tinha teste. Agora
+tem 108 casos, com repos git de mentira em pasta temporaria para exercitar arvore suja/limpa e flag
+presente/ausente sem tocar o repo real, e prova de MUTACAO (11 de 12 defesas tem caso que morre
+quando a defesa cai). Reintroduzir a segmentacao mata 12 casos na hora.
+
+**Residuais aceitos e registrados (nao viraram tarefa aberta por escolha):** verbo ofuscado por
+concatenacao ou por variavel (`F=firebase; $F deploy`) nao e interceptado, limite pre-existente e
+nao ampliado; a guarda do canal `live` e textual e nao resiste a indirecao, mas e defesa em
+profundidade (a propria CLI recusa o canal `live`); a conferencia de arvore limpa e contornavel por
+`git config status.showUntrackedFiles no` ou `update-index --skip-worktree` num comando anterior
+nao interceptado, com impacto limitado ao preview; payload de hook vazio ou malformado libera.
+
+**Armadilha pratica descoberta na frente, vale para todo mundo:** o hook le a string do comando de
+topo, entao QUALQUER comando que cite os verbos de deploy e interceptado, inclusive `echo`,
+`printf`, heredoc e MENSAGEM DE COMMIT. Mensagem longa que cite deploy vai por arquivo
+(`git commit -F arquivo`). Isso bloqueou o proprio trabalho da fabrica duas vezes nesta sessao.
 
 ---
 
