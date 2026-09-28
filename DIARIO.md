@@ -5,46 +5,88 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
-## PONTO DE RETOMADA (2026-09-27) — Onda 2 do CP + ajuste do Cliente aguardando validacao visual
+## PONTO DE RETOMADA (2026-09-27, sessao encerrada pelo diretor) — aguardando SO a validacao visual
 
-**Onde parou:** OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2) mais o ajuste de Tipo = Cliente estao
-CONSTRUIDOS, AUDITADOS e no PREVIEW, faltando SO a validacao visual do diretor. Nada foi para
-producao nem para a `main`. Confirmado por leitura do arquivo servido: producao NAO tem o modal da
-Onda 2 (zero ocorrencias de `modal-cp-classificacao`), preview tem.
+**Onde parou, em uma frase:** a Onda 2 do CP mais o ajuste de Tipo = Cliente estao CONSTRUIDOS,
+AUDITADOS e NO PREVIEW; falta SO o diretor validar na tela. Nada foi para producao nem para a
+`main`. A frente do gate de deploy, que nasceu no meio desta sessao, esta FECHADA.
 
-- **Branch:** `feature/cp-classificacao-import`, 6 commits a frente da `main`.
-  - `ae857a5` Onda 2 (classificacao obrigatoria na importacao)
-  - `0a2b37c` ajuste Tipo = Cliente (cliente e o proprio centro de custo)
-  - `29d95d2`, `9e35c83`, `5f7bf7d`, `9017410`, `02c5310` frente do gate de deploy (abaixo)
-  - `a94e1bb` suite permanente do gate
-- **Preview channel (expira 2026-10-04):**
-  `https://centra-fin--cp-onda2-classif-xo63x99l.web.app/gerenciador_contas_pagar_desktop/code.html`
-- **Auditorias:** seguranca APROVADO sem veto no CP e APROVADO no gate (depois de UM VETO que a
-  fabrica aceitou e corrigiu); tester PASSA 26/26 no CP e 108/108 no gate.
+**Verificado por leitura do arquivo servido, nao por suposicao:** producao NAO tem o codigo novo
+(zero ocorrencias de `modal-cp-classificacao` e de `_cpClassCC`), o preview tem.
 
-**Proximo passo ao retomar (apos o diretor validar na tela):**
-1. Deploy de producao: `firebase deploy --only hosting` (firestore.rules NAO mudou).
-2. Merge `feature/cp-classificacao-import` -> `main` (ff), confirmar arquivos servidos em 200.
-3. Flag `READY_cp-classificacao-import` real (nasce so apos validacao), push, remover flag.
-4. Fechar as OS no DIARIO/TASKS.
+### Estado exato do git
+Branch `feature/cp-classificacao-import`, **9 commits a frente da `main`**, arvore LIMPA,
+**nenhuma flag `READY_*` criada** (`.claude/state/` vazio, entao o gate esta fechado de proposito).
 
-**O que o diretor testa no preview (ajuste do Cliente):** no modal de classificacao, escolher
-Tipo = Cliente numa linha, o campo Centro de Custo SOME e no lugar aparece o aviso com o nome que
-sera gravado como centro de custo; trocar para outro tipo, o campo volta e volta a ser obrigatorio;
-"Salvar E Importar" habilita quando cada linha estiver completa pela regra do tipo dela (Cliente
-precisa de Tipo + Empresa, os outros de Tipo + CC + Empresa).
+| commit | o que e |
+|---|---|
+| `ae857a5` | Onda 2, classificacao obrigatoria na importacao (sessao anterior) |
+| `fb49284` | docs da Onda 2 (sessao anterior) |
+| `0a2b37c` | **ajuste Tipo = Cliente**, o que falta validar |
+| `29d95d2` `9e35c83` `5f7bf7d` `9017410` `02c5310` | frente do gate, em 5 passos (ver entrada propria abaixo) |
+| `a94e1bb` `5af2054` | suite permanente do gate, 117 casos |
+| `3d91e93` | este registro |
 
-**Decisoes do diretor ja tomadas nesta sessao (nao reperguntar):**
-1. CC do cliente gravado em CAIXA ALTA, identico a `/Fornecedores.nome`. CONFIRMADO pelo diretor.
-2. Gate de deploy corrigido para nao barrar preview (em vez de criar flag prematura). CONFIRMADO.
+**Preview channel, EXPIRA 2026-10-04:**
+`https://centra-fin--cp-onda2-classif-xo63x99l.web.app/gerenciador_contas_pagar_desktop/code.html`
+Se tiver expirado ao retomar, republicar com `firebase hosting:channel:deploy cp-onda2-classif
+--expires 7d` (a arvore precisa estar limpa; o gate NAO exige flag para preview desde esta sessao).
 
-**Decisoes do diretor ainda ABERTAS (nao travam o deploy):**
-1. Gatilho do gate de classificacao: hoje dispara so por TIPO ausente. Favorecido que ja tem tipo
+**Auditorias fechadas:** seguranca APROVADO sem veto no CP, e APROVADO no gate (depois de um VETO
+que a fabrica aceitou e corrigiu). Tester PASSA 26/26 no CP e 117/117 no gate.
+
+### O que o diretor testa no preview (o unico item pendente)
+No modal de classificacao da importacao: escolher **Tipo = Cliente** numa linha, o campo Centro de
+Custo SOME e no lugar aparece o aviso com o nome que sera gravado como centro de custo; trocar para
+outro tipo, o campo VOLTA e volta a ser obrigatorio; "Salvar E Importar" habilita quando cada linha
+estiver completa pela regra do tipo dela (Cliente precisa de Tipo + Empresa; os outros 3 tipos
+precisam de Tipo + CC + Empresa).
+
+### Ao retomar, DEPOIS da validacao, nesta ordem
+1. `firebase deploy --only hosting` (firestore.rules NAO mudou nesta frente).
+2. Merge `feature/cp-classificacao-import` -> `main` (fast-forward) e conferir os arquivos servidos
+   respondendo 200 em producao.
+3. Criar a flag `.claude/state/READY_cp-classificacao-import` (ela nasce SO agora, depois da
+   validacao), dar push, e REMOVER a flag logo apos.
+4. Fechar as OS no DIARIO e no TASKS.
+
+### Decisoes do diretor JA TOMADAS nesta sessao, NAO REPERGUNTAR
+1. **CC do cliente em CAIXA ALTA**, identico a `/Fornecedores.nome`. Confirmado.
+2. **Corrigir o gate** para nao barrar preview, em vez de criar flag prematura. Confirmado.
+
+### ABERTO, esperando o diretor (nao trava o deploy do que ja esta validado)
+1. **PROPOSTA NOVA, prioridade 1, aguarda aval.** O tester varreu o CLI e achou verbos DESTRUTIVOS
+   que o gate nao intercepta. O pior: `firebase firestore:delete --all-collections`, que apaga os
+   dados de producao do CentraFin inteiro, irreversivel e silencioso. Recomendados para entrar na
+   deteccao: `firestore:delete`, `firestore:databases:delete`, `hosting:sites:delete`,
+   `auth:import`, `functions:delete`, e os caminhos por `gcloud` (`firestore import`, `app deploy`,
+   `run deploy`, `functions deploy`) e `gsutil rm` no bucket de backup. Recomendados a NAO entrar,
+   com motivo: `target:apply` (sozinho nao publica), `hosting:channel:delete` (atritaria o proprio
+   loop de validacao), `auth:export` (e tema do seguranca, nao do gate), RTDB e extensions (o
+   projeto nao usa). Implementacao sugerida pelo tester: um alternativo unico no `DEPLOY_PATTERN`.
+   A fabrica NAO implementou por escopo fechado.
+2. Gatilho do gate de classificacao: hoje dispara so por TIPO ausente. Favorecido que ja tem tipo
    mas esta SEM centro de custo NAO e puxado ao modal. Recomendacao: manter so por tipo nesta Onda.
-2. Handler morto `btn-aplicar-cp-quarentena`: caminho inalcancavel, remover em OS de higiene.
-3. Ciencia de que classificar como Cliente joga a despesa para o bucket CUSTOS no DRE Gerencial
-   (`dre_gerencial_desktop/code.html:329-331`). Nenhum lancamento antigo muda; vale so para os
-   classificados de agora em diante.
+3. Handler morto `btn-aplicar-cp-quarentena`: caminho inalcancavel, remover em OS de higiene.
+4. Ciencia de que classificar como Cliente joga a despesa para o bucket CUSTOS do DRE Gerencial
+   (`dre_gerencial_desktop/code.html:329-331`). Nenhum lancamento antigo muda de bucket com este
+   deploy; vale so para os classificados de agora em diante.
+
+### Armadilha operacional que pegou a fabrica DUAS vezes nesta sessao
+O hook do gate le a string do comando de topo, entao QUALQUER comando que cite os verbos de deploy
+e interceptado, inclusive `echo`, `printf`, heredoc e **mensagem de commit**. Mensagem que cite
+deploy vai por arquivo: `git commit -F <arquivo>`. E teste do proprio gate mantem as strings DENTRO
+de um arquivo `.cjs`, nunca na linha de comando.
+
+### Fila sugerida para a proxima sessao (ordem de execucao)
+1. Validacao visual do Cliente e fechamento em producao (passos 1 a 4 acima).
+2. Decidir a proposta dos verbos destrutivos no gate (item ABERTO 1).
+3. Modo permissivo do gate em `main`: hoje QUALQUER flag libera qualquer deploy a partir de `main`.
+   O seguranca elevou a prioridade com evidencia viva (o repo vizinho `CENTRA DASH` esta em `main`
+   com 25 flags acumuladas). Ele recomenda esta OS antes de mais endurecimento do preview.
+4. Onda 3 (empresa na importacao) e Onda 4 (grupos de despesa / DRE).
+5. "Responsavel nao informado" (caso Catarina, CC Comercial), que esta NO RADAR desde 2026-09-24 e
+   deve entrar DEPOIS das Ondas.
 
 ---
 
