@@ -36,12 +36,27 @@
  * de working tree limpo (o que e servido tem que ter vindo de um commit, para a
  * investigacao pos-fato continuar possivel). Producao (firebase deploy) e push
  * seguem exigindo flag correspondente ao branch.
- * A excecao e fechada por tres travas: (1) o comando e avaliado por SEGMENTO
- * (&&, ||, ;, |, nova linha), entao "firebase deploy && firebase
- * hosting:channel:deploy x" NAO se disfarca de preview; (2) canal chamado "live"
- * nao conta como preview; (3) hosting:clone entrou na lista de verbos barrados,
- * porque seria o caminho natural para promover um canal a producao driblando a
- * excecao.
+ * A excecao e fechada por quatro travas:
+ * (1) O comando e avaliado por SEGMENTO (&&, &, ||, |, ;, nova linha, e as
+ *     fronteiras de substituicao $( ) e acento grave), entao um deploy de
+ *     producia colado ao preview NAO se disfarca de preview.
+ * (2) Dentro do segmento, a desqualificacao e por REGRA GERAL e nao por lista:
+ *     retirado o trecho "hosting:channel:deploy", se sobrar qualquer match de
+ *     DEPLOY_PATTERN, o segmento carrega publicacao de verdade e o gate fecha.
+ *     Isso cobre inclusive separador que ninguem previu, como "< <(...)".
+ * (3) Canal chamado "live" nao conta como preview (aspas sao removidas antes do
+ *     teste; conservador, um canal "live-teste" tambem e barrado).
+ * (4) A liberacao do preview EXIGE que a conferencia de working tree limpo tenha
+ *     sido bem-sucedida. No caminho do preview essa e a unica trava que sobra, e
+ *     uma trava que falha aberta sozinha nao e trava.
+ * hosting:clone tambem entrou na lista de verbos barrados do gate, porque promove
+ * um canal a producao sem usar a palavra "deploy" e seria o caminho natural para
+ * driblar a excecao. Antes desta frente ele nao era interceptado por ninguem.
+ *
+ * As travas 1 a 4 nasceram de uma auditoria adversarial (agente seguranca) e de
+ * uma suite de teste (agente tester) que juntas acharam 7 furos na primeira
+ * versao da excecao, incluindo dois furos ANTIGOS do gate. Regressao coberta por
+ * scripts/test-gate-deploy.cjs.
  *
  * Limite conhecido (residual documentado): o hook so ve a string do comando de
  * topo; um verbo escondido dentro de um arquivo (bash deploy.sh, node deploy.js)
@@ -137,16 +152,32 @@ function main() {
     // barrado. Falso positivo custa trocar o nome do canal; falso negativo
     // custaria publicar em producao pela porta do preview.
     if (/\blive\b/i.test(depoisDoVerbo)) return false;
-    // Qualquer outro verbo de publicacao no mesmo segmento desqualifica.
-    if (/\bfirebase\b[^\n]*\bhosting:clone\b/i.test(s)) return false;
-    if (/\bgit\b[^\n]*\bpush\b/i.test(s)) return false;
+    // Qualquer outro verbo de publicacao no mesmo segmento desqualifica. A regra
+    // e GERAL, nao uma lista: retirado do segmento o trecho
+    // "hosting:channel:deploy", se ainda sobrar QUALQUER match de DEPLOY_PATTERN,
+    // o segmento carrega uma publicacao de verdade e nao e preview.
+    // A lista enumerada que existia aqui (so hosting:clone e git push) esquecia
+    // justamente o verbo principal, "firebase deploy", alem de REST, gh, kubectl
+    // e docker, e deixava passar coisas como
+    // "firebase hosting:channel:deploy t < <(firebase deploy)", em que o
+    // separador nao entra na quebra de segmento. Veto do seguranca, 2026-09-27.
+    const semOVerboDePreview = s.replace(/hosting:channel:deploy/gi, ' ');
+    if (DEPLOY_PATTERN.test(semOVerboDePreview)) return false;
     return true;
   };
   const soPreview = segmentosDeploy.length > 0 && segmentosDeploy.every(ehSegmentoPreview);
 
   // ── 1. Working tree limpo ────────────────────────────────────────────────
+  // `arvoreConferida` registra se este criterio pode ser confiado. Para o gate
+  // cheio ele continua falhando ABERTO (a flag ainda protege), mas a liberacao do
+  // preview passou a EXIGIR a conferencia bem-sucedida: no caminho do preview a
+  // arvore limpa e a unica trava que sobra, e uma trava fail-open sozinha nao e
+  // trava (veto do seguranca, 2026-09-27: com cwd fora de repositorio git o
+  // preview era liberado direto).
+  let arvoreConferida = false;
   try {
     const status = execSync('git status --porcelain', { encoding: 'utf8', timeout: 5000 }).trim();
+    arvoreConferida = true;
     if (status.length > 0) {
       process.stderr.write(
         'BLOQUEADO: working tree sujo, ha alteracoes nao commitadas.\n' +
@@ -162,12 +193,19 @@ function main() {
   // ── 1b. Preview channel: libera SEM flag (ver EXCECAO DO PREVIEW) ────────
   // Chega aqui so com working tree limpo (checagem 1 acima), entao o que vai
   // para o canal de preview corresponde a um commit.
-  if (soPreview) {
+  if (soPreview && arvoreConferida) {
     process.stderr.write(
       'NOTA: preview channel (firebase hosting:channel:deploy). Nao toca producao, ' +
       'liberado sem flag READY_*. Producao e push continuam exigindo a flag da frente.\n'
     );
     process.exit(0);
+  }
+  if (soPreview && !arvoreConferida) {
+    process.stderr.write(
+      'AVISO: preview channel, mas nao foi possivel conferir se o working tree esta ' +
+      'limpo (git indisponivel, timeout ou fora de repositorio). A excecao do preview ' +
+      'NAO se aplica sem essa conferencia; caindo na exigencia de flag READY_*.\n'
+    );
   }
 
   // ── 2. Flag READY_* correspondente ao branch ─────────────────────────────
