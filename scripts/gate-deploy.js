@@ -48,9 +48,12 @@
  * (3) A liberacao do preview EXIGE que a conferencia de working tree limpo tenha
  *     sido bem-sucedida. No caminho do preview essa e a unica trava que sobra, e
  *     uma trava que falha aberta sozinha nao e trava.
- * hosting:clone tambem entrou na lista de verbos barrados do gate, porque promove
- * um canal a producao sem usar a palavra "deploy" e seria o caminho natural para
- * driblar a excecao. Antes desta frente ele nao era interceptado por ninguem.
+ * hosting:clone e hosting:disable tambem entraram na lista de verbos barrados do
+ * gate: o primeiro promove um canal a producao e o segundo DERRUBA o hosting de
+ * producao, os dois sem usar a palavra "deploy". Nenhum era interceptado antes
+ * desta frente, e o primeiro seria o caminho natural para driblar a excecao.
+ * git send-pack entrou pelo mesmo motivo do lado do git: empurra commits para o
+ * remoto sem usar a palavra "push".
  *
  * As travas 1 a 4 nasceram de uma auditoria adversarial (agente seguranca) e de
  * uma suite de teste (agente tester) que juntas acharam 7 furos na primeira
@@ -116,7 +119,7 @@ function main() {
   // coisa no meio (mesma linha), para nao serem furados por flags intermediarias
   // como "git -C <dir> push" ou "git --work-tree=... push". O par firebase+deploy
   // ja cobre "firebase deploy" e "firebase hosting:channel:deploy".
-  const DEPLOY_PATTERN = /(\bgit\b[^\n]*\b(?:push|send-pack)\b|\bfirebase\b[^\n]*\bdeploy\b|\bfirebase\b[^\n]*\bhosting:clone\b|firebasehosting\.googleapis\.com|\bgh\b[^\n]*\b(?:workflow|release)\b|\bkubectl\b[^\n]*\bapply\b|\bdocker\b[^\n]*\bpush\b)/i;
+  const DEPLOY_PATTERN = /(\bgit\b[^\n]*\b(?:push|send-pack)\b|\bfirebase\b[^\n]*\bdeploy\b|\bfirebase\b[^\n]*\b(?:hosting:clone|hosting:disable)\b|firebasehosting\.googleapis\.com|\bgh\b[^\n]*\b(?:workflow|release)\b|\bkubectl\b[^\n]*\bapply\b|\bdocker\b[^\n]*\bpush\b)/i;
   const RULES_PATTERN = /firestore:rules/i;
 
   if (!DEPLOY_PATTERN.test(command)) {
