@@ -51,6 +51,7 @@ const VERBO = 'hosting:channel:deploy';   // o verbo que a regra unica retira
 const PREVIEW = FB + ' ' + VERBO;
 const PROD = FB + ' deploy';
 const CLONE = FB + ' hosting:clone';
+const DISABLE = FB + ' hosting:disable';   // derruba o hosting de producao
 
 let falhas = 0;
 let total = 0;
@@ -396,6 +397,19 @@ function main() {
   caso('H29 kubectl apply com o verbo no arquivo', 'kubectl apply -f ' + VERBO + '.yaml', sLimpoSemFlag, 2, SEM_FLAG);
   caso('H30 docker push com o verbo na tag', 'docker push reg/img:' + VERBO, sLimpoSemFlag, 2, SEM_FLAG);
   caso('H31 gh release com o verbo no titulo', 'gh release create v1 -t ' + VERBO, sLimpoSemFlag, 2, SEM_FLAG);
+  // hosting:disable DERRUBA o hosting de producao sem usar a palavra deploy.
+  // Entrou na deteccao em 02c5310, achado do seguranca na auditoria final, pelo
+  // mesmo raciocinio do hosting:clone: acao irreversivel sobre producao que o
+  // texto do comando nao denuncia.
+  caso('H32 hosting:disable sozinho', DISABLE, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H33 hosting:disable com --site', DISABLE + ' --site centra-fin', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H34 hosting:disable junto do preview', PREVIEW + ' x && ' + DISABLE, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('H35 hosting:disable com -f e projeto', DISABLE + ' -f --project centra-fin', sLimpoSemFlag, 2, SEM_FLAG);
+  // Nao-regressao: comando de hosting que so LE ou abre o navegador continua
+  // liberando. A deteccao nao pode virar "qualquer coisa com hosting:".
+  caso('H36 hosting:channel:list, LIBERA', FB + ' hosting:channel:list', sLimpoSemFlag, 0);
+  caso('H37 hosting:channel:open, LIBERA', FB + ' hosting:channel:open cp-onda2', sLimpoSemFlag, 0);
+  caso('H38 hosting:sites:list, LIBERA', FB + ' hosting:sites:list', sLimpoSemFlag, 0);
 
   // ══ I. RESIDUAIS ACEITOS, CARACTERIZACAO ROTULADA ═══════════════════════
   // ATENCAO, leia antes de "consertar" um caso deste grupo: o veredito esperado
@@ -424,16 +438,35 @@ function main() {
   // Artefato da retirada do verbo: verbo DOBRADO se consome inteiro. Nao e
   // executavel (a CLI do firebase nao tem esse comando), fica registrado.
   caso('I6 verbo dobrado se consome (nao executavel)', PREVIEW + ' x && firebase ' + VERBO + VERBO, sLimpoSemFlag, 0);
+  // Mesma familia do I3: a palavra do verbo partida por substituicao nao e vista
+  // pela deteccao, aqui aplicada ao hosting:disable.
+  caso('I7 hosting:disable partido por $( )', 'firebase hosting:$(echo disable)', sLimpoSemFlag, 0);
 
   // ══ Repositorio real intocado ═══════════════════════════════════════════
+  // O que importa aqui e que O TESTE nao mexeu no repo real. Comparar a arvore
+  // inteira antes/depois dava FALSO NEGATIVO: outro agente da fabrica editando
+  // DIARIO.md ou TASKS.md em paralelo mudava o status no meio da rodada e
+  // derrubava o caso sem o teste ter tocado em nada. Entao a asserticao e
+  // especifica: flag READY_*, branch e ausencia de artefato do teste no repo. A
+  // mudanca de arvore por mao alheia sai como NOTA, nao como falha.
   grupo('REPOSITORIO REAL INTOCADO');
   const depois = estadoRepoReal();
   total++;
-  const intocado = depois.status === antes.status && depois.branch === antes.branch && depois.flags === antes.flags;
-  if (!intocado) falhas++;
-  console.log('  ' + (intocado ? 'PASS ' : 'FALHA') + ' | arvore/branch/flags do repo real iguais antes e depois');
-  console.log('    antes : arvore ' + (antes.status ? 'SUJA' : 'limpa') + ', branch ' + antes.branch + ', flags [' + (antes.flags || 'nenhuma') + ']');
-  console.log('    depois: arvore ' + (depois.status ? 'SUJA' : 'limpa') + ', branch ' + depois.branch + ', flags [' + (depois.flags || 'nenhuma') + ']');
+  const okFlagsBranch = depois.branch === antes.branch && depois.flags === antes.flags;
+  if (!okFlagsBranch) falhas++;
+  console.log('  ' + (okFlagsBranch ? 'PASS ' : 'FALHA') + ' | flag READY_* e branch do repo real inalterados' +
+    ' | flags [' + (antes.flags || 'nenhuma') + '] -> [' + (depois.flags || 'nenhuma') + ']' +
+    ' | branch ' + antes.branch + ' -> ' + depois.branch);
+  total++;
+  const ARTEFATO = /gate-deploy-test-|gate-probe|g-mut|t-mut|READY_/;
+  const artefatos = depois.status.split('\n').filter((l) => ARTEFATO.test(l));
+  if (artefatos.length > 0) falhas++;
+  console.log('  ' + (artefatos.length === 0 ? 'PASS ' : 'FALHA') + ' | nenhum artefato do teste no repo real' +
+    (artefatos.length ? ' | encontrados: ' + artefatos.join(' , ') : ''));
+  if (depois.status !== antes.status) {
+    console.log('  NOTA  | a arvore do repo real mudou durante a rodada, provavelmente outro agente ' +
+      'editando em paralelo. Nao e falha do teste: ele nunca escreve no repositorio.');
+  }
 }
 
 function limpar() {
