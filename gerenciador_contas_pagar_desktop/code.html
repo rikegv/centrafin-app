@@ -4338,12 +4338,68 @@
         return sel[0] || '';
     }
 
+    // Nome canônico do favorecido pendente de classificação. FONTE ÚNICA: o
+    // mesmo texto vai para cadastro.nome, para cadastro.centro_custo (quando o
+    // tipo é Cliente) e para o centro_custo do lançamento. Uma segunda
+    // normalização faria as três strings divergirem.
+    function _cpNomeCanonicoClass(codStr) {
+        const cod = String(codStr == null ? '' : codStr);
+        const info = _cpEtlState.classPendentes.get(cod) || {};
+        return String(info.nome || '').trim().toUpperCase() || `FORNECEDOR ${cod}`;
+    }
+
+    // Centro de custo efetivo da linha. Regra do diretor: Cliente NÃO escolhe
+    // centro de custo, o próprio nome do cliente vira o centro de custo. Todo
+    // ponto que lê o CC da classificação passa por aqui (nunca por
+    // _cpClassValor(tr, 'cc') direto), para a regra viver num lugar só.
+    function _cpClassCC(tr) {
+        if (_cpClassValor(tr, 'tipo') === 'Cliente') {
+            return _cpNomeCanonicoClass(tr.getAttribute('data-class-codigo'));
+        }
+        return _cpClassValor(tr, 'cc');
+    }
+
+    // Campo dinâmico de CC: some quando o tipo é Cliente (o cliente É o centro
+    // de custo) e volta para os demais tipos. Esconde o wrapper do componente
+    // do design system, mantendo o <select> no DOM como fonte da verdade.
+    function _cpClassSincronizarCC(tr) {
+        const sel = tr.querySelector('select[data-class-campo="cc"]');
+        const aviso = tr.querySelector('[data-class-cc-cliente]');
+        if (!sel || !aviso) return;
+        const modo = _cpClassValor(tr, 'tipo') === 'Cliente' ? 'cliente' : 'campo';
+        if (modo === 'cliente') {
+            // Zera a seleção do CC para não sobrar valor fantasma escondido.
+            // Fora da guarda de troca de estado: qualquer valor que apareça no
+            // select enquanto o tipo for Cliente é descartado na mesma hora.
+            let mudou = false;
+            Array.from(sel.options).forEach(o => { if (o.selected) { o.selected = false; mudou = true; } });
+            if (mudou) sel.dispatchEvent(new Event('cb-multi-sync'));
+        }
+        if (tr.dataset.classCcModo === modo) return; // sem troca de estado, nada a fazer
+        tr.dataset.classCcModo = modo;
+        const wrap = sel.closest('.cb-multi-wrap') || sel.parentElement;
+        if (modo === 'cliente') {
+            // O painel do checkbox_multi em modo portal vive no <body>: fechar
+            // o wrapper não o fecha, ele ficaria flutuando órfão sobre a tela.
+            if (sel._cpClassPanel) sel._cpClassPanel.classList.add('hidden');
+            const trig = wrap ? wrap.querySelector('.cb-multi-trigger') : null;
+            if (trig) trig.setAttribute('aria-expanded', 'false');
+            if (wrap) wrap.classList.add('hidden');
+            aviso.classList.remove('hidden');
+        } else {
+            aviso.classList.add('hidden');
+            if (wrap) wrap.classList.remove('hidden');
+        }
+    }
+
     function _cpRevalidarClassificacao() {
         const corpo = document.getElementById('cp-class-corpo');
         const linhas = [...corpo.querySelectorAll('tr[data-class-codigo]')];
         let ok = 0;
         for (const tr of linhas) {
-            if (_cpClassValor(tr, 'tipo') && _cpClassValor(tr, 'cc') && _cpClassValor(tr, 'empresa')) ok++;
+            _cpClassSincronizarCC(tr);
+            // Cliente não pede CC: _cpClassCC já devolve o nome canônico nesse caso.
+            if (_cpClassValor(tr, 'tipo') && _cpClassCC(tr) && _cpClassValor(tr, 'empresa')) ok++;
         }
         const total = linhas.length;
         const btn = document.getElementById('btn-cp-class-salvar');
@@ -4405,6 +4461,11 @@
                     </td>
                     <td class="px-3 py-3 w-48">
                         <select id="cp-class-cc-${i}" multiple data-checkbox-multi data-cb-portal data-class-campo="cc" data-placeholder="Selecione o CC…">${optsHtml(_ccDisponiveis)}</select>
+                        <div data-class-cc-cliente class="hidden rounded-xl border border-dashed border-emerald-200 bg-emerald-50 px-3 py-2 overflow-hidden">
+                            <p class="text-[9px] uppercase tracking-widest text-emerald-700 font-bold">Centro De Custo Automático</p>
+                            <p class="text-[12px] font-bold text-slate-800 mt-0.5 leading-snug break-words" title="${cpEscape(_cpNomeCanonicoClass(String(p.codigo)))}">${cpEscape(_cpNomeCanonicoClass(String(p.codigo)))}</p>
+                            <p class="text-[10px] text-slate-500 font-medium mt-0.5 leading-snug break-words">O próprio cliente é o centro de custo.</p>
+                        </div>
                     </td>
                     <td class="px-3 py-3 w-48">
                         <select id="cp-class-empresa-${i}" multiple data-checkbox-multi data-cb-portal data-class-campo="empresa" data-placeholder="Selecione a empresa…">${optsHtml(_cpEmpresasOficiais)}</select>
@@ -4413,14 +4474,33 @@
             }).join('');
 
             // Upgrade dos selects para o componente do design system + trava single.
+            // As duas varreduras de painel ficam FORA do laço (uma antes, uma
+            // depois): varrer o documento por select deixaria o custo de abrir o
+            // modal quadrático no número de favorecidos (gap do tester).
             const panelsAntes = new Set(document.querySelectorAll('.cb-multi-panel'));
+            const selsUpgraded = [];
             corpo.querySelectorAll('select[data-class-campo]').forEach(sel => {
                 if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(sel);
+                selsUpgraded.push(sel);
                 _cpSelectSingleGuard(sel);
             });
-            // Marca os painéis-portal recém-criados para limpeza na próxima abertura.
-            document.querySelectorAll('.cb-multi-panel').forEach(p => {
-                if (!panelsAntes.has(p)) p.setAttribute('data-cp-class-panel', '1');
+            // Marca os painéis-portal recém-criados (limpeza na próxima abertura)
+            // e amarra cada um ao seu select: o painel vive no <body>, então
+            // esconder o campo não o fecha sem esta referência. O componente cria
+            // exatamente 1 painel por select, na mesma ordem, e querySelectorAll
+            // devolve em ordem de documento: o pareamento por índice só é aplicado
+            // quando as contagens batem (se não baterem, marca sem amarrar).
+            // O filtro por pai direto <body> é o que sustenta a premissa da ordem:
+            // só o painel em modo portal (data-cb-portal) nasce no body. Um select
+            // que perdesse o portal criaria o painel dentro da tabela, a ordem de
+            // documento deixaria de bater com a de upgrade, e sem este filtro as
+            // contagens ainda fechariam, amarrando painel na linha errada.
+            const panelsNovos = [...document.querySelectorAll('.cb-multi-panel')]
+                .filter(p => !panelsAntes.has(p) && p.parentElement === document.body);
+            const pareia = panelsNovos.length === selsUpgraded.length;
+            panelsNovos.forEach((p, i) => {
+                p.setAttribute('data-cp-class-panel', '1');
+                if (pareia) selsUpgraded[i]._cpClassPanel = p;
             });
 
             _cpRevalidarClassificacao();
@@ -4451,7 +4531,7 @@
                     const codStr = tr.getAttribute('data-class-codigo');
                     mapClass.set(codStr, {
                         tipo: _cpClassValor(tr, 'tipo'),
-                        centro_custo: _cpClassValor(tr, 'cc'),
+                        centro_custo: _cpClassCC(tr),
                         empresa: _cpClassValor(tr, 'empresa'),
                     });
                 });
@@ -4518,7 +4598,7 @@
                 const b = writeBatch(db);
                 for (const [codStr, c] of fatia) {
                     const info = _cpEtlState.classPendentes.get(codStr) || {};
-                    const nome = String(info.nome || '').trim().toUpperCase() || `FORNECEDOR ${codStr}`;
+                    const nome = _cpNomeCanonicoClass(codStr);
                     const payload = {
                         codigo: Number(codStr) || codStr,
                         nome,
@@ -4541,7 +4621,7 @@
         } else {
             for (const [codStr, c] of entradas) {
                 const info = _cpEtlState.classPendentes.get(codStr) || {};
-                const nome = String(info.nome || '').trim().toUpperCase() || `FORNECEDOR ${codStr}`;
+                const nome = _cpNomeCanonicoClass(codStr);
                 await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
                     tipo_operacao: info.jaExiste ? 'UPDATE' : 'CREATE',
                     colecao_alvo: COLECAO_FORN,
