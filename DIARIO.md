@@ -15,7 +15,7 @@ AUDITADOS e NO PREVIEW; falta SO o diretor validar na tela. Nada foi para produc
 (zero ocorrencias de `modal-cp-classificacao` e de `_cpClassCC`), o preview tem.
 
 ### Estado exato do git
-Branch `feature/cp-classificacao-import`, **9 commits a frente da `main`**, arvore LIMPA,
+Branch `feature/cp-classificacao-import`, **12 commits a frente da `main`**, arvore LIMPA,
 **nenhuma flag `READY_*` criada** (`.claude/state/` vazio, entao o gate esta fechado de proposito).
 
 | commit | o que e |
