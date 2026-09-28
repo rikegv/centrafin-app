@@ -22,16 +22,30 @@
  *
  * Exit 0 = todos os casos passaram. Exit 1 = algum caso falhou.
  *
- * GAPS ABERTOS DO GATE (achados por sonda adversarial nesta frente, NAO corrigidos
- * aqui: quem testa nao conserta o codigo de producao). Nao estao na lista de casos
- * abaixo para o teste nao ficar vermelho de proposito nem carimbar o furo como
- * comportamento esperado. Quando o coordenador mandar fechar, estes sao os casos
- * prontos, todos devem passar a dar exit 2 em sandbox limpo SEM flag:
- *   G1 canal live entre aspas .... firebase hosting:channel:deploy "live"
- *   G2 separador & ............... <preview> x & firebase deploy --only hosting
- *   G3 subshell no segmento ...... <preview> x --token $(firebase deploy)
- *   G4 continuacao PowerShell .... firebase `<nova linha> deploy --only hosting
- *   G5 continuacao PS no push .... git `<nova linha> push origin HEAD
+ * HISTORICO da excecao de preview, cada rodada virou grupo de regressao aqui:
+ *   29d95d2 abriu a excecao. O tester achou 5 furos por sonda adversarial e o
+ *           commit 9e35c83 os fechou  ->  GRUPO F.
+ *   O seguranca VETOU e provou mais 2 classes; 5f7bf7d as fechou  ->  GRUPO G.
+ * Versao do gate conferida por ultimo: 5f7bf7d.
+ *
+ * GAPS ABERTOS DO GATE (conferencia independente do tester sobre 5f7bf7d; NAO
+ * corrigidos aqui, quem testa nao conserta o codigo de producao). Nao entram como
+ * casos abaixo para o teste nao nascer vermelho nem carimbar o furo como
+ * comportamento esperado. Todos precisam dar exit 2 em sandbox limpo SEM flag:
+ *   H1 verbo PARTIDO por separador, junto de um preview. E o furo que sobrou, e
+ *      e EXECUTAVEL de verdade (publica em producao / faz push sem flag):
+ *        <preview> x && git $(echo push) origin main
+ *        <preview> x && firebase $(echo deploy) --only hosting
+ *        <preview> x && firebase `echo deploy` --only hosting
+ *      Causa: a DETECCAO por segmento nao ve o verbo partido, nenhum segmento
+ *      casa o padrao, e o segmento de preview leva o comando inteiro para a
+ *      excecao (gate-deploy.js:140-141). A regra geral de 5f7bf7d
+ *      (gate-deploy.js:164-165) nao pega, porque o resto do verbo esta em OUTRO
+ *      segmento, nao no segmento do preview. Duas das tres variantes eram
+ *      BLOQUEADAS em 29d95d2: entrou junto com os separadores novos.
+ *   H2 guarda do canal live e textual, qualquer indirecao escapa:
+ *        <preview> $(echo live) | <preview> \l\i\v\e | CANAL=live; <preview> $CANAL
+ *   H3 caminho de push fora do padrao: git send-pack origin refs/heads/main
  */
 const fs = require('fs');
 const os = require('os');
@@ -68,10 +82,19 @@ function git(cwd, args) {
  *   sujo     : true = deixa uma alteracao nao commitada (tracked modificado)
  *   destacado: true = deixa o HEAD destacado depois do commit
  *   semCommit: true = repo sem nenhum commit (branch indetectavel por rev-parse)
+ *   semGit   : true = pasta que NAO e repositorio git (git status falha)
  */
 function criarSandbox(rotulo, opts) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-deploy-test-'));
   sandboxes.push(dir);
+  if (opts.semGit) {
+    // Nada de git init: `git status --porcelain` falha, entao o gate nao consegue
+    // CONFERIR a arvore. E a condicao do veto do seguranca (5f7bf7d).
+    const stateDir0 = path.join(dir, '.claude', 'state');
+    fs.mkdirSync(stateDir0, { recursive: true });
+    for (const f of opts.flags || []) fs.writeFileSync(path.join(stateDir0, f), 'flag de teste\n');
+    return { rotulo, dir, opts };
+  }
   git(dir, ['init', '-q']);
 
   if (opts.semCommit) {
@@ -113,8 +136,12 @@ function rodarGate(comando, cwd) {
   return { code: r.status === null ? -1 : r.status, err: (r.stderr || '') + (r.error ? String(r.error) : '') };
 }
 
-// Mostra o comando numa linha, com a quebra de continuacao visivel.
-const legivel = (c) => c.replace(/\\\r?\n\s*/g, '\\<nl> ').replace(/\s+/g, ' ');
+// Mostra o comando numa linha, com a quebra de continuacao visivel (os dois
+// estilos: barra invertida do bash e acento grave do PowerShell).
+const legivel = (c) => c
+  .replace(/([\\`])\r?\n\s*/g, '$1<nl> ')
+  .replace(/\r(?!\n)/g, '<cr>')
+  .replace(/[ \t]+/g, ' ');
 
 function caso(nome, comando, sandbox, esperado, motivoEsperado) {
   total++;
@@ -168,28 +195,32 @@ function main() {
   const sDestacado = criarSandbox('HEAD destacado, flag da frente', { branch: BRANCH, flags: [FLAG_DA_FRENTE], destacado: true });
   const sSemBranch = criarSandbox('branch indetectavel, flag da frente', { semCommit: true, flags: [FLAG_DA_FRENTE] });
   const sMain = criarSandbox('main, flag de outra frente', { branch: 'main', flags: [FLAG_OUTRA] });
+  const sForaDeGit = criarSandbox('fora de repositorio git, sem flag', { semGit: true, flags: [] });
 
   // ── Guarda anti-vacuidade: os sandboxes estao no estado pretendido? ─────
   grupo('PRE-CONDICOES DOS SANDBOXES (guarda anti-vacuidade)');
+  // arvore esperada: 'limpa', 'suja' ou 'sem-git' (git status nao roda).
   const esperadoSandbox = [
-    [sLimpoSemFlag, false, BRANCH, 0],
-    [sLimpoComFlag, false, BRANCH, 1],
-    [sLimpoFlagOutra, false, BRANCH, 1],
-    [sSujo, true, BRANCH, 1],
-    [sDestacado, false, 'HEAD', 1],
-    [sSemBranch, false, '(indetectavel)', 1],
-    [sMain, false, 'main', 1],
+    [sLimpoSemFlag, 'limpa', BRANCH, 0],
+    [sLimpoComFlag, 'limpa', BRANCH, 1],
+    [sLimpoFlagOutra, 'limpa', BRANCH, 1],
+    [sSujo, 'suja', BRANCH, 1],
+    [sDestacado, 'limpa', 'HEAD', 1],
+    [sSemBranch, 'limpa', '(indetectavel)', 1],
+    [sMain, 'limpa', 'main', 1],
+    [sForaDeGit, 'sem-git', '(indetectavel)', 0],
   ];
-  for (const [sb, devSujo, devBranch, devFlags] of esperadoSandbox) {
+  for (const [sb, devArvore, devBranch, devFlags] of esperadoSandbox) {
     total++;
     const st = statusDe(sb.dir);
+    const arvore = st === '(git falhou)' ? 'sem-git' : (st ? 'suja' : 'limpa');
     const br = branchDe(sb.dir);
     let nFlags = 0;
     try { nFlags = fs.readdirSync(path.join(sb.dir, '.claude', 'state')).filter((f) => f.startsWith('READY_')).length; } catch (e) { nFlags = 0; }
-    const ok = (!!st === devSujo) && br === devBranch && nFlags === devFlags;
+    const ok = arvore === devArvore && br === devBranch && nFlags === devFlags;
     if (!ok) falhas++;
     console.log('  ' + (ok ? 'PASS ' : 'FALHA') + ' | ' + sb.rotulo.padEnd(38) +
-      ' | arvore ' + (st ? 'suja ' : 'limpa') + ' (esperado ' + (devSujo ? 'suja' : 'limpa') + ')' +
+      ' | arvore ' + arvore.padEnd(7) + ' (esperado ' + devArvore.padEnd(7) + ')' +
       ' | branch ' + br.padEnd(26) + ' (esperado ' + devBranch + ')' +
       ' | flags ' + nFlags + ' (esperado ' + devFlags + ')');
   }
@@ -252,6 +283,71 @@ function main() {
   // CLAUDE.md). O caso existe para que uma mudanca futura nesse comportamento
   // apareca aqui, e nao em producao.
   caso('main: qualquer flag libera (pendencia conhecida)', PROD + ' --only hosting', sMain, 0, 'AVISO');
+
+  // ══ F. FUROS FECHADOS (regressao) ═══════════════════════════════════════
+  // Os cinco furos que a sonda adversarial do tester achou na excecao de preview
+  // (2026-09-27) e que o commit 9e35c83 fechou. Cada um liberava producao ou push
+  // em arvore limpa SEM flag. Rodam no sandbox limpo SEM flag, a unica condicao
+  // em que o furo aparecia. O motivo exigido ("nenhuma flag") prova que caem no
+  // gate CHEIO, e nao no atalho do preview.
+  // NOTA de prova por mutacao (tester, 2026-09-27): depois da regra geral de
+  // 5f7bf7d, o splitter de segmentos virou defesa REDUNDANTE. Tirar o `&` ou as
+  // fronteiras `$( )` da quebra, sozinho, nao muda nenhum veredito aqui, porque
+  // a regra geral bloqueia o mesmo ataque. F5, F6 e F7 so morrem quando as DUAS
+  // defesas caem juntas. A trava que sustenta esta classe hoje e a regra geral.
+  grupo('F. FUROS FECHADOS, REGRESSAO (sandbox: limpo, SEM flag)');
+  const BT = '`'; // acento grave: continuacao de linha e substituicao no PowerShell
+  caso('F1 canal live entre aspas duplas', PREVIEW + ' "live"', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('F2 canal live entre aspas simples', PREVIEW + " 'live'", sLimpoSemFlag, 2, SEM_FLAG);
+  caso('F3 canal live DEPOIS de flag', PREVIEW + ' --expires 7d live', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('F4 canal live com aspas parciais', PREVIEW + ' li"ve"', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('F5 separador & simples (background)', PREVIEW + ' x & ' + PROD + ' --only hosting', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('F6 subshell $( ) no segmento de preview', PREVIEW + ' x --token $(' + PROD + ')', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('F7 subshell de acento grave', PREVIEW + ' x --token ' + BT + PROD + BT, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('F8 continuacao PowerShell, producao', FB + ' ' + BT + '\n  deploy --only hosting', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('F9 continuacao PowerShell, push', 'git ' + BT + '\n  push origin HEAD', sLimpoSemFlag, 2, SEM_FLAG);
+  // Caracterizacao, NAO acidente: a guarda do canal live ficou CONSERVADORA de
+  // proposito (decisao registrada em 9e35c83), entao um canal chamado
+  // "live-teste" tambem e barrado. Falso positivo custa trocar o nome do canal;
+  // falso negativo custaria publicar em producao pela porta do preview. O caso
+  // existe para que afrouxar isso no futuro apareca aqui.
+  caso('F10 canal live-teste barrado de proposito', PREVIEW + ' live-teste', sLimpoSemFlag, 2, SEM_FLAG);
+  // Nao-regressao do LEGITIMO: a correcao nao pode ter transformado preview de
+  // verdade em falso positivo, nem quebrado comando multilinha dos dois shells.
+  caso('F11 preview legitimo, nome comum, LIBERA', PREVIEW + ' cp-onda2-classif', sLimpoSemFlag, 0, 'preview channel');
+  caso('F12 preview multilinha bash, LIBERA', PREVIEW + ' cp-onda2 \\\n  --expires 7d', sLimpoSemFlag, 0, 'preview channel');
+  caso('F13 preview multilinha PowerShell, LIBERA', PREVIEW + ' cp-onda2 ' + BT + '\n  --expires 7d', sLimpoSemFlag, 0, 'preview channel');
+  caso('F14 producao com flag e subshell, LIBERA', PROD + ' --only hosting:$(cat site.txt)', sLimpoComFlag, 0);
+  caso('F15 producao com flag e contin. PS, LIBERA', FB + ' ' + BT + '\n  deploy --only hosting', sLimpoComFlag, 0);
+  // Defesa em profundidade: um segmento UNICO que contem preview e tambem push
+  // (ou hosting:clone) e desqualificado como preview pela lista de
+  // desqualificadores. Os dois casos abaixo existem para essa lista nao cair sem
+  // ninguem notar. ATENCAO: a mesma forma com "firebase deploy" no lugar do push
+  // LIBERA hoje, porque producao nao esta na lista. E o gap H2 do cabecalho.
+  caso('F16 segmento unico com preview e push', PREVIEW + ' x\rgit push origin HEAD', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('F17 segmento unico com preview e clone', PREVIEW + ' x\r' + CLONE + ' a:b c:live', sLimpoSemFlag, 2, SEM_FLAG);
+
+  // ══ G. VETO DO SEGURANCA, FECHADO EM 5f7bf7d (regressao) ════════════════
+  // Duas defesas novas, ambas achadas por auditoria adversarial:
+  //  (i) desqualificacao do segmento por REGRA GERAL: tirado do segmento o
+  //      trecho "hosting:channel:deploy", se sobrar qualquer match de
+  //      DEPLOY_PATTERN o segmento nao e preview. Fecha a classe inteira
+  //      "segmento carrega producao", inclusive com separador nao previsto.
+  // (ii) o caminho do preview passou a EXIGIR a conferencia da arvore. Antes,
+  //      fora de repositorio git a checagem falhava aberta e o preview era
+  //      liberado com a unica trava que ele tem desligada.
+  grupo('G. VETO DO SEGURANCA, FECHADO (sandbox: limpo, SEM flag)');
+  caso('G1 process substitution < <( ) com preview', PREVIEW + ' t < <(' + PROD + ')', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('G2 segmento unico com preview e PRODUCAO', PREVIEW + ' x\r' + PROD + ' --only hosting', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('G3 preview e prod unidos por contin. bash', PREVIEW + ' x \\\n' + PROD, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('G4 preview e prod unidos por contin. PS', PREVIEW + ' x ' + BT + '\n' + PROD, sLimpoSemFlag, 2, SEM_FLAG);
+  caso('G5 eval juntando preview e prod', 'eval "' + PREVIEW + ' x"$\'\\n\'"' + PROD + '"', sLimpoSemFlag, 2, SEM_FLAG);
+  caso('G6 canal live por ANSI-C quoting', PREVIEW + " $'live'", sLimpoSemFlag, 2, SEM_FLAG);
+  caso('G7 REST do hosting dentro do preview', PREVIEW + ' x --token $(curl https://firebasehosting.googleapis.com/x)', sLimpoSemFlag, 2, SEM_FLAG);
+  // (ii) fora de repositorio git: preview NAO pode se liberar sozinho.
+  caso('G8 fora de repo git, preview BLOQUEIA', PREVIEW + ' cp-onda2-classif', sForaDeGit, 2, 'NAO se aplica sem essa conferencia');
+  caso('G9 fora de repo git, producao BLOQUEIA', PROD + ' --only hosting', sForaDeGit, 2, SEM_FLAG);
+  caso('G10 fora de repo git, push BLOQUEIA', 'git push origin HEAD', sForaDeGit, 2, SEM_FLAG);
 
   // ══ Repositorio real intocado ═══════════════════════════════════════════
   grupo('REPOSITORIO REAL INTOCADO');

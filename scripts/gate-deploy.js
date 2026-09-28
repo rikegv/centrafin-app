@@ -36,17 +36,16 @@
  * de working tree limpo (o que e servido tem que ter vindo de um commit, para a
  * investigacao pos-fato continuar possivel). Producao (firebase deploy) e push
  * seguem exigindo flag correspondente ao branch.
- * A excecao e fechada por quatro travas:
- * (1) O comando e avaliado por SEGMENTO (&&, &, ||, |, ;, nova linha, e as
- *     fronteiras de substituicao $( ) e acento grave), entao um deploy de
- *     producia colado ao preview NAO se disfarca de preview.
- * (2) Dentro do segmento, a desqualificacao e por REGRA GERAL e nao por lista:
- *     retirado o trecho "hosting:channel:deploy", se sobrar qualquer match de
- *     DEPLOY_PATTERN, o segmento carrega publicacao de verdade e o gate fecha.
- *     Isso cobre inclusive separador que ninguem previu, como "< <(...)".
- * (3) Canal chamado "live" nao conta como preview (aspas sao removidas antes do
+ * A excecao e fechada por tres travas:
+ * (1) REGRA UNICA sobre o comando INTEIRO: retiradas todas as ocorrencias do
+ *     verbo "hosting:channel:deploy", se o que sobra ainda casa DEPLOY_PATTERN,
+ *     entao ha publicacao de verdade junto do preview e a excecao nao se aplica.
+ *     Nao ha segmentacao: tentar avaliar por segmento foi o que abriu furo (ver
+ *     o comentario longo na implementacao), porque verbo partido pelo separador
+ *     some de todos os segmentos.
+ * (2) Canal chamado "live" nao conta como preview (aspas sao removidas antes do
  *     teste; conservador, um canal "live-teste" tambem e barrado).
- * (4) A liberacao do preview EXIGE que a conferencia de working tree limpo tenha
+ * (3) A liberacao do preview EXIGE que a conferencia de working tree limpo tenha
  *     sido bem-sucedida. No caminho do preview essa e a unica trava que sobra, e
  *     uma trava que falha aberta sozinha nao e trava.
  * hosting:clone tambem entrou na lista de verbos barrados do gate, porque promove
@@ -117,7 +116,7 @@ function main() {
   // coisa no meio (mesma linha), para nao serem furados por flags intermediarias
   // como "git -C <dir> push" ou "git --work-tree=... push". O par firebase+deploy
   // ja cobre "firebase deploy" e "firebase hosting:channel:deploy".
-  const DEPLOY_PATTERN = /(\bgit\b[^\n]*\bpush\b|\bfirebase\b[^\n]*\bdeploy\b|\bfirebase\b[^\n]*\bhosting:clone\b|firebasehosting\.googleapis\.com|\bgh\b[^\n]*\b(?:workflow|release)\b|\bkubectl\b[^\n]*\bapply\b|\bdocker\b[^\n]*\bpush\b)/i;
+  const DEPLOY_PATTERN = /(\bgit\b[^\n]*\b(?:push|send-pack)\b|\bfirebase\b[^\n]*\bdeploy\b|\bfirebase\b[^\n]*\bhosting:clone\b|firebasehosting\.googleapis\.com|\bgh\b[^\n]*\b(?:workflow|release)\b|\bkubectl\b[^\n]*\bapply\b|\bdocker\b[^\n]*\bpush\b)/i;
   const RULES_PATTERN = /firestore:rules/i;
 
   if (!DEPLOY_PATTERN.test(command)) {
@@ -125,47 +124,40 @@ function main() {
   }
 
   // ── Excecao do preview channel (ver cabecalho) ───────────────────────────
-  // Avaliacao por SEGMENTO: um comando composto so e tratado como preview se
-  // TODOS os segmentos que disparam o gate forem preview. Assim
-  // "firebase deploy && firebase hosting:channel:deploy x" cai no gate cheio.
+  // REGRA UNICA, aplicada ao comando INTEIRO: retire do comando TODAS as
+  // ocorrencias do verbo de preview "hosting:channel:deploy"; se o que sobrar
+  // ainda casar DEPLOY_PATTERN, entao o comando carrega uma publicacao de
+  // verdade alem do preview, e a excecao NAO se aplica.
   //
-  // A DETECCAO (DEPLOY_PATTERN acima) roda sempre no comando INTEIRO; a
-  // segmentacao decide apenas se a EXCECAO se aplica. Por isso quebrar em mais
-  // pedacos so pode APERTAR: se a quebra fizer nenhum segmento casar o padrao,
-  // `segmentosDeploy` fica vazio e `soPreview` e false, caindo no gate cheio.
-  // Separadores cobertos, todos achados pelo tester em 2026-09-27:
-  // `&&` `||` `;` `|` nova linha, o `&` SIMPLES (background no bash) e as
-  // fronteiras de substituicao de comando `$(` `)` e acento grave, que
-  // escondiam um "firebase deploy" dentro de um segmento de preview.
-  const segmentos = command.split(/&&|&|\|\||\||;|\r?\n|\$\(|\)|`/);
-  const segmentosDeploy = segmentos.filter((s) => DEPLOY_PATTERN.test(s));
-  const ehSegmentoPreview = (s) => {
-    if (!/\bfirebase\b/i.test(s)) return false;
-    if (!/\bhosting:channel:deploy\b/i.test(s)) return false;
-    // Canal "live" nao e preview: seria publicar em producao. As aspas sao
-    // removidas antes do teste porque "live" entre aspas driblava o casamento,
-    // e o teste procura o token em qualquer posicao depois do verbo (o nome do
-    // canal pode vir depois de flags como --expires 7d).
-    const semAspas = s.replace(/["']/g, '');
-    const depoisDoVerbo = semAspas.split(/hosting:channel:deploy/i).slice(1).join(' ');
-    // Conservador de proposito: um canal como "live-teste" tambem cai aqui e e
-    // barrado. Falso positivo custa trocar o nome do canal; falso negativo
-    // custaria publicar em producao pela porta do preview.
-    if (/\blive\b/i.test(depoisDoVerbo)) return false;
-    // Qualquer outro verbo de publicacao no mesmo segmento desqualifica. A regra
-    // e GERAL, nao uma lista: retirado do segmento o trecho
-    // "hosting:channel:deploy", se ainda sobrar QUALQUER match de DEPLOY_PATTERN,
-    // o segmento carrega uma publicacao de verdade e nao e preview.
-    // A lista enumerada que existia aqui (so hosting:clone e git push) esquecia
-    // justamente o verbo principal, "firebase deploy", alem de REST, gh, kubectl
-    // e docker, e deixava passar coisas como
-    // "firebase hosting:channel:deploy t < <(firebase deploy)", em que o
-    // separador nao entra na quebra de segmento. Veto do seguranca, 2026-09-27.
-    const semOVerboDePreview = s.replace(/hosting:channel:deploy/gi, ' ');
-    if (DEPLOY_PATTERN.test(semOVerboDePreview)) return false;
-    return true;
-  };
-  const soPreview = segmentosDeploy.length > 0 && segmentosDeploy.every(ehSegmentoPreview);
+  // Historia desta linha, porque ela ja foi complicada e voltou a ser simples:
+  // a primeira versao avaliava o comando por SEGMENTO (&&, ;, |, e depois &,
+  // $( ), acento grave) e exigia que todo segmento de deploy fosse preview. A
+  // premissa era "quebrar em mais pedacos so pode apertar". A premissa e FALSA,
+  // e o tester provou: a segmentacao nao decide so a excecao, ela tambem decide
+  // ONDE a deteccao olha. Um verbo PARTIDO pelo separador
+  // ("firebase $(echo deploy)") sumia de todos os segmentos, nenhum casava o
+  // padrao, e o segmento de preview levava o comando inteiro para a excecao.
+  // Duas dessas strings eram bloqueadas ANTES de eu acrescentar separadores:
+  // a tentativa de fechar buraco abriu outro.
+  // Sem segmentacao esta classe inteira deixa de existir, porque a deteccao
+  // volta a olhar o comando inteiro, exatamente como o gate sempre fez.
+  const semOVerboDePreview = command.replace(/hosting:channel:deploy/gi, ' ');
+  const temPreview = /\bfirebase\b/i.test(command) && /\bhosting:channel:deploy\b/i.test(command);
+  // Canal "live" nao e preview: seria publicar em producao. As aspas sao
+  // removidas antes do teste porque "live" entre aspas driblava o casamento, e o
+  // token e procurado em qualquer posicao depois do verbo (o nome do canal pode
+  // vir depois de flags como --expires 7d). Conservador de proposito: um canal
+  // "live-teste" tambem cai aqui. Falso positivo custa trocar o nome do canal;
+  // falso negativo custaria publicar em producao pela porta do preview.
+  const depoisDoVerbo = command
+    .replace(/["']/g, '')
+    .split(/hosting:channel:deploy/i)
+    .slice(1)
+    .join(' ');
+  const soPreview =
+    temPreview &&
+    !/\blive\b/i.test(depoisDoVerbo) &&
+    !DEPLOY_PATTERN.test(semOVerboDePreview);
 
   // ── 1. Working tree limpo ────────────────────────────────────────────────
   // `arvoreConferida` registra se este criterio pode ser confiado. Para o gate
