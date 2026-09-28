@@ -21,11 +21,27 @@
  * A responsabilidade da flag e do FLUXO de deploy (coordenador cria apos o gate
  * verde e a validacao do diretor); nenhum agente a cria por conta propria.
  *
- * Cobre: git push (inclusive "git -C <dir> push"), firebase deploy e
- * hosting:channel:deploy, chamada REST ao firebasehosting.googleapis.com,
- * gh workflow/release, kubectl apply, docker push. Roda tanto para a ferramenta
- * Bash quanto para a PowerShell (o deploy pode sair por qualquer uma das duas).
+ * Cobre: git push (inclusive "git -C <dir> push"), firebase deploy,
+ * hosting:clone (promove canal para live sem usar a palavra "deploy"), chamada
+ * REST ao firebasehosting.googleapis.com, gh workflow/release, kubectl apply,
+ * docker push. Roda tanto para a ferramenta Bash quanto para a PowerShell (o
+ * deploy pode sair por qualquer uma das duas).
  * Falha fechada: erro inesperado do proprio gate BLOQUEIA.
+ *
+ * EXCECAO DO PREVIEW (OS-CP-GATE-PREVIEW-01, decisao do diretor 2026-09-27):
+ * "firebase hosting:channel:deploy <canal>" publica num PREVIEW CHANNEL, que NAO
+ * toca producao e e justamente o ambiente onde o diretor valida. Exigir a flag
+ * READY_* nele criava impasse circular: a flag so nasce DEPOIS da validacao, mas
+ * e o preview que permite validar. Preview passa SEM flag, mantendo a exigencia
+ * de working tree limpo (o que e servido tem que ter vindo de um commit, para a
+ * investigacao pos-fato continuar possivel). Producao (firebase deploy) e push
+ * seguem exigindo flag correspondente ao branch.
+ * A excecao e fechada por tres travas: (1) o comando e avaliado por SEGMENTO
+ * (&&, ||, ;, |, nova linha), entao "firebase deploy && firebase
+ * hosting:channel:deploy x" NAO se disfarca de preview; (2) canal chamado "live"
+ * nao conta como preview; (3) hosting:clone entrou na lista de verbos barrados,
+ * porque seria o caminho natural para promover um canal a producao driblando a
+ * excecao.
  *
  * Limite conhecido (residual documentado): o hook so ve a string do comando de
  * topo; um verbo escondido dentro de um arquivo (bash deploy.sh, node deploy.js)
@@ -83,12 +99,30 @@ function main() {
   // coisa no meio (mesma linha), para nao serem furados por flags intermediarias
   // como "git -C <dir> push" ou "git --work-tree=... push". O par firebase+deploy
   // ja cobre "firebase deploy" e "firebase hosting:channel:deploy".
-  const DEPLOY_PATTERN = /(\bgit\b[^\n]*\bpush\b|\bfirebase\b[^\n]*\bdeploy\b|firebasehosting\.googleapis\.com|\bgh\b[^\n]*\b(?:workflow|release)\b|\bkubectl\b[^\n]*\bapply\b|\bdocker\b[^\n]*\bpush\b)/i;
+  const DEPLOY_PATTERN = /(\bgit\b[^\n]*\bpush\b|\bfirebase\b[^\n]*\bdeploy\b|\bfirebase\b[^\n]*\bhosting:clone\b|firebasehosting\.googleapis\.com|\bgh\b[^\n]*\b(?:workflow|release)\b|\bkubectl\b[^\n]*\bapply\b|\bdocker\b[^\n]*\bpush\b)/i;
   const RULES_PATTERN = /firestore:rules/i;
 
   if (!DEPLOY_PATTERN.test(command)) {
     process.exit(0); // nao e comando de deploy/push — libera
   }
+
+  // ── Excecao do preview channel (ver cabecalho) ───────────────────────────
+  // Avaliacao por SEGMENTO: um comando composto so e tratado como preview se
+  // TODOS os segmentos que disparam o gate forem preview. Assim
+  // "firebase deploy && firebase hosting:channel:deploy x" cai no gate cheio.
+  const segmentos = command.split(/&&|\|\||;|\||\r?\n/);
+  const segmentosDeploy = segmentos.filter((s) => DEPLOY_PATTERN.test(s));
+  const ehSegmentoPreview = (s) => {
+    if (!/\bfirebase\b/i.test(s)) return false;
+    if (!/\bhosting:channel:deploy\b/i.test(s)) return false;
+    // Canal "live" nao e preview: seria publicar em producao.
+    if (/\bhosting:channel:deploy\s+live\b/i.test(s)) return false;
+    // Qualquer outro verbo de publicacao no mesmo segmento desqualifica.
+    if (/\bfirebase\b[^\n]*\bhosting:clone\b/i.test(s)) return false;
+    if (/\bgit\b[^\n]*\bpush\b/i.test(s)) return false;
+    return true;
+  };
+  const soPreview = segmentosDeploy.length > 0 && segmentosDeploy.every(ehSegmentoPreview);
 
   // ── 1. Working tree limpo ────────────────────────────────────────────────
   try {
@@ -103,6 +137,17 @@ function main() {
     }
   } catch (e) {
     // git indisponivel ou timeout: nao bloqueia por este criterio (falha aberta).
+  }
+
+  // ── 1b. Preview channel: libera SEM flag (ver EXCECAO DO PREVIEW) ────────
+  // Chega aqui so com working tree limpo (checagem 1 acima), entao o que vai
+  // para o canal de preview corresponde a um commit.
+  if (soPreview) {
+    process.stderr.write(
+      'NOTA: preview channel (firebase hosting:channel:deploy). Nao toca producao, ' +
+      'liberado sem flag READY_*. Producao e push continuam exigindo a flag da frente.\n'
+    );
+    process.exit(0);
   }
 
   // ── 2. Flag READY_* correspondente ao branch ─────────────────────────────
