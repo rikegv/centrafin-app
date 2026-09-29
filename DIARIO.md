@@ -5,88 +5,88 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
-## PONTO DE RETOMADA (2026-09-27, sessao encerrada pelo diretor) — aguardando SO a validacao visual
+## 2026-09-29 — OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2) CONCLUIDA E EM PRODUCAO
 
-**Onde parou, em uma frase:** a Onda 2 do CP mais o ajuste de Tipo = Cliente estao CONSTRUIDOS,
-AUDITADOS e NO PREVIEW; falta SO o diretor validar na tela. Nada foi para producao nem para a
-`main`. A frente do gate de deploy, que nasceu no meio desta sessao, esta FECHADA.
+O diretor validou na tela, no preview, a Onda 2 completa mais o ajuste Tipo = Cliente, e autorizou a
+publicacao. **A Onda 2 esta FECHADA em producao.** O ciclo inteiro (flag, publicacao, merge, push,
+remocao da flag) rodou nesta sessao, com prova de cada passo.
 
-**Verificado por leitura do arquivo servido, nao por suposicao:** producao NAO tem o codigo novo
-(zero ocorrencias de `modal-cp-classificacao` e de `_cpClassCC`), o preview tem.
+### O que foi publicado
+Um unico arquivo de producao mudou nesta frente: `gerenciador_contas_pagar_desktop/code.html`.
+`firestore.rules` NAO mudou (diff `main..HEAD` vazio no arquivo), por isso o deploy foi
+`--only hosting`, sem teste de rules no emulador.
 
-### Estado exato do git
-Branch `feature/cp-classificacao-import`, **12 commits a frente da `main`**, arvore LIMPA,
-**nenhuma flag `READY_*` criada** (`.claude/state/` vazio, entao o gate esta fechado de proposito).
+### Gate de qualidade, rodado ANTES da publicacao
+- Sintaxe: os **3 blocos de `<script>`** da pagina do CP extraidos e aprovados no `node --check`
+  (1 modulo de 5.373 linhas e 2 classicos). Feito por extracao para `.mjs`/`.cjs` porque o
+  `scripts/check-syntax.cjs` continua quebrado (pendencia no TASKS).
+- Suite do gate de deploy: **117 de 117 casos PASSA**, zero sujeira temporaria.
+- Auditorias da frente, ja fechadas antes desta sessao: seguranca APROVADO sem veto, tester
+  independente PASSA 26/26.
 
-| commit | o que e |
-|---|---|
-| `ae857a5` | Onda 2, classificacao obrigatoria na importacao (sessao anterior) |
-| `fb49284` | docs da Onda 2 (sessao anterior) |
-| `0a2b37c` | **ajuste Tipo = Cliente**, o que falta validar |
-| `29d95d2` `9e35c83` `5f7bf7d` `9017410` `02c5310` | frente do gate, em 5 passos (ver entrada propria abaixo) |
-| `a94e1bb` `5af2054` | suite permanente do gate, 117 casos |
-| `3d91e93` | este registro |
+### Prova de que producao recebeu exatamente o que foi validado
+Conferido por leitura do arquivo SERVIDO, nao por suposicao:
+- `https://centra-fin.web.app/gerenciador_contas_pagar_desktop/code.html` responde **HTTP 200**,
+  382.673 bytes, e e **identico byte a byte** (`cmp`) ao arquivo do branch validado. O mesmo
+  SHA256 (`9e4c4bb7...`) do que estava no preview channel aprovado.
+- Marcadores do codigo novo presentes em producao: `modal-cp-classificacao` (2), `_cpClassCC` (4),
+  `_cpNomeCanonicoClass` (5). Antes do deploy eram **zero**.
+- Dependencias da pagina servindo **200**: `/sidebar.js` (29.433 bytes, entra por
+  `import { renderSidebar }`, nao por tag `<script src>`), `/assets/checkbox_multi.js?v=20260518v5`
+  (15.598) e `/theme_manager.js?v=20260508a` (5.539). A pagina do CP **nao consome**
+  `core_rules.js`, entao a regra dos consumidores de modulo compartilhado nao se aplica aqui.
 
-**Preview channel, EXPIRA 2026-10-04:**
-`https://centra-fin--cp-onda2-classif-xo63x99l.web.app/gerenciador_contas_pagar_desktop/code.html`
-Se tiver expirado ao retomar, republicar com `firebase hosting:channel:deploy cp-onda2-classif
---expires 7d` (a arvore precisa estar limpa; o gate NAO exige flag para preview desde esta sessao).
+### Git, estado final
+`main` recebeu a frente em **fast-forward** (13 commits, `dcbb6db..c567f0a`), push feito,
+`main` == `feature/cp-classificacao-import` (0 commits de diferenca nos dois sentidos), arvore LIMPA.
+A flag `.claude/state/READY_cp-classificacao-import` nasceu DEPOIS do gate verde e da validacao, e
+foi REMOVIDA apos o push. Preview channel `cp-onda2-classif` removido (nao serve mais para nada e
+expiraria sozinho em 2026-10-04).
 
-**Auditorias fechadas:** seguranca APROVADO sem veto no CP, e APROVADO no gate (depois de um VETO
-que a fabrica aceitou e corrigiu). Tester PASSA 26/26 no CP e 117/117 no gate.
+**Detalhe de ordem, registrado para nao virar armadilha:** a flag foi removida apos o push do commit
+de REGISTRO, nao apos o push do codigo. Motivo: em `main` o gate exige que exista alguma flag, e
+remover antes do registro barraria o proprio commit de documentacao. A flag cobriu a publicacao
+inteira da frente, do codigo ao registro, e morreu no fim dela.
 
-### O que o diretor testa no preview (o unico item pendente)
-No modal de classificacao da importacao: escolher **Tipo = Cliente** numa linha, o campo Centro de
-Custo SOME e no lugar aparece o aviso com o nome que sera gravado como centro de custo; trocar para
-outro tipo, o campo VOLTA e volta a ser obrigatorio; "Salvar E Importar" habilita quando cada linha
-estiver completa pela regra do tipo dela (Cliente precisa de Tipo + Empresa; os outros 3 tipos
-precisam de Tipo + CC + Empresa).
-
-### Ao retomar, DEPOIS da validacao, nesta ordem
-1. `firebase deploy --only hosting` (firestore.rules NAO mudou nesta frente).
-2. Merge `feature/cp-classificacao-import` -> `main` (fast-forward) e conferir os arquivos servidos
-   respondendo 200 em producao.
-3. Criar a flag `.claude/state/READY_cp-classificacao-import` (ela nasce SO agora, depois da
-   validacao), dar push, e REMOVER a flag logo apos.
-4. Fechar as OS no DIARIO e no TASKS.
-
-### Decisoes do diretor JA TOMADAS nesta sessao, NAO REPERGUNTAR
+### Decisoes do diretor JA TOMADAS nesta frente, NAO REPERGUNTAR
 1. **CC do cliente em CAIXA ALTA**, identico a `/Fornecedores.nome`. Confirmado.
 2. **Corrigir o gate** para nao barrar preview, em vez de criar flag prematura. Confirmado.
+3. **Validacao visual da Onda 2 completa, incluindo Tipo = Cliente.** Feita em 2026-09-29.
 
-### ABERTO, esperando o diretor (nao trava o deploy do que ja esta validado)
-1. **PROPOSTA NOVA, prioridade 1, aguarda aval.** O tester varreu o CLI e achou verbos DESTRUTIVOS
-   que o gate nao intercepta. O pior: `firebase firestore:delete --all-collections`, que apaga os
-   dados de producao do CentraFin inteiro, irreversivel e silencioso. Recomendados para entrar na
-   deteccao: `firestore:delete`, `firestore:databases:delete`, `hosting:sites:delete`,
-   `auth:import`, `functions:delete`, e os caminhos por `gcloud` (`firestore import`, `app deploy`,
-   `run deploy`, `functions deploy`) e `gsutil rm` no bucket de backup. Recomendados a NAO entrar,
-   com motivo: `target:apply` (sozinho nao publica), `hosting:channel:delete` (atritaria o proprio
-   loop de validacao), `auth:export` (e tema do seguranca, nao do gate), RTDB e extensions (o
-   projeto nao usa). Implementacao sugerida pelo tester: um alternativo unico no `DEPLOY_PATTERN`.
-   A fabrica NAO implementou por escopo fechado.
-2. Gatilho do gate de classificacao: hoje dispara so por TIPO ausente. Favorecido que ja tem tipo
-   mas esta SEM centro de custo NAO e puxado ao modal. Recomendacao: manter so por tipo nesta Onda.
-3. Handler morto `btn-aplicar-cp-quarentena`: caminho inalcancavel, remover em OS de higiene.
-4. Ciencia de que classificar como Cliente joga a despesa para o bucket CUSTOS do DRE Gerencial
-   (`dre_gerencial_desktop/code.html:329-331`). Nenhum lancamento antigo muda de bucket com este
-   deploy; vale so para os classificados de agora em diante.
+### ABERTO, esperando o diretor (nada disso trava producao hoje)
+1. **PROPOSTA, prioridade 1, aguarda aval.** O tester varreu o CLI e achou verbos DESTRUTIVOS que o
+   gate nao intercepta. O pior: `firebase firestore:delete --all-collections`, que apaga os dados de
+   producao do CentraFin inteiro, irreversivel e silencioso. Recomendados para entrar na deteccao:
+   `firestore:delete`, `firestore:databases:delete`, `hosting:sites:delete`, `auth:import`,
+   `functions:delete`, e os caminhos por `gcloud` (`firestore import`, `app deploy`, `run deploy`,
+   `functions deploy`) e `gsutil rm` no bucket de backup. Recomendados a NAO entrar, com motivo:
+   `target:apply` (sozinho nao publica), `hosting:channel:delete` (atritaria o proprio loop de
+   validacao), `auth:export` (e tema do seguranca, nao do gate), RTDB e extensions (o projeto nao
+   usa). Implementacao sugerida pelo tester: um alternativo unico no `DEPLOY_PATTERN`. A fabrica NAO
+   implementou por escopo fechado.
+2. **Modo permissivo do gate em `main`.** Hoje QUALQUER flag libera qualquer publicacao a partir de
+   `main`. O seguranca elevou a prioridade com evidencia viva (o repo vizinho `CENTRA DASH` esta em
+   `main` com 25 flags acumuladas) e recomenda esta OS antes de mais endurecimento do preview.
+3. Gatilho do gate de classificacao: hoje dispara so por TIPO ausente. Favorecido que ja tem tipo mas
+   esta SEM centro de custo NAO e puxado ao modal. Recomendacao: manter so por tipo nesta Onda.
+4. Handler morto `btn-aplicar-cp-quarentena`: caminho inalcancavel, remover em OS de higiene.
+5. Ciencia de que classificar como Cliente joga a despesa para o bucket CUSTOS do DRE Gerencial
+   (`dre_gerencial_desktop/code.html:329-331`). Nenhum lancamento antigo mudou de bucket com esta
+   publicacao; vale so para os classificados de agora em diante.
 
-### Armadilha operacional que pegou a fabrica DUAS vezes nesta sessao
-O hook do gate le a string do comando de topo, entao QUALQUER comando que cite os verbos de deploy
-e interceptado, inclusive `echo`, `printf`, heredoc e **mensagem de commit**. Mensagem que cite
-deploy vai por arquivo: `git commit -F <arquivo>`. E teste do proprio gate mantem as strings DENTRO
-de um arquivo `.cjs`, nunca na linha de comando.
+### Armadilha operacional que pegou a fabrica DUAS vezes na sessao anterior
+O hook do gate le a string do comando de topo, entao QUALQUER comando que cite os verbos de
+publicacao e interceptado, inclusive `echo`, `printf`, heredoc e **mensagem de commit**. Mensagem que
+cite esses verbos vai por arquivo: `git commit -F <arquivo>`. E teste do proprio gate mantem as
+strings DENTRO de um arquivo `.cjs`, nunca na linha de comando.
 
 ### Fila sugerida para a proxima sessao (ordem de execucao)
-1. Validacao visual do Cliente e fechamento em producao (passos 1 a 4 acima).
-2. Decidir a proposta dos verbos destrutivos no gate (item ABERTO 1).
-3. Modo permissivo do gate em `main`: hoje QUALQUER flag libera qualquer deploy a partir de `main`.
-   O seguranca elevou a prioridade com evidencia viva (o repo vizinho `CENTRA DASH` esta em `main`
-   com 25 flags acumuladas). Ele recomenda esta OS antes de mais endurecimento do preview.
-4. Onda 3 (empresa na importacao) e Onda 4 (grupos de despesa / DRE).
-5. "Responsavel nao informado" (caso Catarina, CC Comercial), que esta NO RADAR desde 2026-09-24 e
-   deve entrar DEPOIS das Ondas.
+1. Decidir a proposta dos verbos destrutivos no gate (item ABERTO 1).
+2. Modo permissivo do gate em `main` (item ABERTO 2), que o seguranca recomenda antes de mais
+   endurecimento do preview.
+3. Onda 3 (empresa na importacao) e Onda 4 (grupos de despesa / DRE).
+4. "Responsavel nao informado" (caso Catarina, CC Comercial), NO RADAR desde 2026-09-24, entra
+   DEPOIS das Ondas.
 
 ---
 

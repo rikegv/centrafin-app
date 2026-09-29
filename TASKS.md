@@ -86,14 +86,17 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
       por clique nas 7 colunas e remoção do travessão de toda a UI do CP. Validada pelo
       diretor no preview channel, deploy `--only hosting`. Mergeada em `main` (`47e4b59`).
       DIARIO 2026-09-24.
-- [~] **Onda 2 — OS-CP-CLASSIFICACAO-IMPORT-01 (classificação na importação). EM PREVIEW,
-      aguardando validação visual do diretor.** Branch `feature/cp-classificacao-import`,
-      commit de código `ae857a5` (+372/-0). Gate de classificação obrigatória de favorecidos
-      SEM TIPO no ETL: modal exige Tipo+CC+Empresa por favorecido (dedup por código), antes do
-      commit; admin grava direto em /Fornecedores, não-admin vai pra esteira; empresa só no
-      cadastro (Desenho B, override por lote fica na Onda 3). Segurança APROVADO, tester PASSA.
-      Preview (expira 2026-10-04): `https://centra-fin--cp-onda2-classif-xo63x99l.web.app/gerenciador_contas_pagar_desktop/code.html`
-      Detalhe e próximos passos no DIARIO.md (PONTO DE RETOMADA + entradas 2026-09-25 e 2026-09-27).
+- [x] **Onda 2 — OS-CP-CLASSIFICACAO-IMPORT-01 (classificação na importação). CONCLUÍDA e em
+      produção (2026-09-29).** Validada na tela pelo diretor no preview, publicada com
+      `--only hosting` (rules não mudaram), mergeada em `main` em fast-forward (`dcbb6db..c567f0a`,
+      13 commits) e com push feito. Produção **idêntica byte a byte** ao branch validado
+      (SHA256 `9e4c4bb7...`, HTTP 200); dependências da página servindo 200. Flag
+      `READY_cp-classificacao-import` criada após o gate verde e a validação, e removida após o
+      push. Preview channel removido. Gate de classificação obrigatória de favorecidos SEM TIPO no
+      ETL: modal exige Tipo+CC+Empresa por favorecido (dedup por código), antes do commit; admin
+      grava direto em /Fornecedores, não-admin vai pra esteira; empresa só no cadastro (Desenho B,
+      override por lote fica na Onda 3). Segurança APROVADO, tester PASSA.
+      Detalhe no DIARIO.md (entrada 2026-09-29 + entradas 2026-09-25 e 2026-09-27).
       - [x] Fase 1 (arquiteto/Plan) — investigação + esclarecimento da empresa (Desenho B)
       - [x] Decisões do diretor: Desenho B · trava por código distinto · admin direto/não-admin esteira
       - [x] Fase 2 — implementação (coordenador, dono do code.html)
@@ -104,8 +107,8 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
             cliente (CAIXA ALTA, idêntico a `/Fornecedores.nome`, confirmado pelo diretor). Empresa
             segue obrigatória; os outros 3 tipos não mudaram. Fecha a Lacuna 4 do
             `docs/MAPA-CP-REFATORACAO.md`. Segurança APROVADO sem veto; tester PASSA 26/26.
-      - [ ] **Validação visual do diretor no preview** (próximo passo, inclui o caso Cliente)
-      - [ ] Deploy produção `--only hosting` → merge em `main` → flag `READY` real → push → registro
+      - [x] **Validação visual do diretor no preview** (2026-09-29, incluiu o caso Cliente)
+      - [x] Deploy produção `--only hosting` → merge em `main` → flag `READY` real → push → registro
       - [ ] Decisões abertas do diretor: gatilho só-por-tipo (recomendado manter); remover código
             morto da quarentena antiga em OS de higiene separada; ciência de que `tipo_entidade` =
             Cliente joga a despesa para o bucket CUSTOS do DRE (`dre_gerencial_desktop/code.html:329-331`)
