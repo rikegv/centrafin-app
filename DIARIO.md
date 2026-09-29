@@ -5,6 +5,181 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
+## PONTO DE RETOMADA (2026-09-29, sessao encerrada pelo diretor) — nada pendente, proxima sessao abre FRENTE UNICA
+
+**Onde parou, em uma frase:** todas as frentes abertas FECHARAM e estao em producao ou na `main`;
+nao ha nada aguardando validacao, deploy ou decisao. A proxima sessao comeca de escopo limpo, e o
+diretor ja definiu que vai abrir UMA frente unica com quatro itens (secao "A PROXIMA FRENTE").
+
+**Estado do git:** branch `main`, arvore LIMPA, `main` == `origin/main`, nenhuma flag `READY_*`
+(`.claude/state/` vazio, gate fechado de proposito).
+
+### JA EM PRODUCAO, nada a fazer nestes
+
+| frente | o que entregou |
+|---|---|
+| **Onda 1**, OS-CP-CORRIGE-NOMES-01 | correcao in-place dos 197 campos com U+FFFD, zero doc apagado ou criado |
+| **Onda Layout**, OS-CP-LAYOUT-01 | colunas, KPIs, ordenacao por clique nas 7 colunas, travessao fora da UI do CP |
+| **Onda 2**, OS-CP-CLASSIFICACAO-IMPORT-01 | classificacao obrigatoria de favorecido SEM TIPO na importacao, mais o ajuste Tipo = Cliente (o cliente E o proprio centro de custo, CAIXA ALTA) |
+| **Gate de deploy**, OS-CP-GATE-PREVIEW-01 | preview channel deixou de exigir flag; 7 furos do gate fechados, 2 deles antigos |
+| **Gate destrutivo**, OS-GATE-DESTRUTIVO-01 | bloqueio incondicional de comando destrutivo (entrada propria abaixo) |
+
+### A PROXIMA FRENTE, que o diretor vai abrir numa SO frente de trabalho
+
+Quatro itens, e a ordem abaixo e a de execucao sugerida. Os dois primeiros sao as Ondas que faltam,
+o terceiro so ficou possivel POR CAUSA da Onda 2, e o quarto e o bug mais antigo do radar.
+
+1. **Onda 3, empresa na importacao.** Seletor de empresa na Central de Importacoes, carimbando a
+   empresa POR LOTE no lancamento; a coluna Detalhe/Obs vira Empresa. Na Onda 2 a empresa ficou
+   apenas no CADASTRO do favorecido (Desenho B, decisao do diretor), e o override por lote foi
+   explicitamente adiado para esta Onda.
+   **AVISO do `docs/MAPA-CP-REFATORACAO.md`, ler antes de construir:** exige GUARDA na cascata do
+   master, que hoje reescreve TODAS as faturas do codigo. Sem a guarda, carimbar empresa por lote
+   espalha a mudanca para fatura que nao estava no lote.
+2. **Onda 4, grupos de despesa / DRE.** Estrutura grupo de despesa -> conta de despesa, e a coluna
+   "Grupo de Contas" na tabela. Coluna nova nasce com filtro multiselect e ordenavel (regra da
+   Parte A), e no DRE Gerencial o bucket e definido por `tipo_entidade`
+   (`dre_gerencial_desktop/code.html:329-331`).
+3. **Cards Custo Interno / Custo Externo.** Destrinchar o OPEX em Interno (CLT + PJ) contra Externo.
+   So ficou possivel agora: e a Onda 2 que garante que todo favorecido tem TIPO preenchido, e o tipo
+   e a chave dessa separacao. Lancamento classificado ANTES da Onda 2 pode nao ter tipo, entao
+   conferir a cobertura do campo antes de prometer o numero.
+4. **Caso Catarina, responsavel "nao informado".** Caso concreto: CATARINA APARECIDA DOS SANTOS,
+   centro de custo "Comercial", gestor JA cadastrado em Areas & Gestores e a tela mostra "nao
+   informado". **CAUSA JA ACHADA, nao precisa investigar de novo:** o Responsavel nao e campo
+   gravado, e DERIVADO em runtime do cruzamento `lancamento.centro_custo` x `AreasContasPagar.nome`
+   -> `gestor_nome`. O match e EXATO e sensivel a caixa, acento e espaco interno: o mapa e chaveado
+   por `String(data.nome).trim()` em `gerenciador_contas_pagar_desktop/code.html:1257-1261` e
+   consultado por `String(r.centro_custo).trim()` em `code.html:2539` e `code.html:5151`, sem
+   `toUpperCase` nem `normalize('NFD')` de nenhum dos dois lados. **Correcao provavel:** normalizar
+   OS DOIS LADOS do lookup. Atencao ao alcance: o mesmo cruzamento alimenta mais de um ponto da tela,
+   entao a normalizacao tem que ser feita numa funcao unica e aplicada nos tres lugares.
+
+### BACKLOG que continua ABERTO e NAO entra na frente unica
+
+Fica registrado para o diretor priorizar quando quiser; nada aqui bloqueia a frente unica.
+1. **Modo permissivo do gate em `main`.** Fora de branch de frente nao ha slug para casar, entao
+   QUALQUER flag `READY_*` libera qualquer publicacao a partir de `main`. O seguranca elevou a
+   prioridade com evidencia viva (o repo vizinho `CENTRA DASH` esta em `main` com 25 flags
+   acumuladas) e recomenda esta OS antes de mais endurecimento do gate.
+2. **Faturamento sem janela de carga.** `contas_a_receber_desktop/code.html:4319` faz
+   `onSnapshot(collection(db,"Lancamentos"))` sem `where`/`orderBy`/`limit`. Mesma classe de problema
+   que travava o CP antes da carga por recencia, e piora conforme a base cresce.
+3. **Mojibake "A-tilde / A-circunflexo" no `CP_Base_Despesas`** (ex.: `ASSESSORIA CONTABIL` gravado
+   errado), 42 de 110 docs. E corrupcao DIFERENTE do U+FFFD da Onda 1 e e REVERSIVEL por
+   re-decodificacao.
+4. **7 cadastros com `NEAT` em centro de custo.**
+5. **Codigo morto da quarentena:** handler `btn-aplicar-cp-quarentena`, caminho inalcancavel.
+6. **`scripts/check-syntax.cjs` quebrado:** grava bloco `<script type="module">` com extensao `.cjs`,
+   entao `node --check` reprova qualquer `import`, inclusive arquivo intocado do HEAD. E gate cego do
+   DoD hoje; as OS recentes contornam extraindo para `.mjs`.
+
+### Regras operacionais que a proxima sessao precisa saber, e que ja custaram retrabalho
+
+1. **O gate agora barra comando DESTRUTIVO sempre**, sem flag de bypass. Ele le a STRING do comando,
+   entao CITAR um desses verbos em texto tambem bloqueia. Contorno, que e obrigatorio e nao
+   preferencia: mensagem de commit que cite os verbos vai por ARQUIVO (`git commit -F <arquivo>`),
+   busca por texto usa a ferramenta Grep e nunca o `grep` de shell, e string de teste mora DENTRO de
+   um arquivo `.cjs`. A propria mensagem de bloqueio do gate ensina isso.
+2. **Qualquer edicao em `scripts/gate-deploy.js` roda `node scripts/test-gate-deploy.cjs` ANTES do
+   commit.** Nao e conferencia, e pre-condicao, e esta escrita no cabecalho do arquivo. O risco
+   dominante do gate deixou de ser o falso negativo e passou a ser a OSCILACAO: em sete rodadas de
+   auditoria, apertar um lado abriu o outro, e foi a suite que pegou cada inversao.
+3. **Os agentes `seguranca` e `arquiteto` NAO estao registrados no runtime**, embora
+   `.claude/agents/seguranca.md` e `arquiteto.md` existam. A lista de tipos disponiveis traz apenas
+   backend, coordenador, frontend, tester e os genericos. Contorno usado nesta sessao: despachar um
+   agente generico mandando ler `.claude/agents/seguranca.md` e assumir aquele papel. Funcionou, e a
+   auditoria saiu com a mesma qualidade.
+
+---
+
+## 2026-09-29 — OS-GATE-DESTRUTIVO-01: o gate passa a barrar comando destrutivo, sempre
+
+Frente de infraestrutura em `scripts/gate-deploy.js`, commit `71bf6cf` (+1689/-7 com a suite), em
+`main`. NAO houve deploy de Hosting: o arquivo e script local do hook, nada servido.
+
+**Decisao do diretor:** bloquear SEMPRE, sem excecao e sem flag de bypass, os comandos que apagam ou
+sobrescrevem dado e codigo em massa. Se ele precisar de um deles, desliga a trava na hora,
+deliberadamente. O pior da lista era `firebase firestore:delete --all-collections`, que apagaria as
+colecoes de producao do CentraFin inteiro, irreversivel e silencioso, e que NAO era interceptado.
+
+**O que o gate barra agora, sem depender de flag, de arvore limpa nem da excecao de preview:**
+`firestore:delete`, `firestore:databases:delete`, `database:remove`, `hosting:disable`,
+`gcloud firestore import/export` e `databases delete`, push forcado (inclusive `-f`,
+`--force-with-lease`, refspec com `+`, e `send-pack`), `reset --hard`, `clean -f`, `branch -D`, e
+remocao recursiva de arquivo no bash, no PowerShell e no cmd.
+
+**O que continua passando, e isso e requisito do diretor e nao detalhe:** remocao de UM arquivo
+(`rm -f arquivo`, `Remove-Item -Force arquivo`), push normal, `push -u`, `branch -d`, `clean -n`,
+`reset --soft`, `git rm -r --cached`, publicacao normal e preview channel.
+
+**O DESENHO, e e o registro mais importante desta entrada:** uma TOKENIZACAO unica decide, caractere
+por caractere, o que e codigo, citado, comentario de linha, comentario de bloco, here-string, corpo
+de heredoc e substituicao de comando; os detectores consultam esse resultado e nenhum mexe no texto
+cru. Essa inversao foi a correcao ESTRUTURAL da frente, e nasceu de um diagnostico do seguranca: as
+tres primeiras geracoes de furo tinham todas a MESMA assinatura, uma transformacao do texto rodando
+ANTES de o gate saber o que era citacao. Cada remendo MOVIA a transformacao em vez de elimina-la, e a
+classe voltava por outra porta na rodada seguinte. E a mesma licao da OS-CP-GATE-PREVIEW-01: o que
+fecha furo e TIRAR ou RESTRINGIR mecanismo, nao acrescentar defesa.
+
+**A prova disso, que vale guardar:** a familia do comentario de bloco `<# #>` voltou TRES vezes por
+portas diferentes (citado, no corpo de heredoc, e heredoc com introdutor nao reconhecido ou
+terminador indentado). A causa nao era nenhuma das tres portas: era a producao disparar nas DUAS
+leituras, quando ela e EXCLUSIVA do PowerShell e no bash `<#` nao significa nada. Condicionada a
+leitura do PowerShell, a familia inteira fechou numa linha.
+
+**Auditoria: SETE rodadas adversariais, 499 strings sondadas pelo seguranca, que VETOU QUATRO vezes.**
+Furos fechados, do mais grave ao mais estreito: `git clean --dry-run && git clean -fd` passava (a
+janela de flags ancorava na PRIMEIRA ocorrencia do verbo, e conferir-antes-de-aplicar e o fluxo que a
+Parte A manda usar); `firebase firestore":"delete` apagava colecao de producao com duas aspas;
+substituicao de comando com aspa aninhada invertia o estado de citacao e liberava
+`git commit -m "$(printf "fix #1")" && git push --force`; a leitura de flag por COMPRIMENTO caia com
+padding de `-v` (`rm -rfvvd`); e o descarte de leitura malformada, que eu acrescentei por conta
+propria, abriu 7 rotas porque a premissa era falsa (o seguranca PROVOU que `bash -c 'echo A\necho
+$(x\)'` imprime A antes de falhar, entao cauda malformada nao impede a linha anterior de rodar).
+
+**O tester independente pegou duas coisas que o seguranca nao viu, ambas por MEDICAO e nao por
+deducao:** `git push -uf` escapava por falta de UMA letra no conjunto de flags curtas, e o corpo de
+heredoc engolia o verbo, o que ele provou rodando a estrutura real com payload inerte e vendo o
+marcador do meio executar. Ele tambem me CORRIGIU numa expectativa que eu havia ditado errada
+(`git push -of` e `-o` com valor "f", nao force push), e provou o agrupamento do `-4f` com comandos
+de leitura (`git push -4f -h` contra `git push -zf -h`) em vez de deixar como suposicao.
+
+**Falso positivo e o risco DOMINANTE deste gate de agora em diante, e isso esta escrito no cabecalho
+do arquivo.** Em todas as sete rodadas, apertar um lado abriu o outro: `-uf` contra `-Format` e
+`-NoProfile`; `/s` de switch contra `/s` dentro de caminho; a letra `o` contra `-of`; a pilha de
+citacao contra o acento grave, que no PowerShell e ESCAPE e nao substituicao. O caso que mais dolorido
+seria em producao: `Remove-Item -Confirm:$false a.txt`, idioma padrao do shell primario daqui, chegou
+a ser barrado porque `-Confirm` tem "r" e "f" no corpo.
+
+**Numeros:** 599 de 599 na suite permanente (`scripts/test-gate-deploy.cjs`, que saiu de 117 para 599
+casos nesta frente), mais 577 casos em 8 sondas do coordenador, total 1176. Veredito final: seguranca
+VETO LEVANTADO declarando que assina subir para producao; tester PASSA sem discordancia; ZERO rotas de
+escape acidentalmente alcancaveis.
+
+**Nenhum comando destrutivo foi executado em momento nenhum**, por nenhum agente: toda string entra
+pelo stdin do gate e o teste le so o exit code, em sandbox de repositorio de mentira em pasta
+temporaria, com guarda conferindo que o repositorio real ficou intocado.
+
+**Decisoes do diretor nesta OS, confirmadas com "segue tudo" e que NAO se reperguntam:**
+1. `rm -r` sozinho BLOQUEIA, alem da letra da lista original: `rm -r pasta` destroi a arvore sozinho,
+   o `-f` so suprime o prompt, e exigir recursao ja preserva o `rm -f arquivo`.
+2. Verbo CITADO em texto bloqueia, com o contorno de `git commit -F <arquivo>` e da ferramenta Grep.
+3. `gcloud firestore export` fica bloqueado junto do `import`: a fabrica nao tem motivo de rodar
+   `gcloud`.
+4. `firestore:databases:delete` MANTIDO, acrescentado alem da lista original porque apaga o banco.
+5. Os 6 verbos git fora da lista (`push --mirror`, `push --delete`, `push origin :branch`,
+   `checkout -f`, `filter-branch --force`, `update-ref -d`) ficam para OS SEPARADA.
+6. `curl -X DELETE` ao `firestore.googleapis.com` tambem fica para OS separada.
+
+**Residuais aceitos:** os 7 itens estao nomeados no cabecalho de `scripts/gate-deploy.js`, com a
+regua que o seguranca propos escrita junto: a regra NAO e "nenhuma rota existe", porque um hook que le
+string nunca sera a prova de adversario humano; a regra e "nenhuma rota ACIDENTALMENTE alcancavel, e
+nenhum trabalho legitimo barrado". O residual 1 e o que sustenta os outros: verbo escondido dentro de
+arquivo (`bash limpar.sh`, `node x.js`) nunca e visto, e e infechavel por construcao.
+
+---
+
 ## 2026-09-29 — OS-CP-CLASSIFICACAO-IMPORT-01 (Onda 2) CONCLUIDA E EM PRODUCAO
 
 O diretor validou na tela, no preview, a Onda 2 completa mais o ajuste Tipo = Cliente, e autorizou a

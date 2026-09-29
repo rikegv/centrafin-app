@@ -112,8 +112,34 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
       - [ ] Decisões abertas do diretor: gatilho só-por-tipo (recomendado manter); remover código
             morto da quarentena antiga em OS de higiene separada; ciência de que `tipo_entidade` =
             Cliente joga a despesa para o bucket CUSTOS do DRE (`dre_gerencial_desktop/code.html:329-331`)
-- [ ] **Onda 3 — empresa na importação.** FUTURA. A coluna Detalhe/Obs vira "Empresa".
-- [ ] **Onda 4 — grupos de despesa / DRE.** FUTURA. Coluna "Grupo de Contas".
+## FRENTE ÚNICA — próxima sessão (o diretor abre os 4 itens juntos)
+
+> Decidido em 2026-09-29, no encerramento da sessão. Detalhe completo e avisos no
+> **PONTO DE RETOMADA** no topo do `DIARIO.md`. Ordem abaixo = ordem de execução sugerida.
+
+- [ ] **1. Onda 3 — empresa na importação.** Seletor de empresa na Central de Importações,
+      carimbando a empresa **por lote** no lançamento; a coluna Detalhe/Obs vira "Empresa".
+      Na Onda 2 a empresa ficou só no CADASTRO do favorecido (Desenho B) e o override por
+      lote foi adiado explicitamente para cá.
+      **AVISO do `docs/MAPA-CP-REFATORACAO.md`, ler antes de construir:** exige GUARDA na
+      cascata do master, que hoje reescreve TODAS as faturas do código. Sem a guarda,
+      carimbar por lote espalha a mudança para fatura fora do lote.
+- [ ] **2. Onda 4 — grupos de despesa / DRE.** Estrutura grupo de despesa → conta de despesa,
+      e coluna "Grupo de Contas" na tabela. Coluna nova nasce com filtro multiselect e
+      ordenável (regra da Parte A). No DRE Gerencial o bucket vem de `tipo_entidade`
+      (`dre_gerencial_desktop/code.html:329-331`).
+- [ ] **3. Cards Custo Interno / Custo Externo.** Destrinchar o OPEX em Interno (CLT + PJ)
+      contra Externo. Só ficou possível agora: é a Onda 2 que garante TIPO preenchido em todo
+      favorecido, e o tipo é a chave da separação. Lançamento classificado ANTES da Onda 2
+      pode não ter tipo — conferir a cobertura do campo antes de prometer o número.
+- [ ] **4. Caso Catarina — responsável "não informado".** CAUSA JÁ ACHADA, não reinvestigar:
+      o Responsável é DERIVADO em runtime do cruzamento `lancamento.centro_custo` ×
+      `AreasContasPagar.nome` → `gestor_nome`, com match EXATO sensível a caixa/acento/espaço.
+      Mapa chaveado por `String(data.nome).trim()` (`gerenciador_contas_pagar_desktop/code.html:1257-1261`),
+      consultado por `String(r.centro_custo).trim()` (`code.html:2539` e `code.html:5151`), sem
+      `toUpperCase` nem `normalize('NFD')` dos dois lados. **Correção provável:** normalizar OS
+      DOIS LADOS, em função única aplicada nos três pontos. Caso concreto: CATARINA APARECIDA
+      DOS SANTOS, centro de custo "Comercial", gestor já cadastrado.
 
 ### OS do CP encerradas sem entrega (superadas)
 - [x] ~~OS-CP-FILTROS-BASE-COMPLETA-01~~ e ~~OS-CP-JANELA-6M-01~~ — **ENCERRADAS, superadas
@@ -138,12 +164,30 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
       elevou a prioridade disso na auditoria de 2026-09-27, com evidência viva: o repositório
       vizinho `CENTRA DASH` está em `main` com **25 flags `READY_*` acumuladas**. Recomendação dele:
       fazer esta OS ANTES de mais endurecimento da exceção de preview.
-- [ ] **Gate: verbos de produção ainda não interceptados** (levantado em 2026-09-27, aguarda a lista
-      final do tester): verificar `hosting:sites:delete`, `functions:delete`, `firestore:delete`,
-      `target:apply` e afins. `hosting:clone`, `hosting:disable` e `git send-pack` já entraram.
+- [x] ~~**Gate: verbos de produção ainda não interceptados**~~ — **RESOLVIDO em 2026-09-29 pela
+      OS-GATE-DESTRUTIVO-01**, em `main` (commit `71bf6cf`). O gate passou a barrar SEMPRE, sem flag de
+      bypass e sem exceção: `firestore:delete` (o pior, apagaria coleções de produção),
+      `firestore:databases:delete`, `database:remove`, `hosting:disable`, `gcloud firestore
+      import/export` e `databases delete`, push forçado (`-f`, `--force-with-lease`, refspec `+`,
+      `send-pack`), `reset --hard`, `clean -f`, `branch -D` e remoção recursiva de arquivo (bash,
+      PowerShell e cmd). Sete rodadas de auditoria adversarial, 499 strings sondadas, segurança
+      VETOU 4 vezes e levantou o veto na 7ª declarando que assina produção. Suíte de 117 → **599
+      casos**, mais 577 em sondas do coordenador (total 1176). Zero rotas de escape acidentais.
+      Detalhe e os 7 residuais aceitos no `DIARIO.md` (entrada 2026-09-29) e no cabeçalho do
+      `scripts/gate-deploy.js`. **Ficaram para OS separada, por decisão do diretor:** os 6 verbos git
+      fora da lista (`push --mirror`, `push --delete`, `push origin :branch`, `checkout -f`,
+      `filter-branch --force`, `update-ref -d`) e o `curl -X DELETE` ao `firestore.googleapis.com`.
 - [ ] **Gate: contrato de entrada do hook.** Payload vazio ou malformado libera (o padrão não casa).
       Sugestão do segurança: bloquear quando o stdin não é vazio e o parse falha ou
       `tool_input.command` não existe. Residual aceito hoje, não urgente.
+- [ ] **Gate: os 6 verbos git e o REST DELETE do Firestore** (fatiado da OS-GATE-DESTRUTIVO-01 por
+      decisão do diretor em 2026-09-29, escopo fechado): `git push --mirror`, `git push --delete`,
+      `git push origin :branch`, `git checkout -f`, `git filter-branch --force`, `git update-ref -d`,
+      e `curl -X DELETE` ao `firestore.googleapis.com` (a rota REST do Hosting já é coberta pelo
+      `DEPLOY_PATTERN`; a do Firestore ficou descoberta). **Qualquer edição no gate roda
+      `node scripts/test-gate-deploy.cjs` ANTES do commit** — é pré-condição escrita no cabeçalho do
+      arquivo, porque o risco dominante do gate virou a OSCILAÇÃO (apertar um lado abre o outro, e foi
+      a suíte que pegou cada inversão nas 7 rodadas).
 - [ ] `CP_Base_Despesas` com mojibake **"Ã/Â" do `seeder_excel`** (ex.: `ASSESSORIA CONTÃBIL`
       = CONTÁBIL), 42/110 docs. É corrupção DIFERENTE do "�" da Onda 1 e é reversível por
       re-decodificação. Ficou fora da Onda 1 por escopo.
