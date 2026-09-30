@@ -133,7 +133,12 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
       o badge do nº do título migrou para a coluna Código e **nada saiu da tela** (`observacao`
       já era renderizado duas vezes). Guarda na cascata do master por `empresa_origem`, com
       ausência do campo cascateando, logo no-op para os 51.181 docs existentes.
-- [x] **2. Onda 4 — grupos de despesa, SEM o DRE.** CONCLUÍDA. Estrutura de 3 níveis
+- [x] **2. Onda 4 — grupos de despesa, SEM o DRE.** CONCLUÍDA. **SUPERADA EM 2026-09-30 pela
+      OS-CP-GRUPOS-2NIVEIS-01: a estrutura hoje tem 2 NÍVEIS** (`CP_Grupos_Contas` →
+      `CP_Tipos_Despesa`, com o Tipo apontando direto para o Grupo). `CP_Contas_Despesa` foi
+      REMOVIDA da aplicação e do `firestore.rules`; a coleção estava vazia em produção, então a
+      remoção foi limpa. O parágrafo abaixo descreve o estado ORIGINAL da Onda 4 e fica como
+      histórico; ver a entrada do DIARIO.md para o que vale hoje. Estrutura de 3 níveis
       (`CP_Grupos_Contas` → `CP_Contas_Despesa` → `CP_Tipos_Despesa`) ancorada na **despesa do
       lançamento** (100% de cobertura e zero corrupção), e não no `CP_Base_Despesas` (27,7% de
       cobertura, por truncamento do ERP em 30 caracteres). Vínculo por ID, nunca por nome.

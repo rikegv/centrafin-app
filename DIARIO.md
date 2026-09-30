@@ -5,10 +5,22 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
-## PONTO DE RETOMADA (2026-09-30, fim do dia) — 4 OS em producao, 2 pendencias e 1 frente recortada
+## PONTO DE RETOMADA (2026-09-30, fim do dia) — 5 OS em producao, 2 pendencias e 1 frente recortada
 
-**Onde parou, em uma frase:** quatro ordens de servico foram construidas, auditadas, validadas pelo
-diretor e **publicadas hoje**; `main` == `origin/main` == producao, arvore limpa, zero flags.
+**Onde parou, em uma frase:** CINCO ordens de servico foram construidas, auditadas, validadas pelo
+diretor e **publicadas hoje**; `main` == `origin/main` == `c1424d7` == producao (conferido por hash,
+arquivo a arquivo), arvore limpa, zero flags, branch de frente apagado.
+
+**A 5a e a mais recente: OS-CP-GRUPOS-2NIVEIS-01**, que REMOVEU o nivel "Conta de Despesa" e deixou a
+estrutura contabil em 2 niveis (Grupo -> Tipo). Entrada propria logo abaixo. **Mudou `firestore.rules`**
+(saiu o match de `CP_Contas_Despesa`), entao o deploy foi COM rules, nao `--only hosting`.
+
+**Duas dividas NOVAS que ela deixou, as duas de decisao do diretor e nenhuma urgente:**
+1. O `<select>` por linha da tela de vinculo e CRU (sem `data-checkbox-multi`), fora do padrao da
+   secao 5. O `tester` provou que e HERANCA, ja era assim antes da frente, nao regressao.
+2. `jsdom` nao esta no `package.json`. A suite `test-grupos-2niveis.cjs` precisa de
+   `--jsdom=<caminho>` e ABORTA sem ele (nao devolve "passou" falso). Para entrar no gate, alguem
+   tem que decidir por `devDependencies`.
 
 **Estado do git:** branch `main`, arvore LIMPA, `main` == `origin/main` em `d3abb62`, nenhuma flag
 `READY_*`. Producao conferida IDENTICA a `main` nos arquivos servidos. Nenhum preview channel
@@ -113,6 +125,124 @@ exatamente para essa decisao nao ser tomada por acidente.
    resultado valido.
 8. **Os agentes `seguranca` e `arquiteto` NAO estao registrados no runtime.** Contorno usado e que
    funciona: despachar agente generico mandando ler `.claude/agents/<papel>.md` e assumir o papel.
+
+---
+
+## 2026-09-30 — OS-CP-GRUPOS-2NIVEIS-01: a estrutura de despesa perde um nivel, EM PRODUCAO
+
+Commit `c1424d7`, branch `feature/cp-grupos-2niveis` (mergeado em fast-forward e apagado). Deploy
+COM rules, porque elas mudaram. Validado pelo diretor no preview antes de publicar.
+
+A estrutura contabil saiu de 3 niveis (Grupo -> Conta -> Tipo) para 2 (Grupo -> Tipo). O nivel
+"Conta de Despesa" foi removido inteiro: cadastro, colecao, regra do Firestore e toda referencia.
+
+### A premissa foi VERIFICADA antes de qualquer edicao, e essa e a ordem certa
+
+A ordem de servico dizia que a tela de cadastro estava vazia. Isso nao se aceita de palavra quando a
+consequencia e uma remocao. Leitura direta do Firestore de producao, ANTES de tocar em arquivo:
+
+| colecao | docs | o que tinha |
+|---|---|---|
+| `CP_Grupos_Contas` | 0 | nada |
+| `CP_Contas_Despesa` | 0 | nada |
+| `CP_Tipos_Despesa` | 1 | `conta_id: null`, vinculo VAZIO |
+
+O unico documento existente era um vinculo em branco, criado quando alguem abriu a tela. **Nenhum
+dado de dinheiro dependia do nivel removido**, entao a remocao e limpa e dispensa migracao e
+backfill. Se a leitura tivesse achado dado, a frente inteira seria outra.
+
+### O que mudou
+
+**Cadastro (`master.html`).** Sai o bloco "2. Contas de Despesa" inteiro. O bloco de vinculo vira o
+"2." e passa a apontar para o GRUPO. A coluna derivada "Grupo" sai da tabela de vinculos: com 2
+niveis ela repetiria o proprio seletor da linha. O arquivo encolheu 174 linhas liquidas.
+
+**Contas a Pagar (`gerenciador_contas_pagar_desktop/code.html`).** `_cpGrupoDeReg` resolve
+tipo -> grupo em 2 `Map.get`, sem o salto pela conta. O estado `conta_orfa` deixa de existir;
+sobrevivem `sem_despesa`, `carregando`, `sem_vinculo`, `grupo_orfao` e `ok`. O tooltip da coluna,
+que mostrava a Conta, passa a ser o proprio nome do grupo, que e o que serve numa coluna com
+`truncate`.
+
+**`firestore.rules`.** Sai o match de `CP_Contas_Despesa`. Zero mudanca de permissao nas duas
+colecoes que ficaram.
+
+### DUAS decisoes de metodo que valem alem desta frente
+
+**1. O id acompanha o SIGNIFICADO, nao so o rotulo.** O seletor de vinculo em massa mudou de
+`tipos-despesa-conta-massa` para `tipos-despesa-grupo-massa`. Id que continua dizendo o nome do
+nivel antigo e exatamente a armadilha que fez o filtro de Favorecido filtrar CLIENTE por meses, e
+que so apareceu quando alguem mediu.
+
+**2. Gravacao do vinculo virou sobrescrita TOTAL, sem `merge`.** Com `merge`, o campo legado
+`conta_id` ficaria pendurado para sempre num documento, apontando para uma colecao que nao existe
+mais, e a proxima pessoa a ler o documento acreditaria nele. O `seguranca` provou que a sobrescrita
+nao perde nada: enumerou os DOIS unicos escritores de `CP_Tipos_Despesa`, confirmou que os dois
+gravam o documento inteiro, e confirmou que **o projeto nao tem Cloud Functions**, logo nao ha
+escritor server-side. **Ressalva permanente dele:** em `CP_Grupos_Contas` a mesma troca SERIA perda,
+porque la o `addDoc` grava `criado_em`/`criado_por`. Nao repetir o padrao sem conferir.
+
+### Remover um match NAO e o inverso de adicionar um
+
+O `seguranca` APROVOU, mas so depois de varrer o `firestore.rules` inteiro provando que **nao existe
+nenhuma clausula catch-all** (`{document=**}`). Se existisse, apagar o match especifico poderia
+ABRIR a colecao em vez de fechar. Sem catch-all, ela passa a ser negada por omissao para todos,
+inclusive `super_admin`.
+
+E ele impos uma condicao bloqueante que mudou o teste de LUGAR, nao de existencia:
+**`CP_Contas_Despesa` nao saiu da suite de rules, virou um bloco NEGATIVO de 6 casos.** Apagar a
+linha e seguir deixaria a colecao sem prova nenhuma de comportamento. O que a fecha e a AUSENCIA de
+catch-all, que e propriedade do arquivo INTEIRO e pode ser quebrada por uma edicao futura em
+qualquer outro ponto dele; o bloco negativo e o que faz essa quebra aparecer como teste vermelho.
+Emulador: 38/38, com `PERMISSION_DENIED: No matching allow statements` na colecao removida.
+
+### O defeito que esta frente descobriu na suite da frente ANTERIOR
+
+`scripts/test-colunas-cliente.cjs` reprovou 1 de 210 casos, e **nao era regressao**. O bloco "7a-bis"
+afirma um fato HISTORICO, que o commit `6a6c392` mexeu so em marcacao. Mas comparava `59cb899`
+contra a **arvore de trabalho**. Com um dos lados vivo, a afirmacao deixa de ser sobre `6a6c392` e
+vira "nenhuma frente futura pode tocar logica nenhuma": bastou o diretor mandar mudar
+`_cpGrupoDeReg` para a suite ficar vermelha sem defeito algum. Corrigido ancorando os DOIS lados em
+commit fixo. Voltou a 210/210, e a assercao continua com dentes.
+
+**REGRA PERMANENTE, extensao de uma que ja existia.** A regra registrada era "base de comparacao vai
+em COMMIT EXPLICITO, nunca em `HEAD`". Faltava a outra metade: **quando a assercao e sobre um FATO
+HISTORICO, os DOIS lados vao em commit fixo.** Fixar so a base deixa o teste com uma perna viva, e
+ele passa a reprovar mudanca legitima futura em vez de medir o passado.
+
+### Prova sobre o universo real, e a do tester foi mais longe que a minha
+
+**Minha (coordenador):** funcao real extraida do arquivo, rodada sobre os 104 tipos do catalogo e os
+51.181 lancamentos, no cenario de aceite do diretor. Vinculando o tipo de maior volume: **9.313**
+lancamentos passam a mostrar o grupo (18,2%), **41.868** ficam em "nao informado", zero orfaos, soma
+51.181, **fecha**. Retorno sem a propriedade `conta`. Acento PRESERVADO. Vinculo para grupo
+inexistente devolve `grupo_orfao` com nome vazio, nunca o nome errado.
+
+**Do tester independente, 51 casos, 0 bloqueantes.** O contraste e o que prova a suite: **28 falhas
+na base `6732932` contra 0 agora.** E ele foi alem do que eu pedi em dois pontos:
+- montou o `master.html` inteiro em jsdom e **executou o bloco de Grupos de ponta a ponta**,
+  provando que os 21 `getElementById` existem e que o bloco nao lanca. Esse era o risco numero 1:
+  um `getElementById` orfao seguido de `.addEventListener` mata o modulo inteiro e derruba telas que
+  nada tem a ver com a frente.
+- carregou o `assets/checkbox_multi.js` REAL, **abriu o painel pelo clique** e conferiu os rotulos
+  que o operador enxerga. Era exatamente ai que, na OS anterior, a prova logica passou e a tela
+  quebrou.
+- reproduziu o incidente "ESTAGIO" na base (`ESTAGIO` casava com `ESTÁGIO` e devolvia o grupo
+  ERRADO) e confirmou corrigido agora.
+
+Suites no fim: 362/362, 210/210, 51/51, 38/38, 15/15, 4/4.
+
+### DIVIDAS que esta frente deixou, decisao do diretor
+
+1. **O `<select>` por linha da tela de vinculo e CRU** (`master.html`, sem `data-checkbox-multi`),
+   entao abre o dropdown do sistema operacional, que nao obedece ao tema. A secao 5 diz que a regra
+   vale "para o que for tocado", e o elemento FOI tocado (a classe mudou). O tester provou contra
+   `6732932` que **ja era assim**: heranca, nao regressao. Nao consertado por desenho, porque a
+   ordem dizia "mantem o motor, muda so o destino do vinculo".
+2. **`jsdom` nao esta no `package.json`.** A suite nova exige `--jsdom=<caminho>` e ABORTA sem ele,
+   em vez de devolver "passou" falso. Para entrar no gate, decidir por `devDependencies`.
+3. **A trava da sobrescrita total e convencao, nao codigo.** Um TERCEIRO escritor futuro de
+   `CP_Tipos_Despesa` teria os campos apagados em silencio pelos outros dois. O caso C5 da suite
+   falha se alguem adicionar um terceiro: **manter esta suite viva**.
 
 ---
 
