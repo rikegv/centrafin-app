@@ -92,6 +92,52 @@ controle na tela, exatamente para essa decisao nao ser tomada por acidente.
 
 ---
 
+## 2026-09-30 — OS-CP-TOOLTIP-SEMCLASS-01: textos do card Sem Classificacao, EM PRODUCAO
+
+Mudanca de TEXTO apenas, commit `3963c8d`, deploy `--only hosting` (nao toca rules, nao toca
+dado, nao muda comportamento). Texto proposto pela fabrica e APROVADO pelo diretor antes de subir.
+
+**O problema que o diretor apontou, e ele estava certo:** o texto dizia "sem tipo de favorecido",
+e o operador lia como "o favorecido esta em branco". Nao e isso. O favorecido esta preenchido; o
+que falta e a CLASSIFICACAO DO TIPO dele. E o texto nao dizia ONDE resolver.
+
+**Descoberta no caminho, que mudou o recorte da tarefa:** o card tem DOIS textos, nao um. O
+diretor pediu "o tooltip" e citou a string do HOVER DO CORPO do card, mas os tres pontos que ele
+queria comunicar (favorecido preenchido, quanto do custo, onde resolver) nao cabem num hover curto:
+eles pertencem ao texto do ICONE DE EXPLICACAO, que e outro. Propus os dois, separados, cada um no
+seu papel, e o diretor aprovou os dois. **Licao de processo: quando o pedido cita um texto, conferir
+quantos textos aquele elemento tem antes de editar; "o tooltip" pode ser dois.**
+
+- **Hover do corpo do card** (funcao: dizer o que o clique faz).
+  Antes: "Filtrar somente lancamentos sem tipo de favorecido".
+  Agora: "Filtrar os lancamentos cujo favorecido ainda nao tem o tipo classificado".
+- **Icone de explicacao, a lampada** (funcao: explicar o KPI). Passa a dizer que o favorecido ESTA
+  preenchido, que o valor mostra quanto do custo esta sem classificacao, e que se resolve
+  classificando o tipo do favorecido no cadastro de fornecedores. Os quatro tipos aparecem com o
+  mesmo rotulo do filtro, para o diretor reconhecer. Titulo do modal segue "Sem Classificacao".
+
+**CONFERIDO NA BASE ANTES DE AFIRMAR, em vez de repetir a premissa do pedido:** dos 1.932
+lancamentos que caem neste card, **ZERO tem `entidade` vazia** e **ZERO estao sem
+`codigo_fornecedor`**. Ou seja, a premissa do diretor se sustenta e o caminho indicado no texto
+resolve 100% dos casos. A mesma verificacao reconfirmou que os 1.932 tem todos o tipo **VAZIO**,
+nenhum com tipo desconhecido, logo o residual conhecido (o card soma tipo desconhecido mas o clique
+filtra so o vazio) **segue com impacto ZERO**.
+
+Sem travessao nos dois textos, so virgula, ponto e dois-pontos. O hifen em "Fornecedor Interno - PJ"
+e o do proprio rotulo do sistema, nao e travessao.
+
+Gate: sintaxe verde nos 3 blocos de script; suite do tester 210 OK / 0 FAIL (nenhuma regressao).
+Producao conferida: HTTP 200, arquivo identico a `main`, os dois textos NOVOS presentes e os dois
+ANTIGOS ausentes, verificado por busca no HTML servido e nao pela mensagem do deploy.
+`main` == `origin/main` em `3963c8d`, arvore limpa, flag `READY_OS-CP-TOOLTIP-SEMCLASS-01` criada
+apos o gate e a aprovacao e removida apos o push.
+
+**Proposta registrada e NAO executada** (escopo fechado): a sublinha do card diz "1.931 sem tipo" e
+ficaria mais precisa como "sem tipo classificado". E um terceiro texto, o diretor pediu o do
+tooltip, e a fabrica nao mexeu.
+
+---
+
 ## 2026-09-30 — OS-CP-PACOTE-ONDAS-01: 4 frentes + vazamento + corte do legado, EM PRODUCAO
 
 Pacote unico, branch `feature/cp-pacote-ondas`, 4 commits, mergeado em `main` por fast-forward
