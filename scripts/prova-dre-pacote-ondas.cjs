@@ -13,7 +13,8 @@
  * Prova em tres partes:
  *   P0  a base de HOJE nao foi tocada: nenhum doc tem `empresa_origem`, logo o DRE
  *       de hoje e identico ao de antes do pacote, por ausencia de mudanca no dado.
- *   P1  CONSOLIDADO invariante e soma das abas == consolidado, nos dois cenarios.
+ *   P1  soma das abas == CONSOLIDADO no cenario de HOJE (que e o unico que existe:
+ *       P0 prova que nenhum doc foi carimbado, entao nao ha "depois" para agregar).
  *   P2  o cenario FUTURO, quando o carimbo comecar a rodar: quanto sai de OUTRAS e
  *       para onde vai, com a garantia de que OUTRAS so DIMINUI e que nenhum doc que
  *       ja herdava empresa muda de aba.
@@ -61,16 +62,23 @@ function extrairFuncao(src, nome) {
     db.collection('Fornecedores').select('empresa', 'codigo').get(),
   ]);
 
-  // Mapa de fornecedor -> empresa, com o MESMO aliasing do DRE (codigo e doc-id).
+  // Mapa de fornecedor -> empresa, ESPELHANDO LINHA A LINHA o que o DRE faz em
+  // `dre_gerencial_desktop/code.html:617`. A chave e EXCLUSIVA: usa `codigo` quando
+  // existe e, SO ENTAO, cai para o doc-id. Nao sao duas chaves.
+  //
+  // CORRIGIDO em 2026-09-30, apontado pelo agente seguranca na reauditoria: a versao
+  // anterior deste script registrava AS DUAS chaves, o que tornava o mapa um
+  // SUPERCONJUNTO do mapa real do DRE. O efeito era classificar como "herda empresa"
+  // um doc que no DRE real cai em OUTRAS, ou seja, o numero de alcancados saia
+  // SUBESTIMADO (piso, nao exato). O erro apontava para o lado seguro, mas numero de
+  // prova numerica nao pode ser aproximado por acidente.
   const fornMap = new Map();
   fornSnap.forEach((d) => {
     const v = d.data() || {};
-    const e = String(v.empresa || '').trim();
+    const e = String(v.empresa || '').trim().toUpperCase();
     if (!e) return;
-    const cod = v.codigo != null ? String(v.codigo).trim() : '';
+    const cod = v.codigo != null ? String(v.codigo).trim() : String(d.id).trim();
     if (cod) fornMap.set(cod, e);
-    const id = String(d.id).trim();
-    if (id && id !== cod) fornMap.set(id, e);
   });
   const { normalizarEmpresa, empresaDespesa, bucketDespesa } = api(fornMap);
 
