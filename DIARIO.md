@@ -5,90 +5,235 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
-## PONTO DE RETOMADA (2026-09-30) — OS-CP-PACOTE-ONDAS-01 EM PRODUCAO, uma pendencia com dry-run
+## PONTO DE RETOMADA (2026-09-30, fim do dia) — 4 OS em producao, 2 pendencias e 1 frente recortada
 
-**Onde parou, em uma frase:** o pacote das 4 frentes mais o vazamento esta EM PRODUCAO e em
-`main`, validado pelo diretor e aprovado pelo seguranca. Sobrou UMA pendencia pequena e uma
-FRENTE SEGUINTE ja definida.
+**Onde parou, em uma frase:** quatro ordens de servico foram construidas, auditadas, validadas pelo
+diretor e **publicadas hoje**; `main` == `origin/main` == producao, arvore limpa, zero flags.
 
-**Estado do git:** branch `main`, arvore LIMPA, `main` == `origin/main` em `1e1b4d0`, nenhuma flag
-`READY_*` (removida apos o push). Produção conferida IDENTICA a `main` nos 8 arquivos servidos.
+**Estado do git:** branch `main`, arvore LIMPA, `main` == `origin/main` em `d3abb62`, nenhuma flag
+`READY_*`. Producao conferida IDENTICA a `main` nos arquivos servidos. Nenhum preview channel
+aberto alem do que expira sozinho.
 
-### A PENDENCIA, e ela exige o diretor
+### O QUE FOI PARA PRODUCAO HOJE, na ordem
 
-**Cadastro da Catarina (fornecedor #1950).** O centro de custo dele esta `COMERCIAL`, que nao
-existe como area. O diretor JA DECIDIU o destino: area **COMERCIAL SOULAN** (gestor Marcelo
-Medeiros). Falta EXECUTAR, e a execucao e escrita em producao, entao vai com DRY-RUN que o
-diretor aprova antes. Corrigir esse 1 cadastro e deixar a cascata rodar resolve os 83
-lancamentos e o futuro de uma vez. Valor envolvido: R$ 7.077,91.
+1. **OS-CP-PACOTE-ONDAS-01** (4 frentes + vazamento + corte do modulo legado).
+2. **OS-CP-TOOLTIP-SEMCLASS-01** (textos do card Sem Classificacao).
+3. **OS-CP-CARDS-CANCELADO-TARIFA-01** (cancelado e tarifa fora dos 4 cards e da tabela do card).
+4. **OS-CP-COLUNAS-CLIENTE-01** (coluna Cliente, filtro de Favorecido corrigido, rolagem lateral
+   com colunas congeladas).
 
-### A FRENTE SEGUINTE, ja recortada
+Cada uma tem entrada propria abaixo, com os numeros e as licoes. **Nao reabrir nenhuma sem ler a
+entrada:** tres delas tinham a premissa da ordem de servico ERRADA, e o que se aprendeu ali e o
+que impede repetir o erro.
 
-**DRE por grupo de despesa.** Ficou FORA deste pacote por decisao do diretor, e o motivo nao foi
-falta de tempo: o DRE por grupo so mostra algo DEPOIS que o diretor agrupar as despesas na tela
-nova, que acabou de entrar em producao. Construir junto obrigaria a validar o relatorio duas
-vezes, uma com a dimensao vazia e outra com dado real.
+### AS 2 PENDENCIAS, e as duas exigem o diretor
 
-**DECISAO PENDENTE que abre essa frente, e o arquiteto preparou os numeros:** hoje o bucket do DRE
-vem de QUEM RECEBEU o dinheiro (`bucketDespesa` em `dre_gerencial_desktop/code.html:329-331`, tipo
-Cliente vai para CUSTOS e todo o resto para G&A). Com grupos, ele poderia vir DO QUE FOI GASTO. Em
-2026 isso e R$ 25.474.325,89 em CUSTOS contra R$ 23.419.841,17 em G&A. **Em qualquer cenario o
-EBITDA e identico ao centavo**; o que muda e a fronteira entre Custo e Despesa, logo o Lucro Bruto
-e a margem. As tres opcoes, com a recomendacao (cenario misto, `bucket_dre` nasce nulo e cada
-grupo migra sozinho quando o diretor classificar), estao em
-`docs/os-briefings/OS-CP-PACOTE-ONDAS-01-DESENHO.md`, secao 5.6 e pergunta Q7.
+1. **Cadastro do fornecedor #1950 (CATARINA APARECIDA DOS SANTOS) para a area COMERCIAL SOULAN.**
+   O diretor JA DECIDIU o destino (gestor Marcelo Medeiros); falta EXECUTAR, e a execucao e
+   escrita em producao, entao vai com **DRY-RUN que ele aprova antes**. Corrigir esse 1 cadastro e
+   deixar a cascata rodar resolve os 83 lancamentos e o futuro de uma vez. Valor: R$ 7.077,91.
+   **E o UNICO centro de custo orfao da base** (varredura completa feita).
+2. **Decisao do bucket do Cliente no DRE**, que abre a frente seguinte. Ver abaixo.
 
-O campo `bucket_dre` JA existe nos docs de `CP_Grupos_Contas`, nasce `null` e ainda NAO tem
-controle na tela, exatamente para essa decisao nao ser tomada por acidente.
+### A FRENTE SEGUINTE, ja recortada: DRE por grupo de despesa
+
+Ficou FORA do pacote por decisao do diretor, e o motivo nao foi tempo: o DRE por grupo so mostra
+algo DEPOIS que o diretor agrupar as despesas na tela nova, que acabou de entrar em producao.
+Construir junto obrigaria a validar o relatorio duas vezes, uma com a dimensao vazia e outra com
+dado real.
+
+**DECISAO PENDENTE:** hoje o bucket do DRE vem de QUEM RECEBEU o dinheiro (`bucketDespesa` em
+`dre_gerencial_desktop/code.html:329-331`: tipo Cliente vai para CUSTOS, o resto para G&A). Com
+grupos, poderia vir DO QUE FOI GASTO. Em 2026 sao R$ 25.474.325,89 em CUSTOS contra
+R$ 23.419.841,17 em G&A. **Em qualquer cenario o EBITDA e identico ao centavo**; muda a fronteira
+Custo x Despesa, logo o Lucro Bruto e a margem. As tres opcoes e a recomendacao (cenario misto:
+`bucket_dre` nasce nulo e cada grupo migra sozinho quando o diretor classificar) estao em
+`docs/os-briefings/OS-CP-PACOTE-ONDAS-01-DESENHO.md`, secao 5.6 e pergunta Q7. O campo `bucket_dre`
+JA existe nos docs de `CP_Grupos_Contas`, nasce `null` e **ainda nao tem controle na tela**,
+exatamente para essa decisao nao ser tomada por acidente.
+
+### DIVIDAS PEQUENAS levantadas e NAO corrigidas (escopo do diretor)
+
+1. **`ef-cp-favorecido`**: o id, a variavel e o texto de ajuda do campo continuam dizendo
+   "favorecido" enquanto o rotulo diz "Cliente". Mesma armadilha nominal que gerou o bloqueio 3 da
+   OS das colunas, agora so no codigo.
+2. **Editar o Favorecido (`observacao`) nao e possivel**: o modal so edita o Cliente (`entidade`).
+   Se o diretor quiser, e frente propria e mexe em escrita.
+3. **Nome de pessoa no `resumo` de `CP_SolicitacoesAprovacao`** (o log de exclusao passou a
+   gravar). O tester nao ve violacao (o nome ja aparece na tabela para o mesmo publico), mas pediu
+   que o agente `seguranca` carimbe. **Ainda nao carimbado.**
+4. **`border-collapse` com celula congelada**: risco conhecido de a borda nao repintar ao rolar em
+   alguns navegadores. Trocar para `border-separate` faria TODAS as linhas perderem a divisoria,
+   porque este arquivo poe a divisoria no `<tr>` (via `divide-y`) e o modelo separate nao pinta
+   borda em `<tr>`. Nao trocar sem mover a divisoria para as celulas junto.
+5. **Os 3 alertas de status** da OS dos cards (dois criterios de cancelado na mesma funcao;
+   prefixo pegando `cancelamento_previsto`; fronteira de selecao manual). Impacto ZERO hoje.
+   **Se `cancelamento_previsto` for tratado, tem que ser no CP e no DRE JUNTOS.**
 
 ### BACKLOG que continua aberto
 
-1. **Modo permissivo do gate em `main`.** Fora de branch de frente nao ha slug para casar, entao
-   qualquer flag `READY_*` libera publicacao a partir de `main`. O gate avisa em stderr, mas
-   libera. Prioridade elevada pelo seguranca desde 2026-09-27.
-2. **Faturamento sem janela de carga** (`contas_a_receber_desktop/code.html`, `onSnapshot` na
-   colecao inteira). Mesma classe do problema que o CP resolveu com carga por recencia.
-3. **DRE le `ContasAPagar` inteira sem limite** (`dre_gerencial_desktop/code.html:624-630`),
-   51.181 docs, e reprocessa 5 abas a cada snapshot de 3 colecoes. Achado do arquiteto nesta OS;
-   NAO estava no backlog antes. Vira gargalo quando o DRE por grupo for construido.
-4. **Tres esquemas de chave de fornecedor convivem:** ETL (codigo + alias por doc-id), runtime do
-   CP (codigo E doc-id) e DRE (codigo OU doc-id, exclusivo). Esta OS fechou a divergencia que
-   importava; um resolvedor unico compartilhado e frente propria. Achado do seguranca.
-5. **`firestore.rules` ainda honram `hasMenu('contas_pagar')`**, a chave do modulo legado, para
-   ler e escrever `ContasAPagar` (linhas 165-166 e 251-254). ZERO usuarios tem essa chave hoje,
-   entao sao clausulas mortas, mas remove-las MUDA regra existente e pede auditoria propria.
-6. **Mojibake A-til/A-circunflexo em `CP_Base_Despesas`**, 40 de 112 docs, reversivel por
-   re-decodificacao. Esta OS provou que ele NAO atrapalha nada: a ancora da Onda 4 e a despesa do
-   lancamento, que esta 100% limpa.
-7. **7 cadastros com `NEAT` em centro de custo**; 86 fornecedores sem centro de custo; 127
-   fornecedores sem empresa (a tela de correcao em massa ja atende esses 127).
-8. **Sujeira no cadastro de areas:** uma area chamada `ginfor` em minusculas, `RATEIO` sem gestor,
-   `CLIENTES` com o gestor gravado como "CLIENTES".
-9. **`scripts/check-syntax.cjs` quebrado** (grava bloco de modulo com extensao `.cjs`, entao
-   `node --check` reprova qualquer `import`). Contorno usado e obrigatorio: extrair para `.mjs`.
-10. **Dois testes MORTOS no repo**, que quebram na extracao antes do primeiro caso e ninguem
-    percebe: `scripts/test-cp-filtros-base-completa-logica.cjs` (procura funcao que nao existe
-    mais) e `scripts/test-filtro-servico-dinamico.cjs` (compara contra `HEAD`, que andou). Achado
-    do tester. **Licao que vale para todo teste novo:** comparar contra `HEAD` apodrece no
-    primeiro commit da propria frente; fixe a base num commit explicito.
+1. **Modo permissivo do gate em `main`**: fora de branch de frente nao ha slug para casar, entao
+   qualquer flag `READY_*` libera publicacao a partir de `main`. O gate avisa em stderr, mas libera.
+2. **Faturamento sem janela de carga** (`contas_a_receber_desktop`, `onSnapshot` na colecao
+   inteira).
+3. **DRE le `ContasAPagar` inteira sem limite** e reprocessa 5 abas a cada snapshot de 3 colecoes.
+   Vira gargalo quando o DRE por grupo for construido.
+4. **Tres esquemas de chave de fornecedor** convivem (ETL, runtime do CP, DRE). Um resolvedor unico
+   e frente propria.
+5. **`firestore.rules` ainda honram `hasMenu('contas_pagar')`**, a chave do modulo legado. ZERO
+   usuarios tem essa chave; sao clausulas mortas, mas remove-las MUDA regra existente.
+6. **Mojibake A-til/A-circunflexo em `CP_Base_Despesas`**, 40 de 112 docs, reversivel. Provado que
+   NAO atrapalha nada: a ancora da Onda 4 e a despesa do lancamento, que esta 100% limpa.
+7. **Sujeira de cadastro**: 7 registros com `NEAT` em centro de custo; 86 fornecedores sem centro
+   de custo; area chamada `ginfor` em minusculas; `RATEIO` sem gestor; `CLIENTES` com o gestor
+   gravado como "CLIENTES".
+8. **`scripts/check-syntax.cjs` quebrado.** Contorno obrigatorio: extrair para `.mjs` ou usar
+   `node --check`.
+9. **Dois testes MORTOS** que quebram na extracao antes do primeiro caso:
+   `test-cp-filtros-base-completa-logica.cjs` e `test-filtro-servico-dinamico.cjs`.
 
-### Regras operacionais que a proxima sessao precisa saber
+### REGRAS OPERACIONAIS que a proxima sessao precisa saber
 
-1. **O gate exige ARVORE LIMPA mesmo para preview channel.** Ele dispensa a flag `READY_*` no
-   preview, nao a arvore limpa. Consequencia pratica: para publicar preview e preciso COMMITAR
-   antes, o que inverte a ordem da secao 8 (commit depois da validacao). Nao e furo do gate, e o
-   fluxo real; assuma e registre.
-2. **O carimbo de empresa por lote e PERMANENTE para aquele lancamento.** A guarda da cascata
-   protege `empresa_origem` em `importacao`, `manual` e `backfill`, entao preencher a empresa do
-   fornecedor depois NAO move mais esses lancamentos no DRE. Corrigir cadastro conserta o futuro,
-   nao o que ja foi carimbado. Lote carimbado errado so se conserta com nova escrita em massa.
-3. **Teste que documenta um bug precisa ser INVERTIDO quando o bug e consertado.** Nesta OS dois
-   casos do tester afirmavam a presenca do gap e viraram vermelho permanente quando eu corrigi.
-4. **O gate barra comando destrutivo pela STRING**, entao citar um desses verbos em texto tambem
+1. **O gate roda ANTES do comando**, entao comando composto nao funciona: `criar flag && push` e
+   `commit && push` sao BLOQUEADOS, porque no instante da avaliacao a flag ainda nao existe e a
+   arvore ainda esta suja. Criar flag, commitar e empurrar tem que ser chamadas SEPARADAS.
+2. **O gate exige arvore limpa MESMO para preview channel.** Dispensa a flag, nao a arvore. Na
+   pratica isso inverte a ordem da secao 8: para publicar o preview que o diretor vai validar, e
+   preciso commitar antes, no branch da frente e sem push.
+3. **O gate barra comando destrutivo pela STRING**, entao citar um desses verbos em texto tambem
    bloqueia: mensagem de commit vai por arquivo (`git commit -F`), busca de texto usa a ferramenta
    Grep e nunca o `grep` de shell.
-5. **Nao usar `sed` para editar codigo.** Nesta sessao um `sed` mangueou uma linha de teste dentro
-   de uma string. Edicao de codigo vai por ferramenta de edicao precisa.
+4. **NAO usar `sed` nem substituicao de texto por shell para editar codigo.** Nesta sessao isso
+   quebrou uma linha dentro de uma string e falhou silenciosamente em casamentos multilinha mais de
+   uma vez. Edicao de codigo vai por ferramenta de edicao precisa.
+5. **Crase dentro de comentario que esta DENTRO de template literal encerra a string.** Quebrou o
+   arquivo uma vez.
+6. **Base de comparacao de teste vai em COMMIT EXPLICITO, nunca em `HEAD`.** Aconteceu TRES vezes.
+7. **Caminho de falha aberta tem que ser BARULHENTO.** `catch` mudo faz teste quebrado parecer
+   resultado valido.
+8. **Os agentes `seguranca` e `arquiteto` NAO estao registrados no runtime.** Contorno usado e que
+   funciona: despachar agente generico mandando ler `.claude/agents/<papel>.md` e assumir o papel.
+
+---
+
+## 2026-09-30 — OS-CP-COLUNAS-CLIENTE-01: coluna Cliente, filtro corrigido e rolagem congelada, EM PRODUCAO
+
+Branch `feature/cp-colunas-cliente`, 4 commits, rebaseado sobre `main` e mergeado em fast-forward
+(`2f62ee8..d3abb62`), deploy `--only hosting` (rules nao mudaram). Validado no notebook de 1366px
+pelo diretor antes de publicar. Tester independente REPROVOU DUAS VEZES antes de liberar.
+
+### A investigacao que cancelou metade da OS antes de escrever codigo
+
+A OS pedia: capturar o cabecalho de bloco do TXT (`-Ciente:` cliente / `-Fiente:` fornecedor),
+gravar o vinculo no lancamento, e reprocessar os 22 arquivos antigos para recuperar o cliente dos
+lancamentos ja importados, com dry-run e backup.
+
+**Nada disso era necessario.** O parser JA capturava o cabecalho desde 2026-05-14, em DUAS
+variaveis: o codigo do bloco vira `codigo_fornecedor` e o **nome do bloco vira `entidade`**; o nome
+da LINHA (o funcionario) vai para `observacao`. A regra do diretor tem dois ramos, bloco cliente
+mostra o cliente e bloco fornecedor repete o proprio favorecido, e os DOIS caem em `entidade`.
+Provado rodando o regex REAL do sistema sobre o `MAIO TODAS AS EMPRESAS.txt`: 230 cabecalhos
+`-Ciente`, 171 `-Fiente`, e os funcionarios da MEIWA saindo com `entidade="MEIWA..."` e
+`observacao="MOISES DE OLIVEIRA SALVIANO"`.
+
+**Resultado: FRENTE C cancelada.** Zero mudanca no ETL, zero campo novo, zero reimportacao, zero
+escrita em massa. O dado nunca se perdeu: estava nos 51.181 lancamentos.
+
+Para o registro, os arquivos existem (22 TXT em `Desktop/bases de importacao sistema/Contas a
+Pagar`, por mes), mas nao foram precisos. E **o sistema NAO guarda TXT**: nenhum Firebase Storage
+no projeto, so o nome do arquivo e o hash SHA-256 ficam gravados. Se um dia o dado dependesse do
+arquivo, dependeria da maquina do diretor.
+
+**Correcao ao meu proprio entendimento, apontada pelo tester:** `entidade` nao e "o nome do bloco",
+e `l._nomeOficial || l.entidade`, ou seja o nome OFICIAL de `/Fornecedores` quando o codigo casa,
+com o nome cru do bloco em `entidade_txt`. Consequencia pratica: **renomear um fornecedor no
+cadastro muda a coluna Cliente retroativamente na proxima ingestao.** Isso valida a escolha de unir
+o catalogo do filtro de Cliente com `_cpCadFavorecidos`.
+
+### O que entrou
+
+**Frente A.** "Empresa" virou "Empresa Pagadora" e foi para a primeira coluna.
+
+**Frente B.** Coluna **Cliente** exibindo `entidade`, com filtro multiselect proprio e ordenacao.
+
+**Frente D, a que mais valia.** O filtro de Favorecido casava por `entidade` (o bloco) enquanto a
+coluna Favorecido exibia `observacao` (o funcionario). O caso discriminante, medido com a funcao
+real sobre os 51.181 docs:
+
+| acao | antes | depois |
+|---|---|---|
+| filtrar Favorecido pelo nome de um CLIENTE | **10.299 linhas** | **0** |
+| filtrar Favorecido por um FUNCIONARIO | **0** | **79** |
+
+Ou seja: o filtro de Favorecido estava filtrando cliente. O catalogo dele tambem saiu da uniao com
+`/Fornecedores` (que guarda nomes de bloco) e passou a ser os 3.688 valores de `observacao`.
+
+**Correcao de um esquecimento da Onda 4:** `cp-filtro-grupo` foi criado e NUNCA ligado ao "Limpar
+filtros", ao chip de filtros ativos nem ao estado persistido. "Limpar" deixava um filtro ativo para
+tras sem o operador perceber. Ligado nos quatro pontos, junto com o de Cliente.
+
+### Responsividade: o sintoma nao era falta de espaco
+
+O diretor usa notebook de 1366px e relatou nomes cortados. A tabela estava com `w-full`: o
+navegador tentava caber tudo em 100% do container e **espremia as colunas ignorando as larguras
+declaradas**. Trocado por `w-max min-w-full`, a tabela cresce ate o conteudo (1.608px) e o
+`overflow-x-auto` que ja existia faz a rolagem, DENTRO do container, sem a pagina rolar de lado.
+
+**4 colunas congeladas** (648px): checkbox, Empresa Pagadora, Cliente e Favorecido, offsets
+0/40/168/424 espelhados entre `<th>` e `<td>`. **Coluna congelada precisa ser CONTIGUA**, senao a
+que rola passa por baixo; por isso Mes de Referencia e Codigo desceram para depois de Favorecido.
+Duas exigencias tecnicas ficaram documentadas no codigo: fundo opaco obrigatorio, e `group-hover`
+para devolver o realce de linha que o fundo opaco mataria.
+
+**Larguras medidas na base, nao chutadas:** `observacao` tem **maximo 30 caracteres** em 3.688
+distintos (o ERP trunca), entao `w-56` faz a coluna Favorecido **nunca mais cortar**. `entidade`
+tem p50=31, p75=40 e maximo 51: `w-64` cobre o caso comum e o excepcional corta com tooltip.
+`centro_custo` tem p90=8 e estava ocupando espaco livre a toa; foi para `w-24`.
+
+Em 1366: util ~1207px, congelado 648px, janela de 559px para as colunas que rolam. Em 1920 a
+tabela cabe com 153px de folga.
+
+### O tester reprovou duas vezes, e as duas foram boas
+
+**1a reprovacao, 3 bloqueios.** (a) O filtro Cliente nascia INUTILIZAVEL: eu copiei o molde do
+filtro de Grupo (lista de strings) e alimentei com `_cpUniaoOpcoes`, que devolve OBJETOS; 296
+opcoes com 2 values distintos, todos `[object Object]`, clique devolvendo zero. Corrigido
+DELETANDO meu populador e delegando ao `_popularSelectMultiChunked`, que ja normaliza as duas
+formas. (b) A planilha ficou falando outra lingua que a tela: chamava `entidade` de
+"Fornecedor/Favorecido", que virou CLIENTE, e `observacao` saia sob "Detalhe / Observacao".
+(c) **O modal de edicao dizia "Favorecido" e gravava em `entidade`**, ou seja no CLIENTE: quem
+tentasse corrigir o favorecido reescrevia o cliente da linha, em producao e em silencio. Corrigido
+o ROTULO, nao o que grava (mexer na escrita e frente propria). Mais: os modais de edicao e
+exclusao identificavam a linha so pelo cliente, e num cliente com 540 favorecidos isso nao
+distingue linha nenhuma, sendo a exclusao IRREVERSIVEL.
+
+**2a reprovacao, 1 gap de uma palavra, e ele estava certo.** Eu tinha posto `max-w-44` sozinho num
+`<td>`. Em `table-layout: auto` o browser **ignora `max-width` em `table-cell`**, e o
+`whitespace-nowrap` que vem com `truncate` faz a coluna exigir a largura INTEIRA do texto: meu
+"ajuste" apertava em vez de aliviar. Corrigido para o par `w-44 max-w-44`.
+
+**Liberacao, 210/210**, depois de ele descobrir que DOIS "defeitos meus" da rodada anterior eram
+bugs do proprio extrator dele, e de corrigir uma constante que inflou numeros que eu ja havia
+reportado ao diretor: **a sidebar deste app e `w-20` (80px), nao 256px**, entao os deficits de
+largura que eu relatei estavam ~176px pessimistas.
+
+### LICOES que valem mais que esta OS
+
+1. **Provar a camada logica NAO prova a camada que o operador toca.** Minha prova montava o select
+   com o valor ja pronto e exercitava so `aplicarFiltrosCP`: PASSOU. A do tester montou o DOM e
+   deixou o populador REAL encher as opcoes: achou o filtro inutilizavel. Mesma funcionalidade,
+   dois niveis, so um deles testado.
+2. **Extrator de teste que devolve vazio em silencio produz veredito errado com cara de veredito.**
+   O extrator dele ancorava na string exata da classe do `<tr>`; eu acrescentei `group` aquela
+   classe, o `indexOf` deu -1 e ele passou a devolver ZERO celulas sem errar, derrubando 4
+   asserções em cascata, uma das quais chegou a mim como defeito meu. Agora ele ABORTA quando o
+   recorte vem implausivel. Mesma familia do `catch` mudo e do `max-w-44`.
+3. **Asserção de teste busca coluna por NOME, nunca por indice.** Reordenar coluna quebrou varias
+   de uma vez.
+4. **Quando o pedido cita um texto ou um campo, conferir quantos existem antes de editar.** "O
+   tooltip" do card eram DOIS textos; "o favorecido" eram DOIS campos.
+5. **Constante de layout se LE da fonte, nao se lembra.** A sidebar de 80px lida como 256px
+   contaminou uma rodada inteira de numeros.
 
 ---
 
