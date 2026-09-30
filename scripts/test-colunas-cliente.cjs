@@ -210,11 +210,25 @@ function montarAmbiente(src) {
 }
 
 // ───────────────────── recortes da UI (thead / linha) ─────────────────────
+// ENDURECIDO em 2026-09-30, e por culpa propria. A versao anterior ancorava em
+// `'<tr class="hover:bg-slate-50 transition-colors">'`, string EXATA. O commit
+// 6a6c392 acrescentou `group` a essa classe, o indexOf devolveu -1, o slice
+// comeu o arquivo inteiro e `lerLinhaTd` retornou 0 celulas SEM ERRAR. Isso
+// derrubou em cascata 4 asserções que nao tinham nada a ver com o assunto, e
+// uma delas ("celula de Cliente usa nao informado") chegou ao coordenador como
+// se fosse defeito dele. Extrator que devolve vazio em silencio e pior do que
+// extrator que nao existe: ele produz veredito errado com cara de veredito.
+// Agora: ancora por PADRAO (nao por string exata) e EXPLODE se o recorte vier
+// implausivel.
 const semComentario = s => s.replace(/<!--[\s\S]*?-->/g, '');
+function exigir(cond, msg) { if (!cond) { console.error(`\nERRO DE EXTRACAO: ${msg}`); process.exit(3); } }
 
 function lerThead(src) {
-  const i = src.indexOf('<thead'), f = src.indexOf('</thead>', i);
+  const i = src.indexOf('<thead');
+  const f = src.indexOf('</thead>', i);
+  exigir(i >= 0 && f > i, 'nao achei o bloco <thead>...</thead>');
   const bruto = semComentario(src.slice(i, f));
+  exigir(!bruto.includes('<!--'), 'sobrou comentario dentro do thead apos a limpeza');
   const ths = [];
   const re = /<th\b([^>]*)>([\s\S]*?)<\/th>/g;
   let m;
@@ -222,22 +236,60 @@ function lerThead(src) {
     const attrs = m[1], dentro = m[2];
     const mSort = /ordenarTabelaCP\('([^']+)'\)/.exec(attrs);
     const mIcone = /id="icone-sort-([^"]+)"/.exec(dentro);
-    const mW = /\bw-(\d+|auto|full)\b/.exec(attrs);
-    let rotulo = dentro.replace(/<span[\s\S]*?<\/span>/g, '').replace(/<input[^>]*>/g, '')
+    // `w-NN` de largura, ignorando `max-w-NN` e o `w-` de utilitarios vizinhos.
+    const mW = /(?:^|\s)w-(\d+|auto|full|max)\b/.exec(attrs);
+    const mLeft = /(?:^|[\s"'])left-(?:\[(\d+)px\]|(\d+))(?=[\s"']|$)/.exec(attrs);
+    const rotulo = dentro.replace(/<span[\s\S]*?<\/span>/g, '').replace(/<input[^>]*>/g, '')
       .replace(/\s+/g, ' ').trim();
-    ths.push({ rotulo, sort: mSort ? mSort[1] : null, icone: mIcone ? mIcone[1] : null, w: mW ? mW[1] : null });
+    ths.push({
+      rotulo, sort: mSort ? mSort[1] : null, icone: mIcone ? mIcone[1] : null,
+      w: mW ? mW[1] : null, attrs,
+      sticky: /(?:^|[\s"'])sticky(?:[\s"']|$)/.test(attrs),
+      left: mLeft ? (mLeft[1] != null ? Number(mLeft[1]) : TW_PX(mLeft[2])) : null,
+      leftBruto: mLeft ? mLeft[0].trim() : null,
+      z: (/(?:^|\s)z-(\d+)\b/.exec(attrs) || [])[1] || null,
+      bg: (/(?:^|\s)bg-([a-z0-9-]+)\b/.exec(attrs) || [])[1] || null,
+    });
   }
+  exigir(ths.length >= 10, `o thead devolveu so ${ths.length} <th>, implausivel para esta tela`);
   return ths;
 }
 
 function lerLinhaTd(src) {
-  const i = src.indexOf('<tr class="hover:bg-slate-50 transition-colors">');
+  // Ancora no PADRAO da abertura da linha dentro do template literal, nao numa
+  // lista fixa de classes. `linhas[i] = \`` e o marco estavel.
+  const iTpl = src.indexOf('linhas[i] = `');
+  exigir(iTpl >= 0, 'nao achei o template literal da linha (`linhas[i] = `)');
+  const i = src.indexOf('<tr', iTpl);
   const f = src.indexOf('</tr>`', i);
+  exigir(i >= 0 && f > i && f - i < 20000,
+    `recorte da linha implausivel (inicio=${i}, fim=${f}); a ancora do <tr> mudou?`);
   const trecho = src.slice(i, f);
-  // Conta <td de nivel 1: o template nao aninha tabela, entao contagem direta serve.
+  const mTr = /<tr\b([^>]*)>/.exec(trecho);
   const tds = trecho.split(/<td\b/).slice(1);
-  return { trecho, n: tds.length, tds };
+  exigir(tds.length >= 10, `a linha devolveu so ${tds.length} <td>, implausivel para esta tela`);
+  const det = tds.map(td => {
+    const attrs = td.slice(0, td.indexOf('>'));
+    const mW = /(?:^|\s)w-(\d+|auto|full|max)\b/.exec(attrs);
+    const mLeft = /(?:^|[\s"'])left-(?:\[(\d+)px\]|(\d+))(?=[\s"']|$)/.exec(attrs);
+    return {
+      html: td, attrs,
+      w: mW ? mW[1] : null,
+      maxw: (/(?:^|\s)max-w-(\d+)\b/.exec(attrs) || [])[1] || null,
+      sticky: /(?:^|[\s"'])sticky(?:[\s"']|$)/.test(attrs),
+      left: mLeft ? (mLeft[1] != null ? Number(mLeft[1]) : TW_PX(mLeft[2])) : null,
+      leftBruto: mLeft ? mLeft[0].trim() : null,
+      z: (/(?:^|\s)z-(\d+)\b/.exec(attrs) || [])[1] || null,
+      bg: (/(?:^|\s)bg-([a-z0-9-]+)\b/.exec(attrs) || [])[1] || null,
+      hoverBg: (/group-hover:bg-([a-z0-9-]+)/.exec(attrs) || [])[1] || null,
+      truncate: /truncate/.test(td),
+    };
+  });
+  return { trecho, n: tds.length, tds, det, trAttrs: mTr ? mTr[1] : '' };
 }
+
+// Tailwind: w-N = N/4 rem = N*4 px (1rem = 16px).
+const TW_PX = n => (Number(n) / 4) * 16;
 
 function casesDoSort(src) {
   const fn = extrairFn(src, 'obterValorSortCP');
@@ -291,14 +343,27 @@ ok(THS.length === 12, `DEPOIS tem 12 <th> (achei ${THS.length})`);
 ok(LINHA.n === 12, `DEPOIS tem 12 <td> na linha (achei ${LINHA.n})`);
 ok(THS.length === LINHA.n, `th e td alinhados em quantidade`);
 
+// Ordem do modelo de ROLAGEM COM COLUNAS CONGELADAS (6a6c392): Mes e Codigo
+// desceram porque bloco congelado tem que ser CONTIGUO, e as quatro de
+// identidade sao as que ficam.
 const ESPERADA = [
-  '', 'Empresa Pagadora', 'Mês de Referência', 'Código', 'Cliente', 'Favorecido',
+  '', 'Empresa Pagadora', 'Cliente', 'Favorecido', 'Mês de Referência', 'Código',
   'Despesa', 'Grupo de Contas', 'CC', 'Responsável', 'Valor', 'Ações',
 ];
 ESPERADA.forEach((rot, i) => {
   const achado = THS[i] ? THS[i].rotulo : '(ausente)';
   ok(achado === rot, `coluna ${i} = ${JSON.stringify(rot || '(checkbox)')} (achei ${JSON.stringify(achado)})`);
 });
+// Daqui para baixo a suite procura coluna por NOME, nunca por indice: indice fixo
+// foi o que fez 2 asserções minhas acusarem o coordenador quando a ordem mudou.
+const idxCol = nome => {
+  const i = THS.findIndex(t => t.rotulo === nome);
+  exigir(i >= 0, `nao achei a coluna ${JSON.stringify(nome)} no thead`);
+  return i;
+};
+const col = nome => ({ i: idxCol(nome), th: THS[idxCol(nome)], td: LINHA.det[idxCol(nome)] });
+ok(THS.length === LINHA.det.length,
+  `o mapa th->td e 1 para 1, entao procurar por nome no thead indexa a celula certa`);
 
 ok(!/>\s*Empresa\s*</.test(semComentario(DEPOIS).slice(DEPOIS.indexOf('<thead'), DEPOIS.indexOf('</thead>'))),
   `nenhum <th> ficou com o rotulo antigo "Empresa" cru`);
@@ -321,9 +386,15 @@ ok(/case 'cliente':\s*return \{ tipo: 'texto',\s*valor: String\(r\.entidade/.tes
   `sort 'cliente' le r.entidade`);
 ok(/case 'favorecido':\s*return \{ tipo: 'texto',\s*valor: String\(r\.observacao/.test(extrairFn(DEPOIS, 'obterValorSortCP')),
   `sort 'favorecido' le r.observacao`);
-ok(/r\.entidade/.test(LINHA.tds[4]), `td 4 (Cliente) renderiza r.entidade`);
-ok(/r\.observacao/.test(LINHA.tds[5]), `td 5 (Favorecido) renderiza r.observacao`);
-ok(/_cpEmpresaDeReg\(r\)/.test(LINHA.tds[1]), `td 1 (Empresa Pagadora) usa o acessor unico _cpEmpresaDeReg`);
+ok(/r\.entidade/.test(col('Cliente').td.html), `a celula da coluna Cliente renderiza r.entidade`);
+ok(/r\.observacao/.test(col('Favorecido').td.html), `a celula da coluna Favorecido renderiza r.observacao`);
+ok(/_cpEmpresaDeReg\(r\)/.test(col('Empresa Pagadora').td.html), `a celula de Empresa Pagadora usa o acessor unico _cpEmpresaDeReg`);
+ok(/r\.categoria/.test(col('Despesa').td.html), `a celula de Despesa renderiza r.categoria`);
+ok(/r\.centro_custo/.test(col('CC').td.html), `a celula de CC renderiza r.centro_custo`);
+ok(/_cpResponsavelDoReg\(r\)/.test(col('Responsável').td.html), `a celula de Responsável usa o lookup unico`);
+ok(/r\.data_vencimento/.test(col('Mês de Referência').td.html), `a celula de Mês de Referência renderiza r.data_vencimento`);
+ok(/r\.codigo_fornecedor/.test(col('Código').td.html), `a celula de Código renderiza r.codigo_fornecedor`);
+ok(/valor_original/.test(col('Valor').td.html), `a celula de Valor renderiza valor_original`);
 {
   const amostra = REGS.slice(0, 2000);
   const sortOk = amostra.every(r => envDepois.sort(r, 'cliente').valor === String(r.entidade || ''));
@@ -820,133 +891,248 @@ bloco('5e. QUEM MAIS ESCREVE/LE `entidade`? (regra fixa de briefing da Parte A)'
     `contas_a_pagar_desktop (tela legada que tambem exibe r.entidade) NAO esta no sidebar, nao e consumidor vivo`);
 }
 
-// ═══ 6. LARGURAS: 11 -> 12 colunas, a conta com dado real ═══
-bloco('6a. LARGURA: o padrao do arquivo e `w-NN max-w-NN` + truncate no span');
+// ═══════════════════════════════════════════════════════════════════════════
+// 6. O MODELO NOVO: rolagem lateral com colunas congeladas (commit 6a6c392).
+//
+// A pergunta "cabe em 1366?" MORREU: a decisao do diretor foi que a tabela nao
+// tenta mais caber, ela rola. As perguntas novas sao outras, e cada uma tem um
+// jeito de falhar que ninguem ve olhando rapido:
+//   6a  a soma das larguras bate com o declarado (1.608px)?
+//   6b  os offsets `left-*` sao a soma acumulada, no <th> E no <td>?
+//   6c  o bloco congelado sobra espaco util para rolar em 1366?
+//   6d  em 1920 preenche sem faixa branca?
+//   6e  o congelamento esta completo (contiguo, opaco, z, hover)?
+//
+// CORRECAO DE UMA CONSTANTE MINHA, e ela inflou os numeros da rodada passada:
+// eu usei 256px de sidebar. A sidebar deste app e `w-20` (80px), fixa, e o
+// <main> compensa com `ml-20`. O conteudo vive num `<div class="p-8">` (32px de
+// cada lado). Entao a area util e viewport - 80 - 64 - ~15 de barra vertical, e
+// nao viewport - 256 - 64. Os deficits que eu reportei estavam ~176px
+// pessimistas. A conclusao qualitativa (o aperto era pre-existente) NAO muda; a
+// magnitude muda, e a magnitude era minha.
+// ═══════════════════════════════════════════════════════════════════════════
+const SIDEBAR_PX = 80;   // <aside class="... w-20">, e <main class="ml-20">
+const PAD_PX = 64;       // <div class="p-8"> = 32px de cada lado
+const SCROLLV_PX = 15;   // barra de rolagem vertical
+const utilDe = vp => vp - SIDEBAR_PX - PAD_PX - SCROLLV_PX;
 {
-  // Em `table-layout: auto` o `max-width` de um <td> e IGNORADO pelos browsers
-  // (CSS 2.1 10.4: efeito de min/max-width em table-cell e indefinido; Chrome e
-  // Firefox nao aplicam). Quem segura a coluna e o `width`. Por isso TODA coluna
-  // truncada deste arquivo declara o par `w-NN max-w-NN`. Uma que so tenha
-  // `max-w-` fica sem freio, e pior: `truncate` traz `whitespace-nowrap`, que
-  // FAZ a coluna exigir a largura inteira do texto, em vez de deixar quebrar.
-  const comTruncate = LINHA.tds
-    .map((td, i) => ({ i, rot: THS[i] ? (THS[i].rotulo || '(checkbox)') : '?', td }))
-    .filter(x => /truncate/.test(x.td));
-  console.log(`  colunas com truncate: ${comTruncate.map(x => x.rot).join(', ')}`);
-  const semPar = [];
-  for (const c of comTruncate) {
-    const mMax = /\bmax-w-(\d+)\b/.exec(c.td);
-    const mW = /\sw-(\d+)\b/.exec(c.td);
-    const par = !!(mMax && mW && mMax[1] === mW[1]);
-    console.log(`    ${String(c.rot).padEnd(18)} w-${mW ? mW[1] : '(nenhum)'}  max-w-${mMax ? mMax[1] : '(nenhum)'}  ${par ? 'par OK' : 'PAR QUEBRADO'}`);
-    if (!par) semPar.push({ rot: c.rot, w: mW && mW[1], max: mMax && mMax[1] });
-  }
-  ok(semPar.length === 0,
-    `toda coluna truncada declara o par w-NN + max-w-NN (quebrado em: ${semPar.map(s => s.rot).join(', ') || 'nenhuma'})`);
-  if (semPar.length) {
-    gap('ALTO', `Largura de ${semPar.map(s => s.rot).join(', ')}: \`max-w-\` sozinho num <td> nao segura nada`,
-      `A coluna ${semPar.map(s => s.rot).join(', ')} recebeu \`max-w-${semPar[0].max}\` + truncate, mas SEM o \`w-${semPar[0].max}\` ` +
-      `que as outras tres colunas truncadas deste mesmo arquivo declaram (Empresa Pagadora w-28 max-w-28, Cliente w-32 max-w-32, ` +
-      `Grupo w-32 max-w-32). Em table-layout auto o browser IGNORA max-width em table-cell, entao o freio nao existe. ` +
-      `E o efeito e o INVERSO do pretendido: \`truncate\` inclui \`whitespace-nowrap\`, e um span nowrap faz a coluna pedir a ` +
-      `largura INTEIRA do nome, enquanto antes o texto podia quebrar em duas linhas e a coluna encolhia. Ou seja, esta ` +
-      `mudanca tende a APERTAR mais o 1366, nao a aliviar. Correcao de uma palavra: trocar \`max-w-${semPar[0].max}\` por ` +
-      `\`w-${semPar[0].max} max-w-${semPar[0].max}\`, que e o padrao ja validado no arquivo.`);
-  }
-  ok(/\sw-32 max-w-32/.test(LINHA.tds[4]) && /truncate/.test(LINHA.tds[4]),
-    `Cliente foi de w-40 para w-32 e mantem o par + truncate`);
-  ok(/\sw-28 max-w-28/.test(LINHA.tds[1]) && /truncate/.test(LINHA.tds[1]),
-    `Empresa Pagadora segue com w-28 max-w-28 + truncate`);
+  const sb = fs.readFileSync(path.join(RAIZ, 'sidebar.js'), 'utf8');
+  ok(/w-20\b/.test(sb), `a sidebar e mesmo w-20 (80px), nao w-64: constante conferida na fonte, nao na memoria`);
+  ok(/<main class="ml-20/.test(DEPOIS), `o <main> compensa com ml-20, entao a area util comeca em 80px`);
+  ok(/<div class="p-8/.test(DEPOIS), `o conteudo vive num p-8 (32px de cada lado)`);
 }
 
-bloco('6b. LARGURA: a conta em 1366 e 1920, com as larguras que o TEXTO REAL pede');
+bloco('6a. A soma das larguras declaradas bate com o modelo (1.608px)');
+const LARGURAS = THS.map((t, i) => ({
+  rot: t.rotulo || '(checkbox)',
+  th: t.w, td: LINHA.det[i].w,
+  px: t.w && t.w !== 'max' && t.w !== 'full' && t.w !== 'auto' ? TW_PX(t.w) : null,
+}));
+const SOMA = LARGURAS.reduce((a, b) => a + (b.px || 0), 0);
 {
-  const REM = 16;
-  const px = w => (w === 'full' || w === 'auto' ? null : (Number(w) / 4) * REM);
-  const fixas = THS.map((t, i) => ({ i, rot: t.rotulo || '(checkbox)', w: t.w, px: t.w ? px(t.w) : null }));
-  const somaFixa = fixas.reduce((a, b) => a + (b.px || 0), 0);
-  const livres = fixas.filter(f => f.px == null);
-  const fixasAntes = THS_ANTES.map(t => (t.w ? px(t.w) : 0)).reduce((a, b) => a + b, 0);
-  const fixas3177800 = lerThead(fonteDaRef('3177800')).map(t => (t.w ? px(t.w) : 0)).reduce((a, b) => a + b, 0);
+  console.log(`  coluna                largura(th)  largura(td)   px`);
+  for (const l of LARGURAS) {
+    console.log(`    ${String(l.rot).padEnd(20)} ${String('w-' + l.th).padEnd(12)} ${String(l.td ? 'w-' + l.td : '(sem)').padEnd(12)} ${l.px != null ? l.px + 'px' : '-'}`);
+  }
+  console.log(`  SOMA = ${SOMA}px`);
+  ok(LARGURAS.every(l => l.px != null),
+    `TODA coluna declara largura fixa (no modelo de rolagem, coluna sem largura volta a ser elastica e desmonta o calculo)`);
+  ok(SOMA === 1608, `a soma das 12 colunas e 1.608px, o declarado (achei ${SOMA}px)`);
+  const divergentes = LARGURAS.filter(l => l.th !== l.td);
+  console.log(`  th x td divergentes: ${divergentes.map(d => `${d.rot} (th w-${d.th} vs td w-${d.td})`).join(', ') || 'nenhuma'}`);
+  ok(divergentes.length === 0,
+    `a largura do <th> e a do <td> sao IGUAIS em todas as colunas; se divergissem, o cabecalho sairia do lugar da coluna`);
+  // O bloco de larguras do briefing, conferido item a item.
+  const DECLARADO = [40, 128, 256, 224, 96, 96, 224, 128, 96, 128, 112, 80];
+  const batem = LARGURAS.every((l, i) => l.px === DECLARADO[i]);
+  ok(batem, `cada largura bate com o que o coordenador declarou: ${DECLARADO.join(', ')}`);
+}
 
-  console.log(`  larguras declaradas no <th>:`);
-  for (const f of fixas) console.log(`    ${String(f.rot).padEnd(20)} ${f.w ? `w-${f.w} = ${f.px}px` : '(sem largura, flex)'}`);
-  console.log(`  soma fixa: ecb83a3=${fixasAntes}px (11 col) | 3177800=${fixas3177800}px (12 col) | agora=${somaFixa}px (12 col)`);
-  ok(somaFixa < fixas3177800, `a soma fixa caiu de ${fixas3177800}px para ${somaFixa}px (-${fixas3177800 - somaFixa}px), o ajuste de Cliente entrou`);
+bloco('6b. Os offsets `left-*` sao a soma acumulada, no <th> E no <td>');
+{
+  const congTh = THS.map((t, i) => ({ i, rot: t.rotulo || '(checkbox)', ...t })).filter(t => t.sticky);
+  const congTd = LINHA.det.map((d, i) => ({ i, rot: THS[i].rotulo || '(checkbox)', ...d })).filter(d => d.sticky);
+  console.log(`  congeladas no <th>: ${congTh.map(c => `${c.rot}@${c.leftBruto}`).join(' | ')}`);
+  console.log(`  congeladas no <td>: ${congTd.map(c => `${c.rot}@${c.leftBruto}`).join(' | ')}`);
+  ok(congTh.length === 4 && congTd.length === 4, `sao 4 colunas congeladas de cada lado (th=${congTh.length}, td=${congTd.length})`);
+  ok(congTh.map(c => c.i).join(',') === congTd.map(c => c.i).join(','),
+    `as MESMAS posicoes estao congeladas no cabecalho e no corpo`);
+  // Contiguidade: tem que ser 0,1,2,3. Sticky separada por coluna que rola quebra.
+  ok(congTh.map(c => c.i).join(',') === '0,1,2,3',
+    `o bloco congelado e CONTIGUO e comeca na primeira coluna (posicoes ${congTh.map(c => c.i).join(',')})`);
+  // O teste que o coordenador pediu: offset == soma acumulada das anteriores.
+  let acumulado = 0;
+  for (let k = 0; k < congTh.length; k++) {
+    const esperado = acumulado;
+    const th = congTh[k], td = congTd[k];
+    console.log(`    ${String(th.rot).padEnd(20)} esperado left=${esperado}px | th=${th.left}px | td=${td.left}px`);
+    ok(th.left === esperado, `<th> ${th.rot}: left=${th.left}px e a soma acumulada (${esperado}px)`);
+    ok(td.left === esperado, `<td> ${th.rot}: left=${td.left}px espelha o <th> (${esperado}px)`);
+    acumulado += LARGURAS[th.i].px;
+  }
+  console.log(`  bloco congelado = ${acumulado}px`);
+  ok(acumulado === 648, `o bloco congelado soma 648px, o declarado (achei ${acumulado}px)`);
+  // Um erro de 1px aqui desalinha em silencio: vale dizer o que aconteceria.
+  ok(THS.slice(4).every(t => !t.sticky) && LINHA.det.slice(4).every(d => !d.sticky),
+    `nenhuma coluna depois da 4a ficou sticky por engano (isso a faria flutuar sobre as que rolam)`);
+}
 
-  // Quanto CADA coluna livre precisa, medido do texto que a base tem de verdade.
-  // 12px (text-xs); glifo medio de 6.3px para caixa mista/alta em sans-serif, e
-  // 7.0px para tabular-nums (digito de largura fixa). Padding px-4 = 32px.
-  const CH = 6.3, CH_NUM = 7.0, PAD = 32;
-  const pct = (arr, p) => { const s = [...arr].sort((a, b) => a - b); return s[Math.floor(s.length * p)] || 0; };
-  const lens = campo => REGS.map(r => String(r[campo] || '').length);
-  const valorTxt = REGS.slice(0, 5000).map(r =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(r.valor_original) || 0).length);
-  const necessidade = [
-    { rot: 'Favorecido',  p90: pct(lens('observacao'), 0.90), ch: CH },
-    { rot: 'Despesa',     p90: pct(lens('categoria'), 0.90), ch: CH },
-    { rot: 'CC',          p90: pct(lens('centro_custo'), 0.90), ch: CH },
-    // Responsavel vem de lookup em /AreasContasPagar, fora do snapshot: uso 20
-    // caracteres, que e um nome proprio tipico ("Marcelo Souza" = 13, com
-    // sobrenome composto passa de 20). Declarado como estimativa.
-    { rot: 'Responsável', p90: 20, ch: CH, estimado: true },
-    { rot: 'Valor',       p90: pct(valorTxt, 0.90), ch: CH_NUM },
-  ].map(x => ({ ...x, precisa: Math.ceil(x.p90 * x.ch + PAD) }));
-  const somaPrecisa = necessidade.reduce((a, b) => a + b.precisa, 0);
-  console.log(`  o que cada coluna livre PRECISA (p90 do texto real x ${CH}px + ${PAD}px de padding):`);
-  for (const n of necessidade) console.log(`    ${String(n.rot).padEnd(20)} p90=${n.p90} chars -> ${n.precisa}px${n.estimado ? '  (estimado, fora do snapshot)' : ''}`);
-  console.log(`  soma necessaria das livres: ${somaPrecisa}px`);
-  console.log(`  LARGURA MINIMA DA TABELA  : ${somaFixa} + ${somaPrecisa} = ${somaFixa + somaPrecisa}px`);
+bloco('6c. Em 1366px: quanto sobra para rolar depois do bloco congelado');
+{
+  const util = utilDe(1366);
+  const congelado = 648;
+  const janela = util - congelado;          // area em que o conteudo rola
+  const rolante = SOMA - congelado;         // conteudo que precisa rolar
+  const pctCongelado = Math.round((congelado / util) * 100);
+  console.log(`  util ~${util}px | congelado ${congelado}px (${pctCongelado}% da area) | janela de rolagem ${janela}px | conteudo rolante ${rolante}px`);
+  console.log(`  o operador ve ${janela}px de ${rolante}px por vez, ou seja ${Math.round((janela / rolante) * 100)}% das colunas que rolam`);
+  ok(pctCongelado <= 60,
+    `o bloco congelado ocupa ${pctCongelado}% da area util em 1366px, dentro do teto de 60% (acima disso sobra pouca janela para rolar)`);
+  ok(janela >= 400,
+    `sobram ${janela}px de janela de rolagem em 1366px, o bastante para ver 2 ou 3 colunas por vez (piso de 400px)`);
+  // Qual coluna rolante NAO cabe inteira na janela? Nenhuma pode ser maior que a janela.
+  const maiorRolante = Math.max(...LARGURAS.slice(4).map(l => l.px));
+  ok(maiorRolante <= janela,
+    `a maior coluna rolante (${maiorRolante}px) cabe inteira na janela de ${janela}px, entao nenhuma fica impossivel de ler`);
+  ok(SOMA > util, `(modelo) em 1366px a tabela realmente ROLA (${SOMA}px de conteudo para ${util}px de area), que e o desenho aprovado`);
+}
 
-  // A pergunta que muda a decisao: o aperto NASCEU nesta OS, ou ja existia?
-  // As 5 colunas livres sao AS MESMAS em ecb83a3 (Favorecido, Despesa, CC,
-  // Responsavel, Valor), entao a necessidade delas e identica e a unica variavel
-  // e a soma fixa. Sem esta comparacao, o numero sozinho acusa a frente errada.
-  const util1366 = 1366 - 256 - 64;
-  const defAntes = somaPrecisa - (util1366 - fixasAntes);
-  const def3177800 = somaPrecisa - (util1366 - fixas3177800);
-  const defAgora = somaPrecisa - (util1366 - somaFixa);
-  const livresAntes = lerThead(ANTES).filter(t => !t.w).length;
-  console.log(`  colunas livres: ecb83a3=${livresAntes}, agora=${livres.length} (as MESMAS 5, a necessidade nao mudou)`);
-  console.log(`  deficit em 1366px: ecb83a3 ja faltavam ${defAntes}px | 3177800 ${def3177800}px | agora ${defAgora}px`);
-  ok(defAntes > 0,
-    `o aperto em 1366px E PRE-EXISTENTE: ja faltavam ${defAntes}px em ${BASE_REF}, antes desta OS`);
-  ok(defAgora < def3177800,
-    `o ajuste desta rodada aliviou ${def3177800 - defAgora}px em relacao a 3177800`);
-
-  for (const vp of [1366, 1920]) {
-    const util = vp - 256 - 64;              // sidebar w-64 + paddings do container
-    const sobra = util - somaFixa;
-    const deficit = somaPrecisa - sobra;
-    const porLivre = Math.floor(sobra / livres.length);
-    console.log(`  viewport ${vp}px -> util ~${util}px | sobra ${sobra}px para ${livres.length} livres (~${porLivre}px cada) | precisa ${somaPrecisa}px -> ${deficit > 0 ? `FALTAM ${deficit}px` : `folga de ${-deficit}px`}`);
-    const passou = ok(deficit <= 0, `em ${vp}px as colunas livres cabem no espaco disponivel`);
-    if (!passou) {
-      const ganhoPar = Math.max(0, necessidade[0].precisa - 176);
-      gap('MEDIO', `1366px: resposta com numero. AINDA aperta, mas o aperto NAO nasceu aqui`,
-        `Resposta direta ao coordenador. (1) O ajuste funcionou no que dependia dele: a soma fixa caiu de ` +
-        `${fixas3177800}px para ${somaFixa}px (-${fixas3177800 - somaFixa}px). (2) Em ${vp}px sobram ${sobra}px para as ` +
-        `${livres.length} colunas livres (${livres.map(l => l.rot).join(', ')}), que pedem ${somaPrecisa}px pelo p90 do TEXTO REAL ` +
-        `da base (Favorecido ${necessidade[0].precisa}px, Despesa ${necessidade[1].precisa}px, CC ${necessidade[2].precisa}px, ` +
-        `Responsavel ${necessidade[3].precisa}px estimado, Valor ${necessidade[4].precisa}px): FALTAM ${deficit}px. ` +
-        `(3) O QUE MUDA A DECISAO: em ${BASE_REF}, ANTES desta OS e com 11 colunas, ja faltavam ${defAntes}px pela mesma conta. ` +
-        `As 5 colunas livres sao as mesmas de sempre; esta OS acrescentou ${somaFixa - fixasAntes}px de pressao a um aperto que ` +
-        `ja existia. Logo a tela de 1366px ja vinha esmagando Favorecido, Despesa e Responsavel antes de qualquer coisa que ` +
-        `voce fez, e nao e esta OS que deve resolver isso sozinha. ` +
-        `(4) CORTE MINIMO para voltar ao patamar de ${BASE_REF}: ${somaFixa - fixasAntes}px, e o caminho mais barato e ` +
-        `Favorecido com o par \`w-44 max-w-44\` (vira teto duro de 176px, economiza ${ganhoPar}px) + Mes de Referencia de ` +
-        `w-28 para w-24 (a data DD/MM/AAAA cabe em 96px, -16px) = ${ganhoPar + 16}px, ` +
-        `${ganhoPar + 16 >= somaFixa - fixasAntes ? 'o que JA devolve o patamar anterior' : 'faltando ainda um pouco'}. ` +
-        `(5) Para de fato CABER em 1366 seria preciso tirar coluna, e isso e decisao do diretor, nao minha nem sua: a ` +
-        `candidata natural e Codigo (80px), cujo numero de titulo ja aparece em badge/tooltip. ` +
-        `(6) Isto e ARITMETICA com constante declarada (glifo de 6,3px a 12px, padding 32px), nao veredito visual. ` +
-        `A prova de tela continua sendo do diretor, e o que ele precisa abrir e 1366px com um cliente de nome longo.`);
-    } else if (deficit > -150) {
-      console.log(`  (atencao) a folga em ${vp}px e de so ${-deficit}px, e "Responsável" foi ESTIMADO em 20 chars por nao estar no snapshot`);
-    }
+bloco('6d. Em 1920px: preenche sem faixa branca?');
+{
+  const util = utilDe(1920);
+  console.log(`  util ~${util}px | tabela ${SOMA}px | ${SOMA >= util ? `ainda rola ${SOMA - util}px` : `sobra ${util - SOMA}px, esticados por min-w-full`}`);
+  ok(/class="w-max min-w-full/.test(DEPOIS),
+    `a tabela usa 'w-max min-w-full': w-max deixa crescer ate o conteudo, min-w-full impede faixa branca em tela larga`);
+  // Especifico da tabela PRINCIPAL: o arquivo tem outras <table class="w-full">
+  // em modais de importacao, que nao sao alvo desta OS.
+  const iTabPrinc = DEPOIS.lastIndexOf('<table', DEPOIS.indexOf('id="cp-corpo"'));
+  const tagTabPrinc = DEPOIS.slice(iTabPrinc, DEPOIS.indexOf('>', iTabPrinc) + 1);
+  console.log(`  <table> principal: ${tagTabPrinc}`);
+  ok(!/class="w-full/.test(tagTabPrinc),
+    `a tabela PRINCIPAL nao usa mais 'w-full' (era ele que fazia o navegador ignorar as larguras declaradas)`);
+  ok(/class="w-full/.test(fonteDaRef('59cb899').slice(
+    fonteDaRef('59cb899').lastIndexOf('<table', fonteDaRef('59cb899').indexOf('id="cp-corpo"')),
+    fonteDaRef('59cb899').indexOf('>', fonteDaRef('59cb899').lastIndexOf('<table', fonteDaRef('59cb899').indexOf('id="cp-corpo"'))) + 1)),
+    `(controle) em 59cb899 ela ERA w-full, entao a troca e real e esta sendo medida`);
+  const mScroll = /<div class="([^"]*overflow-x-auto[^"]*)">\s*(?:<!--[\s\S]*?-->\s*)?<table/.exec(DEPOIS);
+  ok(!!mScroll, `a tabela esta dentro de um container com overflow-x-auto (a rolagem fica no container, nao na pagina)`);
+  // Faixa branca: min-w-full garante >= 100%; o excedente e distribuido.
+  ok(SOMA < util,
+    `em 1920px a tabela (${SOMA}px) e MENOR que a area util (${util}px), entao min-w-full a estica e nao sobra faixa branca`);
+  const folga = util - SOMA;
+  if (folga > 0 && folga < 60) {
+    gap('BAIXO', `Folga de so ${folga}px em 1920px: a rolagem quase aparece`,
+      `Com a soma em ${SOMA}px e a area util em ~${util}px (viewport 1920 - sidebar ${SIDEBAR_PX} - padding ${PAD_PX} - barra ${SCROLLV_PX}), ` +
+      `a tabela cabe por ${folga}px. E pouco: qualquer zoom de browser em 110%, uma barra de rolagem mais grossa, ou uma coluna ` +
+      `que ganhe 1 rem no futuro fazem a barra horizontal aparecer tambem em 1920. Nao e defeito hoje, e margem curta. ` +
+      `Se incomodar, os 80px de "Ações" sao o corte mais barato.`);
   }
 }
 
+bloco('6e. O congelamento esta completo: opaco, hover, z-index, borda');
+{
+  const congTd = LINHA.det.filter(d => d.sticky);
+  const congTh = THS.filter(t => t.sticky);
+  console.log(`  <td> congelados: bg=${congTd.map(d => d.bg).join(',')} | group-hover=${congTd.map(d => d.hoverBg).join(',')} | z=${congTd.map(d => d.z).join(',')}`);
+  console.log(`  <th> congelados: bg=${congTh.map(t => t.bg).join(',')} | z=${congTh.map(t => t.z).join(',')}`);
+  ok(congTd.every(d => d.bg && d.bg !== 'transparent'),
+    `toda celula congelada tem fundo OPACO (sem isso o conteudo que rola aparece por baixo)`);
+  ok(congTh.every(t => t.bg && t.bg !== 'transparent'),
+    `todo cabecalho congelado tem fundo opaco`);
+  ok(congTd.every(d => d.hoverBg),
+    `toda celula congelada tem group-hover:bg-*, devolvendo o realce de linha que o fundo opaco mataria`);
+  ok(/<tr class="group\b/.test(LINHA.trecho) || /(?:^|\s)group(?:\s|")/.test(LINHA.trAttrs),
+    `o <tr> tem a classe 'group', sem a qual o group-hover das congeladas nunca dispara`);
+  const hoverTr = /hover:bg-(slate-50)/.test(LINHA.trAttrs);
+  const hoverIgual = congTd.every(d => d.hoverBg === 'slate-50');
+  ok(hoverTr && hoverIgual,
+    `o realce do <tr> e o das congeladas usam a MESMA cor (slate-50), senao a linha ficaria bicolor ao passar o mouse`);
+  // Borda separando o bloco congelado do que rola.
+  const ultimaCong = LINHA.det[3];
+  ok(/border-r/.test(ultimaCong.attrs) && /border-r/.test(THS[3].attrs),
+    `a ultima coluna congelada tem borda a direita no <th> e no <td>, marcando onde a rolagem comeca`);
+  // Z-index: cabecalho congelado tem que vencer a celula congelada.
+  const zTh = Number(congTh[0].z), zTd = Number(congTd[0].z);
+  console.log(`  z-index: <th> congelado=${zTh}, <td> congelado=${zTd}`);
+  ok(zTh > zTd, `o cabecalho congelado (z-${zTh}) fica acima da celula congelada (z-${zTd})`);
+}
+
+bloco('6f. z-index: dropdown, painel do checkbox_multi e modais passam por cima?');
+{
+  const cbm = fs.readFileSync(path.join(RAIZ, 'assets', 'checkbox_multi.js'), 'utf8');
+  const zPortal = [...cbm.matchAll(/z-\[(\d+)\]/g)].map(m => Number(m[1]));
+  const zInline = [...cbm.matchAll(/(?:^|\s)z-(\d+)\b/g)].map(m => Number(m[1]));
+  const zModais = [...DEPOIS.matchAll(/fixed inset-0 z-\[(\d+)\]/g)].map(m => Number(m[1]));
+  const zSticky = Math.max(...THS.filter(t => t.sticky).map(t => Number(t.z)),
+    ...LINHA.det.filter(d => d.sticky).map(d => Number(d.z)));
+  console.log(`  maior z das congeladas : ${zSticky}`);
+  console.log(`  painel checkbox_multi  : portal z-[${Math.max(...zPortal)}], fallback inline z-${Math.max(...zInline)}`);
+  console.log(`  modais (fixed inset-0) : z-[${zModais.join('], z-[')}]`);
+  console.log(`  sidebar                : z-50 (fixed)`);
+  ok(Math.max(...zPortal) > zSticky,
+    `o painel do checkbox_multi em modo portal (z-${Math.max(...zPortal)}) passa por cima das congeladas (z-${zSticky})`);
+  ok(zModais.every(z => z > zSticky),
+    `TODOS os modais (menor = z-${Math.min(...zModais)}) passam por cima das congeladas (z-${zSticky})`);
+  ok(/data-cb-portal/.test(DEPOIS),
+    `os filtros desta tela usam 'data-cb-portal', ou seja o painel sai para o body com z-[200] e nao fica preso no container da tabela`);
+  // O ponto de risco real: quem NAO e portal usa z-50 ABSOLUTO dentro do proprio
+  // container. Se algum select da tabela fosse assim, o painel ficaria sob o
+  // overflow-x-auto. Nenhum select vive dentro da tabela, mas vale provar.
+  const selectsNaTabela = /<t[hd][^>]*>[\s\S]{0,400}?<select/.test(LINHA.trecho);
+  ok(!selectsNaTabela,
+    `nenhum <select> vive dentro das celulas da tabela, entao nao ha painel de dropdown preso sob o container de rolagem`);
+  ok(zSticky < 50,
+    `as congeladas (z-${zSticky}) ficam abaixo da sidebar (z-50), que a sobrepoe ao expandir no hover, como deve ser`);
+}
+
+bloco('6g. border-collapse com celula congelada: a borda some?');
+{
+  // Escopo na tabela PRINCIPAL: o arquivo tem outras <table> nos modais de
+  // importacao, e uma delas usa o outro modelo. Medir no arquivo inteiro daria
+  // "os dois ao mesmo tempo", que e diagnostico falso.
+  const iT = DEPOIS.lastIndexOf('<table', DEPOIS.indexOf('id="cp-corpo"'));
+  const tagT = DEPOIS.slice(iT, DEPOIS.indexOf('>', iT) + 1);
+  const usaCollapse = /border-collapse/.test(tagT);
+  const usaSeparate = /border-separate/.test(tagT);
+  const divideNoTbody = /<tbody[^>]*class="[^"]*divide-y/.test(DEPOIS);
+  console.log(`  tabela: border-collapse=${usaCollapse} border-separate=${usaSeparate} | divide-y no tbody=${divideNoTbody}`);
+  ok(usaCollapse !== usaSeparate, `a tabela declara UM dos dois modelos de borda, nao os dois nem nenhum`);
+  ok(divideNoTbody,
+    `(diagnostico) as divisorias de linha vem de 'divide-y' no <tbody>, ou seja border-top no proprio <tr>`);
+  if (usaCollapse && divideNoTbody) {
+    gap('BAIXO', 'border-collapse + sticky: risco real de borda, mas trocar para border-separate CUSTA as divisorias de linha',
+      `Resposta a pergunta do coordenador, com o custo. (1) O risco existe: no modelo COLLAPSE as bordas sao compartilhadas ` +
+      `entre celulas vizinhas e pertencem a "grade" da tabela, nao a celula. Uma celula sticky e pintada fora do fluxo, e o ` +
+      `Chrome tem historico de nao repintar a borda compartilhada dela ao rolar, entao o 'border-r' que separa o bloco ` +
+      `congelado pode piscar ou sumir durante a rolagem. (2) MAS a troca nao e gratuita: no modelo SEPARATE o CSS NAO PINTA ` +
+      `borda aplicada em <tr> nem em <tbody>, e e exatamente ai que este arquivo poe as divisorias ('divide-y divide-slate-50' ` +
+      `gera border-top no <tr>). Trocar para border-separate faria TODAS as linhas da tabela perderem a divisoria de uma vez, ` +
+      `um estrago visual muito maior que o risco que se quer evitar. (3) Se for trocar, tem que vir junto: ` +
+      `'border-separate border-spacing-0' na <table> E mover a divisoria para as celulas (algo como ` +
+      `'[&_tbody_td]:border-b [&_tbody_td]:border-slate-50'), senao a tela fica sem linha nenhuma. (4) RECOMENDACAO: NAO trocar ` +
+      `agora. Manter collapse, e o diretor confere na validacao visual se a borda do bloco congelado se mantem ao rolar em 1366. ` +
+      `Se sumir, ai a troca vale o custo e ja esta mapeada aqui.`);
+  }
+}
+
+bloco('6h. Selecao em massa: o checkbox congelado ainda marca a linha certa?');
+{
+  const tdCheck = LINHA.det[0];
+  ok(tdCheck.sticky && tdCheck.left === 0, `o checkbox da linha e a coluna congelada mais a esquerda (left-0)`);
+  ok(/data-id="\$\{idAttr\}"/.test(tdCheck.html),
+    `o checkbox continua carregando data-id="\${idAttr}", que e o que o handler le para saber a linha`);
+  ok(/class="cp-row-checkbox/.test(tdCheck.html), `e continua com a classe cp-row-checkbox, usada pelo seletor do handler`);
+  // A prova de que nada mudou no JS da selecao.
+  const alvos = ['_cpAtualizarUIBulk', '_cpToggleSelecao'].filter(n => temFn(DEPOIS, n));
+  for (const n of alvos) {
+    ok(extrairFn(fonteDaRef('59cb899'), n) === extrairFn(DEPOIS, n),
+      `${n} esta byte-a-byte identica a antes do congelamento`);
+  }
+  ok(/\.cp-row-checkbox/.test(DEPOIS) && !/querySelector\((['"])[^'"]*nth-child/.test(DEPOIS),
+    `a selecao casa por CLASSE e data-id, nunca por posicao de coluna (nth-child), entao reordenar coluna nao a afeta`);
+  ok(/id="cp-selecionar-todos"/.test(DEPOIS) && THS[0].sticky,
+    `o checkbox mestre do cabecalho tambem ficou congelado, junto com a coluna dele`);
+}
 // ═══ 7. NADA DE CALCULO MUDOU ═══
 bloco('7. KPIs e cards: esta OS nao podia tocar calculo');
 {
@@ -965,6 +1151,54 @@ bloco('7. KPIs e cards: esta OS nao podia tocar calculo');
   ok(aKpi === dKpi, `_KPI_FILTRO_MAP inalterado`);
 }
 
+bloco('7a-bis. 6a6c392 mexeu SO em marcacao: a logica e byte-a-byte igual a 59cb899');
+{
+  // A afirmacao do coordenador e "so mexi em marcacao e classes". Isso e
+  // verificavel: toda funcao de LOGICA tem que sair identica ao commit anterior.
+  const PRE = fonteDaRef('59cb899');
+  const LOGICA = [
+    'aplicarFiltrosCP', 'obterValorSortCP', 'atualizarKPIs', 'cpParsearTXT',
+    '_cpEmpresaDeReg', '_cpGrupoDeReg', '_cpResponsavelDoReg', '_cpResolverEmpresaDoReg',
+    '_cpChaveFiltro', '_cpUniaoOpcoes', '_popularSelectMultiChunked', '_cpPopularFiltroCliente',
+    '_cpSalvarEstadoFiltros', '_cpRestaurarEstadoFiltros', 'limparTodosFiltros',
+    'statusVisual', '_cpEhTarifaOuComissao', '_cpIngerir', 'getMultiValues', 'setMultiValues',
+    'isMultiAll', '_cpNormalizarBusca', 'cpResolverCompetenciaRef',
+  ].filter(n => temFn(PRE, n) && temFn(DEPOIS, n));
+  let diferentes = [];
+  for (const n of LOGICA) if (extrairFn(PRE, n) !== extrairFn(DEPOIS, n)) diferentes.push(n);
+  console.log(`  ${LOGICA.length} funcoes de logica comparadas com 59cb899`);
+  console.log(`  diferentes: ${diferentes.join(', ') || 'nenhuma'}`);
+  ok(diferentes.length === 0,
+    `TODAS as ${LOGICA.length} funcoes de logica estao byte-a-byte identicas a 59cb899 (mudou so marcacao, como declarado)`);
+  // A funcao que MUDOU tem que ser so a que monta o HTML da linha.
+  const renderMudou = temFn(PRE, 'renderTabela') && extrairFn(PRE, 'renderTabela') !== extrairFn(DEPOIS, 'renderTabela');
+  ok(renderMudou, `(controle) renderTabela MUDOU, senao este teste estaria comparando duas versoes iguais e passando de graca`);
+  // E dentro dela, as EXPRESSOES de dado tem que ser as mesmas: so as classes mudaram.
+  // CONJUNTO, nao multiconjunto: envolver uma celula num <span title="..."> repete
+  // a mesma expressao duas vezes (uma no title, outra no corpo). Isso muda a
+  // CONTAGEM sem mudar QUAL dado e lido, que e o que importa aqui.
+  const expr = s => [...new Set(lerLinhaTd(s).trecho.match(/r\.[a-z_]+|_cp[A-Za-z]+\(r\)|fmtBRL\.format|fmtDataBR/g) || [])].sort();
+  const eA = expr(PRE), eD = expr(DEPOIS);
+  const soAntes = eA.filter(x => !eD.includes(x)), soDepois = eD.filter(x => !eA.includes(x));
+  console.log(`  campos lidos na linha: ${eD.length} | so em 59cb899: ${soAntes.join(', ') || 'nenhum'} | so agora: ${soDepois.join(', ') || 'nenhum'}`);
+  ok(soAntes.length === 0 && soDepois.length === 0,
+    `dentro de renderTabela, o CONJUNTO de campos lidos do registro e o mesmo: nenhum campo entrou nem saiu`);
+  // E o que aumentou de repeticao tem que ser so title/tooltip, nao logica nova.
+  const repet = s => (lerLinhaTd(s).trecho.match(/title="/g) || []).length;
+  console.log(`  atributos title= na linha: 59cb899=${repet(PRE)} -> agora=${repet(DEPOIS)} (tooltips das colunas truncadas)`);
+  ok(repet(DEPOIS) >= repet(PRE),
+    `o que cresceu foi o numero de tooltips (title=), coerente com mais colunas truncadas`);
+  ok(extrairFn(PRE, 'obterValorSortCP') === extrairFn(DEPOIS, 'obterValorSortCP'),
+    `reordenar colunas NAO mexeu no mapa de ordenacao (as chaves nunca dependeram da posicao)`);
+  // Rules, ETL e exportacao.
+  const mudados = execSync(`git diff --name-only 59cb899 HEAD`, { cwd: RAIZ }).toString().trim().split('\n').filter(Boolean);
+  console.log(`  arquivos alterados por 6a6c392: ${mudados.join(', ')}`);
+  ok(!mudados.includes('firestore.rules'), `firestore.rules segue intocado (sem rodada de emulador)`);
+  const e1 = lerExport(fonteDaRef('59cb899')), e2 = lerExport(DEPOIS);
+  ok(e1.header.join('>') === e2.header.join('>'),
+    `a exportacao NAO foi mexida de novo: o header continua ${e2.header.length} colunas na mesma ordem`);
+}
+
 bloco('7b. ETL e rules intocados nesta frente');
 {
   const mudados = execSync(`git diff --name-only ${BASE_REF} HEAD`, { cwd: RAIZ }).toString().trim().split('\n').filter(Boolean);
@@ -981,9 +1215,37 @@ bloco('8. Convencoes da Parte A nos textos novos');
     .toString('utf8').split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
   const comTravessao = novos.filter(l => l.includes('—') && !/^\+\s*(\/\/|\*|<!--)/.test(l));
   ok(comTravessao.length === 0, `nenhum travessao (U+2014) em texto de UI novo (${comTravessao.length} linha(s))`);
-  ok(THS[1].rotulo === 'Empresa Pagadora' && THS[4].rotulo === 'Cliente',
-    `titulos de coluna em Title Case`);
-  ok(/não informado/.test(LINHA.tds[4]), `celula vazia de Cliente usa "não informado", nao glifo`);
+  // REESCRITAS: antes eram `THS[1]` e `THS[4]`, indice fixo. Quando a ordem mudou
+  // em 6a6c392, as duas acusaram defeito que nao existia. Agora a regra e
+  // avaliada em TODOS os titulos, sem depender de posicao nenhuma.
+  const MINUSCULAS = new Set(['de', 'da', 'do', 'e', 'a', 'o', 'em', 'para', 'com']);
+  const titulos = THS.map(t => t.rotulo).filter(Boolean);
+  console.log(`  titulos avaliados (${titulos.length}): ${JSON.stringify(titulos)}`);
+  const foraDoPadrao = titulos.filter(t => t.split(' ').some((p, i) => {
+    if (p.length <= 1) return false;
+    if (i > 0 && MINUSCULAS.has(p.toLowerCase())) return false;   // "Grupo de Contas"
+    if (p === p.toUpperCase()) return false;                       // sigla: "CC"
+    return p[0] !== p[0].toLocaleUpperCase('pt-BR');
+  }));
+  ok(foraDoPadrao.length === 0,
+    `todos os ${titulos.length} titulos de coluna em Title Case (fora do padrao: ${foraDoPadrao.join(', ') || 'nenhum'})`);
+  ok(/não informado/.test(col('Cliente').td.html),
+    `celula vazia de Cliente usa "não informado", nao glifo`);
+  // "Valor" nao usa o marcador de propriedade: valor ausente vira R$ 0,00 pelo
+  // fmtBRL, e sempre foi assim. Comparo com a versao anterior em vez de exigir um
+  // absoluto, para nao acusar como defeito desta OS um comportamento herdado.
+  const semMarcador = s => {
+    const L = lerLinhaTd(s), T = lerThead(s);
+    return T.map((t, i) => ({ rot: t.rotulo, td: L.det[i] }))
+      .filter(x => x.rot && x.rot !== 'Ações' && !/não informado|_cpResponsavelDoReg/.test(x.td.html))
+      .map(x => x.rot);
+  };
+  const antesSem = semMarcador(fonteDaRef('59cb899')), agoraSem = semMarcador(DEPOIS);
+  console.log(`  colunas sem marcador de vazio: 59cb899=[${antesSem}] agora=[${agoraSem}]`);
+  ok(agoraSem.every(r => antesSem.includes(r)),
+    `nenhuma coluna PERDEU o "não informado" nesta mudanca (as que nao tem, ja nao tinham: ${agoraSem.join(', ') || 'nenhuma'})`);
+  ok(!/[—]/.test(semComentario(DEPOIS.slice(DEPOIS.indexOf('<thead'), DEPOIS.indexOf('</thead>')))),
+    `nenhum travessao nos titulos de coluna`);
   const placeholders = [...DEPOIS.matchAll(/id="cp-filtro-cliente"[^>]*data-placeholder="([^"]*)"/g)].map(m => m[1]);
   console.log(`  placeholder do filtro Cliente: ${JSON.stringify(placeholders)}`);
   ok(placeholders.length === 1 && placeholders[0] === 'Todos os clientes',
