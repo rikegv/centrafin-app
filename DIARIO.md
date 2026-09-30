@@ -92,6 +92,89 @@ controle na tela, exatamente para essa decisao nao ser tomada por acidente.
 
 ---
 
+## 2026-09-30 — OS-CP-CARDS-CANCELADO-TARIFA-01: cancelado nao e custo, EM PRODUCAO
+
+Commits `32b34ee` e `ecb83a3`, deploy `--only hosting`, validado na tela pelo diretor antes de
+publicar. Nao tocou rules nem dado.
+
+**Como comecou:** o diretor somou os 4 cards de Natureza do Custo e nao fechou com o Total Geral.
+Ele pediu diagnostico, sem correcao. A reconciliacao fechou ao centavo e revelou DUAS coisas
+distintas, uma esperada e uma que ninguem tinha visto.
+
+**A esperada:** "Total Geral" NAO e o total de nada. Ele e `Pago + Tarifas`, por decisao da Onda
+Layout. Os 4 cards de natureza somam o recorte inteiro. As duas somas divergem de proposito.
+
+**A que ninguem tinha visto:** o DRE Gerencial EXCLUI lancamento cancelado (`cpStatusCancelado`)
+e o Contas a Pagar NAO excluia. As duas telas discordavam em **R$ 128.772,98** sobre o mesmo
+universo. Era comportamento ANTERIOR a esta frente (o card OPEX antigo tambem contava cancelado),
+mas so ficou VISIVEL quando os 4 cards novos passaram a somar o conjunto inteiro: a conta deixou
+de fechar. **Sintoma novo, defeito velho.**
+
+**Decisao do diretor, em duas etapas.** Primeiro: cancelado sai dos 4 cards, com o MESMO criterio
+do DRE (prefixo em `status`), para as duas telas concordarem. Depois, quando eu reportei que
+somar a tabela ainda nao fechava no Externo, ele estendeu: clicar num card de natureza esconde da
+tabela **tanto cancelado quanto tarifa**, para a coluna somada bater com o card nos quatro.
+
+**Numeros finais, com a funcao real sobre os 51.181 docs:** Interno R$ 5.627.717,52 (2.135
+linhas), Externo R$ 15.959.644,58 (1.711), Cliente R$ 25.474.325,89 (44.798), Sem Classificacao
+R$ 1.551.255,96 (1.931). Gap ZERO entre card e tabela nos quatro. Sem card ativo, 51.181 linhas
+com os 4 cancelados e as 601 tarifas visiveis. A diferenca contra o Total Geral virou exatamente
+as tarifas (R$ 152.170,13).
+
+**A regra de tarifa virou FONTE UNICA.** Ela vivia inline dentro de `atualizarKPIs`; como a
+tabela passou a precisar dela, foi extraida para `_cpEhTarifaOuComissao`, consumida pelos dois.
+Copiar para o filtro criaria duas copias de algo que decide se um valor e custo ou custo
+bancario. A extracao foi provada DOC A DOC (601 = 601, zero divergencias), nao por agregado:
+agregado igual pode esconder compensacao.
+
+**A guarda da tabela e DERIVADA, nao guardada em flag.** `_cpCardNaturezaAtivoKey` compara o
+conjunto atual do filtro de Tipo contra os valores de cada card. Flag guardada dessincroniza
+(operador mexe no filtro a mao, limpa filtros, restaura da sessao) e o modo de falha seria a
+tabela ESCONDER lancamento sem card ativo. Derivado nao diverge.
+
+### ALERTAS CONHECIDOS de status, registrados por decisao do diretor e NAO corrigidos
+
+Impacto ZERO hoje: a base inteira so tem dois valores de `status`, `pago` (51.177) e `cancelado`
+(4). Os tres dependem de status que nao existem.
+
+1. **Dois criterios de cancelado dentro da MESMA funcao.** `statusVisual` usa igualdade exata sem
+   `.trim()`; a guarda nova usa prefixo com `.trim()`. Um `'Cancelado '` (com espaco) entraria no
+   card **A Pagar** e ao mesmo tempo sairia do custo. Pior: a reconciliacao
+   "Total Geral menos soma dos 4 == tarifas" **continuaria valendo** nesse caso, por acidente
+   algebrico, entao a conta NAO denuncia. Alinhar exige mexer em `statusVisual`, que e codigo
+   validado e alimenta outros cards.
+2. **O criterio de prefixo pega `cancelamento_previsto`.** Um status que signifique "cancelamento
+   previsto", ou seja AINDA NAO cancelado, sairia do custo. **Se um dia for tratado, tem que ser
+   no CP e no DRE JUNTOS**: o criterio foi herdado do DRE exatamente para as duas telas
+   concordarem, e corrigir so de um lado reabre a divergencia de R$ 128.772,98 que esta OS fechou.
+3. **Fronteira de selecao manual.** Selecionando a mao SO `Fornecedor Interno - PJ` (metade do
+   conjunto do card Interno), o card apaga, a guarda da tabela nao dispara, mas o KPI continua
+   excluindo cancelado: card e tabela discordam em R$ 235,87.
+
+### DUAS REGRAS PERMANENTES que esta OS cobrou caro para ensinar
+
+1. **Base de comparacao de teste vai em COMMIT EXPLICITO, nunca em `HEAD`.** Aconteceu TRES vezes
+   nesta frente: a suite compara "antes x depois", o primeiro commit da propria frente faz o
+   "antes" virar o "depois", e dezenas de casos reprovam de uma vez sem nenhum defeito real. Toda
+   suite nova nasce com a base fixada e com `--base`/`--head` para trocar.
+2. **Caminho de falha aberta tem que ser BARULHENTO.** Falha aberta (na duvida, mostrar tudo) e a
+   direcao segura e continua sendo a regra. Mas `catch` mudo MENTE: numa rodada, o harness da
+   prova esqueceu de injetar uma dependencia, a funcao lancou ReferenceError, o catch devolveu
+   vazio e o resultado PARECEU "nada a excluir" quando o teste e que estava quebrado. Toda rota de
+   falha aberta ganhou `console.warn`, inclusive o early-return silencioso que o tester achou
+   depois. **Corolario do tester, que vale igual:** extrator de teste que devolve vazio em
+   silencio produz veredito errado com cara de veredito; ele passou a ABORTAR quando o recorte vem
+   implausivel.
+
+### Terceira licao, de metodo
+
+**Provar a camada logica NAO prova a camada que o operador toca.** Numa OS seguinte, a minha prova
+montava o select ja com o valor pronto e exercitava so a funcao de filtro: passou. A do tester
+montou o DOM e deixou o populador REAL encher as opcoes: achou 295 opcoes com value
+`[object Object]`, filtro inutilizavel. Mesma funcionalidade, dois niveis, so um deles testado.
+
+---
+
 ## 2026-09-30 — OS-CP-TOOLTIP-SEMCLASS-01: textos do card Sem Classificacao, EM PRODUCAO
 
 Mudanca de TEXTO apenas, commit `3963c8d`, deploy `--only hosting` (nao toca rules, nao toca
