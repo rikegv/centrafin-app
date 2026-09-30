@@ -339,59 +339,68 @@
         <!-- TABELA principal -->
         <section class="bg-white rounded-2xl editorial-shadow border border-slate-100 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <!-- `w-max min-w-full` no lugar de `w-full`: com `w-full` o navegador
+                     tenta caber a tabela em 100% do container e ESPREME as colunas,
+                     ignorando as larguras declaradas, que era exatamente o sintoma que o
+                     diretor relatou. `w-max` deixa a tabela crescer ate o conteudo (1.608px
+                     somando as 12 colunas) e o `overflow-x-auto` do container faz a rolagem
+                     lateral; `min-w-full` garante que em tela larga ela ainda preencha
+                     tudo, sem sobrar faixa branca a direita.
+                     A rolagem fica DENTRO do container, entao o corpo da pagina nao rola
+                     para o lado, que e a regra de responsividade da constituicao. -->
+                <table class="w-max min-w-full text-left border-collapse">
                     <thead class="bg-slate-50 border-b border-slate-100 text-[10px]">
                         <tr>
-                            <!-- Checkbox master (auditoria 2026-05-29 — Bulk Total).
-                                 Marca/desmarca TODOS os lançamentos do filtro
-                                 ativo (todas as páginas), não só os visíveis.
-                                 Necessário pra cenários como apagar 3.111
-                                 registros de um recorte sem paginar manual. -->
-                            <th class="px-4 py-3 text-center w-10">
+                            <!-- ══ COLUNAS CONGELADAS (OS-CP-COLUNAS-CLIENTE-01, ajuste de
+                                 responsividade). O uso principal do diretor e notebook de
+                                 1366px, onde a tabela nao cabe: agora ela ROLA dentro do
+                                 proprio container (o corpo da pagina NAO rola para o lado)
+                                 e as colunas de IDENTIDADE ficam fixas a esquerda, no
+                                 padrao "congelar paineis" de planilha.
+                                 As tres congeladas precisam ser CONTIGUAS: coluna sticky
+                                 separada por coluna que rola passa por baixo e o efeito
+                                 quebra. Por isso Mes de Referencia e Codigo desceram para
+                                 depois de Favorecido. O checkbox entra junto porque, se
+                                 ele rolasse para fora, o operador nao conseguiria marcar a
+                                 linha que esta vendo.
+                                 Os offsets `left-*` sao a soma acumulada das larguras
+                                 anteriores: 0, 40, 168, 424. Mexer numa largura obriga a
+                                 recalcular os offsets seguintes.
+                                 `bg-slate-50` e obrigatorio nas celulas congeladas, senao
+                                 o conteudo que rola aparece por baixo delas. ══ -->
+                            <th class="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-center w-10">
                                 <input type="checkbox" id="cp-selecionar-todos" class="rounded border-slate-300 text-primary focus:ring-primary/30" title="Selecionar todos os lançamentos do filtro atual (todas as páginas)">
                             </th>
                             <!-- OS-CP-LAYOUT-01: ordenação por clique (regra permanente).
                                  1o clique asc, 2o desc; seta indica a coluna ativa.
-                                 Mesmo idioma do Faturamento (window.ordenarTabelaCP).
-                                 Detalhe/Obs e Ações não ordenam. -->
-                            <!-- FRENTE A (OS-CP-COLUNAS-CLIENTE-01): "Empresa" virou
-                                 "Empresa Pagadora" e passou a ser a PRIMEIRA coluna,
-                                 por decisão do diretor. O id do ícone de ordenação
-                                 (`icone-sort-empresa`) e a chave de ordenação
-                                 ('empresa') NÃO mudaram: só o rótulo e a posição. -->
-                            <th onclick="window.ordenarTabelaCP('empresa')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-28 cursor-pointer select-none hover:text-secondary transition-colors">Empresa Pagadora <span id="icone-sort-empresa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <th onclick="window.ordenarTabelaCP('data')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-28 cursor-pointer select-none hover:text-secondary transition-colors">Mês de Referência <span id="icone-sort-data" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <th onclick="window.ordenarTabelaCP('codigo')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-20 cursor-pointer select-none hover:text-secondary transition-colors">Código <span id="icone-sort-codigo" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <!-- FRENTE B: CLIENTE. Exibe `entidade`, que é o nome do
-                                 BLOCO do TXT: para bloco de cliente é o cliente, para
-                                 bloco de fornecedor é o próprio favorecido. Os dois
-                                 ramos da regra do diretor caem no mesmo campo, e ele
-                                 JÁ existe nos 51.181 lançamentos (295 valores
-                                 distintos, zero vazios). Nenhuma mudança no ETL. -->
-                            <th onclick="window.ordenarTabelaCP('cliente')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-32 cursor-pointer select-none hover:text-secondary transition-colors">Cliente <span id="icone-sort-cliente" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <th onclick="window.ordenarTabelaCP('favorecido')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Favorecido <span id="icone-sort-favorecido" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <th onclick="window.ordenarTabelaCP('despesa')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Despesa <span id="icone-sort-despesa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <!-- FRENTE 4 / Onda 4: GRUPO DE CONTAS, à direita de Despesa
-                                 porque o Grupo é o pai do Tipo de Despesa; adjacentes, a
-                                 linha se autoexplica e o diretor audita o vínculo lendo a
-                                 própria tabela. Largura fixa + truncate + title: a tabela
-                                 passa de 10 para 11 colunas e este é o ponto de aperto,
-                                 então a Conta vai no tooltip em vez de coluna própria. -->
+                                 Mesmo idioma do Faturamento (window.ordenarTabelaCP). -->
+                            <th onclick="window.ordenarTabelaCP('empresa')" class="sticky left-10 z-20 bg-slate-50 px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-32 cursor-pointer select-none hover:text-secondary transition-colors">Empresa Pagadora <span id="icone-sort-empresa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <!-- CLIENTE (`entidade`): medido na base, p50=31 e p75=40
+                                 caracteres, maximo 51. w-64 comporta ~36 caracteres, ou
+                                 seja o caso comum inteiro; o nome excepcionalmente longo
+                                 corta com tooltip, como o diretor autorizou. -->
+                            <th onclick="window.ordenarTabelaCP('cliente')" class="sticky left-[168px] z-20 bg-slate-50 px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-64 cursor-pointer select-none hover:text-secondary transition-colors">Cliente <span id="icone-sort-cliente" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <!-- FAVORECIDO (`observacao`): o ERP trunca em 30 caracteres, e
+                                 a base confirma (maximo 30, em 3.688 valores distintos).
+                                 w-56 comporta 30 caracteres, entao esta coluna NUNCA corta
+                                 nome nenhum. O tooltip fica como rede, nao como regra. -->
+                            <th onclick="window.ordenarTabelaCP('favorecido')" class="sticky left-[424px] z-20 bg-slate-50 px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-56 cursor-pointer select-none hover:text-secondary transition-colors border-r border-slate-200">Favorecido <span id="icone-sort-favorecido" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <!-- ══ daqui para a direita, rola ══ -->
+                            <th onclick="window.ordenarTabelaCP('data')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-24 cursor-pointer select-none hover:text-secondary transition-colors">Mês de Referência <span id="icone-sort-data" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <th onclick="window.ordenarTabelaCP('codigo')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-24 cursor-pointer select-none hover:text-secondary transition-colors">Código <span id="icone-sort-codigo" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <th onclick="window.ordenarTabelaCP('despesa')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-56 cursor-pointer select-none hover:text-secondary transition-colors">Despesa <span id="icone-sort-despesa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('grupo')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-32 cursor-pointer select-none hover:text-secondary transition-colors">Grupo de Contas <span id="icone-sort-grupo" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <!-- A coluna de Empresa que a Onda 3 criou aqui (no lugar de
-                                 "Detalhe / Obs.") FOI MOVIDA para a primeira posição na
-                                 Frente A, e renomeada para "Empresa Pagadora". O filtro
-                                 multiselect dela (`cp-filtro-empresa`, com a sentinela
-                                 __SEM_EMPRESA__) continua o mesmo, e nada foi duplicado. -->
-                            <th onclick="window.ordenarTabelaCP('cc')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">CC <span id="icone-sort-cc" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <!-- CC: p90 de 8 caracteres e maximo 21. Nao precisava do
+                                 espaco livre que ocupava antes; w-24 ja cobre o p90 com
+                                 folga, e o que sobrou foi para Cliente e Favorecido. -->
+                            <th onclick="window.ordenarTabelaCP('cc')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-24 cursor-pointer select-none hover:text-secondary transition-colors">CC <span id="icone-sort-cc" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <!-- Coluna RESPONSÁVEL (ex-Gestor, Frente 1 — 2026-05-20).
-                                 Cruzamento em memória: cada linha procura o
-                                 gestor_nome cadastrado na Área correspondente
-                                 (master.html, Regras de Classificação,
-                                 Áreas e Gestores). Sem leituras extras ao DB. -->
-                            <th onclick="window.ordenarTabelaCP('responsavel')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Responsável <span id="icone-sort-responsavel" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <th onclick="window.ordenarTabelaCP('valor')" class="px-4 py-3 text-right font-bold text-secondary uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Valor <span id="icone-sort-valor" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <th class="px-4 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest w-24">Ações</th>
+                                 Cruzamento em memória: cada linha procura o gestor_nome
+                                 cadastrado na Área correspondente (master.html, Regras de
+                                 Classificação, Áreas e Gestores). Sem leituras extras. -->
+                            <th onclick="window.ordenarTabelaCP('responsavel')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-32 cursor-pointer select-none hover:text-secondary transition-colors">Responsável <span id="icone-sort-responsavel" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <th onclick="window.ordenarTabelaCP('valor')" class="px-3 py-3 text-right font-bold text-secondary uppercase tracking-widest w-28 cursor-pointer select-none hover:text-secondary transition-colors">Valor <span id="icone-sort-valor" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <th class="px-3 py-3 text-right font-bold text-on-surface-variant uppercase tracking-widest w-20">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="cp-corpo" class="divide-y divide-slate-50"></tbody>
@@ -3201,14 +3210,23 @@
             const idAttr = escHTML(r._id);
             const marcado = _cpSelecao.has(r._id) ? 'checked' : '';
             linhas[i] = `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="px-4 py-3 text-center">
+                <tr class="group hover:bg-slate-50 transition-colors">
+                    <!-- ══ AS 4 PRIMEIRAS CELULAS SAO CONGELADAS (sticky left). Os offsets
+                         left-0/left-10/left-[168px]/left-[424px] batem exatamente com os
+                         do cabecalho; mexer numa largura obriga a recalcular os dois lados.
+                         O fundo opaco bg-white e obrigatorio: sem ele o conteudo que rola
+                         aparece POR BAIXO da celula congelada. E o group-hover existe
+                         porque esse fundo opaco mataria o realce de linha do hover do
+                         proprio tr; o group no tr devolve o realce.
+                         ATENCAO a quem editar: este bloco inteiro esta DENTRO de um
+                         template literal, entao crase aqui encerra a string e quebra o
+                         arquivo. Foi o que aconteceu na primeira tentativa. ══ -->
+                    <td class="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 text-center w-10">
                         <input type="checkbox" class="cp-row-checkbox rounded border-slate-300 text-primary focus:ring-primary/30" data-id="${idAttr}" ${marcado}>
                     </td>
-                    <td class="px-3 py-3 text-xs text-slate-600 uppercase font-semibold w-28 max-w-28">${
-                        // FRENTE A: Empresa Pagadora, agora a PRIMEIRA coluna. Mesmo
-                        // acessor de antes (gravada ganha da derivada); só mudou o lugar
-                        // e o rótulo. Largura fixa + truncate para não empurrar o resto.
+                    <td class="sticky left-10 z-10 bg-white group-hover:bg-slate-50 px-3 py-3 text-xs text-slate-600 uppercase font-semibold w-32 max-w-32">${
+                        // Empresa Pagadora. Mesmo acessor de sempre (gravada ganha da
+                        // derivada); mudaram o lugar, o rotulo e a largura.
                         (() => {
                             const emp = _cpEmpresaDeReg(r);
                             return emp
@@ -3216,23 +3234,29 @@
                                 : '<span class="text-slate-500 italic text-xs normal-case font-normal">não informado</span>';
                         })()
                     }</td>
-                    <td class="px-4 py-3 text-xs font-mono font-bold text-secondary">${r.data_vencimento ? escHTML(fmtDataBR(r.data_vencimento)) : 'não informado'}</td>
-                    <td class="px-4 py-3 text-xs font-mono text-tertiary tabular-nums">
+                    <td class="sticky left-[168px] z-10 bg-white group-hover:bg-slate-50 px-3 py-3 text-xs text-slate-700 w-64 max-w-64">${
+                        // CLIENTE = entidade. Medido: p50=31 e p75=40 caracteres, max 51.
+                        // w-64 comporta o caso comum inteiro; o nome excepcional corta com
+                        // tooltip, que foi o que o diretor autorizou.
+                        r.entidade
+                            ? `<span class="block truncate font-semibold" title="${escHTML(r.entidade)}">${escHTML(r.entidade)}</span>`
+                            : '<span class="text-slate-500 italic">não informado</span>'
+                    }</td>
+                    <td class="sticky left-[424px] z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 px-4 py-3 text-xs font-bold text-slate-800 w-56 max-w-56">${
+                        // FAVORECIDO = observacao. O ERP trunca em 30 caracteres e a base
+                        // confirma (max 30 em 3.688 distintos), entao w-56 NUNCA corta.
+                        // O truncate fica como rede para um dado fora do padrao.
+                        `<span class="block truncate" title="${escHTML(r.observacao || 'não informado')}">${escHTML(r.observacao || 'não informado')}</span>`
+                    }</td>
+                    <!-- ══ daqui para a direita, rola ══ -->
+                    <td class="px-3 py-3 text-xs font-mono font-bold text-secondary w-24">${r.data_vencimento ? escHTML(fmtDataBR(r.data_vencimento)) : 'não informado'}</td>
+                    <td class="px-3 py-3 text-xs font-mono text-tertiary tabular-nums w-24">
                         ${r.codigo_fornecedor != null ? r.codigo_fornecedor : 'não informado'}
                         ${r.codigo_titulo_ord
                             ? `<span class="font-mono bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1 align-middle tabular-nums" title="Nº do Título / Ordenamento">${escHTML(r.codigo_titulo_ord)}</span>`
                             : ''}
                     </td>
-                    <td class="px-3 py-3 text-xs text-slate-700 w-32 max-w-32">${
-                        // FRENTE B: CLIENTE = `entidade`, o nome do BLOCO do TXT.
-                        // Truncate + title porque nome de cliente é longo
-                        // ("GARRETT MOTION INDUSTRIA AUTOMOTIVA BRASIL LTDA").
-                        r.entidade
-                            ? `<span class="block truncate font-semibold" title="${escHTML(r.entidade)}">${escHTML(r.entidade)}</span>`
-                            : '<span class="text-slate-500 italic">não informado</span>'
-                    }</td>
-                    <td class="px-4 py-3 text-xs font-bold text-slate-800 w-44 max-w-44"><span class="block truncate" title="${escHTML(r.observacao || 'não informado')}">${escHTML(r.observacao || 'não informado')}</span></td>
-                    <td class="px-4 py-3 text-xs text-slate-600">${escHTML(r.categoria || 'não informado')}</td>
+                    <td class="px-3 py-3 text-xs text-slate-600 w-56 max-w-56"><span class="block truncate" title="${escHTML(r.categoria || 'não informado')}">${escHTML(r.categoria || 'não informado')}</span></td>
                     <td class="px-3 py-3 text-xs text-slate-700 w-32 max-w-32">${
                         // FRENTE 4: Grupo de Contas, resolvido em runtime. A Conta fica no
                         // tooltip; sem vínculo, "não informado" em itálico, que é o molde
@@ -3244,23 +3268,23 @@
                             return `<span class="block truncate font-semibold" title="${escHTML(tt)}">${escHTML(g.grupo)}</span>`;
                         })()
                     }</td>
-                    <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${escHTML(r.centro_custo || 'não informado')}</td>
-                    <td class="px-4 py-3 text-xs text-slate-700 font-semibold">${
+                    <td class="px-3 py-3 text-xs text-slate-600 uppercase font-semibold w-24 max-w-24"><span class="block truncate" title="${escHTML(r.centro_custo || 'não informado')}">${escHTML(r.centro_custo || 'não informado')}</span></td>
+                    <td class="px-3 py-3 text-xs text-slate-700 font-semibold w-32 max-w-32">${
                         (() => {
                             // FRENTE 1: lookup único. "área não cadastrada" nomeia a
                             // causa quando o CC existe e não casa com área nenhuma,
                             // em vez de dizer "não informado" e o operador concluir
                             // que o sistema está quebrado.
                             const resp = _cpResponsavelDoReg(r);
-                            if (resp.gestor) return escHTML(resp.gestor);
+                            if (resp.gestor) return `<span class="block truncate" title="${escHTML(resp.gestor)}">${escHTML(resp.gestor)}</span>`;
                             const cls = resp.estado === 'sem_area'
                                 ? 'text-amber-600 italic text-xs'
                                 : 'text-slate-500 italic text-xs';
                             return `<span class="${cls}">${escHTML(resp.texto)}</span>`;
                         })()
                     }</td>
-                    <td class="px-4 py-3 text-xs text-right font-extrabold text-secondary tabular-nums">${fmtBRL.format(Number(r.valor_original) || 0)}</td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="px-3 py-3 text-xs text-right font-extrabold text-secondary tabular-nums w-28">${fmtBRL.format(Number(r.valor_original) || 0)}</td>
+                    <td class="px-3 py-3 text-right w-20">
                         <div class="flex justify-end gap-1">
                             <button type="button" data-cp-acao="editar" data-id="${idAttr}" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary transition-colors" title="Editar lançamento">
                                 <span class="material-symbols-outlined text-base">edit</span>
