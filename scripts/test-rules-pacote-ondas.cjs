@@ -243,9 +243,22 @@ async function main() {
   console.log('');
   console.log('--- Metadados: o doc de catalogo da Onda 4 ja esta coberto? ---');
 
-  await check('[META-1] hasMenu(gerenciador_contas_pagar) ESCREVE Metadados/CP_Catalogo_Categorias [suceder]', async () => {
-    await assertSucceeds(
+  // INVERTIDO pelo coordenador em 2026-09-29, apos o VETO 3 do agente seguranca.
+  // O caso original afirmava que quem tem o menu do CP PODE escrever o catalogo, e
+  // provava que a regra fazia o que estava escrito, nao que estava CERTA: um
+  // operador comum podia sobrescrever os 104 tipos com um objeto vazio. A regra foi
+  // estreitada por docId e o teste passou a exigir a NEGACAO.
+  await check('[META-1] hasMenu(gerenciador_contas_pagar) NAO escreve Metadados/CP_Catalogo_Categorias [negar]', async () => {
+    await assertFails(
       setDoc(doc(ctxDe('gerCP@t.com'), 'Metadados', 'CP_Catalogo_Categorias'), { tipos: ['A'] })
+    );
+  });
+
+  // O que NAO pode ter sido quebrado junto: o ETL do CP continua gravando a
+  // telemetria de ultima importacao, que e o uso legitimo desse mesmo match.
+  await check('[META-1b] hasMenu(gerenciador_contas_pagar) AINDA escreve Metadados/UltimaImportacao_CP [suceder]', async () => {
+    await assertSucceeds(
+      setDoc(doc(ctxDe('gerCP@t.com'), 'Metadados', 'UltimaImportacao_CP'), { quando: 'x' })
     );
   });
 

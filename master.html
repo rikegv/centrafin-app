@@ -4601,6 +4601,13 @@
         // `campo` é o NOME do campo em ContasAPagar (alvo); o caller é quem
         // sabe a tradução (Fornecedor.tipo → ContasAPagar.tipo_entidade).
         async function cpCascataCampoFornecedor(codigoFornecedor, campo, novoValor) {
+            // VETO 6 do agente segurança (2026-09-29): o detalhe da última cascata é
+            // RESETADO na entrada. Sem isso, um early-return ou uma falha no `catch`
+            // deixava o resultado do fornecedor ANTERIOR pendurado, e o laço da
+            // alteração em massa re-somava aquele número, reportando preservados que
+            // não existiram. Só desinformação, mas número errado em relatório de
+            // escrita em massa é exatamente o que ninguém consegue auditar depois.
+            cpCascataCampoFornecedor.ultimoResultado = { aplicados: 0, preservados: 0 };
             if (codigoFornecedor == null || codigoFornecedor === '') return 0;
             if (!campo) return 0;
             try {
@@ -4927,6 +4934,13 @@
         // invalidada e o operador tem que conferir de novo: confirmar uma lista e
         // gravar outra é o erro que este passo existe para impedir.
         let _fornMDryRunOk = null;
+        // VETO 5 do agente segurança (2026-09-29): sem intervalo entre a exibição da
+        // prévia e o segundo clique, um DUPLO CLIQUE (~150 ms) gravava sem ninguém ter
+        // lido nada, disparando writeBatch em /Fornecedores mais a cascata em
+        // /ContasAPagar. Era o gesto destrutivo sendo o mais fácil de fazer sem querer,
+        // exatamente o que a seção 5 da constituição proíbe.
+        const FORNM_DRYRUN_ESPERA_MS = 700;
+        let _fornMDryRunEm = 0;
 
         function _fornMAssinaturaDryRun(campo, valor, ids) {
             return JSON.stringify({ campo, valor, ids: [...ids].sort() });
@@ -4991,12 +5005,18 @@
             }
             const assinatura = _fornMAssinaturaDryRun(campo, valor, ids);
             if (_fornMDryRunOk === assinatura) {
-                fornMAplicarMassaGenerico();   // 2º clique: grava
+                const decorrido = Date.now() - _fornMDryRunEm;
+                if (decorrido < FORNM_DRYRUN_ESPERA_MS) {
+                    fornMToast('Confira a prévia antes de confirmar. Clique novamente em um instante.', 'warning');
+                    return;
+                }
+                fornMAplicarMassaGenerico();   // 2º clique, depois de dar tempo de ler
                 return;
             }
             // 1º clique, ou algo mudou desde a prévia: mostra e NÃO grava.
             const quantosMudam = _fornMMontarDryRun(campo, valor, ids);
             _fornMDryRunOk = assinatura;
+            _fornMDryRunEm = Date.now();
             const btn = document.getElementById('btn-confirmar-fornm-massa');
             const lbl = btn && btn.querySelector('span:last-child');
             if (lbl) {

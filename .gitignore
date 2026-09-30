@@ -82,3 +82,10 @@ diag_crf_notas.cjs
 # NUNCA versionar nem publicar — firebase.json tambem os ignora no hosting.
 scripts/backup-*.json
 backup-*.json
+
+# Credencial ADC temporaria (montada do token do firebase CLI para rodar scripts
+# admin). Achado PRE-EXISTENTE do agente seguranca em 2026-09-29: estava apenas no
+# ignore do Hosting, e com padrao de RAIZ, entao um scripts/adc_tmp.json teria sido
+# SERVIDO PUBLICAMENTE por "public": ".". Agora fecha nos dois lados e em qualquer pasta.
+adc_tmp.json
+**/adc_tmp.json

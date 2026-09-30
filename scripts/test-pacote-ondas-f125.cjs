@@ -50,7 +50,29 @@ const ARQ = path.join(ROOT, REL);
 // textual "ficou intocado?" daria falso negativo por causa do \r.
 const lf = (s) => s.replace(/\r\n/g, '\n');
 const SRC_DEPOIS = lf(fs.readFileSync(ARQ, 'utf8'));
-const SRC_ANTES = lf(execSync('git show HEAD:' + REL, { cwd: ROOT, maxBuffer: 1024 * 1024 * 80 }).toString('utf8'));
+// BASE FIXADA, corrigido em 2026-09-30 pelo coordenador.
+// A suite comparava contra `HEAD`, e no instante em que a frente foi commitada o
+// HEAD passou a ser o proprio codigo novo: "antes" ficou igual a "depois" e as
+// assertivas que provam o comportamento ANTIGO comecaram a falhar sozinhas. E o
+// mesmo defeito que o tester registrou como GAP 5 em `test-filtro-servico-dinamico.cjs`.
+// A base agora e o commit anterior a esta OS, explicito e imune a novos commits.
+// Pode ser trocada por --base <ref> quando a OS fechar e virar historico.
+const BASE_PADRAO = '0ca791e';
+function refBase() {
+  const i = process.argv.indexOf('--base');
+  if (i >= 0 && process.argv[i + 1]) return process.argv[i + 1];
+  return process.env.CP_BASE_REF || BASE_PADRAO;
+}
+const BASE_REF = refBase();
+let SRC_ANTES;
+try {
+  SRC_ANTES = lf(execSync(`git show ${BASE_REF}:${REL}`, { cwd: ROOT, maxBuffer: 1024 * 1024 * 80 }).toString('utf8'));
+} catch (e) {
+  console.error(`\nERRO: nao consegui ler a base de comparacao "${BASE_REF}:${REL}".`);
+  console.error(`A suite compara o codigo ANTES x DEPOIS, e sem a base ela nao prova nada.`);
+  console.error(`Passe uma referencia valida com --base <commit>.`);
+  process.exit(1);
+}
 
 // ── caminho do snapshot de dados reais (opcional, fora do repo) ───────────────
 function argDados() {
@@ -137,7 +159,7 @@ console.log('==========================================================');
 console.log(' OS-CP-PACOTE-ONDAS-01 — suite do TESTER (F5 / F1 / F2)');
 console.log('==========================================================');
 console.log(' arquivo DEPOIS : ' + ARQ);
-console.log(' arquivo ANTES  : git show HEAD:' + REL);
+console.log(` arquivo ANTES  : git show ${BASE_REF}:${REL}`);
 console.log(' bytes          : antes=' + SRC_ANTES.length + '  depois=' + SRC_DEPOIS.length);
 console.log(' hoje (local)   : ' + new Date().toString());
 

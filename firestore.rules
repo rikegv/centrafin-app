@@ -337,10 +337,21 @@ service cloud.firestore {
     // da última importação ETL do Gerenciador Contas a Pagar. Leitura aberta
     // (header mostra "Última base importada em..."); escrita restrita aos
     // perfis que de fato disparam o ETL (admin + gerenciador_contas_pagar).
+    //
+    // VETO 3 do agente segurança (OS-CP-PACOTE-ONDAS-01, 2026-09-29): a Onda 4
+    // passou a guardar aqui o doc "CP_Catalogo_Categorias", que é catálogo de
+    // CONTROLADORIA (os 104 tipos de despesa que alimentam o cadastro de Grupos).
+    // Os irmãos dele (CP_Grupos_Contas, CP_Contas_Despesa, CP_Tipos_Despesa) são
+    // admin-only na escrita, e deixar este writable por quem tem apenas o menu do
+    // CP permitiria a um operador comum sobrescrever o catálogo inteiro com um
+    // objeto vazio, derrubando a lista da aba de cadastro até um novo reseed.
+    // Matches do Firestore são OR, então não dá para restringir com um match mais
+    // específico: a restrição tem que morar AQUI, por docId.
     match /Metadados/{docId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && (
-        isAdmin() || hasMenu('gerenciador_contas_pagar')
+        isAdmin()
+        || (hasMenu('gerenciador_contas_pagar') && docId != 'CP_Catalogo_Categorias')
       ) && !isConsulta();
     }
   }

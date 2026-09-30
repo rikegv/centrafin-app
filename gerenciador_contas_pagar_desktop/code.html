@@ -4036,8 +4036,22 @@
         const snap = await getDocs(collection(db, COLECAO_FORN));
         snap.forEach(d => {
             const data = d.data();
+            const reg = { _id: d.id, ...data };
             const cod = cpParseCodigo(data.codigo);
-            if (cod != null) map.set(cod, { _id: d.id, ...data });
+            if (cod != null) map.set(cod, reg);
+            // VETO 1 do agente segurança (2026-09-29): este mapa chaveava SÓ por
+            // `codigo`, enquanto o runtime (`_cpFornecedoresEmpresaMap`) e o DRE
+            // Gerencial também acham o fornecedor pelo DOC-ID. A divergência importa
+            // agora que o ETL CARIMBA empresa: um fornecedor visível ao runtime e
+            // invisível ao ETL receberia `empresa` do LOTE com
+            // `empresa_origem: 'importacao'`, que a guarda da cascata trata como
+            // protegido. O valor errado se autotrancaria, e corrigir o cadastro do
+            // fornecedor nunca mais consertaria aquele lançamento.
+            // Medido na base em 2026-09-29: 0 dos 841 fornecedores estão nessa
+            // situação, então hoje não há instância. O alias fecha a CLASSE, para o
+            // dia em que um cadastro nascer sem código.
+            const idNum = cpParseCodigo(d.id);
+            if (idNum != null && !map.has(idNum)) map.set(idNum, reg);
         });
         return map;
     }
@@ -4352,6 +4366,17 @@
                             // _cpRegistrarUltimaImportacao não disparam.
                 }
                 if (decisao === 'substituir') {
+                    // VETO 4 do agente segurança (2026-09-29): a guarda de abstenção da
+                    // empresa do lote existia só no caminho da ESCRITA, ou seja, DEPOIS
+                    // desta remoção. Com a empresa vazia, o lote antigo seria removido e
+                    // nada seria gravado no lugar: perda de dado.
+                    // A seção 7 da constituição manda VERIFICAR a pré-condição ANTES de
+                    // consumar a ação irreversível, não depois. Aqui está ela.
+                    if (!String(_cpEtlState?.empresaLote || '').trim()) {
+                        if (window._cpEsconderLoader) window._cpEsconderLoader();
+                        mostrarToast('Importação abortada antes de substituir: a empresa do lote não foi definida. O lote anterior foi PRESERVADO e nada foi gravado.', 'error', true);
+                        return;
+                    }
                     if (window._cpMostrarLoader) window._cpMostrarLoader(
                         'Substituindo lote anterior…',
                         'Removendo registros antigos antes de gravar a nova carga.'
