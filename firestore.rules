@@ -203,6 +203,42 @@ service cloud.firestore {
       allow write: if request.auth != null && isAdmin() && !isConsulta();
     }
 
+    // ===== GRUPOS DE DESPESA (3 níveis) — OS-CP-PACOTE-ONDAS-01, Onda 4 =====
+    // Estrutura contábil hierárquica: Grupo de Despesa (nível 1) → Conta de
+    // Despesa (nível 2) → Tipo de Despesa (nível 3, o vínculo com o valor de
+    // `categoria` do lançamento). O vínculo entre níveis é por ID, nunca por
+    // nome (renomear = updateDoc de 1 campo em 1 doc; o render resolve o nome
+    // ao vivo pela cadeia de IDs).
+    // São BASES DE REFERÊNCIA, então seguem exatamente o padrão dos vizinhos
+    // AreasContasPagar e CP_Gestores:
+    //   Leitura: qualquer autenticado — quatro consumidores precisam ler (o
+    //   cadastro em master.html, a tela do Gerenciador Contas a Pagar, o DRE
+    //   Gerencial numa frente futura e, eventualmente, Aprovações).
+    //   Escrita: APENAS admin (master/super_admin), com a trava do perfil
+    //   consulta — o CRUD é de controladoria e vive em master.html →
+    //   Regras de Classificação → Grupos de Despesa.
+    // O catálogo de tipos (Metadados/CP_Catalogo_Categorias) NÃO precisa de
+    // regra nova: o match /Metadados/{docId} abaixo já cobre.
+
+    // Nível 1 — o Grupo de Despesa. Campos: nome, nome_norm, bucket_dre, ordem.
+    match /CP_Grupos_Contas/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
+    }
+
+    // Nível 2 — a Conta de Despesa. Aponta para o Grupo via grupo_id.
+    match /CP_Contas_Despesa/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
+    }
+
+    // Nível 3 — o vínculo Tipo de Despesa → Conta. docId = slug determinístico
+    // do tipo (idempotente). Aponta para a Conta via conta_id.
+    match /CP_Tipos_Despesa/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin() && !isConsulta();
+    }
+
     // CP_BASE_MESTRA — auditoria 2026-05-14 (Fase 1 ETL Preditivo do Contas a Pagar).
     // Banco "aprendizado" do motor de quarentena: cada doc mapeia uma
     // combinação (fornecedor + despesa) → classificação + centro_custo +

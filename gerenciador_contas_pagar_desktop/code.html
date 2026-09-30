@@ -104,7 +104,26 @@
 
     <div class="p-8 space-y-6">
 
-        <!-- KPI GRID — 6 cards reativos aos filtros (auditoria 2026-05-14).
+        <!-- FRENTE 2 (OS-CP-PACOTE-ONDAS-01): o grid virou DUAS FILEIRAS de 4 dentro
+             do MESMO wrapper #kpi-grid-cp (o id é obrigatório: três listeners
+             delegados dependem dele). Fileira 1 = Caixa & Status; fileira 2 =
+             Natureza do Custo.
+             ATENÇÃO, a prova numérica desmentiu a suposição inicial: os 4 cards de
+             Natureza somam o TOTAL DO RECORTE com a tarifa expurgada
+             (R$ 48.741.716,93 na base de 2026-09-29), que NÃO é o número do card
+             "Total Geral". Aquele card é `Pago + Tarifas` por decisão da Onda
+             Layout (R$ 48.765.114,08), então as duas somas divergem de propósito.
+             Quem for conferir os cards somando a fileira 2 tem que comparar com o
+             total do recorte, não com o card Total Geral.
+
+             O card OPEX SAIU por decisão do diretor: ele somava só Fornecedor
+             Interno + Fornecedor Externo e deixava o Interno PJ de fora, então
+             escondia R$ 3,17 mi. Com Interno (CLT + PJ), Externo, Cliente e Sem
+             Classificação, os 9,7% do custo que não apareciam em card nenhum
+             passam a aparecer. 1/4 de largura é MAIOR que o 1/6 de antes, logo
+             nenhum card ficou mais estreito do que já era. -->
+        <!-- KPI GRID — 8 cards reativos aos filtros (auditoria 2026-05-14,
+             recontado na Frente 2 de 2026-09-29).
              Mesmo padrão visual do Gerenciador Folha: bg-surface-container-lowest
              + border-surface-variant (dark mode automático via theme.css) e
              efeito "lift" no hover (-translate-y-0.5 + shadow-md).
@@ -117,7 +136,10 @@
              - botão lightbulb (data-kpi) → modal explicativo (comportamento legado)
              - body do card (data-kpi-card) → toggle de filtro
              Quando ativo, o card recebe ring-2 + cor próxima ao seu acento. -->
-        <section id="kpi-grid-cp" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <section id="kpi-grid-cp" class="space-y-3">
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Caixa &amp; Status</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <!-- 1. Total Geral (DESTAQUE) — Toggle = limpa todos os filtros. -->
             <div data-kpi-card="total" role="button" tabindex="0" title="Limpar filtros e ver tudo"
                  class="relative bg-surface-container-lowest p-4 rounded-xl border border-secondary/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all ring-1 ring-secondary/10 cursor-pointer select-none">
@@ -160,39 +182,13 @@
                 <h3 id="kpi-a-pagar" class="text-base font-extrabold font-manrope text-amber-600 leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1"><span id="kpi-a-pagar-count">0</span> abertos</p>
             </div>
-            <!-- 4. OPEX — Toggle filtro Classificação = OPEX -->
-            <div data-kpi-card="opex" role="button" tabindex="0" title="Filtrar somente OPEX (Forn. Interno + Externo)"
-                 class="relative bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer select-none">
-                <button type="button" data-kpi="opex" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
-                    <span class="material-symbols-outlined text-[14px]">lightbulb</span>
-                </button>
-                <span class="p-1 bg-indigo-50 text-indigo-600 rounded-lg inline-flex mb-1.5">
-                    <span class="material-symbols-outlined text-base">factory</span>
-                </span>
-                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">OPEX</p>
-                <h3 id="kpi-opex" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Forn. Interno + Externo</p>
-            </div>
-            <!-- 5. Custo Cliente — Toggle filtro Classificação = Cliente -->
-            <div data-kpi-card="cliente" role="button" tabindex="0" title="Filtrar somente Custos de Cliente (Repasses)"
-                 class="relative bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer select-none">
-                <button type="button" data-kpi="cliente" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
-                    <span class="material-symbols-outlined text-[14px]">lightbulb</span>
-                </button>
-                <span class="p-1 bg-tertiary/10 text-tertiary rounded-lg inline-flex mb-1.5">
-                    <span class="material-symbols-outlined text-base">groups</span>
-                </span>
-                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Custo Cliente</p>
-                <h3 id="kpi-cliente" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Repasses a clientes</p>
-            </div>
-            <!-- 6. Tarifas & Comissões Bancárias (APARTADO — auditoria 2026-05-28).
+            <!-- 4. Tarifas & Comissões Bancárias (APARTADO — auditoria 2026-05-28).
                  Métrica isolada por governança: TARIFA / COMISSÃO BANCÁRIA são
-                 expurgadas de Total Geral / Pago / A Pagar / Vencidos / OPEX /
-                 Custo Cliente — concentradas aqui. Sem `data-kpi-card` (não
-                 vira toggle de filtro) porque a classificação é cruzada
-                 textual e não há filtro de "tipo bancário" no sistema.
-                 Lightbulb (data-kpi) explica a regra ao usuário. -->
+                 expurgadas de Total Geral / Pago / A Pagar / Vencidos e dos 4
+                 cards de Natureza do Custo — concentradas aqui. Sem
+                 `data-kpi-card` (não vira toggle de filtro) porque a
+                 classificação é cruzada textual e não há filtro de "tipo
+                 bancário" no sistema. Lightbulb (data-kpi) explica a regra. -->
             <div title="Tarifas e Comissões Bancárias, métrica apartada"
                  class="relative bg-surface-container-lowest p-4 rounded-xl border border-slate-200 shadow-sm select-none">
                 <button type="button" data-kpi="tarifas" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
@@ -205,6 +201,71 @@
                 <h3 id="kpi-tarifas" class="text-base font-extrabold font-manrope text-slate-700 leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1"><span id="kpi-tarifas-count">0</span> apartados</p>
             </div>
+            </div>
+          </div>
+          <!-- FILEIRA 2 — Natureza do Custo. Os 4 cards abaixo particionam o
+               universo pelo `tipo_entidade` do lançamento e, somados, dão
+               exatamente o total do recorte (tarifa já expurgada). Cada um é
+               TOGGLE do filtro de Tipo, que já tem os 4 valores e a sentinela
+               __SEM_TIPO__, então nada é acrescentado ao filtro. -->
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Natureza do Custo</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <!-- 5. Custo Fornecedor Interno = Fornecedor Interno (CLT) + Fornecedor Interno - PJ -->
+            <div data-kpi-card="interno" role="button" tabindex="0" title="Filtrar somente Fornecedor Interno, CLT e PJ"
+                 class="relative bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer select-none">
+                <button type="button" data-kpi="interno" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
+                    <span class="material-symbols-outlined text-[14px]">lightbulb</span>
+                </button>
+                <span class="p-1 bg-indigo-50 text-indigo-600 rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">badge</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Custo Fornecedor Interno</p>
+                <h3 id="kpi-interno" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">CLT e PJ</p>
+            </div>
+            <!-- 6. Custo Fornecedor Externo -->
+            <div data-kpi-card="externo" role="button" tabindex="0" title="Filtrar somente Fornecedor Externo"
+                 class="relative bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer select-none">
+                <button type="button" data-kpi="externo" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
+                    <span class="material-symbols-outlined text-[14px]">lightbulb</span>
+                </button>
+                <span class="p-1 bg-sky-50 text-sky-600 rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">storefront</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Custo Fornecedor Externo</p>
+                <h3 id="kpi-externo" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Prestadores de fora</p>
+            </div>
+            <!-- 7. Custo Cliente — Toggle filtro Tipo = Cliente -->
+            <div data-kpi-card="cliente" role="button" tabindex="0" title="Filtrar somente Custos de Cliente (Repasses)"
+                 class="relative bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer select-none">
+                <button type="button" data-kpi="cliente" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
+                    <span class="material-symbols-outlined text-[14px]">lightbulb</span>
+                </button>
+                <span class="p-1 bg-tertiary/10 text-tertiary rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">groups</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Custo Cliente</p>
+                <h3 id="kpi-cliente" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Repasses a clientes</p>
+            </div>
+            <!-- 8. Sem Classificação — favorecido sem tipo. Toggle da sentinela
+                 __SEM_TIPO__ que JÁ existe no filtro de Tipo, sem duplicar regra. -->
+            <div data-kpi-card="sem_class" role="button" tabindex="0" title="Filtrar somente lançamentos sem tipo de favorecido"
+                 class="relative bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer select-none">
+                <button type="button" data-kpi="sem_class" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
+                    <span class="material-symbols-outlined text-[14px]">lightbulb</span>
+                </button>
+                <span class="p-1 bg-rose-50 text-rose-600 rounded-lg inline-flex mb-1.5">
+                    <span class="material-symbols-outlined text-base">help</span>
+                </span>
+                <p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider mb-1">Sem Classificação</p>
+                <h3 id="kpi-sem-class" class="text-base font-extrabold font-manrope text-on-surface leading-none tabular-nums truncate" title="R$ 0,00">R$ 0,00</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1"><span id="kpi-sem-class-count">0</span> sem tipo</p>
+            </div>
+            </div>
+          </div>
         </section>
 
         <!-- TOPBAR DE FILTROS -->
@@ -297,7 +358,23 @@
                             <th onclick="window.ordenarTabelaCP('codigo')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-20 cursor-pointer select-none hover:text-secondary transition-colors">Código <span id="icone-sort-codigo" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('favorecido')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Favorecido <span id="icone-sort-favorecido" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('despesa')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Despesa <span id="icone-sort-despesa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <th class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest">Detalhe / Obs.</th>
+                            <!-- FRENTE 4 / Onda 4: GRUPO DE CONTAS, à direita de Despesa
+                                 porque o Grupo é o pai do Tipo de Despesa; adjacentes, a
+                                 linha se autoexplica e o diretor audita o vínculo lendo a
+                                 própria tabela. Largura fixa + truncate + title: a tabela
+                                 passa de 10 para 11 colunas e este é o ponto de aperto,
+                                 então a Conta vai no tooltip em vez de coluna própria. -->
+                            <th onclick="window.ordenarTabelaCP('grupo')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-32 cursor-pointer select-none hover:text-secondary transition-colors">Grupo de Contas <span id="icone-sort-grupo" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <!-- FRENTE 3 / Onda 3: "Detalhe / Obs." virou EMPRESA.
+                                 Nada de informação saiu da tela: `observacao` já era
+                                 renderizado DUAS vezes (a coluna Favorecido também o
+                                 mostra), e o badge do nº do título migrou para a
+                                 coluna Código, onde ele conceitualmente mora. A tabela
+                                 segue com o MESMO número de colunas.
+                                 Nasce ordenável, e o filtro multiselect de Empresa já
+                                 existia (`cp-filtro-empresa`, com a sentinela
+                                 __SEM_EMPRESA__), então nada foi duplicado. -->
+                            <th onclick="window.ordenarTabelaCP('empresa')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-32 cursor-pointer select-none hover:text-secondary transition-colors">Empresa <span id="icone-sort-empresa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('cc')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">CC <span id="icone-sort-cc" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <!-- Coluna RESPONSÁVEL (ex-Gestor, Frente 1 — 2026-05-20).
                                  Cruzamento em memória: cada linha procura o
@@ -701,6 +778,19 @@
                     <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todas as Despesas</option>
                 </select>
             </div>
+            <!-- FRENTE 4 / Onda 4: filtro de GRUPO DE CONTAS. Fica ao lado de Despesa
+                 porque o Grupo é o pai do Tipo de Despesa. As opções vêm do CADASTRO
+                 (CP_Grupos_Contas), não das linhas carregadas, e são populadas pelo
+                 próprio listener em `_cpPopularFiltroGrupo`, fora da cadeia serial de
+                 `_cpPopularDropdownsAsync` (que é código validado e não foi tocado). -->
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Grupo de Contas</label>
+                <select id="cp-filtro-grupo" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todos os Grupos"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Grupos</option>
+                    <option value="__SEM_GRUPO__">[ ⚠️ MOSTRAR LANÇAMENTOS SEM GRUPO ]</option>
+                </select>
+            </div>
             <!-- Filtro Empresa + sentinela de saneamento (Frente 1 — 2026-05-20). -->
             <div>
                 <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Empresa</label>
@@ -812,6 +902,49 @@
      Modal de PREENCHIMENTO: NÃO fecha ao clicar fora (overlay sem data-modal-overlay);
      fecha por Cancelar/Salvar; Escape cancela (gesto deliberado). Fluxo via Promise
      em _cpAbrirModalClassificacao. -->
+<!-- MODAL: Empresa Do Lote (FRENTE 3 / Onda 3, OS-CP-PACOTE-ONDAS-01).
+     Perguntado UMA vez por importação, ANTES do gate de classificação da Onda 2,
+     porque aquele gate pode cancelar a importação e pedir a empresa depois de o
+     operador classificar 30 favorecidos jogaria o trabalho dele no lixo.
+     Modal de PREENCHIMENTO: o overlay NÃO tem `data-modal-overlay`, então clicar
+     fora não fecha; sai por Cancelar ou pelo botão de confirmar, e Escape cancela. -->
+<div id="modal-cp-empresa-lote" class="fixed inset-0 z-[83] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+    <div class="bg-white w-full max-w-lg mx-4 rounded-2xl shadow-2xl z-10 flex flex-col transform scale-95 transition-transform duration-300 relative border border-slate-100">
+        <div class="flex items-start gap-3 p-6 pb-4 border-b border-slate-100">
+            <div class="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 shadow-inner">
+                <span class="material-symbols-outlined text-primary text-2xl">apartment</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="font-headline text-lg font-extrabold text-secondary tracking-tight">Empresa Do Lote</h3>
+                <p class="text-[12px] text-slate-500 font-medium mt-0.5">Escolha a empresa deste arquivo antes de importar.</p>
+            </div>
+        </div>
+        <div class="px-6 py-5 space-y-3">
+            <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Empresa</label>
+            <select id="cp-empresa-lote-sel" multiple data-checkbox-multi data-cb-portal
+                    data-placeholder="Selecione a empresa…"
+                    class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner"></select>
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+                A empresa escolhida é gravada apenas nos lançamentos deste arquivo que
+                <strong class="font-bold text-secondary">não têm empresa</strong> pelo cadastro do favorecido.
+                Quem já tem empresa pelo cadastro mantém a dele, sem sobrescrever.
+            </p>
+            <p id="cp-empresa-lote-aviso" class="hidden text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 font-medium"></p>
+        </div>
+        <div class="flex items-center justify-end gap-2 p-6 pt-4 border-t border-slate-100">
+            <button id="btn-cp-empresa-lote-cancelar" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                Cancelar
+            </button>
+            <button id="btn-cp-empresa-lote-confirmar" type="button" disabled
+                class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-xs font-extrabold shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+                <span class="material-symbols-outlined text-base">task_alt</span>
+                <span>Confirmar E Continuar</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="modal-cp-classificacao" class="fixed inset-0 z-[82] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
     <div class="bg-white w-full max-w-4xl mx-4 rounded-2xl shadow-2xl z-10 flex flex-col max-h-[88vh] transform scale-95 transition-transform duration-300 relative border border-slate-100">
@@ -1183,6 +1316,41 @@
     // extras ao Firestore por linha.
     let _areaGestorMap = new Map();
 
+    // FRENTE 1 (OS-CP-PACOTE-ONDAS-01): conjunto das CHAVES de todas as áreas
+    // cadastradas, com gestor ou sem. Sem ele não há como distinguir "a área não
+    // existe no cadastro" de "a área existe mas ninguém preencheu o gestor": as
+    // duas caíam no mesmo `Map.get() === undefined`, e a tela acusaria área
+    // inexistente para uma área que existe (há casos reais na base).
+    let _areaChavesSet = new Set();
+
+    // FRENTE 1: LOOKUP ÚNICO do responsável de um lançamento. Os três consumidores
+    // (ordenação, célula da tabela, exportação) passam por aqui, e é isso que
+    // garante que os três usem a MESMA régua. Devolve o estado, não só o texto,
+    // porque a ação do operador é diferente em cada caso:
+    //   cc_vazio        → classificar o lançamento
+    //   area_sem_gestor → cadastrar o gestor da área em master.html
+    //   sem_area        → cadastrar a área, ou corrigir o CC do lançamento
+    // Enquanto /AreasContasPagar não chegou, NÃO acusa área inexistente: seria
+    // alarme falso em toda linha durante a carga.
+    function _cpResponsavelDoReg(reg) {
+        const ccBruto = String(reg?.centro_custo || '').trim();
+        if (!ccBruto) return { gestor: '', texto: 'não informado', estado: 'cc_vazio' };
+        // GAP G2 do tester (2026-09-29): `_cpAreasCarregadas` vira true mesmo quando o
+        // snapshot de /AreasContasPagar chega VAZIO (regra, permissão, coleção
+        // momentaneamente vazia). Com zero áreas, TODA linha com CC preenchido cairia
+        // em `sem_area` e a tabela inteira pintaria "área não cadastrada" em amber,
+        // alarme falso que o comportamento anterior não tinha. Conjunto vazio de áreas
+        // é tratado como AINDA CARREGANDO: na dúvida, o texto neutro.
+        if (!_cpAreasCarregadas || _areaChavesSet.size === 0) {
+            return { gestor: '', texto: 'não informado', estado: 'carregando' };
+        }
+        const k = _cpChaveFiltro(ccBruto);
+        const gestor = _areaGestorMap.get(k) || '';
+        if (gestor) return { gestor, texto: gestor, estado: 'ok' };
+        if (_areaChavesSet.has(k)) return { gestor: '', texto: 'não informado', estado: 'area_sem_gestor' };
+        return { gestor: '', texto: 'área não cadastrada', estado: 'sem_area' };
+    }
+
     // ── Esteira de aprovações — utilitário de criação de solicitação ────────
     async function _criarSolicitacaoAprovacao(tipoOp, colecaoAlvo, docIdAlvo, dadosAntigos, dadosNovos, resumo, moduloOrigem) {
         await addDoc(collection(db, 'CP_SolicitacoesAprovacao'), {
@@ -1283,6 +1451,7 @@
             // maximizar a chance do map já estar populado no 1º snap.
             inscreverAreas();
             inscreverFornecedoresEmpresa();
+            inscreverGruposDespesa();   // FRENTE 4 (Onda 4)
             inscreverContasPagar();
             // Auditoria 2026-05-18: a Esteira de Aprovação saiu deste módulo
             // (vive em aprovacoes_desktop). A visibilidade admin-only continua
@@ -1298,23 +1467,139 @@
         }
     });
 
+    // ── FRENTE 4 / Onda 4: GRUPOS DE DESPESA, resolução em RUNTIME ─────────────
+    // Estrutura de 3 níveis: Grupo de Despesa -> Conta de Despesa -> Tipo de Despesa
+    // (o Tipo é o valor de `categoria` que o lançamento já carrega).
+    //
+    // O grupo NÃO é gravado no lançamento, e isso é decisão de desenho, não preguiça:
+    //   1) gravar seriam 51.181 updates, e NÃO uma vez só. O diretor vai mexer nos
+    //      vínculos iterativamente, e cada "movi o tipo X do grupo A para o B" viraria
+    //      recascata em massa, com auditoria de segurança a cada rodada.
+    //   2) o grupo é FUNÇÃO PURA de `categoria`, que o lançamento já tem, e não existe
+    //      nada por lançamento para sobrescrever: dois lançamentos com a mesma despesa
+    //      têm o mesmo grupo, sempre. É a mesma linha que separa `centro_custo`
+    //      (gravado, porque é editável por lançamento) de `empresa` (derivada).
+    //   3) o vínculo muda no cadastro e a tela reflete NA HORA, sem recascata.
+    //
+    // E, pela mesma regra da Frente 5, NADA é anexado ao objeto de `cacheRegistros`:
+    // ele é espalhado com spread para dentro de writeBatch, e campo sintético ali
+    // vazaria para o Firestore. A resolução é por função pura, sob demanda.
+    //
+    // O vínculo é por ID, nunca por nome: renomear um Grupo é updateDoc de 1 campo em
+    // 1 doc, sem tocar Conta, Tipo nem lançamento. Vínculo por NOME é exatamente o que
+    // produziu o caso Catarina em `AreasContasPagar`, e não se repete aqui.
+    let _cpGruposMap = new Map();   // grupo_id → { nome, bucket_dre, ordem }
+    let _cpContasMap = new Map();   // conta_id  → { nome, grupo_id }
+    let _cpTiposMap  = new Map();   // tipo_norm → { conta_id }
+    let _cpGruposCarregados = false;
+
+    function inscreverGruposDespesa() {
+        const reagir = () => { if (typeof renderTudo === 'function') renderTudo(); _cpPopularFiltroGrupo(); };
+        onSnapshot(collection(db, 'CP_Grupos_Contas'), (snap) => {
+            const m = new Map();
+            snap.forEach(d => {
+                const v = d.data() || {};
+                m.set(d.id, {
+                    nome: String(v.nome || '').trim(),
+                    bucket_dre: v.bucket_dre || null,
+                    ordem: Number(v.ordem) || 0,
+                });
+            });
+            _cpGruposMap = m;
+            _cpGruposCarregados = true;
+            reagir();
+        }, (err) => console.warn('[CP_Grupos_Contas] listener falhou:', err?.code || err?.message));
+
+        onSnapshot(collection(db, 'CP_Contas_Despesa'), (snap) => {
+            const m = new Map();
+            snap.forEach(d => {
+                const v = d.data() || {};
+                m.set(d.id, { nome: String(v.nome || '').trim(), grupo_id: v.grupo_id || null });
+            });
+            _cpContasMap = m;
+            reagir();
+        }, (err) => console.warn('[CP_Contas_Despesa] listener falhou:', err?.code || err?.message));
+
+        onSnapshot(collection(db, 'CP_Tipos_Despesa'), (snap) => {
+            const m = new Map();
+            snap.forEach(d => {
+                const v = d.data() || {};
+                const k = String(v.tipo_norm || '').trim();
+                if (k) m.set(k, { conta_id: v.conta_id || null });
+            });
+            _cpTiposMap = m;
+            reagir();
+        }, (err) => console.warn('[CP_Tipos_Despesa] listener falhou:', err?.code || err?.message));
+    }
+
+    // Resolve Grupo e Conta de um lançamento. Função PURA: recebe o registro, devolve
+    // texto, e NÃO escreve nada no objeto. São 2 ou 3 Map.get por chamada, feitos sob
+    // demanda no render de 50 linhas por página, no filtro e na ordenação.
+    // A chave é `_cpChaveFiltro(categoria)`, a mesma régua do catálogo semeado e do
+    // cadastro, com acento PRESERVADO (incidente "ESTÁGIO", 2026-06-19).
+    function _cpGrupoDeReg(reg) {
+        const cat = String(reg?.categoria || '').trim();
+        if (!cat) return { grupo: '', conta: '', estado: 'sem_despesa' };
+        if (!_cpGruposCarregados) return { grupo: '', conta: '', estado: 'carregando' };
+        const vinc = _cpTiposMap.get(_cpChaveFiltro(cat));
+        if (!vinc || !vinc.conta_id) return { grupo: '', conta: '', estado: 'sem_vinculo' };
+        const conta = _cpContasMap.get(vinc.conta_id);
+        if (!conta) return { grupo: '', conta: '', estado: 'conta_orfa' };
+        const grupo = conta.grupo_id ? _cpGruposMap.get(conta.grupo_id) : null;
+        if (!grupo) return { grupo: '', conta: conta.nome, estado: 'grupo_orfao' };
+        return { grupo: grupo.nome, conta: conta.nome, estado: 'ok' };
+    }
+
+    // Catálogo do filtro vem do CADASTRO, não das linhas carregadas (regra da Parte A).
+    // Por isso NÃO entra na cadeia serial de `_cpPopularDropdownsAsync`: é populado
+    // direto pelo listener, o que também evita mexer naquele código validado.
+    function _cpPopularFiltroGrupo() {
+        const sel = document.getElementById('cp-filtro-grupo');
+        if (!sel) return;
+        const marcados = new Set(getMultiValues(sel));
+        const nomes = [..._cpGruposMap.values()].map(g => g.nome).filter(Boolean)
+            .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        sel.innerHTML =
+            '<option value="Todos" class="font-bold border-b pb-1 mb-1">Todos os Grupos</option>' +
+            '<option value="__SEM_GRUPO__">[ ⚠️ MOSTRAR LANÇAMENTOS SEM GRUPO ]</option>' +
+            nomes.map(n => `<option value="${escHTML(n)}">${escHTML(n)}</option>`).join('');
+        // Preserva a marcação do operador; valor órfão é ignorado, igual ao resto.
+        const restaurar = [...marcados].filter(v => v === 'Todos' || v === '__SEM_GRUPO__' || nomes.includes(v));
+        setMultiValues(sel, restaurar.length ? restaurar : ['Todos']);
+        if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(sel);
+    }
+
     function inscreverAreas() {
         onSnapshot(collection(db, 'AreasContasPagar'), (snap) => {
             const nomes = [];
             const mapaGestor = new Map();
+            const chaves = new Set();
             snap.forEach(d => {
                 const data = d.data() || {};
                 const n = String(data.nome || '').trim();
                 if (!n) return;
+                // `nomes` PRESERVA o rótulo curado do cadastro: é ele que aparece
+                // nos <option> visíveis e alimenta `_ccDisponiveis`, que por sua vez
+                // abastece selects de ESCRITA. Normalizar aqui gravaria CC em caixa
+                // alta no banco. Só a CHAVE do cruzamento é normalizada.
                 nomes.push(n);
+                // FRENTE 1: chave canônica `_cpChaveFiltro` (colapsa espaço interno,
+                // apara borda, sobe caixa, PRESERVA acento de propósito, vide o
+                // incidente "ESTÁGIO" de 2026-06-19). Antes a chave era `.trim()`
+                // puro aqui e no lookup, enquanto o FILTRO de Centro de Custo já
+                // usava `_cpChaveFiltro`: duas réguas para o mesmo campo, e um CC
+                // gravado com caixa ou espaçamento diferente passava pelo filtro e
+                // desaparecia da coluna Responsável.
+                chaves.add(_cpChaveFiltro(n));
                 const gestor = String(data.gestor_nome || '').trim();
-                if (gestor) mapaGestor.set(n, gestor);
+                if (gestor) mapaGestor.set(_cpChaveFiltro(n), gestor);
             });
             nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
             _ccDisponiveis = nomes;
             // Atualiza o mapa Centro de Custo → Gestor (Frente 1, 2026-05-20)
             // e força um re-render para que a coluna "Gestor" recalcule.
             _areaGestorMap = mapaGestor;
+            _areaChavesSet = chaves;
             if (typeof renderTudo === 'function') renderTudo();
             // OS-CP-FILTROS-BASE-COMPLETA-01: `renderTudo()` NÃO repopula os
             // dropdowns. Se as Áreas chegam depois do 1º snapshot de
@@ -1338,6 +1623,18 @@
     // objeto de `cacheRegistros`: ele é espalhado com spread direto pra dentro de
     // writeBatch (edição/recorrência) e o blob vazaria pro Firestore.
     const _cpBlobBusca = new Map(); // _id → blob normalizado de busca
+
+    // FRENTE 5 (OS-CP-PACOTE-ONDAS-01): a empresa DERIVADA em runtime (lookup
+    // /Fornecedores pelo codigo_fornecedor) mora AQUI, em Map paralelo, pela
+    // mesma razão que o blob de busca: até 2026-09-29 ela era escrita de volta
+    // em `reg.empresa`, e `_cpProjetarRecorrencia` espalha o objeto do cache
+    // (`...reg`) direto para dentro de writeBatch — então um valor calculado em
+    // memória era PERSISTIDO em faturas novas, sem decisão e sem rastro, e o DRE
+    // Gerencial passava a congelar aquele valor (ele dá precedência a
+    // `reg.empresa` explícito). Nenhuma fatura chegou a ser afetada (não havia
+    // clone de recorrência na base quando a frente rodou), mas o caminho existia.
+    // REGRA PERMANENTE: valor derivado NUNCA é anexado ao objeto de cacheRegistros.
+    const _cpEmpresaDerivada = new Map(); // _id → empresa resolvida (UPPER)
 
     // OS-CP-CARGA-RECENCIA-01: cursor do startAfter para paginar o RESTANTE da
     // base. É o ÚLTIMO QueryDocumentSnapshot da leitura mais recente (NÃO o objeto
@@ -1603,11 +1900,23 @@
     // debounce juntam a rajada num único passe. Higiene de performance.
     let _cpSnapRefreshTimer = null;
     function _cpAgendarSnapRefresh() {
-        if (typeof _cpUltimoSnapRefresh !== 'function') return;
+        // FRENTE 5: antes, sem a closure (caso da HIDRATAÇÃO do cache próprio, que
+        // roda antes de qualquer _cpIngerir) esta função desistia. Isso bastava
+        // enquanto a empresa derivada vinha gravada no objeto do cache. Agora ela
+        // mora em Map paralelo, então a hidratação precisa de um caminho de
+        // reenriquecimento: sem a closure, recomputa o Map e repinta.
+        const temClosure = typeof _cpUltimoSnapRefresh === 'function';
+        if (!temClosure && !cacheRegistros.length) return;
         if (_cpSnapRefreshTimer) clearTimeout(_cpSnapRefreshTimer);
         _cpSnapRefreshTimer = setTimeout(() => {
             _cpSnapRefreshTimer = null;
-            if (typeof _cpUltimoSnapRefresh === 'function') _cpUltimoSnapRefresh();
+            if (typeof _cpUltimoSnapRefresh === 'function') { _cpUltimoSnapRefresh(); return; }
+            if (!cacheRegistros.length) return;
+            // Só recomputa quando /Fornecedores já chegou: recomputar antes LIMPARIA o
+            // Map restaurado do cache (GAP G1) e a coluna Empresa piscaria vazia. Este
+            // caminho também é acionado pelo listener de Áreas, que pode chegar antes.
+            if (_cpFornecedoresCarregados) _cpRecomputarEmpresaDerivada();
+            renderTudo();
         }, 80);
     }
 
@@ -1654,6 +1963,34 @@
         if (cod == null) return '';
         const chave = String(cod).trim();
         return _cpFornecedoresEmpresaMap.get(chave) || '';
+    }
+
+    // FRENTE 5: ACESSOR ÚNICO da empresa de um lançamento, para render, filtro,
+    // ordenação e exportação. Precedência deliberada:
+    //   1) `reg.empresa` GRAVADO no doc (carimbo por lote da Onda 3, cascata do
+    //      master, ou alteração em massa) — verdade explícita, sempre ganha;
+    //   2) o Map paralelo `_cpEmpresaDerivada` — verdade derivada do cadastro.
+    // Nenhum consumidor lê `reg.empresa` direto: quem ler direto perde a empresa
+    // dos 44.586 lançamentos que só a têm por herança.
+    function _cpEmpresaDeReg(reg) {
+        const direta = String(reg?.empresa || '').trim();
+        if (direta) return direta.toUpperCase();
+        return _cpEmpresaDerivada.get(reg?._id) || '';
+    }
+
+    // FRENTE 5: recomputa o Map de empresa derivada sobre o cacheRegistros
+    // INTEIRO e devolve o Set de empresas distintas (que alimenta o dropdown).
+    // Chamada em toda ingestão, no refresh do listener de /Fornecedores e na
+    // hidratação do cache próprio — este último é obrigatório, porque o cache do
+    // IndexedDB guarda o registro SEM o campo derivado (é isso que se quer).
+    function _cpRecomputarEmpresaDerivada() {
+        _cpEmpresaDerivada.clear();
+        const empresas = new Set();
+        for (const reg of cacheRegistros) {
+            const emp = _cpResolverEmpresaDoReg(reg);
+            if (emp) { _cpEmpresaDerivada.set(reg._id, emp); empresas.add(emp); }
+        }
+        return empresas;
     }
 
     // ── Snapshot principal ─────────────────────────────────────────────────
@@ -1732,14 +2069,17 @@
         }
         cacheRegistros = ehAppend ? cacheRegistros.concat(regs) : regs;
         // Recomputa os 5 Sets sobre o cache INTEIRO (obrigatório no append; no
-        // replace o cache == regs, então é o mesmo resultado). A resolução de
-        // empresa (lookup /Fornecedores) escreve de volta em `reg.empresa` (UPPER),
-        // idêntico ao enriquecimento original e ao de `_cpUltimoSnapRefresh`.
+        // replace o cache == regs, então é o mesmo resultado). FRENTE 5
+        // (OS-CP-PACOTE-ONDAS-01): a resolução de empresa (lookup /Fornecedores)
+        // vai para o Map paralelo `_cpEmpresaDerivada`, NÃO mais para
+        // `reg.empresa` — o objeto do cache é espalhado para dentro de writeBatch
+        // e o valor derivado era persistido. Mesmo laço, sem segunda passada.
         const comps = new Set(), favs = new Set(), desp = new Set(),
               ccs = new Set(), empresas = new Set();
+        _cpEmpresaDerivada.clear();
         for (const reg of cacheRegistros) {
             const empResolvida = _cpResolverEmpresaDoReg(reg);
-            if (empResolvida) { reg.empresa = empResolvida; empresas.add(empResolvida); }
+            if (empResolvida) { _cpEmpresaDerivada.set(reg._id, empResolvida); empresas.add(empResolvida); }
             const comp = fmtCompetenciaBR(reg);
             if (comp) comps.add(comp);
             if (reg.entidade)     favs.add(reg.entidade);
@@ -1763,14 +2103,8 @@
         // (via _cpAgendarSnapRefresh) pra repopular o dropdown Empresa sem
         // precisar de uma nova leitura de ContasAPagar.
         _cpUltimoSnapRefresh = () => {
-            const empresasReenriq = new Set();
-            for (const r of cacheRegistros) {
-                const e = _cpResolverEmpresaDoReg(r);
-                if (e) {
-                    r.empresa = e;
-                    empresasReenriq.add(e);
-                }
-            }
+            // FRENTE 5: reenriquecimento no Map paralelo, nunca no objeto do cache.
+            const empresasReenriq = _cpRecomputarEmpresaDerivada();
             _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresasReenriq, _cpTentarRestaurarFiltros);
             renderTudo();
         };
@@ -1804,7 +2138,12 @@
     // otimização: TODA falha é engolida, nunca quebra a tela nem o logout.
     const CP_CACHE_DB = 'centrafin_cp_cache';
     const CP_CACHE_STORE = 'snapshot';
-    const CP_CACHE_KEY = 'contasapagar';
+    // FRENTE 5: chave BUMPADA de 'contasapagar' para '_v2'. O cache antigo guarda
+    // registros com a empresa DERIVADA já gravada no objeto, e o acessor novo leria
+    // aquilo como se fosse empresa explícita do documento (verdade de carimbo).
+    // Bumpar descarta o cache velho uma única vez; o custo é uma leitura do
+    // servidor na primeira abertura, e o cache é otimização, não fonte de verdade.
+    const CP_CACHE_KEY = 'contasapagar_v2';
     function _cpCacheAbrir() {
         return new Promise((resolve, reject) => {
             let req;
@@ -1832,14 +2171,17 @@
             return val;
         } catch (_) { return null; }
     }
-    async function _cpCacheGravar(stamp, registros, blob) {
+    async function _cpCacheGravar(stamp, registros, blob, empDerivada) {
         try {
             const dbc = await _cpCacheAbrir();
             await new Promise((resolve) => {
                 let tx;
                 try { tx = dbc.transaction(CP_CACHE_STORE, 'readwrite'); }
                 catch (_) { return resolve(); }
-                try { tx.objectStore(CP_CACHE_STORE).put({ stamp, registros, blob }, CP_CACHE_KEY); }
+                // `empDerivada` é a empresa resolvida por herança, em chave SEPARADA do
+                // registro (GAP G1). Ausente em cache antigo, e o `|| []` na leitura
+                // cobre isso sem migração.
+                try { tx.objectStore(CP_CACHE_STORE).put({ stamp, registros, blob, empDerivada: empDerivada || [] }, CP_CACHE_KEY); }
                 catch (_) { return resolve(); }
                 tx.oncomplete = () => resolve();
                 tx.onerror = () => resolve();
@@ -1860,7 +2202,17 @@
     }
     // Snapshot serializado do estado atual (mesma forma em toda gravação).
     function _cpCachePersistir() {
-        return _cpCacheGravar(_cpEtlStamp || Date.now(), cacheRegistros, Array.from(_cpBlobBusca));
+        // GAP G1 do tester (2026-09-29): o Map de empresa DERIVADA também vai para o
+        // cache local, senão hidratar offline (ou com /Fornecedores lento) deixa a
+        // coluna, o filtro e a exportação de Empresa vazios para os lançamentos que só
+        // têm empresa por herança. Antes da Frente 5 isso funcionava offline porque o
+        // valor derivado vinha gravado dentro do próprio registro.
+        // Isto NÃO reabre o vazamento: o cache é IndexedDB local, não é o Firestore, e
+        // o valor entra numa CHAVE SEPARADA do registro, nunca dentro dele. O que a
+        // Frente 5 proíbe é derivado dentro do objeto que é espalhado em writeBatch.
+        // A reconciliação em background recomputa e regrava logo em seguida.
+        return _cpCacheGravar(_cpEtlStamp || Date.now(), cacheRegistros,
+            Array.from(_cpBlobBusca), Array.from(_cpEmpresaDerivada));
     }
 
     // Cede o controle entre chunks para o main thread pintar/responder à UI.
@@ -1932,6 +2284,20 @@
                 cacheRegistros = c.registros;
                 _cpBlobBusca.clear();
                 if (Array.isArray(c.blob)) for (const par of c.blob) { if (par) _cpBlobBusca.set(par[0], par[1]); }
+                // FRENTE 5: o cache próprio guarda o registro SEM a empresa derivada
+                // (ela não é mais anexada ao objeto), então o Map paralelo é
+                // restaurado da chave própria do cache (GAP G1 do tester) e, em
+                // seguida, RECOMPUTADO. A ordem importa: o recompute só produz valor
+                // se /Fornecedores já chegou, e ele é no-op quando o mapa de cadastro
+                // ainda está vazio, então o valor restaurado do cache é o que segura a
+                // coluna no primeiro render e no uso offline. Quando /Fornecedores
+                // chega, o listener dispara _cpAgendarSnapRefresh e repinta com a
+                // verdade do cadastro.
+                _cpEmpresaDerivada.clear();
+                if (Array.isArray(c.empDerivada)) {
+                    for (const par of c.empDerivada) { if (par) _cpEmpresaDerivada.set(par[0], par[1]); }
+                }
+                if (_cpFornecedoresCarregados) _cpRecomputarEmpresaDerivada();
                 renderTudo();
                 _cpAtualizarUICarregarMais();
                 window._cpDiag.t_refresh = performance.now() - _cpT0;
@@ -2434,8 +2800,10 @@
         const tipoArr    = getMultiValues(document.getElementById('cp-filtro-tipo'));
         const ccArr      = getMultiValues(document.getElementById('cp-filtro-cc'));
         const classArr   = getMultiValues(document.getElementById('cp-filtro-classificacao'));
+        const grupoArr   = getMultiValues(document.getElementById('cp-filtro-grupo')); // FRENTE 4
 
         const statusSet = !isMultiAll(statusArr) ? new Set(statusArr) : null;
+        const grupoSet = !isMultiAll(grupoArr)  ? new Set(grupoArr)  : null;
         const favSet   = !isMultiAll(favsArr)   ? new Set(favsArr)   : null;
         const despSet  = !isMultiAll(despArr)   ? new Set(despArr)   : null;
         const empSet   = !isMultiAll(empArr)    ? new Set(empArr)    : null;
@@ -2459,6 +2827,7 @@
         const ccFiltraSemCC      = ccSet  && ccSet.has('__SEM_CC__');
         const empFiltraSemEmp    = empSet && empSet.has('__SEM_EMPRESA__');
         const tipoFiltraSemTipo  = tipoSet && tipoSet.has('__SEM_TIPO__');
+        const grupoFiltraSemGrupo = grupoSet && grupoSet.has('__SEM_GRUPO__'); // FRENTE 4
         // Busca rápida textual (auditoria 2026-05-18 V6 — Item 1).
         const termo = _cpTermoBusca;
         return registros.filter(r => {
@@ -2480,7 +2849,8 @@
             if (favSet && !favSet.has(_cpChaveFiltro(r.entidade))) return false;
             if (despSet && !despSet.has(r.categoria || '')) return false;
             if (empSet) {
-                const empReg = _cpChaveFiltro(r.empresa);
+                // FRENTE 5: acessor único (gravado ganha do derivado).
+                const empReg = _cpChaveFiltro(_cpEmpresaDeReg(r));
                 const passaSemEmp = empFiltraSemEmp && !empReg;
                 const passaEspec  = empSet.has(empReg);
                 if (!passaSemEmp && !passaEspec) return false;
@@ -2498,6 +2868,14 @@
                 if (!passaSemCC && !passaCcEspec) return false;
             }
             if (classSetExpandido && !classSetExpandido.has(r.tipo_entidade || '')) return false;
+            // FRENTE 4: mesma mecânica das outras sentinelas. Resolvido em runtime,
+            // nada é lido do documento além de `categoria`.
+            if (grupoSet) {
+                const gRes = _cpGrupoDeReg(r).grupo;
+                const passaSemGrupo = grupoFiltraSemGrupo && !gRes;
+                const passaEspec = grupoSet.has(gRes);
+                if (!passaSemGrupo && !passaEspec) return false;
+            }
             // Match parcial (case-insensitive + sem acento) em 4 campos:
             // Favorecido, Código, Despesa, Observação. Match em QUALQUER um.
             if (termo) {
@@ -2586,7 +2964,16 @@
             case 'codigo':      return { tipo: 'numero', valor: Number(r.codigo_fornecedor) };
             case 'despesa':     return { tipo: 'texto',  valor: String(r.categoria || '') };
             case 'cc':          return { tipo: 'texto',  valor: String(r.centro_custo || '') };
-            case 'responsavel': { const cc = String(r.centro_custo || '').trim(); return { tipo: 'texto', valor: String((cc && _areaGestorMap.get(cc)) || '') }; }
+            // FRENTE 3: ordena pelo MESMO acessor que a célula e o filtro usam, senão
+            // a coluna ordenaria por um valor diferente do que está na tela.
+            case 'empresa':     return { tipo: 'texto',  valor: _cpEmpresaDeReg(r) };
+            // FRENTE 4: ordena pelo mesmo resolvedor da célula e do filtro. Sem
+            // vínculo ordena como string vazia, o que agrupa no topo do ascendente
+            // justamente o que falta vincular.
+            case 'grupo':       return { tipo: 'texto',  valor: _cpGrupoDeReg(r).grupo };
+            // FRENTE 1: mesmo lookup único da célula e da exportação. Ordena pelo
+            // GESTOR (vazio quando não há), preservando a semântica de hoje.
+            case 'responsavel': return { tipo: 'texto', valor: _cpResponsavelDoReg(r).gestor };
             case 'valor':       return { tipo: 'numero', valor: Number(r.valor_original) || 0 };
             default:            return { tipo: 'texto',  valor: '' };
         }
@@ -2699,23 +3086,47 @@
                         <input type="checkbox" class="cp-row-checkbox rounded border-slate-300 text-primary focus:ring-primary/30" data-id="${idAttr}" ${marcado}>
                     </td>
                     <td class="px-4 py-3 text-xs font-mono font-bold text-secondary">${r.data_vencimento ? escHTML(fmtDataBR(r.data_vencimento)) : 'não informado'}</td>
-                    <td class="px-4 py-3 text-xs font-mono text-tertiary tabular-nums">${r.codigo_fornecedor != null ? r.codigo_fornecedor : 'não informado'}</td>
+                    <td class="px-4 py-3 text-xs font-mono text-tertiary tabular-nums">
+                        ${r.codigo_fornecedor != null ? r.codigo_fornecedor : 'não informado'}
+                        ${r.codigo_titulo_ord
+                            ? `<span class="font-mono bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1 align-middle tabular-nums" title="Nº do Título / Ordenamento">${escHTML(r.codigo_titulo_ord)}</span>`
+                            : ''}
+                    </td>
                     <td class="px-4 py-3 text-xs font-bold text-slate-800">${escHTML(r.observacao || 'não informado')}</td>
                     <td class="px-4 py-3 text-xs text-slate-600">${escHTML(r.categoria || 'não informado')}</td>
-                    <td class="px-4 py-3 text-xs text-slate-500">
-                        ${r.codigo_titulo_ord
-                            ? `<span class="font-mono bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold mr-1.5 align-middle tabular-nums" title="Nº do Título / Ordenamento">${escHTML(r.codigo_titulo_ord)}</span>`
-                            : ''}
-                        <span class="italic align-middle">${escHTML(r.observacao || 'não informado')}</span>
-                    </td>
+                    <td class="px-3 py-3 text-xs text-slate-700 w-32 max-w-32">${
+                        // FRENTE 4: Grupo de Contas, resolvido em runtime. A Conta fica no
+                        // tooltip; sem vínculo, "não informado" em itálico, que é o molde
+                        // que a coluna Responsável já usa.
+                        (() => {
+                            const g = _cpGrupoDeReg(r);
+                            if (!g.grupo) return '<span class="text-slate-500 italic">não informado</span>';
+                            const tt = g.conta ? `Conta: ${g.conta}` : '';
+                            return `<span class="block truncate font-semibold" title="${escHTML(tt)}">${escHTML(g.grupo)}</span>`;
+                        })()
+                    }</td>
+                    <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${
+                        // FRENTE 3: acessor único (empresa gravada ganha da derivada).
+                        (() => {
+                            const emp = _cpEmpresaDeReg(r);
+                            return emp
+                                ? escHTML(emp)
+                                : '<span class="text-slate-500 italic text-xs normal-case font-normal">não informado</span>';
+                        })()
+                    }</td>
                     <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${escHTML(r.centro_custo || 'não informado')}</td>
                     <td class="px-4 py-3 text-xs text-slate-700 font-semibold">${
                         (() => {
-                            const cc = String(r.centro_custo || '').trim();
-                            const gestor = cc ? _areaGestorMap.get(cc) : '';
-                            return gestor
-                                ? escHTML(gestor)
-                                : '<span class="text-slate-500 italic text-xs">não informado</span>';
+                            // FRENTE 1: lookup único. "área não cadastrada" nomeia a
+                            // causa quando o CC existe e não casa com área nenhuma,
+                            // em vez de dizer "não informado" e o operador concluir
+                            // que o sistema está quebrado.
+                            const resp = _cpResponsavelDoReg(r);
+                            if (resp.gestor) return escHTML(resp.gestor);
+                            const cls = resp.estado === 'sem_area'
+                                ? 'text-amber-600 italic text-xs'
+                                : 'text-slate-500 italic text-xs';
+                            return `<span class="${cls}">${escHTML(resp.texto)}</span>`;
                         })()
                     }</td>
                     <td class="px-4 py-3 text-xs text-right font-extrabold text-secondary tabular-nums">${fmtBRL.format(Number(r.valor_original) || 0)}</td>
@@ -2749,7 +3160,12 @@
         // igual a "COMISSAO". Padrão idêntico ao usado em outros pontos do app.
         const normTexto = (s) => String(s || '').trim().toUpperCase()
             .normalize('NFD').replace(/[̀-ͯ]/g, '');
-        let total = 0, pago = 0, aPagar = 0, vencido = 0, opex = 0, cliente = 0;
+        let total = 0, pago = 0, aPagar = 0, vencido = 0;
+        // FRENTE 2: os 4 buckets de Natureza do Custo substituem `opex` + `cliente`.
+        // Eles PARTICIONAM o universo (todo lançamento cai em exatamente um), então
+        // interno + externo + cliente + semClass === total, por construção e não por
+        // sorte do dado. Somados DENTRO do laço único, lendo o `v` já calculado.
+        let interno = 0, externo = 0, cliente = 0, semClass = 0, cSemClass = 0;
         let cTotal = 0, cPago = 0, cAPagar = 0, cVencido = 0;
         let tarifas = 0, cTarifas = 0;
         // OS-CP-CARGA-DUAS-ONDAS-01 (ajuste do diretor): os KPIs ACOMPANHAM o
@@ -2784,9 +3200,18 @@
             if (vs === 'pago') { pago += v; cPago++; }
             else if (vs === 'a_vencer') { aPagar += v; cAPagar++; }
             else if (vs === 'atrasado') { vencido += v; cVencido++; }
-            const t = String(r.tipo_entidade || '');
-            if (t === 'Fornecedor Interno' || t === 'Fornecedor Externo') opex += v;
+            // FRENTE 2: `.trim()` alinhado ao filtro de Tipo (`aplicarFiltrosCP`
+            // sempre usou trim aqui, o KPI não usava). Sem isso um tipo gravado como
+            // espaço em branco cairia em lugares diferentes no card e no filtro.
+            // O `else` final é deliberado: qualquer tipo que não seja um dos três
+            // conhecidos é, por definição, favorecido não classificado. É isso que
+            // torna a soma dos 4 cards igual ao total uma GARANTIA estrutural, e não
+            // uma coincidência do dado de hoje.
+            const t = String(r.tipo_entidade || '').trim();
+            if (t === 'Fornecedor Interno' || t === 'Fornecedor Interno - PJ') interno += v;
+            else if (t === 'Fornecedor Externo') externo += v;
             else if (t === 'Cliente') cliente += v;
+            else { semClass += v; cSemClass++; }
         }
         const setKPI = (id, valor, count, countId) => {
             const el = document.getElementById(id);
@@ -2802,8 +3227,11 @@
         setKPI('kpi-total',    pago + tarifas, cPago + cTarifas, 'kpi-total-count');
         setKPI('kpi-pago',     pago,    cPago,   'kpi-pago-count');
         setKPI('kpi-a-pagar',  aPagar,  cAPagar, 'kpi-a-pagar-count');
-        setKPI('kpi-opex',     opex);
+        // FRENTE 2: Natureza do Custo. `kpi-opex` saiu do DOM junto com o card.
+        setKPI('kpi-interno',  interno);
+        setKPI('kpi-externo',  externo);
         setKPI('kpi-cliente',  cliente);
+        setKPI('kpi-sem-class', semClass, cSemClass, 'kpi-sem-class-count');
         setKPI('kpi-vencido',  vencido, cVencido,'kpi-vencido-count');
         setKPI('kpi-tarifas',  tarifas, cTarifas,'kpi-tarifas-count');
     }
@@ -3042,7 +3470,19 @@
         const nomes = [];
         snap.forEach(d => {
             const data = d.data() || {};
-            const nome = String(data.nome_fantasia || data.nome || d.id || '').trim();
+            // FRENTE 3 (OS-CP-PACOTE-ONDAS-01): só entra no catálogo quem tem o
+            // campo canônico `nome`. O diretor declarou (2026-09-29) que as
+            // empresas alocáveis são NEAT, SOULAN ADM, SOULAN CONSULTORIA e
+            // ESTÁGIO; os dois documentos restantes de Base_Empresas ("RAFUL" e
+            // "SOULAN CONSULTORIA 3") têm SÓ `nome_fantasia`, sem `nome` e sem
+            // `data_cadastro`, e não são empresas do grupo. O critério é de DADO,
+            // não lista fixa de nomes: cadastro completo tem `nome`.
+            // Medido antes de mexer: esses dois nomes aparecem em ZERO lançamentos
+            // e ZERO fornecedores, então nenhum registro muda de comportamento.
+            // O fallback `|| d.id` também saiu: ele só poderia produzir um ID cru do
+            // Firestore como rótulo de empresa na tela.
+            if (!String(data.nome || '').trim()) return;
+            const nome = String(data.nome_fantasia || data.nome).trim();
             if (nome) nomes.push(nome);
         });
         nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -3649,6 +4089,11 @@
             // ao lote e barrar o auto-cadastro mudo.
             classPendentes: new Map(),  // codigoStr → {codigo, nome, jaExiste}
             classAplicadas: null,       // codigoStr → {tipo, centro_custo, empresa}
+            // FRENTE 3 / Onda 3: empresa escolhida para ESTE arquivo. Nasce vazia e
+            // é RESETADA a cada importação de propósito: valor remanescente de um
+            // lote anterior carimbaria o arquivo seguinte com a empresa errada, em
+            // silêncio. A guarda de abstenção na escrita depende deste reset.
+            empresaLote: '',
             mapeamentos: new Map(),    // chave (codigo|despesa_norm) → {per_evento, per_valor, data_fim_contrato}
             // Telemetria do parser (2026-05-20). Resetada a cada importação
             // pra não misturar contagens de lotes anteriores no toast final.
@@ -3842,6 +4287,25 @@
             // para o sanesamento posterior em lote — `_cpFinalizarImportacao`
             // detecta as combinações inéditas e cuida da alimentação de
             // retaguarda.
+
+            // ── FRENTE 3 / Onda 3: EMPRESA DO LOTE, obrigatória ───────────────────
+            // Vem ANTES do gate da Onda 2 de propósito: aquele gate pode CANCELAR a
+            // importação, e pedir a empresa depois de o operador classificar os
+            // favorecidos jogaria o trabalho dele no lixo. É uma escolha só.
+            if (!(_cpEmpresasOficiais && _cpEmpresasOficiais.length)) {
+                mostrarToast('Não foi possível importar: o cadastro de Empresas ainda não carregou. Aguarde alguns segundos e importe novamente.', 'warning', true);
+                return;
+            }
+            const empresaLoteEscolhida = await _cpAbrirModalEmpresaLote();
+            if (empresaLoteEscolhida === 'cancelar') {
+                mostrarToast('Importação cancelada, nada foi gravado.', 'warning', true);
+                return; // finally limpa estado; nada foi escrito.
+            }
+            _cpEtlState.empresaLote = String(empresaLoteEscolhida || '').trim().toUpperCase();
+            if (window._cpMostrarLoader) window._cpMostrarLoader(
+                'Preparando importação…',
+                `Empresa do lote: ${_cpEtlState.empresaLote}.`
+            );
 
             // ── GATE de classificação obrigatória (OS-CP-CLASSIFICACAO-IMPORT-01) ──
             // ANTES de qualquer escrita de lançamento: se há favorecido SEM TIPO,
@@ -4417,6 +4881,95 @@
     // Abre o modal e devolve 'ok' | 'cancelar' via Promise (mesmo padrão de
     // _cpAbrirModalDuplicidade). Ao salvar, já aplicou a classificação ao lote
     // em memória e persistiu (admin) ou enfileirou (não-admin).
+    // ── FRENTE 3 / Onda 3: EMPRESA DO LOTE ────────────────────────────────────
+    // Guarda de seleção única PRÓPRIA, e não o `_cpSelectSingleGuard` de cima, de
+    // propósito: aquele chama `_cpRevalidarClassificacao()` no fim, que é do modal
+    // da Onda 2. Reaproveitá-lo aqui dispararia a validação do modal errado. São 10
+    // linhas duplicadas contra o risco de mexer em código validado.
+    function _cpEmpLoteSingleGuard(sel, aoMudar) {
+        let prev = new Set(Array.from(sel.options).filter(o => o.selected).map(o => o.value));
+        sel.addEventListener('change', () => {
+            const marcados = Array.from(sel.options).filter(o => o.selected);
+            if (marcados.length > 1) {
+                const novos = marcados.filter(o => !prev.has(o.value));
+                const manter = novos[0] || marcados[marcados.length - 1];
+                Array.from(sel.options).forEach(o => { o.selected = (o === manter); });
+                sel.dispatchEvent(new Event('cb-multi-sync'));
+            }
+            prev = new Set(Array.from(sel.options).filter(o => o.selected).map(o => o.value));
+            if (typeof aoMudar === 'function') aoMudar();
+        });
+    }
+
+    // Devolve o NOME da empresa escolhida, ou 'cancelar'. Nunca devolve vazio com
+    // decisão de seguir: o botão só habilita com uma empresa marcada, e o caminho
+    // da escrita tem guarda própria de abstenção (não confia só na UI).
+    function _cpAbrirModalEmpresaLote() {
+        return new Promise((resolve) => {
+            const m = document.getElementById('modal-cp-empresa-lote');
+            if (!m) { resolve('cancelar'); return; }
+            document.querySelectorAll('.cb-multi-panel[data-cp-emplote-panel]').forEach(p => p.remove());
+
+            const sel = document.getElementById('cp-empresa-lote-sel');
+            const btnOk = document.getElementById('btn-cp-empresa-lote-confirmar');
+            const btnCancel = document.getElementById('btn-cp-empresa-lote-cancelar');
+            const aviso = document.getElementById('cp-empresa-lote-aviso');
+            if (!sel || !btnOk || !btnCancel) { resolve('cancelar'); return; }
+
+            const empresas = (_cpEmpresasOficiais || []).slice();
+            sel.innerHTML = empresas
+                .map(v => `<option value="${cpEscape(v)}">${cpEscape(v)}</option>`).join('');
+            btnOk.disabled = true;
+            if (aviso) {
+                // O catálogo curado tem 4 empresas alocáveis. Se faltar alguma, o
+                // operador precisa SABER, em vez de escolher a errada por ausência.
+                if (empresas.length < 4) {
+                    aviso.textContent = `O cadastro de empresas tem ${empresas.length} empresa(s) disponível(is). Se a empresa deste arquivo não estiver na lista, cancele e avise o administrador.`;
+                    aviso.classList.remove('hidden');
+                } else {
+                    aviso.classList.add('hidden');
+                }
+            }
+
+            const valorAtual = () => Array.from(sel.options).filter(o => o.selected).map(o => o.value)[0] || '';
+            const revalidar = () => { btnOk.disabled = !valorAtual(); };
+            _cpEmpLoteSingleGuard(sel, revalidar);
+            // O componente em modo portal (`data-cb-portal`) anexa o painel ao
+            // <body> e não o amarra ao select. Mesmo idioma do modal da Onda 2:
+            // fotografa os painéis ANTES do upgrade e marca só os que nasceram
+            // agora, para o cleanup remover exatamente os meus.
+            const panelsAntes = new Set(document.querySelectorAll('.cb-multi-panel'));
+            if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(sel);
+            [...document.querySelectorAll('.cb-multi-panel')]
+                .filter(p => !panelsAntes.has(p) && p.parentElement === document.body)
+                .forEach(p => p.setAttribute('data-cp-emplote-panel', '1'));
+
+            // Loader escondido para não competir com o modal (padrão da duplicidade).
+            if (window._cpEsconderLoader) window._cpEsconderLoader();
+            m.classList.remove('opacity-0', 'pointer-events-none');
+            const card = m.querySelector('div.bg-white');
+            if (card) card.classList.remove('scale-95');
+
+            const cleanup = (dec) => {
+                m.classList.add('opacity-0', 'pointer-events-none');
+                if (card) card.classList.add('scale-95');
+                document.querySelectorAll('.cb-multi-panel[data-cp-emplote-panel]').forEach(p => p.remove());
+                btnOk.removeEventListener('click', onOk);
+                btnCancel.removeEventListener('click', onCancel);
+                document.removeEventListener('keydown', onKey);
+                resolve(dec);
+            };
+            const onOk = () => { if (btnOk.disabled) return; cleanup(valorAtual()); };
+            const onCancel = () => cleanup('cancelar');
+            // Escape CANCELA (gesto deliberado). Clique fora NÃO fecha: o overlay
+            // deste modal não tem `data-modal-overlay`.
+            const onKey = (e) => { if (e.key === 'Escape') onCancel(); };
+            btnOk.addEventListener('click', onOk);
+            btnCancel.addEventListener('click', onCancel);
+            document.addEventListener('keydown', onKey);
+        });
+    }
+
     function _cpAbrirModalClassificacao() {
         return new Promise((resolve) => {
             const m = document.getElementById('modal-cp-classificacao');
@@ -4683,6 +5236,17 @@
             return (venc < _hojeISO) ? 'pago' : statusBase;
         };
         let _calibradosPago = 0;
+        // FRENTE 3 / Onda 3: GUARDA DE ABSTENÇÃO no caminho da ESCRITA. A trava da
+        // UI (botão desabilitado) é a primeira camada; esta é a que vale, porque a
+        // constituição manda a guarda morar no código e num teste, não na disciplina
+        // de quem clica. Sem empresa do lote definida, NADA é gravado: abster-se é o
+        // comportamento seguro, gravar 12 mil lançamentos sem empresa é dano que
+        // depois só se conserta com escrita em massa.
+        if (!String(_cpEtlState?.empresaLote || '').trim()) {
+            if (window._cpEsconderLoader) window._cpEsconderLoader();
+            mostrarToast('Importação abortada: a empresa do lote não foi definida. Nada foi gravado.', 'error', true);
+            return;
+        }
         try {
             for (let i = 0; i < expandido.length; i += CHUNK_SIZE) {
                 const fatia = expandido.slice(i, i + CHUNK_SIZE);
@@ -4697,6 +5261,20 @@
                     // tem CC definido (não há prejuízo; o ETL apenas preenche
                     // um campo que ficaria nulo).
                     const ccHerdado = l._fornecedor?.centro_custo || null;
+                    // FRENTE 3 / Onda 3: CARIMBO DE EMPRESA POR LOTE.
+                    // Regra do diretor: carimba SÓ quem não tem empresa pelo cadastro
+                    // do favorecido; quem já herdaria, MANTÉM a dele. A informação já
+                    // está em memória (cpCarregarFornecedoresMap carrega o doc inteiro
+                    // do fornecedor e `l._fornecedor` foi amarrado no match), então não
+                    // há leitura extra. `empresa_origem` é o RASTRO, e é ele que
+                    // sustenta a guarda da cascata no master.html: sem campo próprio
+                    // não há como distinguir empresa carimbada de empresa herdada, e o
+                    // `cascata_origem` não serve (é uma string só, compartilhada pelos
+                    // três campos cascateáveis, e a cascata seguinte sobrescreve a
+                    // anterior; medido na base real em 2026-09-29).
+                    const _empHerdada = String(l._fornecedor?.empresa || '').trim().toUpperCase();
+                    const _empCarimbo = _empHerdada || String(_cpEtlState.empresaLote || '').trim().toUpperCase();
+                    const _empOrigem = _empHerdada ? 'fornecedor' : 'importacao';
                     const _statusBase = l._projetado ? 'pendente' : (l.situacao || 'pendente');
                     const _statusFinal = _calibrarStatus(_statusBase, l.vencimentoISO);
                     if (_statusFinal === 'pago' && _statusBase === 'pendente') _calibradosPago++;
@@ -4715,6 +5293,9 @@
                         codigo_titulo_ord: l.codigo_titulo_ord || null,
                         codigo_fornecedor: l.codigo || null,
                         centro_custo: ccHerdado,
+                        // FRENTE 3 / Onda 3: empresa agora é atributo da TRANSAÇÃO.
+                        empresa: _empCarimbo || null,
+                        empresa_origem: _empCarimbo ? _empOrigem : null,
                         categoria: l.despesa || null,
                         valor_original: Number(l.valor) || 0,
                         // Status canônico após a calibração automática
@@ -5537,8 +6118,10 @@
     // cota) e NÃO se limita à paginação visual (PAGE_SIZE_CP = 50).
     //
     // - Status → label humano via BADGE_MAP[statusVisual(...)].lbl
-    // - Gestor → lookup em _areaGestorMap (Map<centro_custo, gestor_nome>),
-    //   alimentado pelo listener de AreasContasPagar.
+    // - Gestor → `_cpResponsavelDoReg(reg)`, o lookup ÚNICO da Frente 1
+    //   (OS-CP-PACOTE-ONDAS-01), chaveado por `_cpChaveFiltro` nos DOIS lados do
+    //   cruzamento e alimentado pelo listener de AreasContasPagar. Os três
+    //   consumidores (ordenação, célula, esta exportação) passam pela mesma régua.
     // - Valor → Number puro (Excel agrega automaticamente em SOMA / Σ).
     // - Data Venc → string DD/MM/YYYY (fmtDataBR), aceita pela coluna do Excel.
     // - Cabeçalho em ordem fixa via array `colunas` — preserva a ordem mesmo
@@ -5599,14 +6182,18 @@
             const linhas = new Array(fonte.length);
             for (let i = 0; i < fonte.length; i++) {
                 const r = fonte[i];
+                // FRENTE 1: `cc` segue sendo o valor GRAVADO (é o que vai na planilha,
+                // não a chave em caixa alta); o gestor vem do lookup único.
                 const cc = String(r.centro_custo || '').trim();
-                const gestor = cc ? (_areaGestorMap.get(cc) || '') : '';
+                const gestor = _cpResponsavelDoReg(r).gestor;
                 const visual = statusVisual(r, hoje);
                 const statusLbl = (BADGE_MAP[visual] && BADGE_MAP[visual].lbl) || '';
                 const valor = Number(r.valor_original || r.valor || 0);
                 linhas[i] = {
                     // Empresa — fallbacks múltiplos pra schemas legados.
-                    'Empresa':              r.empresa || r.empresa_nome || r.nome_empresa || r.filial || 'não informado',
+                    // FRENTE 5: acessor único, senão a exportação perde a empresa
+                    // dos lançamentos que só a têm por herança do cadastro.
+                    'Empresa':              _cpEmpresaDeReg(r) || r.empresa_nome || r.nome_empresa || r.filial || 'não informado',
                     'Fornecedor/Favorecido': r.entidade || r.fornecedor_nome || r.favorecido || 'não informado',
                     // Despesa — campo que estava OMITIDO. Usa a mesma variável
                     // que `renderTabela` (r.categoria) com fallbacks legados.
@@ -6232,9 +6819,17 @@
             titulo: 'A Pagar',
             texto: 'É o valor que ainda está pendente, ou seja, as contas que estão aguardando o pagamento.',
         },
-        opex: {
-            titulo: 'OPEX (Despesas Operacionais)',
-            texto: 'OPEX significa "Despesas Operacionais". Aqui mostramos o custo para manter a sua empresa funcionando no dia a dia (como água, luz, salários, aluguéis e sistemas), excluindo os custos diretos com clientes.',
+        interno: {
+            titulo: 'Custo Fornecedor Interno',
+            texto: 'É o custo da sua própria estrutura: as pessoas e prestadores internos, somando o pessoal CLT e o pessoal PJ. Antes esses dois estavam separados e o PJ não aparecia em card nenhum.',
+        },
+        externo: {
+            titulo: 'Custo Fornecedor Externo',
+            texto: 'É o que você paga a fornecedores de fora para a empresa funcionar no dia a dia, como água, luz, aluguel, sistemas e serviços contratados.',
+        },
+        sem_class: {
+            titulo: 'Sem Classificação',
+            texto: 'São os lançamentos cujo favorecido ainda não tem um tipo definido no cadastro, então o sistema não sabe se aquele custo é interno, externo ou de cliente. Clique no card para ver quais são e classificar o favorecido.',
         },
         cliente: {
             titulo: 'Custo Cliente',
@@ -6275,12 +6870,28 @@
     // lightbulb (data-kpi). O lightbulb tem stopPropagation implícito porque
     // tratamos o click no botão ANTES (closest('button[data-kpi]')) — aqui só
     // disparamos quando o clique não foi nele.
+    // FRENTE 2 (OS-CP-PACOTE-ONDAS-01): `valor` escalar virou `valores` ARRAY,
+    // porque o card Custo Fornecedor Interno isola DOIS valores de uma vez (CLT e
+    // PJ). E os cards de natureza passaram a apontar para `cp-filtro-tipo`, que já
+    // tem exatamente os 4 valores mais a sentinela `__SEM_TIPO__`, em vez de
+    // `cp-filtro-classificacao`. Consequência deliberada: `MAP_CLASS_FILTRO` e
+    // `classSetExpandido` ficam INTOCADOS, e o filtro Classificação continua
+    // funcionando como sempre. A comparação de "já é este" virou igualdade de
+    // CONJUNTO, não de valor único.
     const _KPI_FILTRO_MAP = {
-        pago:    { selId: 'cp-filtro-status',        valor: 'pago' },
-        a_pagar: { selId: 'cp-filtro-status',        valor: 'a_vencer' },
-        opex:    { selId: 'cp-filtro-classificacao', valor: 'OPEX' },
-        cliente: { selId: 'cp-filtro-classificacao', valor: 'Cliente' },
+        pago:      { selId: 'cp-filtro-status', valores: ['pago'] },
+        a_pagar:   { selId: 'cp-filtro-status', valores: ['a_vencer'] },
+        interno:   { selId: 'cp-filtro-tipo',   valores: ['Fornecedor Interno', 'Fornecedor Interno - PJ'] },
+        externo:   { selId: 'cp-filtro-tipo',   valores: ['Fornecedor Externo'] },
+        cliente:   { selId: 'cp-filtro-tipo',   valores: ['Cliente'] },
+        sem_class: { selId: 'cp-filtro-tipo',   valores: ['__SEM_TIPO__'] },
     };
+    // Igualdade de conjunto: mesmo tamanho e mesmos membros, ordem irrelevante.
+    function _cpMesmoConjunto(a, b) {
+        if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+        const s = new Set(a);
+        return b.every(v => s.has(v));
+    }
     function _cpToggleFiltroKPI(key) {
         if (key === 'total') {
             limparTodosFiltros();
@@ -6292,12 +6903,11 @@
         const sel = document.getElementById(conf.selId);
         if (!sel) return;
         const atual = getMultiValues(sel);
-        // Toggle: se já é exatamente [valor], limpa. Senão, isola.
-        const jaEhEste = atual.length === 1 && atual[0] === conf.valor;
-        if (jaEhEste) {
+        // Toggle: se já é exatamente o conjunto do card, limpa. Senão, isola.
+        if (_cpMesmoConjunto(atual, conf.valores)) {
             setMultiValues(sel, ['Todos']);
         } else {
-            setMultiValues(sel, [conf.valor]);
+            setMultiValues(sel, conf.valores.slice());
         }
         _cpPage = 1; // mudança de recorte → volta pra pág 1
         renderTudo();
@@ -6318,7 +6928,7 @@
                 const conf = _KPI_FILTRO_MAP[key];
                 if (conf) {
                     const arr = getMultiValues(document.getElementById(conf.selId));
-                    ativo = arr.length === 1 && arr[0] === conf.valor;
+                    ativo = _cpMesmoConjunto(arr, conf.valores);
                 }
             }
             // Classes de "ativo" — ring acentuado + leve tint.

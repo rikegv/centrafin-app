@@ -333,6 +333,15 @@
                     <span class="material-symbols-outlined text-[16px]">receipt_long</span>
                     Banco de Despesas
                 </button>
+                <!-- FRENTE 4 / Onda 4 (OS-CP-PACOTE-ONDAS-01). O switcher de sub-abas é
+                     genérico (querySelectorAll por data-aba-regras-btn), então este
+                     botão e o painel correspondente são HTML puramente ADITIVO: nenhuma
+                     linha de JS de navegação foi alterada. -->
+                <button type="button" data-aba-regras-btn="grupos" role="tab"
+                        class="pb-2.5 text-xs font-extrabold text-slate-400 border-b-2 border-transparent hover:text-secondary transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">account_tree</span>
+                    Grupos de Contas
+                </button>
             </div>
 
             <!-- ════════ ABA 1: ÁREAS & GESTORES ════════ -->
@@ -767,6 +776,21 @@
                             <span class="material-symbols-outlined text-base">filter_alt_off</span>
                             Limpar
                         </button>
+                        <!-- FRENTE 3 (OS-CP-PACOTE-ONDAS-01): atalho para o recorte "sem
+                             empresa" e seleção do FILTRO INTEIRO. O checkbox do
+                             cabeçalho marca só a página visível (50 por vez), e a
+                             correção em bloco dos fornecedores sem empresa precisa
+                             alcançar o recorte todo. -->
+                        <button id="btn-fornm-sem-empresa" type="button" title="Filtrar somente fornecedores sem empresa cadastrada"
+                            class="flex items-center gap-1.5 px-3 py-2 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl text-xs font-bold transition-colors">
+                            <span class="material-symbols-outlined text-base">domain_disabled</span>
+                            Sem Empresa
+                        </button>
+                        <button id="btn-fornm-sel-filtro" type="button" title="Marcar todos os fornecedores do recorte filtrado, não só os desta página"
+                            class="hidden items-center gap-1.5 px-3 py-2 text-secondary bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-xs font-bold transition-colors">
+                            <span class="material-symbols-outlined text-base">select_all</span>
+                            <span id="lbl-fornm-sel-filtro">Selecionar Todos Do Filtro</span>
+                        </button>
                         <span id="fornm-chip-filtros" class="hidden text-[11px] font-medium text-slate-500 px-3 py-1 bg-slate-100 rounded-full"></span>
                         <span id="forn-master-hint" class="text-[11px] text-slate-400 font-medium">—</span>
                         <div class="flex-1"></div>
@@ -918,6 +942,190 @@
             </div>
 
             </div><!-- /aba-regras-despesas -->
+
+            <!-- ════════ ABA 4: GRUPOS DE CONTAS (FRENTE 4 / Onda 4) ════════
+                 Estrutura de 3 níveis: Grupo de Despesa -> Conta de Despesa -> Tipo de
+                 Despesa. O Tipo já existe: é o valor de `categoria` do lançamento, e a
+                 lista dele vem do catálogo `Metadados/CP_Catalogo_Categorias` (1 leitura
+                 de 1 documento, em vez de 51.181).
+                 O grupo NÃO é gravado no lançamento: é derivado em runtime pelo Tipo.
+                 A classificação no DRE (bucket Custo x G&A) NÃO entra nesta frente, por
+                 decisão do diretor: fica para a frente seguinte, junto do DRE por grupo. -->
+            <div id="aba-regras-grupos" data-aba-regras="grupos" class="hidden space-y-8">
+
+                <!-- ▣ 1. GRUPOS DE DESPESA ▣ -->
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary text-[20px]">account_tree</span>
+                        </div>
+                        <div>
+                            <h2 class="font-headline text-base font-extrabold text-secondary">1. Grupos de Despesa</h2>
+                            <p class="text-[11px] text-slate-400 font-medium">O nível mais alto da estrutura. Renomear um grupo não exige retrabalho: o vínculo é por identificador, não por nome.</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div class="xl:col-span-1">
+                            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                                <form id="form-grupo-despesa" class="space-y-3">
+                                    <div>
+                                        <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome do Grupo</label>
+                                        <input id="grupo-despesa-nome" type="text" required maxlength="80"
+                                            placeholder="Ex: Pessoal, Benefícios, Ocupação"
+                                            class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                                    </div>
+                                    <div id="msg-grupo-despesa" class="hidden text-xs font-bold p-2.5 rounded-lg flex items-start gap-2"></div>
+                                    <button type="submit" id="btn-salvar-grupo-despesa"
+                                        class="w-full py-2.5 bg-primary text-secondary font-extrabold rounded-xl shadow-md hover:brightness-105 transition-all flex items-center justify-center gap-2 text-xs">
+                                        <span id="grupo-despesa-save-icon" class="material-symbols-outlined text-base">add</span>
+                                        <span id="lbl-salvar-grupo-despesa">Adicionar Grupo</span>
+                                    </button>
+                                    <button type="button" id="btn-cancelar-edicao-grupo-despesa"
+                                        class="hidden w-full py-2 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                                        Cancelar edição
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="xl:col-span-2">
+                            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div class="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                    <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">Grupos Cadastrados</h3>
+                                    <span id="contador-grupos-despesa" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full tabular-nums">0</span>
+                                </div>
+                                <div id="lista-grupos-despesa" class="max-h-72 overflow-y-auto divide-y divide-slate-100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ▣ 2. CONTAS DE DESPESA ▣ -->
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-9 h-9 rounded-lg bg-tertiary/10 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-tertiary text-[20px]">list_alt</span>
+                        </div>
+                        <div>
+                            <h2 class="font-headline text-base font-extrabold text-secondary">2. Contas de Despesa</h2>
+                            <p class="text-[11px] text-slate-400 font-medium">O nível do meio. Cada conta pertence a um grupo, e é nela que os tipos de despesa são pendurados.</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div class="xl:col-span-1">
+                            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                                <form id="form-conta-despesa" class="space-y-3">
+                                    <div>
+                                        <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome da Conta</label>
+                                        <input id="conta-despesa-nome" type="text" required maxlength="80"
+                                            placeholder="Ex: Vale Transporte, Salários"
+                                            class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Grupo</label>
+                                        <!-- Componente do design system em modo seleção única
+                                             (multi + guarda), NUNCA <select> cru: o select
+                                             nativo abre o dropdown do sistema operacional,
+                                             que não obedece ao tema. -->
+                                        <select id="conta-despesa-grupo" multiple data-checkbox-multi data-cb-portal
+                                            data-placeholder="Selecione o grupo…"
+                                            class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"></select>
+                                    </div>
+                                    <div id="msg-conta-despesa" class="hidden text-xs font-bold p-2.5 rounded-lg flex items-start gap-2"></div>
+                                    <button type="submit" id="btn-salvar-conta-despesa"
+                                        class="w-full py-2.5 bg-primary text-secondary font-extrabold rounded-xl shadow-md hover:brightness-105 transition-all flex items-center justify-center gap-2 text-xs">
+                                        <span id="conta-despesa-save-icon" class="material-symbols-outlined text-base">add</span>
+                                        <span id="lbl-salvar-conta-despesa">Adicionar Conta</span>
+                                    </button>
+                                    <button type="button" id="btn-cancelar-edicao-conta-despesa"
+                                        class="hidden w-full py-2 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                                        Cancelar edição
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="xl:col-span-2">
+                            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div class="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                    <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">Contas Cadastradas</h3>
+                                    <span id="contador-contas-despesa" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full tabular-nums">0</span>
+                                </div>
+                                <div id="lista-contas-despesa" class="max-h-72 overflow-y-auto divide-y divide-slate-100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ▣ 3. VÍNCULO DOS TIPOS DE DESPESA ▣ -->
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-9 h-9 rounded-lg bg-secondary/10 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-secondary text-[20px]">link</span>
+                        </div>
+                        <div>
+                            <h2 class="font-headline text-base font-extrabold text-secondary">3. Vínculo dos Tipos de Despesa</h2>
+                            <p class="text-[11px] text-slate-400 font-medium">Cada tipo de despesa que aparece nos lançamentos aponta para uma conta. A lista nasce ordenada pelo volume de lançamentos, então os primeiros vínculos já cobrem a maior parte da base.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center gap-2">
+                            <span id="tipos-despesa-saude" class="text-[11px] font-bold text-slate-500">Carregando catálogo…</span>
+                            <div class="flex-1"></div>
+                            <input id="tipos-despesa-busca" type="text" placeholder="Buscar tipo de despesa…"
+                                class="w-56 border border-slate-200 rounded-xl py-1.5 px-3 text-xs font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
+                            <select id="tipos-despesa-filtro" multiple data-checkbox-multi data-cb-portal
+                                data-placeholder="Todos"
+                                class="w-40 border border-slate-200 rounded-xl py-1.5 px-3 text-xs font-medium bg-white outline-none">
+                                <option value="Todos" selected>Todos</option>
+                                <option value="__SEM_VINCULO__">Somente Sem Vínculo</option>
+                                <option value="__COM_VINCULO__">Somente Vinculados</option>
+                            </select>
+                        </div>
+                        <div class="px-5 py-2.5 border-b border-slate-100 flex flex-wrap items-center gap-2 bg-white">
+                            <label class="flex items-center gap-2 text-[11px] font-bold text-slate-500">
+                                <input type="checkbox" id="tipos-despesa-sel-todos" class="rounded border-slate-300 text-secondary focus:ring-secondary">
+                                Selecionar visíveis
+                            </label>
+                            <span id="tipos-despesa-sel-count" class="text-[11px] font-bold text-secondary tabular-nums">0 selecionados</span>
+                            <div class="flex-1"></div>
+                            <select id="tipos-despesa-conta-massa" multiple data-checkbox-multi data-cb-portal
+                                data-placeholder="Vincular à conta…"
+                                class="w-56 border border-slate-200 rounded-xl py-1.5 px-3 text-xs font-medium bg-white outline-none"></select>
+                            <button type="button" id="btn-tipos-despesa-vincular-massa" disabled
+                                class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-extrabold shadow-md active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                style="background-color:#002443;color:#ffffff;">
+                                <span class="material-symbols-outlined text-[15px]" style="color:#aad12f;">link</span>
+                                <span style="color:#ffffff;">Vincular Selecionados</span>
+                            </button>
+                        </div>
+                        <div class="max-h-96 overflow-y-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-widest sticky top-0 z-10 shadow-sm">
+                                    <tr>
+                                        <th class="px-4 py-2.5 text-center w-10"></th>
+                                        <th class="px-4 py-2.5 text-left">Tipo de Despesa</th>
+                                        <th class="px-4 py-2.5 text-right w-24">Lançamentos</th>
+                                        <th class="px-4 py-2.5 text-left w-64">Conta de Despesa</th>
+                                        <th class="px-4 py-2.5 text-left w-40">Grupo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tipos-despesa-corpo" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                            <p id="tipos-despesa-vazio" class="hidden text-[11px] text-slate-400 italic text-center py-8">
+                                Nenhum tipo de despesa no recorte atual.
+                            </p>
+                        </div>
+                        <div class="px-5 py-2.5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                            <span id="tipos-despesa-pag-info" class="text-[11px] text-slate-500 font-medium tabular-nums"></span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="tipos-despesa-pag-prev" class="px-2.5 py-1 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
+                                <span id="tipos-despesa-pag-pagina" class="text-[11px] font-bold text-slate-500 tabular-nums"></span>
+                                <button type="button" id="tipos-despesa-pag-next" class="px-2.5 py-1 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">Próximo</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /aba-regras-grupos -->
 
         </section>
 
@@ -1140,6 +1348,19 @@
                         <span class="material-symbols-outlined text-[14px] mt-0.5 text-tertiary">info</span>
                         <span>Esta operação sobrescreve o campo nos fornecedores selecionados E propaga em cascata para as faturas em /ContasAPagar — dashboards permanecem conciliados.</span>
                     </p>
+                    <!-- FRENTE 3 (OS-CP-PACOTE-ONDAS-01): DRY-RUN obrigatório. A escrita
+                         em massa deixou de aplicar no primeiro clique: o primeiro clique
+                         MOSTRA o que mudaria, fornecedor por fornecedor, e só o segundo
+                         grava. Exigência do diretor para escrita em massa em produção. -->
+                    <div id="fornm-massa-dryrun" class="hidden border border-slate-200 rounded-xl overflow-hidden">
+                        <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[15px] text-secondary">fact_check</span>
+                            <span class="text-[11px] font-extrabold text-secondary uppercase tracking-widest">Prévia Da Alteração</span>
+                            <span id="fornm-dryrun-resumo" class="text-[11px] font-medium text-slate-500 ml-auto tabular-nums"></span>
+                        </div>
+                        <div id="fornm-dryrun-corpo" class="max-h-56 overflow-y-auto divide-y divide-slate-100 text-[11px]"></div>
+                        <p id="fornm-dryrun-nota" class="px-3 py-2 bg-amber-50 border-t border-amber-200 text-[11px] font-medium text-amber-800"></p>
+                    </div>
                 </div>
                 <div class="px-7 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
                     <button id="btn-cancelar-fornm-massa" type="button" class="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">Cancelar</button>
@@ -3894,6 +4115,32 @@
         document.getElementById('btn-filtros-fornm-limpar').addEventListener('click', () => fornmLimparTodosFiltros());
         document.getElementById('btn-limpar-filtros-fornm').addEventListener('click', () => fornmLimparTodosFiltros());
 
+        // ── FRENTE 3 (OS-CP-PACOTE-ONDAS-01): correção em bloco dos sem empresa ──
+        // Atalho para o recorte. Não cria filtro novo: usa a sentinela
+        // `__SEM_EMPRESA__` que já existe no filtro de Empresa desde 2026-05-20.
+        document.getElementById('btn-fornm-sem-empresa').addEventListener('click', () => {
+            const sel = document.getElementById('fornm-filtro-empresa');
+            if (!sel) return;
+            setMultiValues(sel, ['__SEM_EMPRESA__']);
+            _fornMPage = 1;
+            _fornmAtualizarChipFiltros();
+            fornMRender();
+        });
+        // Seleção do recorte INTEIRO. `_fornMUltimosFiltrados` já é o conjunto
+        // filtrado completo (a paginação é só de exibição), então não há
+        // recomputação de filtro aqui: reusa o que o render acabou de produzir.
+        document.getElementById('btn-fornm-sel-filtro').addEventListener('click', () => {
+            const alvo = _fornMUltimosFiltrados || [];
+            if (!alvo.length) return;
+            const todosJaMarcados = alvo.every(r => _fornMSelecao.has(r._id));
+            if (todosJaMarcados) {
+                for (const r of alvo) _fornMSelecao.delete(r._id);
+            } else {
+                for (const r of alvo) _fornMSelecao.add(r._id);
+            }
+            fornMRender();
+        });
+
         function fornMRender() {
             const tbody = document.getElementById('forn-master-corpo');
             const vazio = document.getElementById('forn-master-vazio');
@@ -4032,6 +4279,27 @@
                 master.indeterminate = marcadosVisiveis > 0 && marcadosVisiveis < totalVisivel;
             }
             const totalSel = _fornMSelecao.size;
+            // FRENTE 3: botão de selecionar o recorte INTEIRO. Aparece quando há
+            // recorte e ele não cabe numa página só, que é exatamente o caso da
+            // correção em bloco (127 fornecedores sem empresa contra 50 por página).
+            // O rótulo diz o número e vira "Desmarcar" quando tudo já está marcado,
+            // para o gesto ter volta.
+            {
+                const btnSelF = document.getElementById('btn-fornm-sel-filtro');
+                const lblSelF = document.getElementById('lbl-fornm-sel-filtro');
+                const alvo = _fornMUltimosFiltrados || [];
+                if (btnSelF && lblSelF) {
+                    const mostrar = alvo.length > FORNM_PAGE_SIZE;
+                    btnSelF.classList.toggle('hidden', !mostrar);
+                    btnSelF.classList.toggle('flex', mostrar);
+                    if (mostrar) {
+                        const todos = alvo.every(r => _fornMSelecao.has(r._id));
+                        lblSelF.textContent = todos
+                            ? `Desmarcar Os ${alvo.length.toLocaleString('pt-BR')}`
+                            : `Selecionar Todos Do Filtro (${alvo.length.toLocaleString('pt-BR')})`;
+                    }
+                }
+            }
             // Contadores (delete + cc-massa + badge geral). Os menu items são
             // sempre visíveis no dropdown — só o trigger "Ações em Lote" liga/
             // desliga conforme a seleção. Frente 1 (auditoria 2026-05-20).
@@ -4248,6 +4516,9 @@
                     if (empresaAntiga !== empresa) {
                         const apl = await cpCascataCampoFornecedor(codFornEdit, 'empresa', empresa || null);
                         if (apl > 0) cascataMsg += ` ${apl} fatura(s) atualizada(s) em cascata (Empresa).`;
+                        // FRENTE 3: o preservado aparece MESMO quando apl é 0, senão o
+                        // operador conclui que a cascata não rodou.
+                        cascataMsg += cpCascataMsgPreservados();
                     }
                     if (tipoAntigo !== tipo) {
                         // Mapeamento de nome: Fornecedor.tipo → ContasAPagar.tipo_entidade.
@@ -4353,12 +4624,46 @@
                 if (codStr !== String(codNum)) {
                     queries.push(query(collection(db, 'ContasAPagar'), where('codigo_fornecedor', '==', codStr)));
                 }
-                const idsAtingidos = new Set();
+                // FRENTE 3 / Onda 3 (OS-CP-PACOTE-ONDAS-01): guarda a ORIGEM junto do
+                // id. Antes só o id era coletado e o dado do doc era descartado, então
+                // não havia como a cascata saber que aquela fatura tinha empresa
+                // carimbada por lote na importação.
+                const atingidos = new Map(); // id → { empresa_origem }
                 for (const q of queries) {
                     const snap = await getDocs(q);
-                    snap.forEach(d => idsAtingidos.add(d.id));
+                    snap.forEach(d => {
+                        const dd = d.data() || {};
+                        atingidos.set(d.id, { empresa_origem: String(dd.empresa_origem || '').trim() });
+                    });
                 }
-                const ids = [...idsAtingidos];
+                // A GUARDA. Só vale para `empresa`: centro_custo e tipo_entidade
+                // seguem cascateando exatamente como antes, porque a Frente 3 não
+                // mudou a verdade deles.
+                //
+                // Ausência de `empresa_origem` conta como 'fornecedor', isto é,
+                // CASCATEIA. É isso que prova que a guarda não quebra o uso legítimo
+                // de hoje: nenhum dos 51.181 documentos existentes tem esse campo,
+                // então para 100% da base atual a guarda é um no-op e a cascata se
+                // comporta igual. Só fatura criada DEPOIS, com carimbo explícito de
+                // lote, fica protegida.
+                //
+                // Por que campo próprio e não `cascata_origem`: medido na base real em
+                // 2026-09-29, existem documentos cuja empresa foi gravada por uma
+                // cascata de empresa mas que hoje carregam o marcador
+                // `#centro_custo`, porque `cascata_origem` é UMA string compartilhada
+                // pelos três campos cascateáveis e a cascata seguinte sobrescreve a
+                // anterior. Como marcador de proveniência, ele mente.
+                const ORIGENS_PROTEGIDAS = new Set(['importacao', 'manual', 'backfill']);
+                const ids = [];
+                let preservados = 0;
+                for (const [id, meta] of atingidos) {
+                    if (campo === 'empresa' && ORIGENS_PROTEGIDAS.has(meta.empresa_origem)) {
+                        preservados++;
+                        continue;
+                    }
+                    ids.push(id);
+                }
+                cpCascataCampoFornecedor.ultimoResultado = { aplicados: 0, preservados };
                 if (!ids.length) return 0;
 
                 const CHUNK = 400;
@@ -4378,11 +4683,26 @@
                     aplicados += fatia.length;
                     await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
                 }
+                cpCascataCampoFornecedor.ultimoResultado = { aplicados, preservados };
                 return aplicados;
             } catch (err) {
                 console.warn(`[Cascata ${campo}] falhou (best-effort):`, err?.code || err?.message);
                 return 0;
             }
+        }
+        // FRENTE 3: canal do detalhe da última cascata. O RETORNO da função continua
+        // sendo o número de aplicados (contrato intocado, 4 pontos de chamada), e o
+        // que a guarda preservou vem por aqui. Abster-se em silêncio seria tão ruim
+        // quanto sobrescrever em silêncio: o operador precisa saber que existem
+        // faturas com verdade própria que a cascata respeitou.
+        // O detalhe é PROPRIEDADE da própria função, e não uma variável separada, para
+        // não depender de ordem de declaração: `function` é hoisted, então qualquer
+        // ponto que consegue CHAMAR a cascata também consegue ler o resultado dela.
+        function cpCascataMsgPreservados() {
+            const p = Number(cpCascataCampoFornecedor.ultimoResultado?.preservados) || 0;
+            return p > 0
+                ? ` ${p} fatura(s) preservada(s) por terem empresa definida na importação.`
+                : '';
         }
 
         async function fornMCriarSolicitacao(payload) {
@@ -4449,7 +4769,16 @@
             const lista = [];
             snap.forEach(d => {
                 const data = d.data() || {};
-                const nome = String(data.nome_fantasia || data.nome || d.id || '').trim();
+                // FRENTE 3 (OS-CP-PACOTE-ONDAS-01): mesmo critério aplicado ao seletor
+                // da importação no Gerenciador. Só entra quem tem o campo canônico
+                // `nome`. O diretor declarou 4 empresas alocáveis (NEAT, SOULAN ADM,
+                // SOULAN CONSULTORIA, ESTÁGIO); os dois documentos restantes têm só
+                // `nome_fantasia` e não são empresas do grupo. Oferecê-los aqui
+                // permitiria GRAVAR uma empresa inválida em massa, que é justamente o
+                // que a decisão quis evitar. O fallback `|| d.id` também saiu: ele só
+                // poderia exibir um ID cru do Firestore como nome de empresa.
+                if (!String(data.nome || '').trim()) return;
+                const nome = String(data.nome_fantasia || data.nome).trim();
                 if (nome) lista.push(nome);
             });
             lista.sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -4491,6 +4820,9 @@
             } else {
                 return;
             }
+            // FRENTE 3: o modal SEMPRE abre no passo da prévia, nunca com uma
+            // confirmação herdada de uma abertura anterior.
+            _fornMLimparDryRun();
             fornMAbrirModal('modal-alterar-genrico-massa');
         }
         document.getElementById('forn-master-btn-empresa-massa').addEventListener('click', () => fornMAbrirMassaGenerico('empresa'));
@@ -4519,6 +4851,7 @@
                     // pra mesmo campo `empresa`; Tipo cascateia pra `tipo_entidade`.
                     let aplicados = 0;
                     let cascataTotal = 0;
+                    let preservadosTotal = 0; // FRENTE 3: guarda da cascata de empresa
                     const campoFatura = _fornMCampoMassa === 'tipo' ? 'tipo_entidade' : 'empresa';
                     for (let i = 0; i < ids.length; i += FORNM_CHUNK) {
                         const fatia = ids.slice(i, i + FORNM_CHUNK);
@@ -4538,12 +4871,17 @@
                             const cod = reg?.codigo ?? id;
                             const apl = await cpCascataCampoFornecedor(cod, campoFatura, valor);
                             cascataTotal += (apl || 0);
+                            // FRENTE 3: acumula o que a guarda preservou neste lote.
+                            preservadosTotal += Number(cpCascataCampoFornecedor.ultimoResultado?.preservados) || 0;
                         }
                         // Yield ao browser entre macro-chunks.
                         await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
                     }
                     const labelCampo = _fornMCampoMassa === 'empresa' ? 'empresa' : 'tipo';
-                    fornMToast(`${aplicados} fornecedor(es) atualizado(s) (${labelCampo}). ${cascataTotal} fatura(s) em cascata.`, 'check_circle');
+                    const msgPreserv = preservadosTotal > 0
+                        ? ` ${preservadosTotal} fatura(s) preservada(s) por terem empresa definida na importação.`
+                        : '';
+                    fornMToast(`${aplicados} fornecedor(es) atualizado(s) (${labelCampo}). ${cascataTotal} fatura(s) em cascata.${msgPreserv}`, 'check_circle');
                 } else {
                     // Esteira: 1 UPDATE por fornecedor com snapshot antes/depois.
                     let pendentes = 0;
@@ -4565,6 +4903,9 @@
                     fornMToast(MSG_ESTEIRA_AVISO, 'check_circle');
                 }
                 _fornMSelecao.clear();
+                // FRENTE 3: prévia consumida. A próxima alteração em massa recomeça
+                // pelo passo de conferência, sempre.
+                _fornMLimparDryRun();
                 if (typeof fornMRender === 'function') fornMRender();
                 fornMFecharModal('modal-alterar-genrico-massa');
             } catch (err) {
@@ -4577,7 +4918,706 @@
                 btn.disabled = false;
             }
         }
-        document.getElementById('btn-confirmar-fornm-massa').addEventListener('click', () => fornMAplicarMassaGenerico());
+        // ── FRENTE 3 (OS-CP-PACOTE-ONDAS-01): DRY-RUN OBRIGATÓRIO ────────────────
+        // A escrita em massa passou a ter dois passos. 1º clique: mostra a prévia,
+        // fornecedor por fornecedor, com o valor atual e o novo, e conta quantos de
+        // fato MUDAM contra quantos já estão no valor alvo. 2º clique: grava.
+        // `_fornMDryRunOk` guarda a assinatura exata (campo + valor + conjunto de ids)
+        // que foi conferida. Se qualquer coisa mudar depois da prévia, ela é
+        // invalidada e o operador tem que conferir de novo: confirmar uma lista e
+        // gravar outra é o erro que este passo existe para impedir.
+        let _fornMDryRunOk = null;
+
+        function _fornMAssinaturaDryRun(campo, valor, ids) {
+            return JSON.stringify({ campo, valor, ids: [...ids].sort() });
+        }
+        function _fornMLimparDryRun() {
+            _fornMDryRunOk = null;
+            const box = document.getElementById('fornm-massa-dryrun');
+            if (box) box.classList.add('hidden');
+            const btn = document.getElementById('btn-confirmar-fornm-massa');
+            if (btn) {
+                const lbl = btn.querySelector('span:last-child');
+                if (lbl) lbl.textContent = 'Ver Prévia Da Alteração';
+            }
+        }
+        function _fornMMontarDryRun(campo, valor, ids) {
+            const box = document.getElementById('fornm-massa-dryrun');
+            const corpo = document.getElementById('fornm-dryrun-corpo');
+            const resumo = document.getElementById('fornm-dryrun-resumo');
+            const nota = document.getElementById('fornm-dryrun-nota');
+            if (!box || !corpo) return;
+            const campoForn = campo === 'tipo' ? 'tipo' : 'empresa';
+            const regs = ids.map(id => _fornMRegistros.find(r => r._id === id)).filter(Boolean);
+            const mudam = [], iguais = [];
+            for (const r of regs) {
+                const atual = String(r[campoForn] || '').trim();
+                (atual === valor ? iguais : mudam).push({ r, atual });
+            }
+            corpo.innerHTML = mudam.length
+                ? mudam.slice(0, 200).map(({ r, atual }) => `
+                    <div class="px-3 py-1.5 flex items-center gap-2">
+                        <span class="font-mono text-slate-400 tabular-nums w-14 shrink-0">${escapeHTMLm(String(r.codigo ?? r._id))}</span>
+                        <span class="font-bold text-slate-700 truncate flex-1">${escapeHTMLm(r.nome || 'não informado')}</span>
+                        <span class="text-slate-400 italic shrink-0">${escapeHTMLm(atual || 'não informado')}</span>
+                        <span class="material-symbols-outlined text-[13px] text-slate-300 shrink-0">arrow_forward</span>
+                        <span class="font-extrabold text-secondary shrink-0">${escapeHTMLm(valor)}</span>
+                    </div>`).join('')
+                : '<p class="px-3 py-3 text-slate-400 italic">Nenhum fornecedor mudaria de valor.</p>';
+            if (resumo) {
+                resumo.textContent = `${mudam.length} mudam · ${iguais.length} já estão em "${valor}"`
+                    + (mudam.length > 200 ? ` · mostrando os 200 primeiros` : '');
+            }
+            if (nota) {
+                nota.textContent = mudam.length
+                    ? `Ao confirmar, ${mudam.length} cadastro(s) serão gravados e a cascata propagará para as faturas em ContasAPagar. Faturas com empresa definida na importação são preservadas pela guarda.`
+                    : 'Nada será gravado se você confirmar, porque nenhum valor mudaria.';
+            }
+            box.classList.remove('hidden');
+            return mudam.length;
+        }
+        document.getElementById('btn-confirmar-fornm-massa').addEventListener('click', () => {
+            const ids = [..._fornMSelecao];
+            const campo = _fornMCampoMassa;
+            if (!ids.length || !campo) return;
+            const valor = String(
+                (campo === 'empresa'
+                    ? document.getElementById('fornm-massa-select-empresa').value
+                    : document.getElementById('fornm-massa-select-tipo').value) || ''
+            ).trim();
+            if (!valor) {
+                fornMToast(`Selecione um valor para ${campo === 'empresa' ? 'a empresa' : 'o tipo'}.`, 'warning', true);
+                return;
+            }
+            const assinatura = _fornMAssinaturaDryRun(campo, valor, ids);
+            if (_fornMDryRunOk === assinatura) {
+                fornMAplicarMassaGenerico();   // 2º clique: grava
+                return;
+            }
+            // 1º clique, ou algo mudou desde a prévia: mostra e NÃO grava.
+            const quantosMudam = _fornMMontarDryRun(campo, valor, ids);
+            _fornMDryRunOk = assinatura;
+            const btn = document.getElementById('btn-confirmar-fornm-massa');
+            const lbl = btn && btn.querySelector('span:last-child');
+            if (lbl) {
+                lbl.textContent = quantosMudam
+                    ? `Confirmar E Aplicar (${quantosMudam})`
+                    : 'Nada A Aplicar';
+            }
+        });
+        // Trocar o valor alvo invalida a prévia conferida.
+        ['fornm-massa-select-empresa', 'fornm-massa-select-tipo'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => _fornMLimparDryRun());
+        });
+
+        /* ══════════════════════════════════════════════════════════════════════
+           FRENTE 4 / Onda 4 (OS-CP-PACOTE-ONDAS-01): GRUPOS DE CONTAS
+           Grupo de Despesa -> Conta de Despesa -> Tipo de Despesa.
+
+           O Tipo de Despesa NAO e cadastrado aqui: ele JA EXISTE como o valor de
+           `categoria` dos lancamentos. A lista dos 104 tipos vem do catalogo
+           `Metadados/CP_Catalogo_Categorias`, que e UM documento com o nome e o
+           VOLUME de cada tipo. Sem ele, esta tela teria que ler 51.181 documentos
+           de /ContasAPagar a cada abertura.
+
+           `CP_Tipos_Despesa` guarda apenas os VINCULOS que o diretor fizer, um doc
+           por tipo vinculado, com docId = slug deterministico (reseed nao duplica).
+           Catalogo e vinculo sao coisas diferentes de proposito: semear 104 vinculos
+           vazios criaria duas listas para manter em sincronia.
+
+           O bucket do DRE (Custo x G&A) NAO entra nesta frente, por decisao do
+           diretor: vem na frente seguinte, junto do DRE por grupo.
+           ══════════════════════════════════════════════════════════════════════ */
+        const GD_COL_GRUPOS = 'CP_Grupos_Contas';
+        const GD_COL_CONTAS = 'CP_Contas_Despesa';
+        const GD_COL_TIPOS  = 'CP_Tipos_Despesa';
+        const GD_PAGE_SIZE = 25;
+        const GD_CHUNK = 450;
+
+        let _gdGrupos = new Map();      // id → { nome }
+        let _gdContas = new Map();      // id → { nome, grupo_id }
+        let _gdTipos  = new Map();      // tipo_norm → { docId, conta_id }
+        let _gdCatalogo = [];           // [{ tipo, tipo_norm, slug, docs }] por volume desc
+        let _gdCatalogoTotalDocs = 0;
+        let _gdCatalogoAtualizadoEm = '';
+        let _gdPage = 1;
+        let _gdBusca = '';
+        const _gdSelecao = new Set();   // tipo_norm marcados
+        let _gdEditGrupoId = null;
+        let _gdEditContaId = null;
+        let _gdConfirmando = null;      // chave do item aguardando 2o clique de exclusao
+        let _gdConfirmTimer = null;
+
+        // MESMA regra de `_cpChaveFiltro` do Gerenciador e do script de catalogo:
+        // colapsa espaco interno, apara borda, sobe caixa, e PRESERVA ACENTO de
+        // proposito (incidente "ESTAGIO" de 2026-06-19, em que tirar acento juntou
+        // valores distintos no Faturamento). Tipo de despesa contabil nao pode ser
+        // fundido com outro por causa de acento.
+        const gdChave = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
+
+        // Seletor unico usando o componente do design system (multi + guarda). O
+        // <select> cru e proibido: ele abre o dropdown do sistema operacional, que
+        // nao obedece ao tema.
+        function gdSingleGuard(sel, aoMudar) {
+            let prev = new Set(Array.from(sel.options).filter(o => o.selected).map(o => o.value));
+            sel.addEventListener('change', () => {
+                const marcados = Array.from(sel.options).filter(o => o.selected);
+                if (marcados.length > 1) {
+                    const novos = marcados.filter(o => !prev.has(o.value));
+                    const manter = novos[0] || marcados[marcados.length - 1];
+                    Array.from(sel.options).forEach(o => { o.selected = (o === manter); });
+                    sel.dispatchEvent(new Event('cb-multi-sync'));
+                }
+                prev = new Set(Array.from(sel.options).filter(o => o.selected).map(o => o.value));
+                if (typeof aoMudar === 'function') aoMudar();
+            });
+        }
+        const gdValorUnico = (sel) => (sel ? (Array.from(sel.options).filter(o => o.selected).map(o => o.value)[0] || '') : '');
+
+        function gdOpcoesContas() {
+            // Rotulo "Conta (Grupo)" para o diretor nao precisar decorar a hierarquia.
+            return [..._gdContas.entries()].map(([id, c]) => {
+                const g = c.grupo_id ? _gdGrupos.get(c.grupo_id) : null;
+                return { id, label: g ? `${c.nome} (${g.nome})` : `${c.nome} (sem grupo)` };
+            }).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+        }
+        function gdRepopularSelects() {
+            const selG = document.getElementById('conta-despesa-grupo');
+            if (selG) {
+                const atual = gdValorUnico(selG);
+                const nomes = [..._gdGrupos.entries()].sort((a, b) => a[1].nome.localeCompare(b[1].nome, 'pt-BR'));
+                selG.innerHTML = nomes.map(([id, g]) => `<option value="${escapeHTMLm(id)}">${escapeHTMLm(g.nome)}</option>`).join('');
+                if (atual && _gdGrupos.has(atual)) setMultiValues(selG, [atual]);
+                if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(selG);
+            }
+            const selM = document.getElementById('tipos-despesa-conta-massa');
+            if (selM) {
+                const atual = gdValorUnico(selM);
+                selM.innerHTML = gdOpcoesContas()
+                    .map(o => `<option value="${escapeHTMLm(o.id)}">${escapeHTMLm(o.label)}</option>`).join('');
+                if (atual && _gdContas.has(atual)) setMultiValues(selM, [atual]);
+                if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(selM);
+            }
+        }
+
+        function gdMsg(idEl, texto, erro) {
+            const el = document.getElementById(idEl);
+            if (!el) return;
+            if (!texto) { el.classList.add('hidden'); el.textContent = ''; return; }
+            el.className = 'text-xs font-bold p-2.5 rounded-lg flex items-start gap-2 '
+                + (erro ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700');
+            el.textContent = texto;
+        }
+
+        // Exclusao em DOIS cliques no proprio botao, sem dialogo nativo (proibido) e
+        // sem modal novo. O primeiro clique arma, o segundo consuma, e o estado se
+        // desarma sozinho em 4 segundos.
+        function gdArmarConfirmacao(chave, render) {
+            _gdConfirmando = chave;
+            if (_gdConfirmTimer) clearTimeout(_gdConfirmTimer);
+            _gdConfirmTimer = setTimeout(() => { _gdConfirmando = null; render(); }, 4000);
+            render();
+        }
+
+        function gdRenderGrupos() {
+            const lista = document.getElementById('lista-grupos-despesa');
+            const cont = document.getElementById('contador-grupos-despesa');
+            if (!lista) return;
+            const arr = [..._gdGrupos.entries()].sort((a, b) => a[1].nome.localeCompare(b[1].nome, 'pt-BR'));
+            if (cont) cont.textContent = String(arr.length);
+            if (!arr.length) {
+                lista.innerHTML = '<p class="px-5 py-6 text-[11px] text-slate-400 italic text-center">Nenhum grupo cadastrado. Comece criando os grupos de despesa.</p>';
+                return;
+            }
+            lista.innerHTML = arr.map(([id, g]) => {
+                const nContas = [..._gdContas.values()].filter(c => c.grupo_id === id).length;
+                const nTipos = [..._gdTipos.values()].filter(t => {
+                    const c = t.conta_id ? _gdContas.get(t.conta_id) : null;
+                    return c && c.grupo_id === id;
+                }).length;
+                const armado = _gdConfirmando === `g:${id}`;
+                return `
+                <div class="px-5 py-3 flex items-center gap-3">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-extrabold text-secondary truncate">${escapeHTMLm(g.nome)}</p>
+                        <p class="text-[10px] text-slate-400 font-medium tabular-nums">${nContas} conta(s) · ${nTipos} tipo(s) de despesa</p>
+                    </div>
+                    <button type="button" data-gd-editar-grupo="${escapeHTMLm(id)}" title="Editar"
+                        class="p-1.5 rounded-lg text-slate-400 hover:text-secondary hover:bg-slate-100 transition-colors">
+                        <span class="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                    <button type="button" data-gd-excluir-grupo="${escapeHTMLm(id)}"
+                        title="${nContas ? 'Não pode excluir: há contas neste grupo' : 'Excluir grupo'}"
+                        class="p-1.5 rounded-lg transition-colors ${nContas ? 'text-slate-300 cursor-not-allowed' : (armado ? 'text-white bg-red-600' : 'text-slate-400 hover:text-red-600 hover:bg-red-50')}">
+                        <span class="material-symbols-outlined text-[18px]">${armado ? 'check' : 'delete'}</span>
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        function gdRenderContas() {
+            const lista = document.getElementById('lista-contas-despesa');
+            const cont = document.getElementById('contador-contas-despesa');
+            if (!lista) return;
+            const arr = gdOpcoesContas();
+            if (cont) cont.textContent = String(arr.length);
+            if (!arr.length) {
+                lista.innerHTML = '<p class="px-5 py-6 text-[11px] text-slate-400 italic text-center">Nenhuma conta cadastrada. Crie um grupo primeiro e depois as contas dele.</p>';
+                return;
+            }
+            lista.innerHTML = arr.map(o => {
+                const c = _gdContas.get(o.id);
+                const g = c && c.grupo_id ? _gdGrupos.get(c.grupo_id) : null;
+                const nTipos = [..._gdTipos.values()].filter(t => t.conta_id === o.id).length;
+                const armado = _gdConfirmando === `c:${o.id}`;
+                return `
+                <div class="px-5 py-3 flex items-center gap-3">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-extrabold text-secondary truncate">${escapeHTMLm(c ? c.nome : '')}</p>
+                        <p class="text-[10px] text-slate-400 font-medium">
+                            ${g ? escapeHTMLm(g.nome) : '<span class="text-amber-600">grupo não informado</span>'}
+                            · <span class="tabular-nums">${nTipos} tipo(s)</span>
+                        </p>
+                    </div>
+                    <button type="button" data-gd-editar-conta="${escapeHTMLm(o.id)}" title="Editar"
+                        class="p-1.5 rounded-lg text-slate-400 hover:text-secondary hover:bg-slate-100 transition-colors">
+                        <span class="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                    <button type="button" data-gd-excluir-conta="${escapeHTMLm(o.id)}"
+                        title="${nTipos ? 'Não pode excluir: há tipos de despesa vinculados' : 'Excluir conta'}"
+                        class="p-1.5 rounded-lg transition-colors ${nTipos ? 'text-slate-300 cursor-not-allowed' : (armado ? 'text-white bg-red-600' : 'text-slate-400 hover:text-red-600 hover:bg-red-50')}">
+                        <span class="material-symbols-outlined text-[18px]">${armado ? 'check' : 'delete'}</span>
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        function gdRenderTipos() {
+            const corpo = document.getElementById('tipos-despesa-corpo');
+            const vazio = document.getElementById('tipos-despesa-vazio');
+            const saude = document.getElementById('tipos-despesa-saude');
+            if (!corpo) return;
+
+            const filtroArr = getMultiValues(document.getElementById('tipos-despesa-filtro'));
+            const soSem = filtroArr.includes('__SEM_VINCULO__');
+            const soCom = filtroArr.includes('__COM_VINCULO__');
+            const termo = gdChave(_gdBusca);
+
+            // Contador de SAUDE: o diretor precisa saber se o trabalho dele acabou, e a
+            // medida honesta nao e "quantos tipos faltam", e quanto da BASE ficou sem
+            // grupo. Um tipo raro sem vinculo pesa muito menos que um de 9.313 docs.
+            let vinculados = 0, docsVinculados = 0;
+            for (const it of _gdCatalogo) {
+                const v = _gdTipos.get(it.tipo_norm);
+                if (v && v.conta_id) { vinculados++; docsVinculados += it.docs; }
+            }
+            const semVinculo = _gdCatalogo.length - vinculados;
+            const pctDocs = _gdCatalogoTotalDocs
+                ? ((docsVinculados / _gdCatalogoTotalDocs) * 100) : 0;
+            if (saude) {
+                // A data do catálogo fica VISÍVEL de propósito. Ele é gerado pelo
+                // script `seed-catalogo-categorias-cp.cjs`, não se atualiza sozinho a
+                // cada importação, e um tipo de despesa novo só aparece aqui depois de
+                // regerar. Esconder isso faria o contador de saúde mentir.
+                const q = _gdCatalogoAtualizadoEm;
+                saude.textContent = _gdCatalogo.length
+                    ? `${_gdCatalogo.length} tipos · ${semVinculo} sem vínculo · ${pctDocs.toFixed(1)}% dos lançamentos já têm grupo`
+                        + (q ? ` · catálogo de ${q}` : '')
+                    : 'Catálogo de tipos de despesa ainda não gerado.';
+            }
+
+            const filtrados = _gdCatalogo.filter(it => {
+                const v = _gdTipos.get(it.tipo_norm);
+                const temVinc = !!(v && v.conta_id);
+                if (soSem && temVinc) return false;
+                if (soCom && !temVinc) return false;
+                if (termo && !gdChave(it.tipo).includes(termo)) return false;
+                return true;
+            });
+
+            const totalPaginas = Math.max(1, Math.ceil(filtrados.length / GD_PAGE_SIZE));
+            if (_gdPage > totalPaginas) _gdPage = totalPaginas;
+            const inicio = (_gdPage - 1) * GD_PAGE_SIZE;
+            const pagina = filtrados.slice(inicio, inicio + GD_PAGE_SIZE);
+
+            const info = document.getElementById('tipos-despesa-pag-info');
+            const lblPag = document.getElementById('tipos-despesa-pag-pagina');
+            const prev = document.getElementById('tipos-despesa-pag-prev');
+            const next = document.getElementById('tipos-despesa-pag-next');
+            if (info) info.textContent = filtrados.length
+                ? `${(inicio + 1).toLocaleString('pt-BR')}–${Math.min(inicio + GD_PAGE_SIZE, filtrados.length).toLocaleString('pt-BR')} de ${filtrados.length.toLocaleString('pt-BR')}`
+                : '';
+            if (lblPag) lblPag.textContent = `Página ${_gdPage} / ${totalPaginas}`;
+            if (prev) prev.disabled = _gdPage <= 1;
+            if (next) next.disabled = _gdPage >= totalPaginas;
+
+            if (!pagina.length) {
+                corpo.innerHTML = '';
+                if (vazio) vazio.classList.remove('hidden');
+                gdAtualizarUISelecao();
+                return;
+            }
+            if (vazio) vazio.classList.add('hidden');
+
+            const opts = gdOpcoesContas();
+            corpo.innerHTML = pagina.map(it => {
+                const v = _gdTipos.get(it.tipo_norm);
+                const contaId = (v && v.conta_id) || '';
+                const conta = contaId ? _gdContas.get(contaId) : null;
+                const grupo = conta && conta.grupo_id ? _gdGrupos.get(conta.grupo_id) : null;
+                const marcado = _gdSelecao.has(it.tipo_norm) ? 'checked' : '';
+                return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-2 text-center">
+                        <input type="checkbox" class="gd-tipo-check rounded border-slate-300 text-secondary focus:ring-secondary"
+                               data-tipo-norm="${escapeHTMLm(it.tipo_norm)}" ${marcado}>
+                    </td>
+                    <td class="px-4 py-2 text-[12px] font-bold text-slate-800">${escapeHTMLm(it.tipo)}</td>
+                    <td class="px-4 py-2 text-[12px] text-right text-slate-500 tabular-nums">${it.docs.toLocaleString('pt-BR')}</td>
+                    <td class="px-4 py-2">
+                        <select class="gd-tipo-conta w-full border border-slate-200 rounded-lg py-1 px-2 text-[11px] font-medium bg-white outline-none focus:ring-2 focus:ring-primary/30"
+                                data-tipo-norm="${escapeHTMLm(it.tipo_norm)}" data-slug="${escapeHTMLm(it.slug)}" data-tipo="${escapeHTMLm(it.tipo)}">
+                            <option value="">não informado</option>
+                            ${opts.map(o => `<option value="${escapeHTMLm(o.id)}" ${o.id === contaId ? 'selected' : ''}>${escapeHTMLm(o.label)}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="px-4 py-2 text-[11px] ${grupo ? 'font-bold text-secondary' : 'text-slate-400 italic'}">${grupo ? escapeHTMLm(grupo.nome) : 'não informado'}</td>
+                </tr>`;
+            }).join('');
+            gdAtualizarUISelecao();
+        }
+
+        function gdAtualizarUISelecao() {
+            const n = _gdSelecao.size;
+            const lbl = document.getElementById('tipos-despesa-sel-count');
+            if (lbl) lbl.textContent = `${n} selecionado(s)`;
+            const btn = document.getElementById('btn-tipos-despesa-vincular-massa');
+            if (btn) btn.disabled = n === 0 || !gdValorUnico(document.getElementById('tipos-despesa-conta-massa'));
+            const master = document.getElementById('tipos-despesa-sel-todos');
+            if (master) {
+                const vis = [...document.querySelectorAll('.gd-tipo-check')];
+                const marc = vis.filter(cb => cb.checked).length;
+                master.checked = vis.length > 0 && marc === vis.length;
+                master.indeterminate = marc > 0 && marc < vis.length;
+            }
+        }
+
+        function gdRenderTudo() { gdRepopularSelects(); gdRenderGrupos(); gdRenderContas(); gdRenderTipos(); }
+
+        // ── Listeners ──────────────────────────────────────────────────────────
+        onSnapshot(collection(db, GD_COL_GRUPOS), (snap) => {
+            const m = new Map();
+            snap.forEach(d => { const v = d.data() || {}; m.set(d.id, { nome: String(v.nome || '').trim() }); });
+            _gdGrupos = m;
+            gdRenderTudo();
+        }, (err) => console.warn('[CP_Grupos_Contas/master] listener falhou:', err?.code || err?.message));
+
+        onSnapshot(collection(db, GD_COL_CONTAS), (snap) => {
+            const m = new Map();
+            snap.forEach(d => {
+                const v = d.data() || {};
+                m.set(d.id, { nome: String(v.nome || '').trim(), grupo_id: v.grupo_id || null });
+            });
+            _gdContas = m;
+            gdRenderTudo();
+        }, (err) => console.warn('[CP_Contas_Despesa/master] listener falhou:', err?.code || err?.message));
+
+        onSnapshot(collection(db, GD_COL_TIPOS), (snap) => {
+            const m = new Map();
+            snap.forEach(d => {
+                const v = d.data() || {};
+                const k = String(v.tipo_norm || '').trim();
+                if (k) m.set(k, { docId: d.id, conta_id: v.conta_id || null });
+            });
+            _gdTipos = m;
+            gdRenderTipos();
+            gdRenderGrupos();
+            gdRenderContas();
+        }, (err) => console.warn('[CP_Tipos_Despesa/master] listener falhou:', err?.code || err?.message));
+
+        onSnapshot(doc(db, 'Metadados', 'CP_Catalogo_Categorias'), (snap) => {
+            const v = snap.exists() ? (snap.data() || {}) : {};
+            _gdCatalogo = Array.isArray(v.itens) ? v.itens.slice() : [];
+            _gdCatalogoTotalDocs = Number(v.total_docs) || 0;
+            try {
+                const ts = v.atualizado_em && typeof v.atualizado_em.toDate === 'function'
+                    ? v.atualizado_em.toDate() : null;
+                _gdCatalogoAtualizadoEm = ts
+                    ? ts.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : '';
+            } catch (_) { _gdCatalogoAtualizadoEm = ''; }
+            // Ordem padrao = VOLUME decrescente. Com os dados de 2026-09-29, os 15
+            // primeiros cobrem 91,6% dos lancamentos: o diretor nao precisa dos 104
+            // vinculos para a tela valer, precisa dos primeiros.
+            _gdCatalogo.sort((a, b) => (Number(b.docs) || 0) - (Number(a.docs) || 0));
+            gdRenderTipos();
+        }, (err) => console.warn('[CP_Catalogo_Categorias] listener falhou:', err?.code || err?.message));
+
+        // ── CRUD de Grupo ──────────────────────────────────────────────────────
+        document.getElementById('form-grupo-despesa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inp = document.getElementById('grupo-despesa-nome');
+            const nome = String(inp.value || '').replace(/\s+/g, ' ').trim();
+            if (!nome) return;
+            const norm = gdChave(nome);
+            // Dedup por nome normalizado, ignorando o proprio doc em edicao.
+            for (const [id, g] of _gdGrupos) {
+                if (id !== _gdEditGrupoId && gdChave(g.nome) === norm) {
+                    gdMsg('msg-grupo-despesa', `Já existe um grupo chamado "${g.nome}".`, true);
+                    return;
+                }
+            }
+            try {
+                if (_gdEditGrupoId) {
+                    await updateDoc(doc(db, GD_COL_GRUPOS, _gdEditGrupoId), {
+                        nome, nome_norm: norm, atualizado_em: serverTimestamp(), atualizado_por: usuarioLogadoNome,
+                    });
+                    gdMsg('msg-grupo-despesa', 'Grupo atualizado.', false);
+                } else {
+                    await addDoc(collection(db, GD_COL_GRUPOS), {
+                        nome, nome_norm: norm, bucket_dre: null, ordem: _gdGrupos.size,
+                        criado_em: serverTimestamp(), criado_por: usuarioLogadoNome,
+                    });
+                    gdMsg('msg-grupo-despesa', 'Grupo criado.', false);
+                }
+                gdCancelarEdicaoGrupo();
+                setTimeout(() => gdMsg('msg-grupo-despesa', '', false), 2500);
+            } catch (err) {
+                console.error('[GD grupo] falhou:', err);
+                gdMsg('msg-grupo-despesa', 'Falha ao salvar: ' + (err?.code === 'permission-denied' ? 'acesso negado pelo Firestore.' : (err?.message || 'erro')), true);
+            }
+        });
+        function gdCancelarEdicaoGrupo() {
+            _gdEditGrupoId = null;
+            document.getElementById('grupo-despesa-nome').value = '';
+            document.getElementById('lbl-salvar-grupo-despesa').textContent = 'Adicionar Grupo';
+            document.getElementById('grupo-despesa-save-icon').textContent = 'add';
+            document.getElementById('btn-cancelar-edicao-grupo-despesa').classList.add('hidden');
+        }
+        document.getElementById('btn-cancelar-edicao-grupo-despesa').addEventListener('click', () => {
+            gdCancelarEdicaoGrupo(); gdMsg('msg-grupo-despesa', '', false);
+        });
+
+        // ── CRUD de Conta ──────────────────────────────────────────────────────
+        document.getElementById('form-conta-despesa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inp = document.getElementById('conta-despesa-nome');
+            const nome = String(inp.value || '').replace(/\s+/g, ' ').trim();
+            const grupoId = gdValorUnico(document.getElementById('conta-despesa-grupo'));
+            if (!nome) return;
+            if (!grupoId) { gdMsg('msg-conta-despesa', 'Escolha o grupo desta conta.', true); return; }
+            const norm = gdChave(nome);
+            for (const [id, c] of _gdContas) {
+                if (id !== _gdEditContaId && c.grupo_id === grupoId && gdChave(c.nome) === norm) {
+                    gdMsg('msg-conta-despesa', `Este grupo já tem uma conta chamada "${c.nome}".`, true);
+                    return;
+                }
+            }
+            try {
+                const g = _gdGrupos.get(grupoId);
+                if (_gdEditContaId) {
+                    await updateDoc(doc(db, GD_COL_CONTAS, _gdEditContaId), {
+                        nome, nome_norm: norm, grupo_id: grupoId, grupo_nome: g ? g.nome : null,
+                        atualizado_em: serverTimestamp(), atualizado_por: usuarioLogadoNome,
+                    });
+                    gdMsg('msg-conta-despesa', 'Conta atualizada.', false);
+                } else {
+                    await addDoc(collection(db, GD_COL_CONTAS), {
+                        nome, nome_norm: norm, grupo_id: grupoId, grupo_nome: g ? g.nome : null,
+                        criado_em: serverTimestamp(), criado_por: usuarioLogadoNome,
+                    });
+                    gdMsg('msg-conta-despesa', 'Conta criada.', false);
+                }
+                gdCancelarEdicaoConta();
+                setTimeout(() => gdMsg('msg-conta-despesa', '', false), 2500);
+            } catch (err) {
+                console.error('[GD conta] falhou:', err);
+                gdMsg('msg-conta-despesa', 'Falha ao salvar: ' + (err?.code === 'permission-denied' ? 'acesso negado pelo Firestore.' : (err?.message || 'erro')), true);
+            }
+        });
+        function gdCancelarEdicaoConta() {
+            _gdEditContaId = null;
+            document.getElementById('conta-despesa-nome').value = '';
+            document.getElementById('lbl-salvar-conta-despesa').textContent = 'Adicionar Conta';
+            document.getElementById('conta-despesa-save-icon').textContent = 'add';
+            document.getElementById('btn-cancelar-edicao-conta-despesa').classList.add('hidden');
+        }
+        document.getElementById('btn-cancelar-edicao-conta-despesa').addEventListener('click', () => {
+            gdCancelarEdicaoConta(); gdMsg('msg-conta-despesa', '', false);
+        });
+
+        // ── Editar / excluir por delegação ────────────────────────────────────
+        // EXCLUSÃO BLOQUEADA enquanto houver filho, e a guarda mora no CÓDIGO, não no
+        // aviso: apagar um grupo com contas deixaria contas apontando para um id que
+        // não existe, e o relatório perderia o pai de uma linha de dinheiro.
+        // Abster-se é o comportamento seguro.
+        document.getElementById('aba-regras-grupos').addEventListener('click', async (e) => {
+            const bEdG = e.target.closest('[data-gd-editar-grupo]');
+            if (bEdG) {
+                const id = bEdG.getAttribute('data-gd-editar-grupo');
+                const g = _gdGrupos.get(id);
+                if (!g) return;
+                _gdEditGrupoId = id;
+                document.getElementById('grupo-despesa-nome').value = g.nome;
+                document.getElementById('lbl-salvar-grupo-despesa').textContent = 'Salvar Grupo';
+                document.getElementById('grupo-despesa-save-icon').textContent = 'save';
+                document.getElementById('btn-cancelar-edicao-grupo-despesa').classList.remove('hidden');
+                return;
+            }
+            const bExG = e.target.closest('[data-gd-excluir-grupo]');
+            if (bExG) {
+                const id = bExG.getAttribute('data-gd-excluir-grupo');
+                const nContas = [..._gdContas.values()].filter(c => c.grupo_id === id).length;
+                if (nContas) {
+                    fornMToast(`Não é possível excluir: este grupo tem ${nContas} conta(s). Mova ou exclua as contas primeiro.`, 'warning', true);
+                    return;
+                }
+                if (_gdConfirmando !== `g:${id}`) {
+                    gdArmarConfirmacao(`g:${id}`, gdRenderGrupos);
+                    fornMToast('Clique de novo no mesmo botão para confirmar a exclusão.', 'warning');
+                    return;
+                }
+                _gdConfirmando = null;
+                try { await deleteDoc(doc(db, GD_COL_GRUPOS, id)); fornMToast('Grupo excluído.', 'check_circle'); }
+                catch (err) { fornMToast('Falha ao excluir: ' + (err?.message || 'erro'), 'error', true); }
+                return;
+            }
+            const bEdC = e.target.closest('[data-gd-editar-conta]');
+            if (bEdC) {
+                const id = bEdC.getAttribute('data-gd-editar-conta');
+                const c = _gdContas.get(id);
+                if (!c) return;
+                _gdEditContaId = id;
+                document.getElementById('conta-despesa-nome').value = c.nome;
+                const selG = document.getElementById('conta-despesa-grupo');
+                if (selG && c.grupo_id) setMultiValues(selG, [c.grupo_id]);
+                document.getElementById('lbl-salvar-conta-despesa').textContent = 'Salvar Conta';
+                document.getElementById('conta-despesa-save-icon').textContent = 'save';
+                document.getElementById('btn-cancelar-edicao-conta-despesa').classList.remove('hidden');
+                return;
+            }
+            const bExC = e.target.closest('[data-gd-excluir-conta]');
+            if (bExC) {
+                const id = bExC.getAttribute('data-gd-excluir-conta');
+                const nTipos = [..._gdTipos.values()].filter(t => t.conta_id === id).length;
+                if (nTipos) {
+                    fornMToast(`Não é possível excluir: ${nTipos} tipo(s) de despesa estão vinculados a esta conta. Desvincule primeiro.`, 'warning', true);
+                    return;
+                }
+                if (_gdConfirmando !== `c:${id}`) {
+                    gdArmarConfirmacao(`c:${id}`, gdRenderContas);
+                    fornMToast('Clique de novo no mesmo botão para confirmar a exclusão.', 'warning');
+                    return;
+                }
+                _gdConfirmando = null;
+                try { await deleteDoc(doc(db, GD_COL_CONTAS, id)); fornMToast('Conta excluída.', 'check_circle'); }
+                catch (err) { fornMToast('Falha ao excluir: ' + (err?.message || 'erro'), 'error', true); }
+            }
+        });
+
+        // ── Vínculo do Tipo de Despesa, individual ────────────────────────────
+        // `setDoc` com docId = slug determinístico: idempotente, e o mesmo tipo nunca
+        // gera dois documentos de vínculo.
+        document.getElementById('tipos-despesa-corpo').addEventListener('change', async (e) => {
+            const sel = e.target.closest('.gd-tipo-conta');
+            if (sel) {
+                const tipoNorm = sel.getAttribute('data-tipo-norm');
+                const slug = sel.getAttribute('data-slug');
+                const tipo = sel.getAttribute('data-tipo');
+                const contaId = String(sel.value || '');
+                try {
+                    await gdGravarVinculo({ slug, tipoNorm, tipo, contaId });
+                } catch (err) {
+                    console.error('[GD vínculo] falhou:', err);
+                    fornMToast('Falha ao vincular: ' + (err?.code === 'permission-denied' ? 'acesso negado pelo Firestore.' : (err?.message || 'erro')), 'error', true);
+                }
+                return;
+            }
+            const cb = e.target.closest('.gd-tipo-check');
+            if (cb) {
+                const k = cb.getAttribute('data-tipo-norm');
+                if (cb.checked) _gdSelecao.add(k); else _gdSelecao.delete(k);
+                gdAtualizarUISelecao();
+            }
+        });
+
+        async function gdGravarVinculo({ slug, tipoNorm, tipo, contaId }) {
+            const conta = contaId ? _gdContas.get(contaId) : null;
+            await setDoc(doc(db, GD_COL_TIPOS, slug), {
+                tipo, tipo_norm: tipoNorm,
+                conta_id: contaId || null,
+                conta_nome: conta ? conta.nome : null,   // só para log e auditoria
+                origem: 'manual',
+                atualizado_em: serverTimestamp(), atualizado_por: usuarioLogadoNome,
+            }, { merge: true });
+        }
+
+        document.getElementById('tipos-despesa-sel-todos').addEventListener('change', (e) => {
+            const marcar = e.target.checked;
+            document.querySelectorAll('.gd-tipo-check').forEach(cb => {
+                cb.checked = marcar;
+                const k = cb.getAttribute('data-tipo-norm');
+                if (marcar) _gdSelecao.add(k); else _gdSelecao.delete(k);
+            });
+            gdAtualizarUISelecao();
+        });
+
+        // ── Vínculo em MASSA ──────────────────────────────────────────────────
+        // É isto que faz o trabalho caber: 9 vínculos de família cobrem a maior parte
+        // da base. writeBatch em chunks, padrão da casa.
+        document.getElementById('btn-tipos-despesa-vincular-massa').addEventListener('click', async () => {
+            const contaId = gdValorUnico(document.getElementById('tipos-despesa-conta-massa'));
+            const alvos = _gdCatalogo.filter(it => _gdSelecao.has(it.tipo_norm));
+            if (!contaId || !alvos.length) return;
+            const conta = _gdContas.get(contaId);
+            const btn = document.getElementById('btn-tipos-despesa-vincular-massa');
+            btn.disabled = true;
+            try {
+                for (let i = 0; i < alvos.length; i += GD_CHUNK) {
+                    const fatia = alvos.slice(i, i + GD_CHUNK);
+                    const b = writeBatch(db);
+                    for (const it of fatia) {
+                        b.set(doc(db, GD_COL_TIPOS, it.slug), {
+                            tipo: it.tipo, tipo_norm: it.tipo_norm,
+                            conta_id: contaId, conta_nome: conta ? conta.nome : null,
+                            origem: 'manual',
+                            atualizado_em: serverTimestamp(), atualizado_por: usuarioLogadoNome,
+                        }, { merge: true });
+                    }
+                    await b.commit();
+                    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+                }
+                const docsAfetados = alvos.reduce((s, it) => s + (Number(it.docs) || 0), 0);
+                _gdSelecao.clear();
+                fornMToast(`${alvos.length} tipo(s) vinculados a "${conta ? conta.nome : ''}", alcançando ${docsAfetados.toLocaleString('pt-BR')} lançamento(s).`, 'check_circle');
+                gdRenderTipos();
+            } catch (err) {
+                console.error('[GD vínculo massa] falhou:', err);
+                fornMToast('Falha ao vincular em massa: ' + (err?.message || 'erro'), 'error', true);
+            } finally {
+                gdAtualizarUISelecao();
+            }
+        });
+
+        // ── Busca, filtro e paginação ─────────────────────────────────────────
+        document.getElementById('tipos-despesa-busca').addEventListener('input', (e) => {
+            _gdBusca = String(e.target.value || ''); _gdPage = 1; gdRenderTipos();
+        });
+        document.getElementById('tipos-despesa-filtro').addEventListener('change', () => { _gdPage = 1; gdRenderTipos(); });
+        document.getElementById('tipos-despesa-pag-prev').addEventListener('click', () => { if (_gdPage > 1) { _gdPage--; gdRenderTipos(); } });
+        document.getElementById('tipos-despesa-pag-next').addEventListener('click', () => { _gdPage++; gdRenderTipos(); });
+
+        // Guardas de seleção única nos dois seletores do design system.
+        gdSingleGuard(document.getElementById('conta-despesa-grupo'));
+        gdSingleGuard(document.getElementById('tipos-despesa-conta-massa'), () => gdAtualizarUISelecao());
+        if (window.CentraCheckboxMulti) {
+            ['tipos-despesa-filtro'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) window.CentraCheckboxMulti.upgrade(el);
+            });
+        }
+        gdRenderTudo();
 
         // ── Excluir em massa ──────────────────────────────────────────────
         document.getElementById('forn-master-btn-deletar').addEventListener('click', () => {
