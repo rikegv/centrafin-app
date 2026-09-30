@@ -7,17 +7,27 @@
  * Custo x Gestor) e 2 (cards de Natureza do Custo) de
  * `gerenciador_contas_pagar_desktop/code.html`.
  *
+ * Desde 2026-09-30 cobre tambem a guarda "CANCELADO NAO E CUSTO" (decisao do
+ * diretor): os 4 cards de Natureza excluem lancamento cancelado, por teste de
+ * PREFIXO em `status` (/^cancel/i), o mesmo criterio do DRE Gerencial.
+ *
  * PRINCIPIO: nada aqui reimplementa a regra. Todo pedaco de logica testado e
  * EXTRAIDO TEXTUALMENTE do arquivo real (por contagem de chaves) e executado com
  * stubs apenas para as dependencias de ambiente (DOM, Firestore, formatadores).
- * As duas versoes do arquivo entram no mesmo teste: o ANTES vem de
- * `git show HEAD:...` e o DEPOIS da arvore de trabalho, entao a suite se
- * atualiza sozinha enquanto o coordenador continua editando.
+ *
+ * TRES versoes do arquivo entram no mesmo teste, e cada uma responde uma pergunta
+ * diferente (ver o bloco "A SEGUNDA BASE" mais abaixo para o porque):
+ *   `--base` (default 0ca791e) = PRE-Frente-2, tem kpi-opex.
+ *   `--head` (default HEAD)    = POS-Frente-2, SEM a guarda de cancelado.
+ *   arvore de trabalho         = com tudo.
+ * A suite FALHA de cara se o papel de cada ref nao for o suposto, para nunca
+ * comparar a coisa errada em silencio.
  *
  * READ-ONLY: nao escreve no repositorio, nao toca Firestore, nao roda emulador.
  *
  * USO:  node scripts/test-pacote-ondas-f125.cjs
  *       node scripts/test-pacote-ondas-f125.cjs --dados <caminho/dados.json>
+ *       node scripts/test-pacote-ondas-f125.cjs --base <ref> --head <ref>
  *
  * O caminho do snapshot de dados reais NAO tem default dentro do repositorio de
  * proposito: dado real em pasta servida pelo Firebase Hosting ja causou
@@ -73,6 +83,59 @@ try {
   console.error(`Passe uma referencia valida com --base <commit>.`);
   process.exit(1);
 }
+
+// ── A SEGUNDA BASE, e por que ela e necessaria (2026-09-30) ───────────────────
+// A suite passou a ter DUAS bases de comparacao, porque ha DUAS perguntas
+// diferentes e cada uma exige um "antes" diferente. Misturar as duas foi o que
+// fez 7 casos falharem quando a exclusao de cancelado entrou.
+//
+//   SRC_ANTES (BASE_PADRAO = 0ca791e) = PRE-FRENTE-2.
+//     Tem o card unico `kpi-opex` (Fornecedor Interno + Fornecedor Externo, SEM
+//     PJ, SEM trim, INCLUINDO cancelado) e nao tem `kpi-interno`/`kpi-externo`/
+//     `kpi-sem-class`. E o "antes" correto para a pergunta "o que a Frente 2
+//     INTEIRA mudou": OPEX -> 4 cards de Natureza.
+//
+//   SRC_HEAD (HEAD) = POS-FRENTE-2, PRE-GUARDA-DE-CANCELADO.
+//     Ja tem os 4 cards de Natureza, ja tem o PJ dentro de `interno` e ja tem o
+//     `.trim()`, e NAO tem a guarda `_ehCancelado`. E o "antes" correto para a
+//     pergunta "o que a guarda de cancelado, SOZINHA, mudou": isola o efeito de
+//     uma unica linha, sem o ruido da Frente 2 inteira.
+//
+// Com uma base so nao daria para provar o item mais importante da frente: que a
+// guarda mexeu APENAS em `interno` e `externo` e em NADA mais. Contra 0ca791e,
+// `kpi-interno` nem existe para comparar; contra HEAD, a comparacao e de 1 linha.
+// A checagem "nao podia mudar" (kpi-total/pago/a-pagar/vencido/tarifas e as
+// contagens) roda contra AS DUAS: preservado desde antes da Frente 2 E preservado
+// pela guarda. Se algum dia a guarda for commitada, `--head <ref>` aponta o HEAD
+// para o commit anterior a ela.
+function refHead() {
+  const i = process.argv.indexOf('--head');
+  if (i >= 0 && process.argv[i + 1]) return process.argv[i + 1];
+  return process.env.CP_HEAD_REF || 'HEAD';
+}
+const HEAD_REF = refHead();
+let SRC_HEAD;
+try {
+  SRC_HEAD = lf(execSync(`git show ${HEAD_REF}:${REL}`, { cwd: ROOT, maxBuffer: 1024 * 1024 * 80 }).toString('utf8'));
+} catch (e) {
+  console.error(`\nERRO: nao consegui ler a 2a base de comparacao "${HEAD_REF}:${REL}".`);
+  process.exit(1);
+}
+// Sanidade das DUAS bases: se o papel de cada ref nao for o que a suite supoe,
+// todos os casos que dependem delas viram teatro. Falha cedo e alto.
+const TEM_GUARDA = (s) => {
+  const i = s.indexOf('function atualizarKPIs(');
+  return i >= 0 && /_ehCancelado/.test(s.slice(i, casarChavesSeguro(s, i)));
+};
+function casarChavesSeguro(s, i) {
+  const ab = s.indexOf('{', i); let n = 0;
+  for (let k = ab; k < s.length; k++) { if (s[k] === '{') n++; else if (s[k] === '}') { n--; if (!n) return k + 1; } }
+  return s.length;
+}
+const PAPEL_BASES_OK =
+  !/setKPI\('kpi-interno'/.test(SRC_ANTES) && /setKPI\('kpi-opex'/.test(SRC_ANTES) &&
+  /setKPI\('kpi-interno'/.test(SRC_HEAD) && !TEM_GUARDA(SRC_HEAD) &&
+  /setKPI\('kpi-interno'/.test(SRC_DEPOIS) && TEM_GUARDA(SRC_DEPOIS);
 
 // ── caminho do snapshot de dados reais (opcional, fora do repo) ───────────────
 function argDados() {
@@ -159,9 +222,20 @@ console.log('==========================================================');
 console.log(' OS-CP-PACOTE-ONDAS-01 — suite do TESTER (F5 / F1 / F2)');
 console.log('==========================================================');
 console.log(' arquivo DEPOIS : ' + ARQ);
-console.log(` arquivo ANTES  : git show ${BASE_REF}:${REL}`);
-console.log(' bytes          : antes=' + SRC_ANTES.length + '  depois=' + SRC_DEPOIS.length);
+console.log(` base 1, ANTES  : git show ${BASE_REF}:${REL}   (PRE-Frente-2, tem kpi-opex)`);
+console.log(` base 2, HEAD   : git show ${HEAD_REF}:${REL}   (POS-Frente-2, SEM guarda de cancelado)`);
+console.log(' bytes          : antes=' + SRC_ANTES.length + '  head=' + SRC_HEAD.length + '  depois=' + SRC_DEPOIS.length);
 console.log(' hoje (local)   : ' + new Date().toString());
+secao('BASES — o papel de cada ref e o que a suite supoe?');
+assert(PAPEL_BASES_OK,
+  'as DUAS bases tem o papel suposto: ' + BASE_REF + ' tem kpi-opex e NAO tem kpi-interno; ' +
+  HEAD_REF + ' tem kpi-interno e NAO tem a guarda _ehCancelado; a arvore de trabalho tem as duas coisas');
+if (!PAPEL_BASES_OK) {
+  console.log('      ' + BASE_REF + ': kpi-opex=' + /setKPI\('kpi-opex'/.test(SRC_ANTES) + ' kpi-interno=' + /setKPI\('kpi-interno'/.test(SRC_ANTES));
+  console.log('      ' + HEAD_REF + ': kpi-interno=' + /setKPI\('kpi-interno'/.test(SRC_HEAD) + ' guarda=' + TEM_GUARDA(SRC_HEAD));
+  console.log('      worktree: kpi-interno=' + /setKPI\('kpi-interno'/.test(SRC_DEPOIS) + ' guarda=' + TEM_GUARDA(SRC_DEPOIS));
+  console.log('      Sem isso, os casos de "antes x depois" comparam a coisa errada. Use --base/--head.');
+}
 
 // =============================================================================
 // FRENTE 5 — vazamento da empresa derivada
@@ -1114,7 +1188,304 @@ async function frente2() {
     }
   }
 
-  secao('FRENTE 2.5 — PROVA NUMERICA sobre os dados reais');
+  // ===========================================================================
+  // FRENTE 2.5 — A GUARDA DE CANCELADO. Prova SINTETICA, e ela nao e "reforco":
+  // e a UNICA forma de provar quase tudo desta frente, porque a base real tem
+  // apenas DOIS valores de `status` ('pago' com 51.177 docs e 'cancelado' com 4)
+  // e nenhuma variacao de grafia. Com dado real da para provar que os 4 docs
+  // cancelados sairam de `interno` e `externo`, e SO isso. Que `cliente` e
+  // `sem_class` tambem excluem cancelado, e que o criterio e de PREFIXO e nao de
+  // igualdade, NAO tem testemunha no dado real: os buckets Cliente e SemClass
+  // tem ZERO cancelados hoje.
+  // Estes casos sao, por isso, prova de COMPORTAMENTO DO CODIGO, nao prova de
+  // dado existente. As duas coisas ficam em secoes separadas de proposito, e
+  // nenhuma assertiva mistura as duas.
+  // ===========================================================================
+  secao('FRENTE 2.5 — a guarda de CANCELADO, comportamento do codigo (sintetico)');
+  // Centavos como INTEIRO: o formatador `numerico` da suite e toFixed(2), entao a
+  // string ja vem com 2 casas exatas e da para virar inteiro sem passar por
+  // aritmetica de ponto flutuante. Comparar 48612943.95 com float acumulado por
+  // somas sucessivas e o caminho para um teste que passa por epsilon, nao por
+  // igualdade.
+  const cent = (s) => {
+    const m = String(s == null ? '0.00' : s).match(/^(-?)(\d+)\.(\d\d)$/);
+    if (!m) throw new Error('valor nao esta no formato decimal de 2 casas: ' + s);
+    return (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 100 + Number(m[3]));
+  };
+  const centSoma = (e, ...ids) => ids.reduce((a, id) => a + cent(e[id]), 0);
+  {
+    // (a) O criterio e o MESMO do DRE, e isso e o proprio objetivo da frente.
+    //     Comparado como TEXTO da expressao, extraido dos dois arquivos reais.
+    const DRE_REL = 'dre_gerencial_desktop/code.html';
+    const SRC_DRE = lf(fs.readFileSync(path.join(ROOT, DRE_REL), 'utf8'));
+    const expr = (s) => {
+      const m = s.match(/\/\^cancel\/i\s*\.test\(\s*String\(\s*\w+\.status\s*\|\|\s*''\s*\)\s*\.trim\(\)\s*\)/);
+      return m ? m[0].replace(/\s+/g, '').replace(/\w+\.status/, 'X.status') : null;
+    };
+    const eCP = expr(extrairLinha(SRC_DEPOIS, 'const _ehCancelado ='));
+    const eDRE = expr(extrairLinha(SRC_DRE, 'function cpStatusCancelado(reg)'));
+    console.log('  CP  (' + REL + ':' + linhaDe(SRC_DEPOIS, 'const _ehCancelado =') + ') : ' + eCP);
+    console.log('  DRE (' + DRE_REL + ':' + linhaDe(SRC_DRE, 'function cpStatusCancelado(reg)') + ') : ' + eDRE);
+    assert(eCP !== null && eCP === eDRE,
+      'o criterio de cancelado do CP e TEXTUALMENTE o mesmo do DRE (prefixo /^cancel/i sobre status.trim()), ' +
+      'que era o proposito declarado da frente: as duas telas concordarem sobre o que e custo');
+    // A guarda envolve SO os 4 buckets. Provado pela POSICAO: os acumuladores de
+    // caixa sao incrementados ANTES da linha da guarda, e os 4 buckets DEPOIS.
+    const corpoKPI = extrairFuncao(SRC_DEPOIS, 'atualizarKPIs', 'depois');
+    const iGuarda = corpoKPI.indexOf('const _ehCancelado =');
+    const pos = (t) => corpoKPI.indexOf(t);
+    for (const [rot, marca] of [['total', 'total += v; cTotal++;'], ['pago', 'pago += v; cPago++;'],
+      ['aPagar', 'aPagar += v; cAPagar++;'], ['vencido', 'vencido += v; cVencido++;'], ['tarifas', 'tarifas += v;']]) {
+      const p = pos(marca);
+      assert(p >= 0 && p < iGuarda,
+        'o acumulador `' + rot + '` e incrementado ANTES da guarda, logo a guarda NAO pode afeta-lo (escopo estreito que o diretor pediu)');
+    }
+    for (const [rot, marca] of [['interno', 'interno += v;'], ['externo', 'externo += v;'],
+      ['cliente', 'cliente += v;'], ['semClass', 'semClass += v; cSemClass++;']]) {
+      const p = pos(marca);
+      assert(p > iGuarda, 'o bucket `' + rot + '` e incrementado DEPOIS da guarda, logo esta coberto por ela');
+    }
+    // E o card Total Geral continua sendo Pago + Tarifas, sem tocar em cancelado.
+    const lTotal = extrairLinha(SRC_DEPOIS, "setKPI('kpi-total',");
+    assert(/pago \+ tarifas/.test(lTotal) && /cPago \+ cTarifas/.test(lTotal),
+      'Total Geral continua sendo Pago + Tarifas (decisao do diretor, nao tocada): ' + lTotal.trim());
+  }
+
+  // Fabrica de registro sintetico. `categoria`/`entidade` escolhidos para NAO
+  // acionarem a regra de tarifa (nada de TARIFA, nada de COMISSAO+BANC).
+  const ANO_LIM = String(montarKPI(SRC_DEPOIS, 'depois', { numerico: true }).CP_LIMIAR_ANO).slice(0, 4);
+  let _seq = 0;
+  const mk = (tipo, valor, status, venc) => ({
+    _id: 'sint-' + (++_seq), entidade: 'FORNECEDOR DE TESTE', categoria: 'ALUGUEL',
+    tipo_entidade: tipo, valor_original: valor,
+    data_vencimento: venc || (ANO_LIM + '-06-15'), status: status || 'pago',
+  });
+  const rodar = (regs) => { const k = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); k.fn(regs); return k.escrito; };
+  // Mede o universo que os 4 cards cobrem SEM reimplementar o recorte: apaga
+  // `tipo_entidade` de tudo e le `kpi-sem-class`, porque o `else` final da funcao
+  // manda todo tipo desconhecido para la. Como `semClass` esta DENTRO da guarda,
+  // o numero que sai e, por construcao, "recorte sem tarifa E SEM CANCELADO".
+  const semTipo = (regs) => regs.map(r => { const c = Object.assign({}, r); delete c.tipo_entidade; return c; });
+  const universo4 = (regs) => rodar(semTipo(regs));
+  // O MESMO medidor, mas contra o HEAD (sem a guarda): devolve o recorte sem
+  // tarifa COM cancelado. Serve para a diferenca entre os dois universos ter nome.
+  const universo4H = (regs) => { const k = montarKPI(SRC_HEAD, 'head', { numerico: true }); k.fn(semTipo(regs)); return k.escrito; };
+
+  {
+    // (b) CONSISTENCIA ENTRE OS QUATRO: um cancelado de CADA um dos 4 tipos (mais
+    //     um de tipo desconhecido), e NENHUM deles pode somar. Valores escolhidos
+    //     distintos e nao redondos para que qualquer vazamento apareca no centavo
+    //     e seja atribuivel ao bucket exato.
+    const pagos = [mk('Fornecedor Interno', 100), mk('Fornecedor Interno - PJ', 200),
+      mk('Fornecedor Externo', 400), mk('Cliente', 800), mk('', 1600)];
+    const cancs = [mk('Fornecedor Interno', 7.01, 'cancelado'), mk('Fornecedor Interno - PJ', 11.02, 'cancelado'),
+      mk('Fornecedor Externo', 13.03, 'cancelado'), mk('Cliente', 17.04, 'cancelado'),
+      mk('', 19.05, 'cancelado'), mk('Fornecedor Misterioso', 23.06, 'cancelado')];
+    const soPagos = rodar(pagos);
+    const comCancs = rodar(pagos.concat(cancs));
+    const ESP = { 'kpi-interno': 30000, 'kpi-externo': 40000, 'kpi-cliente': 80000, 'kpi-sem-class': 160000 };
+    for (const [id, esp] of Object.entries(ESP)) {
+      assert(cent(soPagos[id]) === esp, 'pre-condicao, so pagos: ' + id + ' = ' + (esp / 100).toFixed(2) + ' (obtido ' + soPagos[id] + ')');
+      assert(cent(comCancs[id]) === esp,
+        'TODOS OS 4 excluem cancelado: ' + id + ' nao se moveu ao acrescentar 1 cancelado de cada tipo (' +
+        soPagos[id] + ' -> ' + comCancs[id] + ')');
+    }
+    // A CONTAGEM tambem. `cSemClass` esta dentro da guarda, entao o cancelado sem
+    // tipo nao pode inflar o "N sem tipo" do card.
+    assert(comCancs['kpi-sem-class-count'] === soPagos['kpi-sem-class-count'],
+      'a CONTAGEM de Sem Classificacao tambem exclui cancelado (' + soPagos['kpi-sem-class-count'] +
+      ' -> ' + comCancs['kpi-sem-class-count'] + '), senao o card mostraria valor de 1 doc e contagem de 2');
+    // Contraprova de que o conjunto sintetico nao e vacuo: os cancelados EXISTEM
+    // e sao vistos pela funcao, porque `total` os conta. `total` nao e exibido,
+    // entao a testemunha e `kpi-a-pagar`/`kpi-vencido`: um cancelado com
+    // statusVisual 'cancelado' nao entra em nenhum dos dois. Uso `kpi-total-count`,
+    // que e cPago+cTarifas, para provar que eles NAO entraram em pago tambem.
+    assert(comCancs['kpi-total-count'] === soPagos['kpi-total-count'],
+      'os 6 cancelados sinteticos tambem nao entram em kpi-total-count (que e cPago + cTarifas), ' +
+      'ou seja: cancelado hoje nao aparece em NENHUM card, nem de caixa nem de natureza');
+    // E o universo que os 4 cobrem, medido pela propria funcao, exclui cancelado.
+    assert(cent(universo4(pagos.concat(cancs))['kpi-sem-class']) === centSoma(comCancs, 'kpi-interno', 'kpi-externo', 'kpi-cliente', 'kpi-sem-class'),
+      'soma dos 4 == recorte sem tarifa E SEM CANCELADO, em CENTAVOS inteiros (sintetico)');
+  }
+
+  {
+    // (c) CRITERIO DE PREFIXO, e nao de igualdade. Cada variante entra sozinha
+    //     sobre a mesma base de 1 doc pago, e o card nao pode se mover.
+    //     NENHUMA destas grafias existe na base real: isto e prova do codigo.
+    const base = [mk('Fornecedor Externo', 1000)];
+    const VARIANTES = [
+      ['cancelado', 'o literal exato, o unico que existe na base real'],
+      ['CANCELADO', 'maiusculas, pego pelo /i'],
+      ['Cancelada', 'genero feminino, pego pelo prefixo e NAO por igualdade'],
+      ['cancelado ', 'espaco no fim, pego pelo .trim()'],
+      [' cancelado', 'espaco no inicio, pego pelo .trim()'],
+      ['Cancelado ', 'maiuscula + espaco, as duas defesas juntas'],
+      ['cancelamento_previsto', 'PREFIXO: excluido tambem, e isto e um FALSO POSITIVO em potencial'],
+      ['cancel', 'o prefixo nu'],
+    ];
+    for (const [st, nota] of VARIANTES) {
+      const e = rodar(base.concat([mk('Fornecedor Externo', 55.55, st)]));
+      assert(cent(e['kpi-externo']) === 100000,
+        'status ' + JSON.stringify(st) + ' e EXCLUIDO dos cards de natureza (' + nota + '), kpi-externo ficou ' + e['kpi-externo']);
+    }
+    // Controle NEGATIVO: sem ele, um teste que "exclui tudo" passaria igual.
+    const NAO_CANCELADO = [
+      ['pago', 'o normal'],
+      ['provisionado', 'status real do statusVisual, e NAO e cancelamento'],
+      ['pendente', 'inexistente na base, mas nao e cancelamento'],
+      ['a_cancelar', 'contem "cancel" mas NAO como prefixo: entra como custo'],
+      ['pago cancelado', 'contem "cancelado" no meio: entra como custo'],
+      ['concelado', 'erro de digitacao: NAO e pego, entra como custo'],
+      ['estornado', 'estorno nao e cancelamento para esta regra'],
+      ['', 'status vazio entra como custo'],
+    ];
+    for (const [st, nota] of NAO_CANCELADO) {
+      const e = rodar(base.concat([mk('Fornecedor Externo', 55.55, st)]));
+      assert(cent(e['kpi-externo']) === 105555,
+        'status ' + JSON.stringify(st) + ' NAO e excluido, SOMA normalmente (' + nota + '), kpi-externo = ' + e['kpi-externo']);
+    }
+  }
+
+  {
+    // (d) GAP-A. O criterio DIVERGE dentro da MESMA funcao: `statusVisual` usa
+    //     IGUALDADE (st === 'cancelado', depois de toLowerCase e SEM trim) e a
+    //     guarda nova usa PREFIXO com trim. Nas grafias em que os dois discordam,
+    //     a MESMA tela se contradiz: o lancamento entra no card A Pagar (e recebe
+    //     o icone de "a vencer" na tabela) e ao mesmo tempo NAO conta como custo.
+    const base = [mk('Fornecedor Externo', 1000)];
+    const futuro = '2099-12-31';
+    for (const st of ['Cancelado ', 'Cancelada', 'cancelamento_previsto']) {
+      const e = rodar(base.concat([mk('Fornecedor Externo', 55.55, st, futuro)]));
+      const entrouEmCaixa = cent(e['kpi-a-pagar']) === 5555;
+      const saiuDoCusto = cent(e['kpi-externo']) === 100000;
+      console.log('  status ' + JSON.stringify(st).padEnd(26) + ' kpi-a-pagar=' + e['kpi-a-pagar'] +
+        '  kpi-externo=' + e['kpi-externo'] + (entrouEmCaixa && saiuDoCusto ? '   <== CONTRADICAO' : ''));
+      assert(entrouEmCaixa && saiuDoCusto,
+        'GAP-A CONFIRMADO para status ' + JSON.stringify(st) + ': statusVisual (igualdade) o trata como A VENCER e ' +
+        'a guarda (prefixo) o trata como CANCELADO. Mesma funcao, dois criterios. O card A Pagar mostra ' +
+        e['kpi-a-pagar'] + ' de um lancamento que os cards de custo ignoram');
+      // E aqui esta a parte que torna o GAP-A PIOR, nao melhor, e que eu errei na
+      // primeira tentativa deste teste: a identidade "Total Geral - soma dos 4 ==
+      // tarifas" CONTINUA valendo. Ela vale por acidente algebrico, porque
+      // `Total Geral` = Pago + Tarifas ignora `aPagar`, e tanto `aPagar` quanto
+      // `canceladoVisual` entram na conta com o MESMO sinal. O documento apenas
+      // migra de uma parcela subtraida para outra parcela subtraida e a diferenca
+      // nao se move. Consequencia pratica: a reconciliacao que o diretor vai usar
+      // para conferir a tela NAO detecta o GAP-A. Ele e silencioso.
+      const soma4 = centSoma(e, 'kpi-interno', 'kpi-externo', 'kpi-cliente', 'kpi-sem-class');
+      assert(cent(e['kpi-total']) - soma4 === cent(e['kpi-tarifas']),
+        '  ... e a identidade "Total Geral - soma dos 4 == tarifas" CONTINUA valendo (' +
+        (cent(e['kpi-total']) - soma4) + ' == ' + cent(e['kpi-tarifas']) + '), porque Total Geral ignora ' +
+        '`aPagar`. Logo a conta de reconciliacao NAO pega o GAP-A: ele e SILENCIOSO');
+    }
+    // O que REALMENTE quebra a identidade nao e o cancelado com grafia estranha, e
+    // sim qualquer lancamento a vencer com status normal. Prova, para a fronteira
+    // da invariante 2 ficar explicita e nao ser descoberta em producao:
+    const eAVencer = rodar(base.concat([mk('Fornecedor Externo', 55.55, 'pendente', futuro)]));
+    const s4 = centSoma(eAVencer, 'kpi-interno', 'kpi-externo', 'kpi-cliente', 'kpi-sem-class');
+    assert(cent(eAVencer['kpi-a-pagar']) === 5555 && cent(eAVencer['kpi-externo']) === 105555 &&
+      cent(eAVencer['kpi-total']) - s4 !== cent(eAVencer['kpi-tarifas']),
+      'FRONTEIRA da invariante 2: um unico lancamento A VENCER com status normal ja quebra ' +
+      '"Total Geral - soma dos 4 == tarifas" (' + (cent(eAVencer['kpi-total']) - s4) + ' != ' +
+      cent(eAVencer['kpi-tarifas']) + '), porque ele e custo mas nao e Pago. A invariante so vale ' +
+      'enquanto a base estiver 100% paga. Nao e erro da frente, e limite da invariante');
+  }
+
+  {
+    // (e) GAP-E, PRE-EXISTENTE mas relevante porque a identidade nova depende dele:
+    //     'provisionado' NAO e cancelado, entao entra nos 4 cards como custo, mas
+    //     `statusVisual` o manda para um ramo que nao alimenta pago/aPagar/vencido.
+    //     Logo ele soma no custo e nao aparece em nenhum card de caixa.
+    const e = rodar([mk('Fornecedor Externo', 1000), mk('Fornecedor Externo', 77.77, 'provisionado')]);
+    const soma4 = centSoma(e, 'kpi-interno', 'kpi-externo', 'kpi-cliente', 'kpi-sem-class');
+    console.log('  provisionado: kpi-externo=' + e['kpi-externo'] + ' kpi-pago=' + e['kpi-pago'] +
+      ' kpi-a-pagar=' + e['kpi-a-pagar'] + ' kpi-vencido=' + e['kpi-vencido']);
+    assert(cent(e['kpi-externo']) === 107777,
+      'GAP-E: provisionado CONTA como custo nos 4 cards (nao e cancelado), kpi-externo = ' + e['kpi-externo']);
+    assert(cent(e['kpi-total']) - soma4 !== cent(e['kpi-tarifas']),
+      'GAP-E: com um provisionado em base, "Total Geral - soma dos 4 == tarifas" QUEBRA (' +
+      (cent(e['kpi-total']) - soma4) + ' != ' + cent(e['kpi-tarifas']) + '). A identidade so vale porque HOJE ' +
+      'a base nao tem provisionado, nem a vencer, nem atrasado. E COINCIDENCIA DO DADO, nao invariante estrutural');
+    // A invariante que E estrutural, e que vale em TODOS os casos acima:
+    assert(cent(universo4([mk('Fornecedor Externo', 1000), mk('Fornecedor Externo', 77.77, 'provisionado'),
+      mk('Cliente', 5, 'cancelado')])['kpi-sem-class']) === 107777,
+      'a invariante ESTRUTURAL (soma dos 4 == recorte sem tarifa e sem cancelado) sobrevive a provisionado E a cancelado');
+  }
+
+  {
+    // (f) PARTICAO: tipo desconhecido cai em Sem Classificacao e a soma fecha,
+    //     inclusive na presenca de cancelado.
+    const regs = [mk('Fornecedor Interno', 100), mk('Fornecedor Quinto Tipo', 250.25),
+      mk('Fornecedor Sexto Tipo', 0.01, 'cancelado'), mk('Cliente', 300)];
+    const e = rodar(regs);
+    assert(cent(e['kpi-sem-class']) === 25025,
+      'tipo_entidade INVENTADO cai em Sem Classificacao (' + e['kpi-sem-class'] + '), e o cancelado de outro tipo inventado NAO');
+    assert(centSoma(e, 'kpi-interno', 'kpi-externo', 'kpi-cliente', 'kpi-sem-class') === cent(universo4(regs)['kpi-sem-class']),
+      'com dois tipos desconhecidos, os 4 cards continuam PARTICIONANDO o universo que cobrem (soma fecha em centavos)');
+  }
+
+  {
+    // (g) MUTACAO. Um teste verde que continuaria verde com o codigo errado nao
+    //     prova nada. Aqui a fonte e MUTADA em memoria (o arquivo real nunca e
+    //     tocado) e os casos acima sao re-executados contra a mutacao: eles TEM
+    //     que reprovar. Se uma mutacao passar, a assertiva correspondente e
+    //     tautologica e precisa ser reescrita.
+    const rodarSrc = (src, regs) => { const k = montarKPI(src, 'mutante', { numerico: true }); k.fn(regs); return k.escrito; };
+
+    // M1 — prefixo trocado por IGUALDADE. As grafias variantes voltam a somar.
+    const M1 = SRC_DEPOIS.replace(
+      "const _ehCancelado = /^cancel/i.test(String(r.status || '').trim());",
+      "const _ehCancelado = String(r.status || '').toLowerCase() === 'cancelado';");
+    assert(M1 !== SRC_DEPOIS, 'mutante M1 foi construido (o texto da guarda e o que a suite supoe)');
+    const m1 = rodarSrc(M1, [mk('Fornecedor Externo', 1000), mk('Fornecedor Externo', 55.55, 'Cancelada')]);
+    assert(cent(m1['kpi-externo']) === 105555,
+      'MUTACAO M1 REPROVADA como esperado: trocando o prefixo por igualdade, o status "Cancelada" volta a somar ' +
+      '(' + m1['kpi-externo'] + '). Logo o caso do criterio de prefixo NAO e tautologico');
+
+    // M2 — `.trim()` removido da guarda. Grafia com espaco volta a somar.
+    // ARMADILHA QUE ME PEGOU, registrada para nao pegar o proximo: a expressao
+    // `/^cancel/i.test(String(r.status || '').trim())` ocorre DUAS vezes no arquivo
+    // (a guarda do KPI e a guarda do drill-down em `aplicarFiltrosCP`), e
+    // String.replace com string troca so a PRIMEIRA. O mutante saiu com o KPI
+    // intacto e o teste "falhou" apontando para o lugar errado. O alvo agora inclui
+    // `const _ehCancelado = `, que e unico.
+    const ALVO_GUARDA = "const _ehCancelado = /^cancel/i.test(String(r.status || '').trim());";
+    assert(SRC_DEPOIS.split(ALVO_GUARDA).length - 1 === 1,
+      'o alvo da mutacao M2 e UNICO no arquivo (a expressao nua ocorre 2x: KPI e drill-down)');
+    const M2 = SRC_DEPOIS.replace(ALVO_GUARDA,
+      "const _ehCancelado = /^cancel/i.test(String(r.status || ''));");
+    assert(M2 !== SRC_DEPOIS, 'mutante M2 foi construido');
+    const m2 = rodarSrc(M2, [mk('Fornecedor Externo', 1000), mk('Fornecedor Externo', 55.55, ' cancelado')]);
+    assert(cent(m2['kpi-externo']) === 105555,
+      'MUTACAO M2 REPROVADA como esperado: sem o .trim(), " cancelado" (espaco no inicio) volta a somar ' +
+      '(' + m2['kpi-externo'] + '). Logo o caso do trim NAO e tautologico');
+
+    // M3 — `cliente` tirado de DENTRO da guarda. O cancelado de Cliente volta a
+    //      somar, e e exatamente o cenario que o dado real nao consegue testemunhar.
+    const M3 = SRC_DEPOIS.replace(
+      "else if (t === 'Cliente') cliente += v;",
+      "else if (t === 'Cliente') { }\n                }\n                { const t2 = String(r.tipo_entidade || '').trim(); if (t2 === 'Cliente') cliente += v;");
+    assert(M3 !== SRC_DEPOIS, 'mutante M3 foi construido');
+    const m3 = rodarSrc(M3, [mk('Cliente', 1000), mk('Cliente', 55.55, 'cancelado')]);
+    assert(cent(m3['kpi-cliente']) === 105555,
+      'MUTACAO M3 REPROVADA como esperado: com `cliente` FORA da guarda, o cancelado de Cliente volta a somar ' +
+      '(' + m3['kpi-cliente'] + '). Logo o caso "os QUATRO excluem cancelado" NAO e tautologico, e e ele que ' +
+      'cobre o que os 51.181 docs reais nao cobrem (zero cancelados em Cliente)');
+
+    // M4 — guarda ESTENDIDA tambem ao `pago`. O que o diretor proibiu.
+    const M4 = SRC_DEPOIS.replace(
+      "if (vs === 'pago') { pago += v; cPago++; }",
+      "if (vs === 'pago' && !/^cancel/i.test(String(r.status || '').trim())) { pago += v; cPago++; }");
+    assert(M4 !== SRC_DEPOIS, 'mutante M4 foi construido');
+    const m4 = rodarSrc(M4, [mk('Fornecedor Externo', 1000), mk('Fornecedor Externo', 55.55, 'cancelado')]);
+    const d4 = rodarSrc(SRC_DEPOIS, [mk('Fornecedor Externo', 1000), mk('Fornecedor Externo', 55.55, 'cancelado')]);
+    assert(m4['kpi-pago'] === d4['kpi-pago'],
+      'MUTACAO M4: estender a guarda ao `pago` nao muda nada HOJE, porque statusVisual ja manda cancelado para ' +
+      'fora de `pago`. E por isso que a checagem de "o que nao podia mudar" NAO basta sozinha: quem garante o ' +
+      'escopo estreito e o teste de POSICAO textual da guarda no laco (2.5a), nao o numero');
+  }
+
+  secao('FRENTE 2.6 — PROVA NUMERICA sobre os dados reais');
   const CAMINHO = argDados();
   if (!CAMINHO || !fs.existsSync(CAMINHO)) {
     pular('prova numerica antes/depois nos 51.181 docs', 'snapshot nao informado (use --dados <arquivo fora do repo>)');
@@ -1124,17 +1495,37 @@ async function frente2() {
   console.log('  snapshot: ' + CAMINHO);
   console.log('  docs: ' + registros.length.toLocaleString('pt-BR'));
 
-  // (1) Comparacao byte a byte com o formatador REAL do arquivo.
+  // (1) O QUE NAO PODIA MUDAR, comparado como STRING com o formatador REAL do
+  //     arquivo (Intl pt-BR), contra AS DUAS BASES.
+  //     Contra HEAD a pergunta e "a guarda de cancelado, sozinha, mexeu nisto?".
+  //     Contra 0ca791e a pergunta e "a Frente 2 inteira mexeu nisto?".
+  //     A primeira e a que o diretor pediu; a segunda e a rede de seguranca.
   const strA = montarKPI(SRC_ANTES, 'antes'); strA.fn(registros);
+  const strH = montarKPI(SRC_HEAD, 'head'); strH.fn(registros);
   const strD = montarKPI(SRC_DEPOIS, 'depois'); strD.fn(registros);
   const PRESERVAR = ['kpi-total', 'kpi-total-count', 'kpi-pago', 'kpi-pago-count',
     'kpi-a-pagar', 'kpi-a-pagar-count', 'kpi-vencido', 'kpi-vencido-count',
     'kpi-tarifas', 'kpi-tarifas-count'];
   console.log('  --- formatador REAL (Intl pt-BR), comparado como STRING ---');
+  console.log('      ' + 'id'.padEnd(20) + BASE_REF.padEnd(24) + HEAD_REF.padEnd(24) + 'worktree');
   for (const k of PRESERVAR) {
-    const a = strA.escrito[k], d = strD.escrito[k];
-    console.log('      ' + k.padEnd(20) + ' antes=' + String(a).padEnd(22) + ' depois=' + d);
-    assert(a === d, 'PRESERVADO byte a byte: ' + k + ' (antes=' + a + ' depois=' + d + ')');
+    const a = strA.escrito[k], h = strH.escrito[k], d = strD.escrito[k];
+    console.log('      ' + k.padEnd(20) + String(a).padEnd(24) + String(h).padEnd(24) + String(d));
+    assert(h === d, 'a GUARDA DE CANCELADO nao tocou ' + k + ': identico como STRING contra ' + HEAD_REF +
+      ' (head=' + h + ' depois=' + d + ')');
+    assert(a === d, 'e nem a Frente 2 inteira tocou: identico como STRING contra ' + BASE_REF +
+      ' (antes=' + a + ' depois=' + d + ')');
+  }
+  // E o CONTRARIO tambem tem que ser verdade, senao a comparacao acima e vacua:
+  // os DOIS cards que DEVIAM mudar mudaram, e so eles.
+  console.log('  --- o que DEVIA mudar (guarda de cancelado), contra ' + HEAD_REF + ' ---');
+  for (const k of ['kpi-interno', 'kpi-externo', 'kpi-cliente', 'kpi-sem-class', 'kpi-sem-class-count']) {
+    const h = strH.escrito[k], d = strD.escrito[k];
+    const deveMudar = (k === 'kpi-interno' || k === 'kpi-externo');
+    console.log('      ' + k.padEnd(20) + String(h).padEnd(24) + String(d) + (h === d ? '   (igual)' : '   (MUDOU)'));
+    assert(deveMudar ? h !== d : h === d, deveMudar
+      ? 'kpi-' + k.slice(4) + ' MUDOU pela guarda (' + h + ' -> ' + d + '), como esperado: tinha cancelado dentro'
+      : k + ' NAO mudou pela guarda (' + d + '): nao havia cancelado neste bucket no dado real');
   }
 
   // (2) Valores decimais para casar com as constantes ditadas.
@@ -1145,12 +1536,42 @@ async function frente2() {
   console.log('  --- ANTES, em decimal ---');
   Object.keys(numA.escrito).sort().forEach(k => console.log('      ' + k.padEnd(22) + '= ' + numA.escrito[k]));
 
+  // ── AS CONSTANTES, e POR QUE cada uma mudou (atualizadas em 2026-09-30) ──────
+  // A guarda `cancelado nao e custo` tirou 4 documentos dos cards de natureza.
+  // Sao estes, lidos do snapshot (o teste os RE-DERIVA logo abaixo, nao confia):
+  //   Fornecedor Externo        3 docs   R$ 128.537,11
+  //                                        126.785,99  EMPRESTIMOS - BANCO REAL - SEL
+  //                                            700,35  TELEFONES - INTERNOS
+  //                                          1.050,77  UNIFORMES/EPI'S - CLIENTES
+  //   Fornecedor Interno - PJ   1 doc    R$     235,87  RELATORIO DE DESPESAS - INTERN
+  //   Cliente                   0 docs   R$       0,00  <- por isso kpi-cliente nao mudou
+  //   (sem tipo)                0 docs   R$       0,00  <- por isso kpi-sem-class nao mudou
+  //
+  // MUDARAM, e exatamente por isto:
+  //   kpi-externo  16088181.69 -> 15959644.58   (-128.537,11, os 3 cancelados de Externo)
+  //   kpi-interno   5627953.39 ->  5627717.52   (-235,87, o cancelado de Interno - PJ,
+  //                                              que cai em `interno` porque desde a
+  //                                              Frente 2 o bucket Interno agrega CLT + PJ)
+  // NAO MUDARAM, e tambem por um motivo, nao por sorte:
+  //   kpi-cliente e kpi-sem-class: zero cancelados nesses dois tipos no dado real.
+  //     ATENCAO: isso significa que o dado real NAO testemunha que esses dois cards
+  //     excluem cancelado. Quem prova isso e a FRENTE 2.5 (sintetico). Nao trate o
+  //     "nao mudou" aqui como cobertura.
+  //   kpi-total / kpi-pago / kpi-a-pagar / kpi-vencido / kpi-tarifas e as contagens:
+  //     a guarda esta posicionada DEPOIS deles no laco (provado em 2.5 por posicao
+  //     textual), e o Total Geral e Pago + Tarifas, onde cancelado nunca entrou
+  //     porque `statusVisual('cancelado')` nao e 'pago'.
   const ESPERADO = {
     'kpi-total': '48765114.08', 'kpi-total-count': '51.176',
     'kpi-pago': '48612943.95', 'kpi-pago-count': '50.575',
     'kpi-a-pagar': '0.00',
     'kpi-tarifas': '152170.13', 'kpi-tarifas-count': '601',
-    'kpi-interno': '5627953.39', 'kpi-externo': '16088181.69',
+    // ATUALIZADO 2026-09-30: era 5627953.39. Saiu R$ 235,87 (1 doc cancelado de
+    // `Fornecedor Interno - PJ`). 5627953.39 - 235.87 = 5627717.52.
+    'kpi-interno': '5627717.52',
+    // ATUALIZADO 2026-09-30: era 16088181.69. Sairam R$ 128.537,11 (3 docs
+    // cancelados de `Fornecedor Externo`). 16088181.69 - 128537.11 = 15959644.58.
+    'kpi-externo': '15959644.58',
     'kpi-cliente': '25474325.89', 'kpi-sem-class': '1551255.96',
     'kpi-sem-class-count': '1.931',
   };
@@ -1158,7 +1579,41 @@ async function frente2() {
     assert(numD.escrito[k] === v, 'constante ditada ' + k + ' = ' + v + ' (obtido ' + numD.escrito[k] + ')');
   }
   assert(numA.escrito['kpi-opex'] === '18549404.72',
-    'OPEX ANTES = 18549404.72 (obtido ' + numA.escrito['kpi-opex'] + ')');
+    'OPEX ANTES (' + BASE_REF + ') = 18549404.72 (obtido ' + numA.escrito['kpi-opex'] + ')');
+  // As constantes do HEAD, para a aritmetica "antes - saiu = depois" ser explicita
+  // no proprio teste em vez de virar um numero magico no comentario.
+  const numH = montarKPI(SRC_HEAD, 'head', { numerico: true }); numH.fn(registros);
+  assert(numH.escrito['kpi-interno'] === '5627953.39' && numH.escrito['kpi-externo'] === '16088181.69',
+    'os valores do HEAD (com cancelado dentro) sao interno=5627953.39 e externo=16088181.69 (obtido ' +
+    numH.escrito['kpi-interno'] + ' / ' + numH.escrito['kpi-externo'] + ')');
+
+  // ── O QUE SAIU, medido pela PROPRIA funcao, sem reimplementar o criterio ─────
+  // Metodo: roda a funcao DEPOIS sobre a base com TODO status trocado por 'pago'.
+  // Como a unica coisa que a guarda le e `status`, neutralizar o status devolve
+  // exatamente o comportamento pre-guarda. A diferenca contra a rodada normal E
+  // o valor cancelado, por bucket, sem nenhuma reimplementacao do /^cancel/i.
+  const semCancelado = registros.map(r => Object.assign({}, r, { status: 'pago' }));
+  const kSemC = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kSemC.fn(semCancelado);
+  const SAIU = {};
+  for (const k of ['kpi-interno', 'kpi-externo', 'kpi-cliente', 'kpi-sem-class']) {
+    SAIU[k] = cent(kSemC.escrito[k]) - cent(numD.escrito[k]);
+  }
+  console.log('  --- o cancelado que saiu de cada bucket, em CENTAVOS (medido pela funcao real) ---');
+  for (const [k, c] of Object.entries(SAIU)) console.log('      ' + k.padEnd(18) + String(c).padStart(12) + '  = R$ ' + (c / 100).toFixed(2));
+  assert(SAIU['kpi-interno'] === 23587, 'saiu de kpi-interno: 23587 centavos (R$ 235,87), o 1 doc PJ cancelado (obtido ' + SAIU['kpi-interno'] + ')');
+  assert(SAIU['kpi-externo'] === 12853711, 'saiu de kpi-externo: 12853711 centavos (R$ 128.537,11), os 3 docs Externo cancelados (obtido ' + SAIU['kpi-externo'] + ')');
+  assert(SAIU['kpi-cliente'] === 0, 'saiu de kpi-cliente: 0, nao havia cancelado neste bucket (obtido ' + SAIU['kpi-cliente'] + ')');
+  assert(SAIU['kpi-sem-class'] === 0, 'saiu de kpi-sem-class: 0, nao havia cancelado neste bucket (obtido ' + SAIU['kpi-sem-class'] + ')');
+  assert(SAIU['kpi-interno'] + SAIU['kpi-externo'] + SAIU['kpi-cliente'] + SAIU['kpi-sem-class'] === 12877298,
+    'o TOTAL que saiu dos 4 cards e 12877298 centavos (R$ 128.772,98), que e a divergencia exata que o CP tinha contra o DRE');
+  // Contraprova cruzada: neutralizar o status tem que reproduzir o HEAD EXATAMENTE.
+  // Se nao reproduzir, a guarda le mais coisa que `status` e o metodo acima e invalido.
+  assert(kSemC.escrito['kpi-interno'] === numH.escrito['kpi-interno'] &&
+    kSemC.escrito['kpi-externo'] === numH.escrito['kpi-externo'] &&
+    kSemC.escrito['kpi-cliente'] === numH.escrito['kpi-cliente'] &&
+    kSemC.escrito['kpi-sem-class'] === numH.escrito['kpi-sem-class'],
+    'CONTRAPROVA do metodo: com todo status neutralizado, a funcao DEPOIS reproduz o HEAD ao centavo nos 4 cards, ' +
+    'logo a guarda nao le nada alem de `status` e a medicao acima e valida');
 
   const num = (k, e) => Number((e || numD.escrito)[k] || 0);
   const interno = num('kpi-interno'), externo = num('kpi-externo');
@@ -1167,61 +1622,444 @@ async function frente2() {
   const soma4 = Math.round((interno + externo + cliente + semClass) * 100) / 100;
   const delta = Math.round((interno + externo - opexAntes) * 100) / 100;
 
-  // (3) O DELTA e exatamente o bucket PJ. Metodo INDEPENDENTE do usado pelo
-  //     coordenador: em vez de rodar a funcao so com os PJ, roda a funcao real
-  //     sobre a base SEM os PJ e tira a diferenca. Nada e reimplementado.
+  // ===========================================================================
+  // (3) A IDENTIDADE RE-DERIVADA. Este caso foi REESCRITO em 2026-09-30, nao
+  //     relaxado. A versao antiga afirmava:
+  //
+  //        (interno + externo)_novo - OPEX_antigo  ==  bucket "Fornecedor Interno - PJ"
+  //                                                    "nada alem"
+  //
+  //     e valia com UM termo porque a unica coisa que a Frente 2 tinha feito era
+  //     ACRESCENTAR o PJ ao bucket Interno. Com a guarda de cancelado ela deixou
+  //     de valer: `OPEX_antigo` (0ca791e) INCLUI cancelado e os cards novos NAO.
+  //     Relaxar a tolerancia ou apagar a assertiva esconderia justamente o efeito
+  //     que a frente introduziu. A identidade correta tem DOIS termos:
+  //
+  //        DELTA = B - C
+  //          B = bucket "Fornecedor Interno - PJ", SEM cancelado   (o que ENTROU)
+  //          C = cancelado dos tipos que o OPEX antigo ja cobria,
+  //              isto e "Fornecedor Interno" + "Fornecedor Externo" (o que SAIU)
+  //
+  //     Os dois termos tem sinais OPOSTOS e e por isso que o numero antigo
+  //     (3.166.730,36) estava a 235,87 + 128.537,11 do novo: 235,87 porque o
+  //     proprio PJ perdeu 1 cancelado (B encolheu), e 128.537,11 porque o OPEX
+  //     antigo contava 3 cancelados de Externo que agora saem (C entra negativo).
+  //
+  //     Conferencia aritmetica, em centavos, que o teste abaixo re-executa:
+  //        B (PJ sem cancelado) .............   316.649.449
+  //        C (Int+Ext cancelado) ............    12.853.711
+  //        B - C ............................   303.795.738  =  R$ 3.037.957,38
+  //        (interno+externo)_novo ...........  2.158.736.210
+  //        OPEX_antigo ......................  1.854.940.472
+  //        DELTA ............................   303.795.738  FECHA
+  //
+  //     E o PJ COM cancelado vale 316.673.036 (R$ 3.166.730,36), que era exatamente
+  //     a constante antiga. Nenhum centavo ficou sem endereco.
+  // ===========================================================================
+  const centD = (k) => cent(numD.escrito[k]);
+  const cIntExtNovo = centD('kpi-interno') + centD('kpi-externo');
+  const cOpexAntigo = cent(numA.escrito['kpi-opex']);
+  const cDelta = cIntExtNovo - cOpexAntigo;
+
+  // TERMO B, medido pela funcao real e por DIFERENCA, sem reimplementar nada:
+  // roda a funcao sobre a base sem nenhum PJ e subtrai de `interno`.
   const semPJ = registros.filter(r => String(r.tipo_entidade || '').trim() !== 'Fornecedor Interno - PJ');
   const kSemPJ = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kSemPJ.fn(semPJ);
-  const bucketPJ = Math.round((interno - Number(kSemPJ.escrito['kpi-interno'])) * 100) / 100;
-  console.log('  OPEX antes ................ ' + opexAntes.toFixed(2));
-  console.log('  Interno + Externo depois .. ' + (interno + externo).toFixed(2));
-  console.log('  DELTA ..................... ' + delta.toFixed(2));
-  console.log('  bucket PJ (por diferenca) . ' + bucketPJ.toFixed(2));
-  assert(Math.abs(interno + externo - 21716135.08) < 0.005,
-    'Interno + Externo = 21716135.08 (obtido ' + (interno + externo).toFixed(2) + ')');
-  assert(Math.abs(delta - 3166730.36) < 0.005, 'DELTA = 3166730.36 (obtido ' + delta.toFixed(2) + ')');
-  assert(Math.abs(delta - bucketPJ) < 0.005,
-    'a diferenca corresponde EXATAMENTE ao bucket Fornecedor Interno - PJ, nada alem (' + delta.toFixed(2) + ' = ' + bucketPJ.toFixed(2) + ')');
-  assert(Math.abs(cliente - Number(numA.escrito['kpi-cliente'])) < 0.005,
-    'kpi-cliente nao se moveu: antes=' + numA.escrito['kpi-cliente'] + ' depois=' + numD.escrito['kpi-cliente']);
+  const cB = centD('kpi-interno') - cent(kSemPJ.escrito['kpi-interno']);
+  // O MESMO termo, pelo HEAD (que nao tem a guarda), da o PJ COM cancelado.
+  const kSemPJh = montarKPI(SRC_HEAD, 'head', { numerico: true }); kSemPJh.fn(semPJ);
+  const cBcomCanc = cent(numH.escrito['kpi-interno']) - cent(kSemPJh.escrito['kpi-interno']);
+  // TERMO C: o cancelado dos tipos que o OPEX antigo cobria. Reusa o SAIU medido
+  // acima pela propria funcao. O OPEX antigo somava 'Fornecedor Interno' e
+  // 'Fornecedor Externo' e NAO somava PJ, entao C e o cancelado de Externo mais o
+  // cancelado de Fornecedor Interno CLT. Este ultimo e zero no dado real (o unico
+  // cancelado do bucket `interno` e do PJ), o que o teste PROVA, nao supoe.
+  const kSemCh = montarKPI(SRC_HEAD, 'head', { numerico: true });
+  kSemCh.fn(semPJ.map(r => Object.assign({}, r, { status: 'pago' })));
+  const cCancCLT = cent(kSemCh.escrito['kpi-interno']) - cent(kSemPJ.escrito['kpi-interno']);
+  const cC = SAIU['kpi-externo'] + cCancCLT;
 
-  // (4) Total do recorte extraido da PROPRIA funcao real: com todo tipo_entidade
-  //     removido, o `else` final joga tudo em sem_class, que ESTA exposto.
-  //     Assim o total interno da funcao aparece sem reimplementar o recorte.
-  const semTipoAlgum = registros.map(r => {
-    const c = Object.assign({}, r); delete c.tipo_entidade; return c;
-  });
-  const kTotal = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kTotal.fn(semTipoAlgum);
-  const totalRecorte = Number(kTotal.escrito['kpi-sem-class']);
-  const cTotal = kTotal.escrito['kpi-sem-class-count'];
-  console.log('  total do recorte (tarifa expurgada) = ' + totalRecorte.toFixed(2) + ' em ' + cTotal + ' docs');
-  console.log('  soma dos 4 cards de natureza        = ' + soma4.toFixed(2));
-  assert(Math.abs(soma4 - totalRecorte) < 0.005,
-    'os 4 cards de natureza somam o TOTAL DO RECORTE, medido pela propria funcao (' + soma4.toFixed(2) + ' = ' + totalRecorte.toFixed(2) + ')');
-  assert(Math.abs(soma4 - 48741716.93) < 0.005, 'soma dos 4 = 48741716.93 (obtido ' + soma4.toFixed(2) + ')');
+  console.log('  --- A IDENTIDADE, em CENTAVOS inteiros ---');
+  console.log('      OPEX_antigo (' + BASE_REF + ') ........... ' + String(cOpexAntigo).padStart(14));
+  console.log('      (interno+externo)_novo ............ ' + String(cIntExtNovo).padStart(14));
+  console.log('      DELTA ............................. ' + String(cDelta).padStart(14) + '  = R$ ' + (cDelta / 100).toFixed(2));
+  console.log('      B = PJ SEM cancelado .............. ' + String(cB).padStart(14) + '  = R$ ' + (cB / 100).toFixed(2));
+  console.log('      C = cancelado de Int(CLT)+Ext ..... ' + String(cC).padStart(14) + '  = R$ ' + (cC / 100).toFixed(2));
+  console.log('          dos quais Externo ............. ' + String(SAIU['kpi-externo']).padStart(14));
+  console.log('          dos quais Interno CLT ......... ' + String(cCancCLT).padStart(14));
+  console.log('      B - C ............................. ' + String(cB - cC).padStart(14));
+  console.log('      PJ COM cancelado (const antiga) ... ' + String(cBcomCanc).padStart(14) + '  = R$ ' + (cBcomCanc / 100).toFixed(2));
 
-  // A soma dos 4 NAO e o card Total Geral, e a diferenca e explicavel.
-  const kpiTotal = num('kpi-total');
-  const diff = Math.round((kpiTotal - totalRecorte) * 100) / 100;
-  const pago = num('kpi-pago'), aPagar = num('kpi-a-pagar'), vencido = num('kpi-vencido'), tarifas = num('kpi-tarifas');
-  const outros = Math.round((totalRecorte - pago - aPagar - vencido) * 100) / 100;
-  console.log('  card Total Geral (pago+tarifas) ..... ' + kpiTotal.toFixed(2));
-  console.log('  diferenca vs soma dos 4 ............. ' + diff.toFixed(2));
-  console.log('  decomposicao: tarifas=' + tarifas.toFixed(2) + ' aPagar=' + aPagar.toFixed(2) +
-    ' vencido=' + vencido.toFixed(2) + ' provisionado/cancelado=' + outros.toFixed(2));
-  assert(Math.abs(diff - 23397.15) < 0.005,
-    'a divergencia soma-dos-4 vs Total Geral e ' + diff.toFixed(2) + ' = 23397.15, e NAO um erro');
-  assert(Math.abs(diff - (tarifas - aPagar - vencido - outros)) < 0.02,
-    'a divergencia e inteiramente explicada por tarifas - (aPagar + vencido + provisionado/cancelado): ' +
-    (tarifas - aPagar - vencido - outros).toFixed(2));
+  assert(cIntExtNovo === 2158736210,
+    'Interno + Externo depois = 2158736210 centavos (R$ 21.587.362,10). ATUALIZADO 2026-09-30: era ' +
+    '2171613508 (R$ 21.716.135,08); saiu o cancelado dos dois buckets (obtido ' + cIntExtNovo + ')');
+  assert(cDelta === 303795738,
+    'DELTA = 303795738 centavos (R$ 3.037.957,38). ATUALIZADO 2026-09-30: era 316673036 ' +
+    '(R$ 3.166.730,36), que era o PJ COM cancelado; hoje o DELTA e B - C (obtido ' + cDelta + ')');
+  assert(cCancCLT === 0,
+    'nao ha cancelado no bucket `Fornecedor Interno` CLT no dado real (' + cCancCLT + ' centavos), ' +
+    'logo C e so o cancelado de Fornecedor Externo. PROVADO, nao suposto');
+  assert(cB === 316649449, 'B (PJ sem cancelado) = 316649449 centavos (R$ 3.166.494,49), obtido ' + cB);
+  assert(cC === 12853711, 'C (cancelado de Int CLT + Externo) = 12853711 centavos (R$ 128.537,11), obtido ' + cC);
+  // A IDENTIDADE. Comparacao de INTEIROS, sem epsilon: nao ha tolerancia a esconder nada.
+  assert(cDelta === cB - cC,
+    'IDENTIDADE RE-DERIVADA E FECHADA: (interno+externo)_novo - OPEX_antigo == B - C, ' +
+    'onde B = PJ sem cancelado (entrou) e C = cancelado de Interno CLT + Externo (saiu). ' +
+    cDelta + ' == ' + cB + ' - ' + cC + '. Cada centavo do delta tem endereco, e sao EXATAMENTE estes dois');
+  // E a ponte com a constante ANTIGA, para a mudanca de numero ficar auditavel:
+  assert(cBcomCanc === 316673036 && cBcomCanc - cB === 23587,
+    'a constante ANTIGA (316673036 = R$ 3.166.730,36) era o PJ COM cancelado, e ela difere de B ' +
+    'em exatamente 23587 centavos, o 1 doc PJ cancelado. E por isso, e so por isso, que ela mudou');
+  assert(cent(numD.escrito['kpi-cliente']) === cent(numA.escrito['kpi-cliente']),
+    'kpi-cliente nao se moveu nem contra ' + BASE_REF + ': antes=' + numA.escrito['kpi-cliente'] + ' depois=' + numD.escrito['kpi-cliente']);
 
-  // (5) Particao completa sobre o dado REAL, medida pela propria funcao.
-  const kSemClassOnly = montarKPI(SRC_DEPOIS, 'depois', { numerico: true });
-  kSemClassOnly.fn(registros.map(r => Object.assign({}, r, { tipo_entidade: 'Fornecedor Misterioso' })));
-  assert(Math.abs(Number(kSemClassOnly.escrito['kpi-sem-class']) - totalRecorte) < 0.005,
-    'com todo tipo trocado por um tipo INVENTADO, sem_class recebe 100% do total do recorte (particao completa no dado real)');
-  assert(kSemClassOnly.escrito['kpi-sem-class-count'] === cTotal,
-    'e a CONTAGEM tambem fecha: ' + kSemClassOnly.escrito['kpi-sem-class-count'] + ' = ' + cTotal);
+  // ===========================================================================
+  // (4) AS INVARIANTES NOVAS, todas em CENTAVOS INTEIROS.
+  //     O universo que os 4 cards cobrem e medido pela PROPRIA funcao: apagando
+  //     `tipo_entidade` de todo registro, o `else` final manda tudo para
+  //     `semClass`, que esta exposto no DOM. Como `semClass` esta DENTRO da
+  //     guarda, o numero que sai e, por construcao, "recorte sem tarifa E SEM
+  //     CANCELADO". Nada do recorte e reimplementado aqui.
+  // ===========================================================================
+  const kUniv = universo4(registros);
+  const cUniverso = cent(kUniv['kpi-sem-class']);
+  const cUnivCount = kUniv['kpi-sem-class-count'];
+  const cSoma4 = centSoma(numD.escrito, 'kpi-interno', 'kpi-externo', 'kpi-cliente', 'kpi-sem-class');
+  // O mesmo universo medido no HEAD (COM cancelado), para a diferenca ter nome.
+  const cUniversoHead = cent(universo4H(registros)['kpi-sem-class']);
+  console.log('  --- INVARIANTES, em CENTAVOS inteiros ---');
+  console.log('      recorte sem tarifa, COM cancelado (' + HEAD_REF + ') . ' + String(cUniversoHead).padStart(14));
+  console.log('      recorte sem tarifa, SEM cancelado (worktree) ... ' + String(cUniverso).padStart(14) + ' em ' + cUnivCount + ' docs');
+  console.log('      soma dos 4 cards .............................. ' + String(cSoma4).padStart(14));
+  console.log('      kpi-total (Pago + Tarifas) .................... ' + String(centD('kpi-total')).padStart(14));
+  console.log('      kpi-total - soma dos 4 ........................ ' + String(centD('kpi-total') - cSoma4).padStart(14));
+  console.log('      kpi-tarifas ................................... ' + String(centD('kpi-tarifas')).padStart(14));
+
+  // INVARIANTE 1 — soma dos 4 == recorte sem tarifa E SEM cancelado.
+  assert(cSoma4 === cUniverso,
+    'INVARIANTE 1: interno + externo + cliente + semClass == recorte sem tarifa E SEM CANCELADO, ' +
+    'em centavos inteiros (' + cSoma4 + ' == ' + cUniverso + '), medido pela propria funcao');
+  assert(cSoma4 === 4861294395,
+    'soma dos 4 = 4861294395 centavos (R$ 48.612.943,95). ATUALIZADO 2026-09-30: era 4874171693 ' +
+    '(R$ 48.741.716,93), que era o recorte COM cancelado; saiu 12877298 (R$ 128.772,98), obtido ' + cSoma4);
+  assert(cUniversoHead - cUniverso === 12877298,
+    'e a diferenca entre os dois universos (COM e SEM cancelado) e exatamente 12877298 centavos, ' +
+    'os 4 docs cancelados. Nada mais mudou no recorte: nem o corte de ano, nem o expurgo de tarifa');
+
+  // INVARIANTE 2 — Total Geral - soma dos 4 == tarifas, EXATAMENTE, em centavos.
+  const cGap = centD('kpi-total') - cSoma4;
+  assert(cGap === centD('kpi-tarifas'),
+    'INVARIANTE 2: (Total Geral - soma dos 4) == tarifas, EXATAMENTE e em centavos inteiros (' +
+    cGap + ' == ' + centD('kpi-tarifas') + ' = R$ 152.170,13). ATUALIZADO 2026-09-30: antes da guarda ' +
+    'essa diferenca era 2339715 (R$ 23.397,15), que era tarifas menos os cancelados; agora a conta fecha ' +
+    'na tarifa e so na tarifa');
+  // E a prova de que a invariante 2 NAO e estrutural, e sim consequencia do dado
+  // de HOJE. Sem isto, a frente seguinte construiria em cima de uma coincidencia.
+  assert(centD('kpi-a-pagar') === 0 && centD('kpi-vencido') === 0 &&
+    cUniverso === centD('kpi-pago'),
+    'ATENCAO, a invariante 2 vale porque HOJE `a pagar` e `vencido` sao zero e o recorte sem cancelado ' +
+    'e todo `pago` (' + cUniverso + ' == ' + centD('kpi-pago') + '). No dia em que houver fatura a vencer, ' +
+    'provisionada ou atrasada, ela QUEBRA sem que nada esteja errado. A invariante 1 e a estrutural; ' +
+    'a 2 e observacao do dado atual. A FRENTE 2.5 prova essa quebra sinteticamente');
+
+  // INVARIANTE 3 — particao: tipo desconhecido cai em Sem Classificacao.
+  const kMist = montarKPI(SRC_DEPOIS, 'depois', { numerico: true });
+  kMist.fn(registros.map(r => Object.assign({}, r, { tipo_entidade: 'Fornecedor Misterioso' })));
+  assert(cent(kMist.escrito['kpi-sem-class']) === cUniverso,
+    'INVARIANTE 3: com TODO tipo_entidade trocado por um tipo INVENTADO, Sem Classificacao recebe 100% ' +
+    'do universo e a soma continua fechando (' + cent(kMist.escrito['kpi-sem-class']) + ' == ' + cUniverso + ')');
+  assert(kMist.escrito['kpi-sem-class-count'] === cUnivCount,
+    'e a CONTAGEM tambem fecha: ' + kMist.escrito['kpi-sem-class-count'] + ' = ' + cUnivCount);
+  // Particao com o tipo inventado CONVIVENDO com os 4 reais, que e o caso que
+  // importa: so trocar tudo por um tipo so nao prova que a soma fecha na mistura.
+  const kMix = montarKPI(SRC_DEPOIS, 'depois', { numerico: true });
+  kMix.fn(registros.map((r, i) => i % 7 === 0 ? Object.assign({}, r, { tipo_entidade: 'Fornecedor Quinto Tipo' }) : r));
+  assert(centSoma(kMix.escrito, 'kpi-interno', 'kpi-externo', 'kpi-cliente', 'kpi-sem-class') === cUniverso,
+    'INVARIANTE 3b: com 1 em cada 7 registros reetiquetado para um QUINTO tipo, a soma dos 4 continua ' +
+    'igual ao universo (particao por construcao, nao por sorte do dado)');
+
+  // ===========================================================================
+  // (5) O DRILL-DOWN. Eu abri este caso como GAP-B: `_KPI_FILTRO_MAP` manda os 4
+  //     cards de natureza para `cp-filtro-tipo`, NAO toca `cp-filtro-status`, e
+  //     `aplicarFiltrosCP` so filtrava status quando o filtro de status estava
+  //     setado. Clicar no card abria uma tabela que INCLUIA os cancelados que o
+  //     card acabou de excluir: card e tabela discordavam em R$ 128.537,11.
+  //     O coordenador corrigiu na mesma frente, com a guarda de
+  //     `_cardNaturezaAtivo` em aplicarFiltrosCP. Os casos abaixo passaram a
+  //     PROVAR a correcao e a cercar os modos de falha dela.
+  // ===========================================================================
+  {
+    // O drill-down continua NAO tocando o filtro de status, e isso esta certo:
+    // a correcao nao foi por filtro de status, foi por guarda derivada.
+    const mapTxt = extrairStatement(SRC_DEPOIS, 'const _KPI_FILTRO_MAP = {', 'depois');
+    for (const c of ['interno', 'externo', 'cliente', 'sem_class']) {
+      const linha = mapTxt.split('\n').find(l => new RegExp('^\\s*' + c + ':').test(l)) || '';
+      assert(/cp-filtro-tipo/.test(linha) && !/status/.test(linha),
+        'o drill-down do card ' + c + ' seta SO `cp-filtro-tipo` (a correcao nao mexeu no filtro de Status, ' +
+        'entao o operador continua livre para combinar Status com o card)');
+    }
+    // A guarda derivada e DERIVADA mesmo, nao uma flag guardada. Textual, porque
+    // uma flag e o modo de falha que faria a tabela esconder cancelado sem card ativo.
+    assert(/const _cardNaturezaAtivo = !!_cpCardNaturezaAtivoKey\(tipoArr\);/.test(SRC_DEPOIS),
+      '`_cardNaturezaAtivo` e DERIVADO do estado real do filtro de Tipo, nao de flag guardada (' +
+      REL + ':' + linhaDe(SRC_DEPOIS, 'const _cardNaturezaAtivo =') + ')');
+
+    // ── Harness do predicado REAL de aplicarFiltrosCP. Injeta TODAS as dependencias
+    //    e ESPIONA console.warn: o `catch` de `_cpCardNaturezaAtivoKey` falha aberto
+    //    (devolve ''), entao um ReferenceError por dependencia esquecida no harness
+    //    apareceria como "nada a excluir" e o teste passaria pelo motivo errado.
+    //    Foi exatamente isso que aconteceu na primeira rodada do coordenador.
+    // AS DEPENDENCIAS, enumeradas e EXIGIDAS. O coordenador avisou que o `catch` de
+    // `_cpCardNaturezaAtivoKey` falha aberto, entao uma dependencia esquecida aqui
+    // apareceria como "nada a excluir" e o teste passaria pelo motivo errado.
+    // Duas defesas: a lista e explicita e a ausencia de qualquer item na versao
+    // DEPOIS e FALHA DURA (o extrator lanca), nunca um fallback silencioso. Na
+    // versao HEAD tres delas nao existem (sao novas), e isso e DECLARADO.
+    const DEPS = [
+      ['stmt', 'const _KPI_FILTRO_MAP = {'],
+      ['stmt', 'const _CARDS_NATUREZA = ['],
+      ['fn', '_cpMesmoConjunto'],
+      ['fn', '_cpCardNaturezaAtivoKey'],
+    ];
+    for (const [tipo, nome] of DEPS) {
+      const achou = tipo === 'fn' ? SRC_DEPOIS.includes('function ' + nome + '(') : SRC_DEPOIS.includes(nome);
+      assert(achou, 'dependencia do harness presente na versao DEPOIS: ' + nome +
+        ' (esquecer esta e o erro que o catch de falha-aberta esconderia)');
+    }
+    const avisos = [];
+    const construirFiltro = (src, rot) => {
+      const temGuardaTabela = /_cardNaturezaAtivo && \/\^cancel\/i/.test(src);
+      const pedacos = [];
+      for (const [tipo, nome] of DEPS) {
+        const achou = tipo === 'fn' ? src.includes('function ' + nome + '(') : src.includes(nome);
+        if (achou) pedacos.push(tipo === 'fn' ? extrairFuncao(src, nome, rot) : extrairStatement(src, nome, rot));
+        else if (temGuardaTabela) throw new Error(rot + ': tem a guarda da tabela mas falta ' + nome);
+      }
+      return new Function('r', 'tipoArr', 'consoleSpy',
+        pedacos.join('\n') + '\n' +
+        'const console = consoleSpy;\n' +
+        'const isMultiAll = (a) => !a || !a.length || a.indexOf("Todos") >= 0;\n' +
+        'const tipoSet = !isMultiAll(tipoArr) ? new Set(tipoArr) : null;\n' +
+        'const tipoFiltraSemTipo = tipoSet && tipoSet.has("__SEM_TIPO__");\n' +
+        (temGuardaTabela ? 'const _cardNaturezaAtivo = !!_cpCardNaturezaAtivoKey(tipoArr);\n' : '') +
+        'let _ok = true;\n' +
+        extrairBloco(src, 'if (tipoSet) {', rot).replace(/return false;/g, '{ _ok = false; }') + '\n' +
+        (temGuardaTabela
+          ? extrairLinha(src, '_cardNaturezaAtivo && /^cancel/i').replace('return false;', '{ _ok = false; }')
+          : '') + '\n' +
+        'return _ok;');
+    };
+    const spy = { warn: (...a) => avisos.push(a.join(' ')) };
+    const filtroD = construirFiltro(SRC_DEPOIS, 'depois');
+    const filtroH = construirFiltro(SRC_HEAD, 'head');
+    assert(!/_cardNaturezaAtivo/.test(SRC_HEAD) && /_cardNaturezaAtivo/.test(SRC_DEPOIS),
+      'a guarda da tabela e NOVA: nao existe em ' + HEAD_REF + ' e existe na arvore de trabalho. ' +
+      'E por isso que o filtro do HEAD e montado sem ela, e nao por omissao do harness');
+    const passa = (fn, r, tipoArr) => fn(r, tipoArr, spy);
+    // Sanidade do harness ANTES de medir: o predicado tem que discriminar de
+    // verdade, senao "tudo passa" ou "nada passa" produziria numero redondo e falso.
+    assert(passa(filtroD, { tipo_entidade: 'Cliente', status: 'pago' }, ['Todos']) === true &&
+      passa(filtroD, { tipo_entidade: 'Cliente', status: 'pago' }, ['Fornecedor Externo']) === false,
+      'sanidade do harness do filtro: com Todos passa, com outro tipo nao passa');
+
+    // (5a) A CORRECAO, em numero, sobre o dado real: card == tabela, ao centavo.
+    const CARD = { externo: { tipo: ['Fornecedor Externo'], kpi: 'kpi-externo' },
+      interno: { tipo: ['Fornecedor Interno', 'Fornecedor Interno - PJ'], kpi: 'kpi-interno' },
+      cliente: { tipo: ['Cliente'], kpi: 'kpi-cliente' },
+      sem_class: { tipo: ['__SEM_TIPO__'], kpi: 'kpi-sem-class' } };
+    console.log('  --- clique no card: a tabela fecha com o card? (dado real) ---');
+    for (const [nome, c] of Object.entries(CARD)) {
+      const drill = registros.filter(r => passa(filtroD, r, c.tipo));
+      const drillH = registros.filter(r => passa(filtroH, r, c.tipo));
+      // O que a tabela soma: TODA linha exibida, dentro do corte de ano da query.
+      const somaTab = (arr) => arr.reduce((a, r) => String(r.data_vencimento || '') < String(numD.CP_LIMIAR_ANO)
+        ? a : a + cent(Number(r.valor_original || 0).toFixed(2)), 0);
+      const kD = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kD.fn(drill);
+      // O ESTADO INTERMEDIARIO, que e a unica coisa contra a qual este caso pode
+      // ser nao-vacuo: KPI da arvore de trabalho (JA exclui cancelado) rodando
+      // sobre a tabela do HEAD (que AINDA NAO excluia). E o GAP-B que eu reportei.
+      // Comparar HEAD-com-HEAD daria gap zero e nao provaria nada: no HEAD as DUAS
+      // pontas incluiam cancelado, logo fechavam. A regressao morava no meio.
+      const kMisto = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kMisto.fn(drillH);
+      // A tarifa fica fora do card por decisao antiga (expurgo do KPI), entao a
+      // comparacao honesta e contra a tabela MENOS a tarifa daquele recorte. A
+      // tarifa do recorte tambem vem da funcao real, via `kpi-tarifas`.
+      const restoD = somaTab(drill) - cent(kD.escrito['kpi-tarifas']);
+      const restoMisto = somaTab(drillH) - cent(kMisto.escrito['kpi-tarifas']);
+      const gapD = restoD - cent(kD.escrito[c.kpi]);
+      const gapMisto = restoMisto - cent(kMisto.escrito[c.kpi]);
+      console.log('      ' + nome.padEnd(10) + ' linhas=' + String(drill.length).padStart(6) +
+        '  tabela-tarifa=' + String(restoD).padStart(12) + '  card=' + String(cent(kD.escrito[c.kpi])).padStart(12) +
+        '  gap agora=' + String(gapD).padStart(8) + '  gap no estado intermediario=' + String(gapMisto).padStart(10));
+      assert(gapD === 0,
+        'CORRECAO PROVADA para o card ' + nome + ': clicando nele, a tabela (descontada a tarifa, que sempre ' +
+        'ficou fora do KPI) soma EXATAMENTE o valor do card, ao centavo. gap = ' + gapD);
+      const ESP_GAP_MISTO = { externo: 12853711, interno: 23587, cliente: 0, sem_class: 0 };
+      assert(gapMisto === ESP_GAP_MISTO[nome],
+        '  ... NAO-VACUIDADE do card ' + nome + ': no estado intermediario (KPI novo + tabela do ' + HEAD_REF +
+        ') o gap seria ' + ESP_GAP_MISTO[nome] + ' centavos' +
+        (ESP_GAP_MISTO[nome] ? ', e e exatamente o cancelado deste bucket. O caso acima reprova esse estado' :
+          ', porque este bucket nao tem cancelado no dado real: aqui a correcao e provada pelo SINTETICO de 2.5, nao por este numero'));
+    }
+    // (5a-bis) A SUTILEZA DO METODO, e ela IMPORTA para o que se diz ao diretor.
+    //   `aplicarFiltrosCP` nao aplica o corte de ano vigente nem o expurgo de
+    //   tarifa: os dois vivem dentro de `atualizarKPIs`. O coordenador descontou os
+    //   dois "a parte, de forma declarada", e para a pergunta "a guarda de cancelado
+    //   alinhou card e tabela?" isso e VALIDO: o teste (5a) acima fecha em ZERO.
+    //   O que NAO e valido e traduzir isso para o diretor como "somar as linhas
+    //   exibidas fecha com o card", porque a tabela que o operador ve na tela
+    //   CONTINUA trazendo as linhas de tarifa, que o card nao conta. Medido:
+    console.log('  --- o que o OPERADOR ve na tela, SEM desconto nenhum ---');
+    for (const [nome, c] of Object.entries(CARD)) {
+      const drill = registros.filter(r => passa(filtroD, r, c.tipo));
+      const visiveis = drill.filter(r => String(r.data_vencimento || '') >= String(numD.CP_LIMIAR_ANO));
+      const somaVis = visiveis.reduce((a, r) => a + cent(Number(r.valor_original || 0).toFixed(2)), 0);
+      const kD = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kD.fn(drill);
+      const tarifa = cent(kD.escrito['kpi-tarifas']);
+      const resto = somaVis - tarifa - cent(kD.escrito[c.kpi]);
+      console.log('      ' + nome.padEnd(10) + ' linhas visiveis=' + String(visiveis.length).padStart(6) +
+        '  soma visivel=' + String(somaVis).padStart(12) + '  card=' + String(cent(kD.escrito[c.kpi])).padStart(12) +
+        '  tarifa na tabela=' + String(tarifa).padStart(10) + '  sobra inexplicada=' + resto);
+      assert(resto === 0,
+        'card ' + nome + ': soma visivel - tarifa - card == 0, logo a UNICA coisa na tabela que o card nao ' +
+        'conta e a tarifa. Nada inexplicado sobrou (' + resto + ')');
+    }
+    {
+      const drill = registros.filter(r => passa(filtroD, r, CARD.externo.tipo));
+      const kD = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kD.fn(drill);
+      assert(cent(kD.escrito['kpi-tarifas']) === 15217013,
+        'GAP-D: clicando em Custo Fornecedor Externo, a tabela exibida ainda traz 601 linhas de TARIFA somando ' +
+        'R$ 152.170,13, que o card nao conta. Entao "somar as linhas exibidas fecha com o card" NAO e verdade ' +
+        'para esse card: fecha depois de descontar a tarifa. A guarda de cancelado resolveu o desencontro de ' +
+        'R$ 128.537,11; o de R$ 152.170,13 e PRE-EXISTENTE (expurgo de tarifa sempre foi so do KPI) e continua ' +
+        'de pe. Nao contar isto ao diretor como "fecha" seria enganoso: ele vai somar a coluna e achar 152 mil a mais');
+      // Nos outros 3 cards a tarifa e zero, entao neles a soma visivel fecha mesmo.
+      for (const nome of ['interno', 'cliente', 'sem_class']) {
+        const d2 = registros.filter(r => passa(filtroD, r, CARD[nome].tipo));
+        const k2 = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); k2.fn(d2);
+        assert(cent(k2.escrito['kpi-tarifas']) === 0,
+          'no card ' + nome + ' nao ha tarifa nenhuma, entao aqui somar as linhas exibidas FECHA com o card ' +
+          'sem desconto nenhum. O GAP-D e exclusivo do card Externo (todas as 601 tarifas sao Fornecedor Externo)');
+      }
+    }
+
+    assert(avisos.length === 0,
+      'nenhum console.warn de `_cpCardNaturezaAtivoKey` foi disparado: o harness injetou todas as dependencias ' +
+      'e o `catch` que falha aberto NAO engoliu nada. Sem esta checagem, um ReferenceError apareceria como ' +
+      '"nada a excluir" e os casos acima passariam pelo motivo errado' +
+      (avisos.length ? ' >>> ' + avisos.join(' | ') : ''));
+
+    // (5b) A guarda vale SO com card ativo, e isso e a parte que protege contra o
+    //      pior modo de falha: lancamento cancelado SUMIR da tela sem card aceso.
+    const cancReal = registros.filter(r => /^cancel/i.test(String(r.status || '').trim()));
+    assert(cancReal.length === 4, 'pre-condicao: 4 cancelados no dado real (obtido ' + cancReal.length + ')');
+    assert(cancReal.every(r => passa(filtroD, r, ['Todos']) === true),
+      'SEM card de natureza ativo, os 4 cancelados CONTINUAM visiveis na tabela. A correcao nao esconde ' +
+      'lancamento do operador, so alinha a tabela ao card quando o card esta aceso');
+    // Conjunto de Tipo que NAO e o de nenhum card: a guarda nao dispara. So os
+    // cancelados cujo TIPO casa com o filtro e que podem aparecer, obviamente, e a
+    // exclusao a testar e a de STATUS, nao a de tipo. O PJ cai fora pelo tipo, nao
+    // pela guarda, e confundir as duas coisas foi um erro meu na 1a versao deste caso.
+    const cancExterno = cancReal.filter(r => String(r.tipo_entidade || '').trim() === 'Fornecedor Externo');
+    assert(cancExterno.length === 3, 'pre-condicao: 3 dos 4 cancelados sao Fornecedor Externo (obtido ' + cancExterno.length + ')');
+    assert(cancExterno.every(r => passa(filtroD, r, ['Fornecedor Externo', 'Cliente']) === true),
+      'com um conjunto de Tipo que NAO e o de nenhum card (Externo + Cliente), a guarda nao dispara e os ' +
+      '3 cancelados de Externo aparecem: a exclusao e amarrada ao card aceso, nao ao filtro de Tipo em geral');
+    assert(cancExterno.every(r => passa(filtroD, r, ['Fornecedor Externo']) === false),
+      'e com o conjunto EXATO do card Externo (aceso, seja por clique ou por selecao manual identica), os ' +
+      'mesmos 3 desaparecem. A guarda e disparada pelo conjunto, nao pela origem do gesto');
+    // BUSCA DE FURO, que foi o que o coordenador pediu para eu atacar: existe algum
+    // conjunto de Tipo que dispare a exclusao SEM ser o conjunto exato de um card?
+    // Varredura exaustiva de todos os subconjuntos nao vazios dos 5 valores de Tipo
+    // que existem na base mais a sentinela. 63 combinacoes, nao amostragem.
+    const VALORES = ['Fornecedor Interno', 'Fornecedor Interno - PJ', 'Fornecedor Externo', 'Cliente', '__SEM_TIPO__', 'Todos'];
+    const CONJ_CARD = Object.values(CARD).map(c => c.tipo.slice().sort().join('|'));
+    const cobaia = { tipo_entidade: 'Fornecedor Externo', status: 'cancelado', valor_original: 1, data_vencimento: '2026-06-15' };
+    let furos = [], testados = 0;
+    for (let m = 1; m < (1 << VALORES.length); m++) {
+      const arr = VALORES.filter((_, i) => m & (1 << i));
+      testados++;
+      const excluiu = passa(filtroD, cobaia, arr) === false;
+      const ehTipoErrado = !arr.includes('Todos') && !arr.includes('Fornecedor Externo');
+      if (!excluiu || ehTipoErrado) continue; // nao excluiu, ou excluiu pelo TIPO
+      if (!CONJ_CARD.includes(arr.slice().sort().join('|'))) furos.push(arr.join(' + '));
+    }
+    console.log('      varredura de ' + testados + ' conjuntos de Tipo, furos encontrados: ' + (furos.length || 'NENHUM'));
+    assert(furos.length === 0,
+      'SEM FURO: varri os ' + testados + ' subconjuntos nao vazios de {4 tipos, __SEM_TIPO__, Todos} e NAO ha ' +
+      'nenhum em que a exclusao de cancelado dispare sem o conjunto ser EXATAMENTE o de um card de natureza. ' +
+      'A derivacao por `_cpMesmoConjunto` nao tem caminho lateral' + (furos.length ? ' >>> ' + furos.join(' ; ') : ''));
+
+    // (5b-bis) AS DUAS ROTAS DE FALHA de `_cpCardNaturezaAtivoKey`, e elas NAO sao
+    //   iguais. O coordenador perguntou se ha caminho de execucao em que o filtro
+    //   roda antes de `_KPI_FILTRO_MAP` (const declarada na linha ~6953, e
+    //   `aplicarFiltrosCP` na ~2783, no MESMO <script>). Analise de ordem: TODA
+    //   chamada de `renderTudo`/`aplicarFiltrosCP` esta dentro de funcao, de
+    //   callback de `onAuthStateChanged`/`onSnapshot`, de `setTimeout` ou de
+    //   `addEventListener`. Nenhuma e statement de topo executado durante a
+    //   avaliacao do script, logo a TDZ nao e alcancavel na pratica. O que os casos
+    //   abaixo provam e o COMPORTAMENTO se ela fosse, porque analise de ordem
+    //   envelhece e teste nao.
+    {
+      const pedacosSemMap =
+        extrairStatement(SRC_DEPOIS, 'const _CARDS_NATUREZA = [', 'f') + '\n' +
+        extrairFuncao(SRC_DEPOIS, '_cpMesmoConjunto', 'f') + '\n' +
+        extrairFuncao(SRC_DEPOIS, '_cpCardNaturezaAtivoKey', 'f') + '\n';
+      // ROTA 1, TDZ: a const existe mas ainda nao foi inicializada. `typeof` sobre
+      // const em TDZ LANCA ReferenceError, o catch pega, e o warn sai. FALHA ABERTA
+      // E RUIDOSA: a tabela mostra tudo, e alguem fica sabendo.
+      const av1 = [];
+      const tdz = new Function('consoleSpy', 'const console = consoleSpy;\n' + pedacosSemMap +
+        'const r = _cpCardNaturezaAtivoKey(["Fornecedor Externo"]);\n' +
+        'const _KPI_FILTRO_MAP = {};\n' + 'return r;');
+      const r1 = tdz({ warn: (...a) => av1.push(a.join(' ')) });
+      assert(r1 === '' && av1.length === 1 && /falhou/.test(av1[0]),
+        'ROTA DE FALHA 1 (TDZ, o caso que o coordenador levantou): devolve "" (falha ABERTA, tabela mostra ' +
+        'cancelado) E dispara o console.warn. Ruidosa, como tem que ser. aviso: ' + (av1[0] || '(nenhum)'));
+      // ROTA 2, identificador INEXISTENTE: `typeof` devolve 'undefined' e a funcao
+      // sai pelo early-return.
+      //
+      // INVERTIDO pelo coordenador em 2026-09-30, depois deste relatorio. O caso
+      // original assertava `av2.length === 0`, ou seja, DOCUMENTAVA que esta rota saia
+      // CALADA, e era um pedido de correcao disfarcado de teste. A correcao foi feita
+      // (o early-return ganhou `console.warn`), entao a assertiva passa a exigir o
+      // aviso. Teste que afirma a existencia de um defeito tem que ser invertido quando
+      // o defeito e corrigido, senao vira vermelho permanente; foi a terceira vez nesta
+      // OS que isso apareceu.
+      const av2 = [];
+      const semMap = new Function('consoleSpy', 'const console = consoleSpy;\n' + pedacosSemMap +
+        'return _cpCardNaturezaAtivoKey(["Fornecedor Externo"]);');
+      const r2 = semMap({ warn: (...a) => av2.push(a.join(' ')) });
+      assert(r2 === '' && av2.length === 1 && /ausente/.test(av2[0]),
+        'ROTA DE FALHA 2 CORRIGIDA (identificador INEXISTENTE): devolve "" (falha ABERTA) E dispara o ' +
+        'console.warn. Nao sobrou nenhuma rota silenciosa: renomear ou mover `_KPI_FILTRO_MAP` agora ' +
+        'aparece no console em vez de matar a exclusao em silencio. aviso: ' + (av2[0] || '(nenhum)'));
+      assert(SRC_DEPOIS.includes('const _KPI_FILTRO_MAP = {'),
+        'SENTINELA da rota 2: `_KPI_FILTRO_MAP` continua declarado com este nome exato. Se este caso falhar, ' +
+        'alguem renomeou a const e a exclusao de cancelado na tabela parou de funcionar SEM erro nenhum');
+    }
+
+    // (5c) GAP-C RESIDUAL. O card Interno cobre DOIS valores de tipo. Se o operador
+    //      selecionar so UM deles a mao, `_cpMesmoConjunto` da falso, o card apaga e
+    //      a guarda nao dispara: o cancelado volta para a tabela. Mas `atualizarKPIs`
+    //      continua excluindo cancelado, entao o card (agora recalculado sobre o
+    //      recorte) e a tabela voltam a discordar. E o unico caminho residual, e o
+    //      valor dele hoje e pequeno, mas e mensuravel.
+    const soPJ = ['Fornecedor Interno - PJ'];
+    const drillPJ = registros.filter(r => passa(filtroD, r, soPJ));
+    const kPJ = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kPJ.fn(drillPJ);
+    const tabPJ = drillPJ.reduce((a, r) => String(r.data_vencimento || '') < String(numD.CP_LIMIAR_ANO)
+      ? a : a + cent(Number(r.valor_original || 0).toFixed(2)), 0) - cent(kPJ.escrito['kpi-tarifas']);
+    const gapPJ = tabPJ - cent(kPJ.escrito['kpi-interno']);
+    console.log('      filtro de Tipo = SO "Fornecedor Interno - PJ" (card Interno APAGADO):');
+    console.log('        tabela-tarifa=' + tabPJ + '  card kpi-interno=' + cent(kPJ.escrito['kpi-interno']) + '  gap=' + gapPJ);
+    assert(gapPJ === 23587,
+      'GAP-C RESIDUAL medido: selecionando a mao SO "Fornecedor Interno - PJ" (metade do conjunto do card ' +
+      'Interno), o card apaga, a guarda da tabela nao dispara, mas o KPI continua excluindo cancelado. ' +
+      'Card e tabela voltam a discordar em R$ 235,87 (' + gapPJ + ' centavos). Nao e regressao da correcao: ' +
+      'e a fronteira dela. Decisao do coordenador: aceitar (valor baixo, caminho manual) ou fazer o KPI ' +
+      'condicionar a exclusao ao mesmo `_cardNaturezaAtivo`');
+  }
 }
 
 // =============================================================================
@@ -1307,6 +2145,35 @@ async function gapsMedidos() {
       'GAP 3: tipo desconhecido e SOMADO no card Sem Classificacao mas o clique no card (sentinela __SEM_TIPO__) ' +
       'NAO o traz na tabela. Hoje o impacto e ZERO (a base so tem os 4 tipos e o vazio), mas um 5o tipo criaria ' +
       'card que nao abre. Medido em ' + REL + ':' + linhaDe(SRC_DEPOIS, 'else { semClass += v; cSemClass++; }') + '.');
+  }
+
+  // ── GAP 4 (2026-09-30) — `total` e `cTotal` sao CODIGO MORTO, e isso muda o que
+  //    dizer ao diretor sobre para onde o cancelado foi. O comentario da frente
+  //    afirma que o cancelado "entra em `total` e portanto na conta do Total Geral".
+  //    A primeira metade e verdade; a segunda NAO e: o card Total Geral e
+  //    `pago + tarifas`, e `total`/`cTotal` nao alimentam nenhum setKPI. Como
+  //    `statusVisual('cancelado')` tambem nao e 'pago', os R$ 128.772,98 de
+  //    cancelado nao aparecem em card NENHUM, nem de caixa nem de natureza.
+  //    Nao e bug de calculo, e imprecisao na explicacao. Vale corrigir o comentario
+  //    (e o de `scripts/diag-cards-natureza-cp.cjs`), porque a proxima frente vai
+  //    ler esse comentario e concluir a coisa errada sobre onde o valor esta.
+  {
+    const corpoKPI = extrairFuncao(SRC_DEPOIS, 'atualizarKPIs', 'depois');
+    const semComentario = corpoKPI.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+    // O `-` entra no lookbehind/lookahead de proposito: sem ele, os IDS do DOM
+    // ('kpi-total', 'kpi-total-count') contariam como uso da VARIAVEL `total`, que
+    // e exatamente o engano que este caso existe para desfazer.
+    const usos = (v) => [...semComentario.matchAll(new RegExp('(?<![\\w$\\-])' + v + '(?![\\w$\\-])', 'g'))].length;
+    // 2 usos = a declaracao e o incremento. Nenhum terceiro uso = nunca lido.
+    assert(usos('total') === 2 && usos('cTotal') === 2,
+      'GAP 4: `total` e `cTotal` sao acumulados e NUNCA lidos (' + usos('total') + ' e ' + usos('cTotal') +
+      ' usos, so declaracao e incremento). O card Total Geral e `pago + tarifas`, nao `total`. ' +
+      'Logo o cancelado NAO esta no Total Geral: ele nao esta em card nenhum. Corrigir o comentario em ' +
+      REL + ':' + linhaDe(SRC_DEPOIS, 'esta frente (o `total` sempre incluiu cancelado') + ' e em scripts/diag-cards-natureza-cp.cjs.');
+    // GAP 5 (PRE-EXISTENTE): `kpi-vencido` e escrito mas nao existe no DOM.
+    assert(/setKPI\('kpi-vencido'/.test(SRC_DEPOIS) && !SRC_DEPOIS.includes('id="kpi-vencido"'),
+      'GAP 5 (PRE-EXISTENTE, nao desta frente): setKPI escreve `kpi-vencido` mas nao ha elemento com esse id ' +
+      'no DOM. Lancamento ATRASADO nao aparece em nenhum card visivel. Hoje o valor e zero, entao ninguem viu.');
   }
 }
 

@@ -109,12 +109,12 @@
              delegados dependem dele). Fileira 1 = Caixa & Status; fileira 2 =
              Natureza do Custo.
              ATENÇÃO, a prova numérica desmentiu a suposição inicial: os 4 cards de
-             Natureza somam o TOTAL DO RECORTE com a tarifa expurgada
-             (R$ 48.741.716,93 na base de 2026-09-29), que NÃO é o número do card
-             "Total Geral". Aquele card é `Pago + Tarifas` por decisão da Onda
-             Layout (R$ 48.765.114,08), então as duas somas divergem de propósito.
-             Quem for conferir os cards somando a fileira 2 tem que comparar com o
-             total do recorte, não com o card Total Geral.
+             Natureza NÃO somam o card "Total Geral". Aquele card é `Pago + Tarifas`
+             por decisão da Onda Layout, então as duas somas divergem DE PROPÓSITO.
+             Depois da correção de 2026-09-30, os 4 cards somam o recorte SEM tarifa
+             e SEM cancelado, e a diferença contra o Total Geral passou a ser
+             exatamente as TARIFAS. Quem for conferir a fileira 2 somando tem que
+             descontar as tarifas, não esperar o número do Total Geral.
 
              O card OPEX SAIU por decisão do diretor: ele somava só Fornecedor
              Interno + Fornecedor Externo e deixava o Interno PJ de fora, então
@@ -2828,6 +2828,14 @@
         const empFiltraSemEmp    = empSet && empSet.has('__SEM_EMPRESA__');
         const tipoFiltraSemTipo  = tipoSet && tipoSet.has('__SEM_TIPO__');
         const grupoFiltraSemGrupo = grupoSet && grupoSet.has('__SEM_GRUPO__'); // FRENTE 4
+        // Um card de natureza está ativo? A resposta é DERIVADA do estado real do
+        // filtro de Tipo, e não guardada numa flag, de propósito: flag guardada
+        // dessincroniza (o operador mexe no filtro à mão, limpa filtros, restaura do
+        // sessionStorage) e o modo de falha seria a tabela ESCONDER cancelado sem card
+        // ativo, ou seja, sumir com lançamento sem ninguém entender por quê.
+        // Derivado não pode divergir: é a MESMA comparação de conjunto que faz o card
+        // acender como ativo, então tabela e card acendem e filtram juntos.
+        const _cardNaturezaAtivo = !!_cpCardNaturezaAtivoKey(tipoArr);
         // Busca rápida textual (auditoria 2026-05-18 V6 — Item 1).
         const termo = _cpTermoBusca;
         return registros.filter(r => {
@@ -2868,6 +2876,13 @@
                 if (!passaSemCC && !passaCcEspec) return false;
             }
             if (classSetExpandido && !classSetExpandido.has(r.tipo_entidade || '')) return false;
+            // CARD DE NATUREZA ATIVO: a tabela mostra EXATAMENTE o que o card contou
+            // (decisão do diretor, 2026-09-30). Os 4 cards de natureza excluem
+            // lançamento cancelado; sem isto o clique no card trazia os cancelados de
+            // volta e somar a tabela não fechava com o número do card.
+            // Vale SÓ com um card de natureza ativo: fora disso a tabela continua
+            // mostrando tudo, inclusive cancelado, como sempre fez.
+            if (_cardNaturezaAtivo && /^cancel/i.test(String(r.status || '').trim())) return false;
             // FRENTE 4: mesma mecânica das outras sentinelas. Resolvido em runtime,
             // nada é lido do documento além de `categoria`.
             if (grupoSet) {
@@ -3200,18 +3215,52 @@
             if (vs === 'pago') { pago += v; cPago++; }
             else if (vs === 'a_vencer') { aPagar += v; cAPagar++; }
             else if (vs === 'atrasado') { vencido += v; cVencido++; }
-            // FRENTE 2: `.trim()` alinhado ao filtro de Tipo (`aplicarFiltrosCP`
-            // sempre usou trim aqui, o KPI não usava). Sem isso um tipo gravado como
-            // espaço em branco cairia em lugares diferentes no card e no filtro.
-            // O `else` final é deliberado: qualquer tipo que não seja um dos três
-            // conhecidos é, por definição, favorecido não classificado. É isso que
-            // torna a soma dos 4 cards igual ao total uma GARANTIA estrutural, e não
-            // uma coincidência do dado de hoje.
-            const t = String(r.tipo_entidade || '').trim();
-            if (t === 'Fornecedor Interno' || t === 'Fornecedor Interno - PJ') interno += v;
-            else if (t === 'Fornecedor Externo') externo += v;
-            else if (t === 'Cliente') cliente += v;
-            else { semClass += v; cSemClass++; }
+            // CANCELADO NÃO É CUSTO (decisão do diretor, 2026-09-30). Os 4 cards de
+            // Natureza do Custo passam a EXCLUIR lançamento cancelado, com o MESMO
+            // critério que o DRE Gerencial já usava (`cpStatusCancelado`, teste de
+            // PREFIXO em `status`), para as duas telas concordarem sobre o que é custo.
+            //
+            // O diagnóstico que levou a isso: o DRE tem `if (cpStatusCancelado(reg))
+            // continue;` e o Contas a Pagar não tinha, então as duas telas discordavam
+            // em R$ 128.772,98 sobre o mesmo universo. Era comportamento ANTERIOR a
+            // esta frente (o card OPEX antigo também contava cancelado), mas ficou
+            // VISÍVEL quando os 4 cards passaram a somar o conjunto inteiro: a conta
+            // deixou de fechar contra o Total Geral.
+            //
+            // CORREÇÃO DE UMA AFIRMAÇÃO MINHA QUE ESTAVA ERRADA, apontada pelo tester:
+            // eu havia escrito que o cancelado "continua em `total`, e portanto na conta
+            // do Total Geral". A segunda metade é FALSA. `total` e `cTotal` são
+            // incrementados e NUNCA LIDOS nesta função; o card Total Geral é
+            // `pago + tarifas` (ver o setKPI mais abaixo). Como cancelado não é `pago`
+            // nem tarifa, esses R$ 128.772,98 não aparecem em card NENHUM, nem antes
+            // nem depois desta guarda. Eles seguem na base e na tabela, só não em card.
+            //
+            // ESCOPO ESTREITO, e é deliberado: a guarda envolve SÓ os 4 buckets de
+            // natureza. `total`, `pago`, `aPagar`, `vencido` e `tarifas` NÃO são
+            // tocados, porque o diretor decidiu manter o card Total Geral como está
+            // (Pago + Tarifas). Consequência esperada e aceita: a diferença entre o
+            // Total Geral e a soma dos 4 cards passa a ser EXATAMENTE as tarifas.
+            //
+            // Prefixo e não igualdade: `statusVisual` só reconhece o literal
+            // 'cancelado', então um 'cancelada' ou 'Cancelado ' escaparia dele e
+            // entraria como custo. Hoje os 4 docs são todos o literal exato e os dois
+            // critérios dão o mesmo resultado; o prefixo fecha a classe.
+            const _ehCancelado = /^cancel/i.test(String(r.status || '').trim());
+            if (!_ehCancelado) {
+                // FRENTE 2: `.trim()` alinhado ao filtro de Tipo (`aplicarFiltrosCP`
+                // sempre usou trim aqui, o KPI não usava). Sem isso um tipo gravado como
+                // espaço em branco cairia em lugares diferentes no card e no filtro.
+                // O `else` final é deliberado: qualquer tipo que não seja um dos três
+                // conhecidos é, por definição, favorecido não classificado. É isso que
+                // mantém os 4 cards PARTICIONANDO o universo que eles cobrem (agora o
+                // recorte sem tarifa e sem cancelado), por construção e não por sorte
+                // do dado.
+                const t = String(r.tipo_entidade || '').trim();
+                if (t === 'Fornecedor Interno' || t === 'Fornecedor Interno - PJ') interno += v;
+                else if (t === 'Fornecedor Externo') externo += v;
+                else if (t === 'Cliente') cliente += v;
+                else { semClass += v; cSemClass++; }
+            }
         }
         const setKPI = (id, valor, count, countId) => {
             const el = document.getElementById(id);
@@ -6922,6 +6971,52 @@
         if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
         const s = new Set(a);
         return b.every(v => s.has(v));
+    }
+
+    // Qual card de NATUREZA está ativo, olhando o estado real do filtro de Tipo.
+    // Devolve a chave ('interno' | 'externo' | 'cliente' | 'sem_class') ou '' se
+    // nenhum. Usado por `aplicarFiltrosCP` para a tabela mostrar exatamente o que o
+    // card contou, e por nada mais.
+    //
+    // FALHA ABERTA de propósito: qualquer imprevisto (mapa ainda não inicializado
+    // porque é `const` e o render correu antes, seletor ausente, erro inesperado)
+    // devolve '' e a tabela mostra TUDO, que é o comportamento de sempre. O modo de
+    // falha inaceitável aqui seria o contrário: esconder lançamento por acidente.
+    //
+    // NÃO REMOVA o try/catch achando que o `typeof` já basta: `_KPI_FILTRO_MAP` é
+    // `const`, e para uma `const` na zona morta temporal o `typeof` LANÇA
+    // ReferenceError em vez de devolver 'undefined'. É o catch que garante a falha
+    // aberta; o `typeof` só cobre o caso de o identificador nem existir.
+    const _CARDS_NATUREZA = ['interno', 'externo', 'cliente', 'sem_class'];
+    function _cpCardNaturezaAtivoKey(tipoArrAtual) {
+        try {
+            if (typeof _KPI_FILTRO_MAP === 'undefined') {
+                // Único caminho que saía CALADO, apontado pelo tester: se o mapa for
+                // renomeado ou sair de escopo, `typeof` devolve 'undefined' (não lança)
+                // e a exclusão pararia de existir sem nada no console. Avisa também aqui.
+                console.warn('[CP] _KPI_FILTRO_MAP ausente, tabela mostrando tudo.');
+                return '';
+            }
+            const atual = Array.isArray(tipoArrAtual)
+                ? tipoArrAtual
+                : getMultiValues(document.getElementById('cp-filtro-tipo'));
+            if (!atual || !atual.length) return '';
+            for (const k of _CARDS_NATUREZA) {
+                const conf = _KPI_FILTRO_MAP[k];
+                if (!conf || conf.selId !== 'cp-filtro-tipo') continue;
+                if (_cpMesmoConjunto(atual, conf.valores)) return k;
+            }
+            return '';
+        } catch (e) {
+            // FALHA ABERTA, mas NUNCA silenciosa. Um `catch` mudo aqui esconderia a
+            // funcionalidade inteira deixando de excluir cancelado sem ninguém notar,
+            // e foi exatamente isso que aconteceu na primeira rodada da prova: o
+            // harness do teste esqueceu de injetar uma dependência, o catch engoliu o
+            // ReferenceError, e o resultado parecia "nada a excluir" em vez de "quebrou".
+            // Aviso no console para que a próxima quebra apareça em vez de passar.
+            console.warn('[CP] _cpCardNaturezaAtivoKey falhou, tabela mostrando tudo:', e && e.message);
+            return '';
+        }
     }
     function _cpToggleFiltroKPI(key) {
         if (key === 'total') {
