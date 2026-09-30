@@ -541,8 +541,17 @@ function extrairLinhaExport(src, rotulo) {
 
   const lD = linhaDepois(respStub, new Map([['ADM', 'Marcelo Souza']]), empDeReg, statusV, BADGE, fmtData, '2026-09-29', reg);
   const lA = linhaAntes(respStub, new Map([['ADM', 'Marcelo Souza']]), empDeReg, statusV, BADGE, fmtData, '2026-09-29', reg);
-  assert(lD['Empresa'] === 'SOULAN ADM',
-    'DEPOIS: exportacao sai com a empresa herdada preenchida (obtido ' + JSON.stringify(lD['Empresa']) + ')');
+  // A CHAVE da coluna de empresa na planilha mudou de 'Empresa' para 'Empresa
+  // Pagadora' em OS-CP-COLUNAS-CLIENTE-01: a exportacao passou a usar o mesmo
+  // vocabulario da tela, onde o <th> virou "Empresa Pagadora". O que esta suite
+  // testa (empresa HERDADA do cadastro chega preenchida na planilha) nao mudou;
+  // mudou so o rotulo da coluna. Por isso o lado DEPOIS le a chave nova e o lado
+  // ANTES (ref antigo) continua lendo a chave velha, que e a que existe la.
+  const chaveEmpDepois = ('Empresa Pagadora' in lD) ? 'Empresa Pagadora' : 'Empresa';
+  assert(chaveEmpDepois === 'Empresa Pagadora',
+    'DEPOIS: a coluna de empresa da planilha se chama "Empresa Pagadora" (renomeada junto com o <th> da tela)');
+  assert(lD[chaveEmpDepois] === 'SOULAN ADM',
+    'DEPOIS: exportacao sai com a empresa herdada preenchida (obtido ' + JSON.stringify(lD[chaveEmpDepois]) + ')');
   assert(lA['Empresa'] === 'não informado',
     'ANTES: a mesma exportacao sairia "não informado" no modelo novo (obtido ' + JSON.stringify(lA['Empresa']) + ')');
 }

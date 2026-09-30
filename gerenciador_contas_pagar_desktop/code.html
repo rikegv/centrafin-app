@@ -368,7 +368,7 @@
                                  ramos da regra do diretor caem no mesmo campo, e ele
                                  JÁ existe nos 51.181 lançamentos (295 valores
                                  distintos, zero vazios). Nenhuma mudança no ETL. -->
-                            <th onclick="window.ordenarTabelaCP('cliente')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-40 cursor-pointer select-none hover:text-secondary transition-colors">Cliente <span id="icone-sort-cliente" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <th onclick="window.ordenarTabelaCP('cliente')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-32 cursor-pointer select-none hover:text-secondary transition-colors">Cliente <span id="icone-sort-cliente" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('favorecido')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Favorecido <span id="icone-sort-favorecido" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('despesa')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Despesa <span id="icone-sort-despesa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <!-- FRENTE 4 / Onda 4: GRUPO DE CONTAS, à direita de Despesa
@@ -484,8 +484,15 @@
                     <p class="text-[10px] text-slate-400 mt-1 italic">Vínculo com a Base de Fornecedores. Somente leitura.</p>
                 </div>
                 <div>
-                    <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Favorecido / Fornecedor</label>
-                    <input id="ef-cp-favorecido" type="text" placeholder="Ex.: TELEFONICA"
+                    <!-- FRENTE D: rótulo corrigido. Este campo SEMPRE editou `entidade`,
+                         que nesta OS passou a ser a coluna CLIENTE. Chamá-lo de
+                         "Favorecido" fazia o operador achar que estava corrigindo o
+                         funcionário e, em vez disso, reescrevia o cliente da linha, em
+                         produção e em silêncio. O que ele edita não mudou; o nome
+                         passou a dizer a verdade. Editar o Favorecido (`observacao`) é
+                         frente própria, ainda não pedida. -->
+                    <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Cliente</label>
+                    <input id="ef-cp-favorecido" type="text" placeholder="Ex.: MEIWA INDUSTRIA E COMERCIO LTDA"
                            class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm uppercase focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" />
                     <p class="text-[10px] text-slate-400 mt-1 italic">Alterar aqui muda apenas este lançamento.</p>
                 </div>
@@ -1584,16 +1591,17 @@
     // BLOCO (cliente ou fornecedor), não de funcionário.
     let _cpClientesDaBase = new Set();
     function _cpPopularFiltroCliente() {
-        const sel = document.getElementById('cp-filtro-cliente');
-        if (!sel) return;
-        const marcados = new Set(getMultiValues(sel));
-        const lista = _cpUniaoOpcoes(_cpClientesDaBase, _cpCadFavorecidos);
-        sel.innerHTML =
-            '<option value="Todos" class="font-bold border-b pb-1 mb-1">Todos os Clientes</option>' +
-            lista.map(n => `<option value="${escHTML(n)}">${escHTML(n)}</option>`).join('');
-        const restaurar = [...marcados].filter(v => v === 'Todos' || lista.includes(v));
-        setMultiValues(sel, restaurar.length ? restaurar : ['Todos']);
-        if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(sel);
+        // DELEGA ao populador validado, e isso é correção de um bug meu que o tester
+        // pegou: a primeira versão desta função copiou o molde do filtro de Grupo (que
+        // recebe lista de STRINGS) mas alimentou com `_cpUniaoOpcoes`, que devolve
+        // OBJETOS `{v, t, temDado}`. Resultado medido: 295 <option> com value
+        // "[object Object]", filtro inutilizável, e a marcação do operador descartada a
+        // cada repopulação porque `lista.includes(valorString)` nunca casava.
+        // `_popularSelectMultiChunked` já normaliza as duas formas, já preserva a
+        // seleção anterior, já corta em chunks e já tem token de geração contra
+        // repopulações concorrentes. Reusar é mais curto E mais correto que remendar.
+        _popularSelectMultiChunked('cp-filtro-cliente',
+            _cpUniaoOpcoes(_cpClientesDaBase, _cpCadFavorecidos), 'Todos os Clientes');
     }
 
     // Catálogo do filtro vem do CADASTRO, não das linhas carregadas (regra da Parte A).
@@ -2613,7 +2621,15 @@
     // fica órfão e é ignorado (é sessionStorage: morre ao fechar a aba), sem
     // precisar de código de migração. Normalizar na restauração NÃO serve:
     // normalizaria "Todos" → "TODOS" e quebraria as sentinelas.
-    const _CP_SS_FILTROS = 'centrafin_cp_filters_v2';
+    // BUMP para _v3 (FRENTE D). O estado salvo antes desta OS guarda, na chave
+    // `favorecido`, nomes de CLIENTE, porque era isso que aquele filtro casava. Ao
+    // restaurar com o significado novo, esses valores não existem mais no catálogo de
+    // Favorecido: `setMultiValues` cai no fallback, o filtro vira "Todos" e o recorte
+    // do operador ALARGA sem aviso (quem tinha 79 linhas volta com 51.181). Medido
+    // pelo tester: não zera a tela, mas mente sobre o que está filtrado. Bumpar a
+    // chave descarta o estado velho uma única vez, que é o mesmo remédio usado quando
+    // esta constante foi de v1 para v2.
+    const _CP_SS_FILTROS = 'centrafin_cp_filters_v3';
     let _cpFiltrosRestaurados = false;
     let _cpSaveTimer = null;
     // Restauração one-shot: só vale depois que os CADASTROS chegaram, senão as
@@ -3207,7 +3223,7 @@
                             ? `<span class="font-mono bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1 align-middle tabular-nums" title="Nº do Título / Ordenamento">${escHTML(r.codigo_titulo_ord)}</span>`
                             : ''}
                     </td>
-                    <td class="px-3 py-3 text-xs text-slate-700 w-40 max-w-40">${
+                    <td class="px-3 py-3 text-xs text-slate-700 w-32 max-w-32">${
                         // FRENTE B: CLIENTE = `entidade`, o nome do BLOCO do TXT.
                         // Truncate + title porque nome de cliente é longo
                         // ("GARRETT MOTION INDUSTRIA AUTOMOTIVA BRASIL LTDA").
@@ -3215,7 +3231,7 @@
                             ? `<span class="block truncate font-semibold" title="${escHTML(r.entidade)}">${escHTML(r.entidade)}</span>`
                             : '<span class="text-slate-500 italic">não informado</span>'
                     }</td>
-                    <td class="px-4 py-3 text-xs font-bold text-slate-800">${escHTML(r.observacao || 'não informado')}</td>
+                    <td class="px-4 py-3 text-xs font-bold text-slate-800 w-44 max-w-44"><span class="block truncate" title="${escHTML(r.observacao || 'não informado')}">${escHTML(r.observacao || 'não informado')}</span></td>
                     <td class="px-4 py-3 text-xs text-slate-600">${escHTML(r.categoria || 'não informado')}</td>
                     <td class="px-3 py-3 text-xs text-slate-700 w-32 max-w-32">${
                         // FRENTE 4: Grupo de Contas, resolvido em runtime. A Conta fica no
@@ -6362,8 +6378,11 @@
             //   - Despesa real fica em `r.categoria` (ETL TXT grava categoria
             //     ← l.despesa). Fallbacks `r.despesa`/`r.historico`/`r.descricao`
             //     cobrem schemas legados de seeders externos.
-            //   - Fornecedor/Favorecido real é `r.entidade` (vide linha do
-            //     renderTabela). Fallbacks defensivos cobrem variantes.
+            //   - CLIENTE é `r.entidade` e FAVORECIDO é `r.observacao` (FRENTE D,
+            //     OS-CP-COLUNAS-CLIENTE-01). Até 2026-09-30 este comentário atribuía
+            //     `r.entidade` ao rótulo antigo, de quando as duas colunas eram uma só;
+            //     a separação na tela tornou aquilo falso. Fallbacks defensivos cobrem
+            //     variantes de schema legado.
             //   - Valor é Number(r.valor_original) — `r.valor` NÃO EXISTE no
             //     schema canônico (aplicaria zero a tudo). Fallback adicional
             //     `r.valor` p/ docs legados que ainda usem a chave curta.
@@ -6387,8 +6406,16 @@
                     // Empresa — fallbacks múltiplos pra schemas legados.
                     // FRENTE 5: acessor único, senão a exportação perde a empresa
                     // dos lançamentos que só a têm por herança do cadastro.
-                    'Empresa':              _cpEmpresaDeReg(r) || r.empresa_nome || r.nome_empresa || r.filial || 'não informado',
-                    'Fornecedor/Favorecido': r.entidade || r.fornecedor_nome || r.favorecido || 'não informado',
+                    // FRENTE D (OS-CP-COLUNAS-CLIENTE-01): a planilha passou a usar o
+                    // MESMO vocabulário da tela. Antes ela chamava `entidade` de
+                    // "Fornecedor/Favorecido"; na tela `entidade` virou CLIENTE, e o que
+                    // a tela chama de Favorecido (`observacao`) saía sob "Detalhe /
+                    // Observação". Tela e planilha diziam coisas diferentes com as
+                    // mesmas palavras, que é o jeito mais fácil de alguém conciliar
+                    // errado sem perceber.
+                    'Empresa Pagadora':     _cpEmpresaDeReg(r) || r.empresa_nome || r.nome_empresa || r.filial || 'não informado',
+                    'Cliente':              r.entidade || r.fornecedor_nome || r.favorecido || 'não informado',
+                    'Favorecido':           r.observacao || r.detalhe || 'não informado',
                     // Despesa — campo que estava OMITIDO. Usa a mesma variável
                     // que `renderTabela` (r.categoria) com fallbacks legados.
                     'Despesa':              r.categoria || r.despesa || r.historico || r.descricao || 'não informado',
@@ -6399,13 +6426,13 @@
                     'Valor (R$)':           valor,
                     'Data de Vencimento':   fmtDataBR(r.data_vencimento) || 'não informado',
                     'Status':               statusLbl || 'não informado',
-                    'Detalhe / Observação': r.observacao || r.detalhe || 'não informado',
                 };
             }
             const worksheet = XLSX.utils.json_to_sheet(linhas, {
                 header: [
-                    'Empresa',
-                    'Fornecedor/Favorecido',
+                    'Empresa Pagadora',
+                    'Cliente',
+                    'Favorecido',
                     'Despesa',
                     'Tipo de Lançamento',
                     'CC (Centro de Custo)',
@@ -6414,15 +6441,16 @@
                     'Valor (R$)',
                     'Data de Vencimento',
                     'Status',
-                    'Detalhe / Observação',
                 ],
             });
             // Larguras aproximadas — não é obrigatório, mas evita o operador
             // ter que ajustar manualmente após abrir o arquivo. Ordem alinhada
-            // com o `header` acima (11 colunas após a inclusão de "Despesa").
+            // com o `header` acima (11 colunas: "Detalhe / Observação" saiu e virou
+            // "Favorecido", e "Cliente" entrou; a contagem não mudou, o vocabulário sim).
             worksheet['!cols'] = [
-                { wch: 18 }, // Empresa
-                { wch: 38 }, // Fornecedor/Favorecido
+                { wch: 18 }, // Empresa Pagadora
+                { wch: 38 }, // Cliente
+                { wch: 34 }, // Favorecido
                 { wch: 30 }, // Despesa
                 { wch: 22 }, // Tipo de Lançamento
                 { wch: 24 }, // CC
@@ -6431,7 +6459,6 @@
                 { wch: 14 }, // Valor
                 { wch: 16 }, // Data Venc
                 { wch: 14 }, // Status
-                { wch: 40 }, // Detalhe / Observação
             ];
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Contas a Pagar');
@@ -6502,7 +6529,11 @@
         // (apenas a transição dispara a projeção dos 60 meses futuros).
         document.getElementById('ef-cp-recorrente').dataset.previo = reg.is_recorrente === true ? '1' : '0';
         document.getElementById('ef-cp-subtitulo').textContent =
-            `${reg.entidade || 'não informado'} · ${reg.categoria || 'sem despesa'} · ${fmtDataBR(reg.data_vencimento)}`;
+            // FRENTE D: identifica pelo FAVORECIDO (observacao), que e a linha que o
+            // operador clicou, e mostra o Cliente ao lado para o contexto. Antes
+            // identificava so pelo cliente, e num cliente com 540 favorecidos isso nao
+            // distingue linha nenhuma.
+            `${reg.observacao || 'não informado'} · ${reg.entidade || 'sem cliente'} · ${reg.categoria || 'sem despesa'} · ${fmtDataBR(reg.data_vencimento)}`;
         abrirModal('modal-editar-fatura-cp');
     }
 
@@ -6699,7 +6730,10 @@
         if (!id) return;
         const reg = cacheRegistros.find(r => r._id === id);
         const desc = reg
-            ? `${reg.entidade || 'não informado'} · ${reg.categoria || 'sem despesa'} · ${fmtDataBR(reg.data_vencimento)} · ${fmtBRL.format(Number(reg.valor_original) || 0)}`
+            // FRENTE D: acao IRREVERSIVEL identificada pelo FAVORECIDO, com o Cliente
+            // ao lado. Identificar so pelo cliente deixava o operador sem saber QUAL das
+            // 540 linhas daquele cliente ele ia apagar (secao 7 da constituicao).
+            ? `${reg.observacao || 'não informado'} · ${reg.entidade || 'sem cliente'} · ${reg.categoria || 'sem despesa'} · ${fmtDataBR(reg.data_vencimento)} · ${fmtBRL.format(Number(reg.valor_original) || 0)}`
             : `este lançamento (id ${id})`;
         _cpDeleteFaturaId = id;
         document.getElementById('dl-fcp-descricao').textContent = desc;
@@ -6759,7 +6793,7 @@
                         data_vencimento: reg.data_vencimento || null,
                     } : null;
                     await _criarSolicitacaoAprovacao('DELETE', COLECAO, _cpDeleteFaturaId, dadosAntigos, null,
-                        `Exclusão: ${reg?.entidade || 'não informado'} · ${reg?.categoria || 'não informado'}`, 'CP');
+                        `Exclusão: ${reg?.observacao || 'não informado'} (cliente: ${reg?.entidade || 'não informado'}) · ${reg?.categoria || 'não informado'}`, 'CP');
                     mostrarToast('Lançamento excluído.', 'check_circle');
                 } else {
                     await deleteDoc(doc(db, COLECAO, _cpDeleteFaturaId));
