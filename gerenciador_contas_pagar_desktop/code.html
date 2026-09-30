@@ -1509,8 +1509,8 @@
     });
 
     // ── FRENTE 4 / Onda 4: GRUPOS DE DESPESA, resolução em RUNTIME ─────────────
-    // Estrutura de 3 níveis: Grupo de Despesa -> Conta de Despesa -> Tipo de Despesa
-    // (o Tipo é o valor de `categoria` que o lançamento já carrega).
+    // Estrutura de 2 níveis: Grupo de Despesa -> Tipo de Despesa (o Tipo é o valor de
+    // `categoria` que o lançamento já carrega, e aponta DIRETO para o Grupo).
     //
     // O grupo NÃO é gravado no lançamento, e isso é decisão de desenho, não preguiça:
     //   1) gravar seriam 51.181 updates, e NÃO uma vez só. O diretor vai mexer nos
@@ -1527,11 +1527,15 @@
     // vazaria para o Firestore. A resolução é por função pura, sob demanda.
     //
     // O vínculo é por ID, nunca por nome: renomear um Grupo é updateDoc de 1 campo em
-    // 1 doc, sem tocar Conta, Tipo nem lançamento. Vínculo por NOME é exatamente o que
+    // 1 doc, sem tocar Tipo nem lançamento. Vínculo por NOME é exatamente o que
     // produziu o caso Catarina em `AreasContasPagar`, e não se repete aqui.
+    //
+    // OS-CP-GRUPOS-2NIVEIS-01: a estrutura passou de 3 níveis (Grupo -> Conta ->
+    // Tipo) para 2 (Grupo -> Tipo). O nível "Conta de Despesa" foi removido inteiro,
+    // e a remoção foi limpa: `CP_Contas_Despesa` tinha ZERO documentos em produção.
+    // A cadeia de resolução perdeu um salto, e com ele o estado `conta_orfa`.
     let _cpGruposMap = new Map();   // grupo_id → { nome, bucket_dre, ordem }
-    let _cpContasMap = new Map();   // conta_id  → { nome, grupo_id }
-    let _cpTiposMap  = new Map();   // tipo_norm → { conta_id }
+    let _cpTiposMap  = new Map();   // tipo_norm → { grupo_id }
     let _cpGruposCarregados = false;
 
     function inscreverGruposDespesa() {
@@ -1551,44 +1555,37 @@
             reagir();
         }, (err) => console.warn('[CP_Grupos_Contas] listener falhou:', err?.code || err?.message));
 
-        onSnapshot(collection(db, 'CP_Contas_Despesa'), (snap) => {
-            const m = new Map();
-            snap.forEach(d => {
-                const v = d.data() || {};
-                m.set(d.id, { nome: String(v.nome || '').trim(), grupo_id: v.grupo_id || null });
-            });
-            _cpContasMap = m;
-            reagir();
-        }, (err) => console.warn('[CP_Contas_Despesa] listener falhou:', err?.code || err?.message));
-
         onSnapshot(collection(db, 'CP_Tipos_Despesa'), (snap) => {
             const m = new Map();
             snap.forEach(d => {
                 const v = d.data() || {};
                 const k = String(v.tipo_norm || '').trim();
-                if (k) m.set(k, { conta_id: v.conta_id || null });
+                if (k) m.set(k, { grupo_id: v.grupo_id || null });
             });
             _cpTiposMap = m;
             reagir();
         }, (err) => console.warn('[CP_Tipos_Despesa] listener falhou:', err?.code || err?.message));
     }
 
-    // Resolve Grupo e Conta de um lançamento. Função PURA: recebe o registro, devolve
-    // texto, e NÃO escreve nada no objeto. São 2 ou 3 Map.get por chamada, feitos sob
+    // Resolve o Grupo de um lançamento. Função PURA: recebe o registro, devolve
+    // texto, e NÃO escreve nada no objeto. São 2 Map.get por chamada, feitos sob
     // demanda no render de 50 linhas por página, no filtro e na ordenação.
     // A chave é `_cpChaveFiltro(categoria)`, a mesma régua do catálogo semeado e do
     // cadastro, com acento PRESERVADO (incidente "ESTÁGIO", 2026-06-19).
+    // `estado` continua existindo e continua distinguindo as causas de "sem grupo",
+    // porque é ele que permite a tela nomear o motivo em vez de dizer só
+    // "não informado" e o operador concluir que o sistema está quebrado.
     function _cpGrupoDeReg(reg) {
         const cat = String(reg?.categoria || '').trim();
-        if (!cat) return { grupo: '', conta: '', estado: 'sem_despesa' };
-        if (!_cpGruposCarregados) return { grupo: '', conta: '', estado: 'carregando' };
+        if (!cat) return { grupo: '', estado: 'sem_despesa' };
+        if (!_cpGruposCarregados) return { grupo: '', estado: 'carregando' };
         const vinc = _cpTiposMap.get(_cpChaveFiltro(cat));
-        if (!vinc || !vinc.conta_id) return { grupo: '', conta: '', estado: 'sem_vinculo' };
-        const conta = _cpContasMap.get(vinc.conta_id);
-        if (!conta) return { grupo: '', conta: '', estado: 'conta_orfa' };
-        const grupo = conta.grupo_id ? _cpGruposMap.get(conta.grupo_id) : null;
-        if (!grupo) return { grupo: '', conta: conta.nome, estado: 'grupo_orfao' };
-        return { grupo: grupo.nome, conta: conta.nome, estado: 'ok' };
+        if (!vinc || !vinc.grupo_id) return { grupo: '', estado: 'sem_vinculo' };
+        const grupo = _cpGruposMap.get(vinc.grupo_id);
+        // Vínculo apontando para um grupo que não existe mais. A trava de exclusão do
+        // cadastro impede criar esse caso, mas a leitura não confia na trava.
+        if (!grupo) return { grupo: '', estado: 'grupo_orfao' };
+        return { grupo: grupo.nome, estado: 'ok' };
     }
 
     // FRENTE B (OS-CP-COLUNAS-CLIENTE-01): catálogo do filtro de CLIENTE.
@@ -3258,14 +3255,15 @@
                     </td>
                     <td class="px-3 py-3 text-xs text-slate-600 w-56 max-w-56"><span class="block truncate" title="${escHTML(r.categoria || 'não informado')}">${escHTML(r.categoria || 'não informado')}</span></td>
                     <td class="px-3 py-3 text-xs text-slate-700 w-32 max-w-32">${
-                        // FRENTE 4: Grupo de Contas, resolvido em runtime. A Conta fica no
-                        // tooltip; sem vínculo, "não informado" em itálico, que é o molde
-                        // que a coluna Responsável já usa.
+                        // FRENTE 4: Grupo de Contas, resolvido em runtime. Com a
+                        // estrutura de 2 níveis não há mais Conta para pôr no tooltip,
+                        // então o tooltip virou o PRÓPRIO nome do grupo, que é o que
+                        // serve numa coluna com `truncate`. Sem vínculo, "não informado"
+                        // em itálico, que é o molde que a coluna Responsável já usa.
                         (() => {
                             const g = _cpGrupoDeReg(r);
                             if (!g.grupo) return '<span class="text-slate-500 italic">não informado</span>';
-                            const tt = g.conta ? `Conta: ${g.conta}` : '';
-                            return `<span class="block truncate font-semibold" title="${escHTML(tt)}">${escHTML(g.grupo)}</span>`;
+                            return `<span class="block truncate font-semibold" title="${escHTML(g.grupo)}">${escHTML(g.grupo)}</span>`;
                         })()
                     }</td>
                     <td class="px-3 py-3 text-xs text-slate-600 uppercase font-semibold w-24 max-w-24"><span class="block truncate" title="${escHTML(r.centro_custo || 'não informado')}">${escHTML(r.centro_custo || 'não informado')}</span></td>

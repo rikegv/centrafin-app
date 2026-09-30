@@ -1,13 +1,23 @@
 /**
  * test-rules-pacote-ondas.cjs
- * OS-CP-PACOTE-ONDAS-01 (Onda 4) — Grupos de Despesa em 3 níveis.
+ * OS-CP-PACOTE-ONDAS-01 (Onda 4) — Grupos de Despesa.
+ * REVISTO pela OS-CP-GRUPOS-2NIVEIS-01 (2026-09-30): a estrutura passou de 3
+ * niveis para 2, e `CP_Contas_Despesa` FOI REMOVIDA do firestore.rules.
  *
- * Valida as tres colecoes NOVAS de firestore.rules (CP_Grupos_Contas,
- * CP_Contas_Despesa, CP_Tipos_Despesa) e faz REGRESSAO nas colecoes vizinhas
- * que a mudanca poderia ter quebrado (ContasAPagar, AreasContasPagar,
+ * Valida as duas colecoes que restaram (CP_Grupos_Contas, CP_Tipos_Despesa),
+ * PROVA QUE `CP_Contas_Despesa` FECHOU (bloco A2, negativo, exigido pelo agente
+ * seguranca ao aprovar a remocao) e faz REGRESSAO nas colecoes vizinhas que a
+ * mudanca poderia ter quebrado (ContasAPagar, AreasContasPagar,
  * CP_Base_Despesas).
  *
- * Contrato esperado das tres colecoes novas (padrao BASE DE REFERENCIA,
+ * Por que o bloco negativo e obrigatorio: apagar `CP_Contas_Despesa` da lista e
+ * seguir deixaria a colecao sem NENHUMA prova de comportamento. Remover um match
+ * nao e o mesmo que adicionar um; o que fecha a colecao e a AUSENCIA de qualquer
+ * clausula catch-all neste arquivo, e isso e uma propriedade do arquivo INTEIRO,
+ * que pode ser quebrada por uma edicao futura em qualquer outro ponto dele. O
+ * bloco negativo e o que faz essa quebra aparecer como teste vermelho.
+ *
+ * Contrato esperado das colecoes de referencia (padrao BASE DE REFERENCIA,
  * identico a AreasContasPagar / CP_Gestores):
  *   allow read:  request.auth != null
  *   allow write: request.auth != null && isAdmin() && !isConsulta()
@@ -35,13 +45,16 @@ const { doc, setDoc, getDoc } = require('firebase/firestore');
 const RULES_PATH = path.join(process.cwd(), 'firestore.rules');
 const PROJECT_ID = 'centrafin-ondas-test'; // isolado do projeto real "centra-fin"
 
-// As tres colecoes novas da Onda 4. O contrato e o MESMO para as tres, entao a
-// bateria de 5 casos roda em laco — evita 15 blocos copiados e divergentes.
+// As colecoes da Onda 4 que CONTINUAM existindo. O contrato e o MESMO para as
+// duas, entao a bateria roda em laco — evita blocos copiados e divergentes.
 const COLECOES_NOVAS = [
   'CP_Grupos_Contas',
-  'CP_Contas_Despesa',
   'CP_Tipos_Despesa',
 ];
+
+// A colecao REMOVIDA na OS-CP-GRUPOS-2NIVEIS-01. Ela nao sai do teste: muda de
+// lado. Aqui o esperado e NEGADO PARA TODOS, inclusive super_admin.
+const COLECAO_REMOVIDA = 'CP_Contas_Despesa';
 
 let passed = 0;
 let failed = 0;
@@ -106,6 +119,10 @@ async function main() {
     for (const col of COLECOES_NOVAS) {
       await setDoc(doc(db, col, 'seed-01'), { nome: 'Seed', ordem: 1 });
     }
+    // Semeia tambem a colecao REMOVIDA, com as rules desligadas. Sem este doc, a
+    // negativa de leitura passaria por o documento nao existir, e nao por a regra
+    // negar: o teste pareceria verde provando outra coisa.
+    await setDoc(doc(db, COLECAO_REMOVIDA, 'seed-01'), { nome: 'Legado', ordem: 1 });
     await setDoc(doc(db, 'ContasAPagar', 'cap-seed'), { valor: 200 });
     await setDoc(doc(db, 'AreasContasPagar', 'area-seed'), { nome: 'TI' });
     await setDoc(doc(db, 'CP_Base_Despesas', 'desp-seed'), { despesa: 'ALUGUEL' });
@@ -168,6 +185,48 @@ async function main() {
 
     console.log('');
   }
+
+  // ------------------------------------------------------------------
+  // BLOCO A2 — a colecao REMOVIDA (OS-CP-GRUPOS-2NIVEIS-01).
+  // Exigencia do agente seguranca ao aprovar a remocao do match: provar que a
+  // colecao FECHOU. O match saiu do firestore.rules e nao ha nenhuma clausula
+  // catch-all no arquivo, entao o esperado e NEGADO PARA TODOS, inclusive
+  // super_admin. Se um dia alguem acrescentar um match abrangente ao arquivo,
+  // e este bloco que denuncia.
+  // O doc 'seed-01' EXISTE (semeado com as rules desligadas), entao a negativa
+  // de leitura prova a regra, e nao a ausencia do documento.
+  // ------------------------------------------------------------------
+  console.log('--- ' + COLECAO_REMOVIDA + ' (colecao REMOVIDA, tudo deve falhar) ---');
+
+  await check('[removida-1] admin (master) LE [falhar]', async () => {
+    await assertFails(getDoc(doc(ctxDe('master@t.com'), COLECAO_REMOVIDA, 'seed-01')));
+  });
+
+  await check('[removida-2] admin (master) ESCREVE [falhar]', async () => {
+    await assertFails(
+      setDoc(doc(ctxDe('master@t.com'), COLECAO_REMOVIDA, 'novo-master'), { nome: 'X' })
+    );
+  });
+
+  await check('[removida-3] admin (super_admin) ESCREVE [falhar]', async () => {
+    await assertFails(
+      setDoc(doc(ctxDe('super@t.com'), COLECAO_REMOVIDA, 'novo-super'), { nome: 'Y' })
+    );
+  });
+
+  await check('[removida-4] admin (super_admin) LE [falhar]', async () => {
+    await assertFails(getDoc(doc(ctxDe('super@t.com'), COLECAO_REMOVIDA, 'seed-01')));
+  });
+
+  await check('[removida-5] autenticado comum LE [falhar]', async () => {
+    await assertFails(getDoc(doc(ctxDe('comum@t.com'), COLECAO_REMOVIDA, 'seed-01')));
+  });
+
+  await check('[removida-6] NAO autenticado LE [falhar]', async () => {
+    await assertFails(getDoc(doc(ctxAnon(), COLECAO_REMOVIDA, 'seed-01')));
+  });
+
+  console.log('');
 
   // ------------------------------------------------------------------
   // BLOCO B — REGRESSAO: o que ja funcionava continua igual.

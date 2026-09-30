@@ -1155,7 +1155,18 @@ bloco('7a-bis. 6a6c392 mexeu SO em marcacao: a logica e byte-a-byte igual a 59cb
 {
   // A afirmacao do coordenador e "so mexi em marcacao e classes". Isso e
   // verificavel: toda funcao de LOGICA tem que sair identica ao commit anterior.
+  //
+  // OS DOIS LADOS SAO COMMIT FIXO, e isso foi CORRIGIDO em 2026-09-30 na
+  // OS-CP-GRUPOS-2NIVEIS-01. A versao anterior comparava `59cb899` contra a
+  // ARVORE DE TRABALHO, e o bloco afirma um fato HISTORICO: "o commit 6a6c392
+  // mexeu so em marcacao". Com um dos lados vivo, a afirmacao deixava de ser
+  // sobre 6a6c392 e passava a ser "nenhuma frente futura pode tocar logica
+  // nenhuma", o que fez esta suite reprovar na primeira frente seguinte que
+  // mexeu em `_cpGrupoDeReg` por decisao do diretor. Nao era regressao: era o
+  // teste medindo outra coisa. Mesma familia da regra permanente "base de
+  // comparacao vai em COMMIT EXPLICITO, nunca em HEAD", so que do lado do head.
   const PRE = fonteDaRef('59cb899');
+  const POS = fonteDaRef('6a6c392');
   const LOGICA = [
     'aplicarFiltrosCP', 'obterValorSortCP', 'atualizarKPIs', 'cpParsearTXT',
     '_cpEmpresaDeReg', '_cpGrupoDeReg', '_cpResponsavelDoReg', '_cpResolverEmpresaDoReg',
@@ -1163,32 +1174,32 @@ bloco('7a-bis. 6a6c392 mexeu SO em marcacao: a logica e byte-a-byte igual a 59cb
     '_cpSalvarEstadoFiltros', '_cpRestaurarEstadoFiltros', 'limparTodosFiltros',
     'statusVisual', '_cpEhTarifaOuComissao', '_cpIngerir', 'getMultiValues', 'setMultiValues',
     'isMultiAll', '_cpNormalizarBusca', 'cpResolverCompetenciaRef',
-  ].filter(n => temFn(PRE, n) && temFn(DEPOIS, n));
+  ].filter(n => temFn(PRE, n) && temFn(POS, n));
   let diferentes = [];
-  for (const n of LOGICA) if (extrairFn(PRE, n) !== extrairFn(DEPOIS, n)) diferentes.push(n);
-  console.log(`  ${LOGICA.length} funcoes de logica comparadas com 59cb899`);
+  for (const n of LOGICA) if (extrairFn(PRE, n) !== extrairFn(POS, n)) diferentes.push(n);
+  console.log(`  ${LOGICA.length} funcoes de logica comparadas: 59cb899 -> 6a6c392`);
   console.log(`  diferentes: ${diferentes.join(', ') || 'nenhuma'}`);
   ok(diferentes.length === 0,
-    `TODAS as ${LOGICA.length} funcoes de logica estao byte-a-byte identicas a 59cb899 (mudou so marcacao, como declarado)`);
+    `em 6a6c392, TODAS as ${LOGICA.length} funcoes de logica estao byte-a-byte identicas a 59cb899 (mudou so marcacao, como declarado)`);
   // A funcao que MUDOU tem que ser so a que monta o HTML da linha.
-  const renderMudou = temFn(PRE, 'renderTabela') && extrairFn(PRE, 'renderTabela') !== extrairFn(DEPOIS, 'renderTabela');
+  const renderMudou = temFn(PRE, 'renderTabela') && extrairFn(PRE, 'renderTabela') !== extrairFn(POS, 'renderTabela');
   ok(renderMudou, `(controle) renderTabela MUDOU, senao este teste estaria comparando duas versoes iguais e passando de graca`);
   // E dentro dela, as EXPRESSOES de dado tem que ser as mesmas: so as classes mudaram.
   // CONJUNTO, nao multiconjunto: envolver uma celula num <span title="..."> repete
   // a mesma expressao duas vezes (uma no title, outra no corpo). Isso muda a
   // CONTAGEM sem mudar QUAL dado e lido, que e o que importa aqui.
   const expr = s => [...new Set(lerLinhaTd(s).trecho.match(/r\.[a-z_]+|_cp[A-Za-z]+\(r\)|fmtBRL\.format|fmtDataBR/g) || [])].sort();
-  const eA = expr(PRE), eD = expr(DEPOIS);
+  const eA = expr(PRE), eD = expr(POS);
   const soAntes = eA.filter(x => !eD.includes(x)), soDepois = eD.filter(x => !eA.includes(x));
   console.log(`  campos lidos na linha: ${eD.length} | so em 59cb899: ${soAntes.join(', ') || 'nenhum'} | so agora: ${soDepois.join(', ') || 'nenhum'}`);
   ok(soAntes.length === 0 && soDepois.length === 0,
     `dentro de renderTabela, o CONJUNTO de campos lidos do registro e o mesmo: nenhum campo entrou nem saiu`);
   // E o que aumentou de repeticao tem que ser so title/tooltip, nao logica nova.
   const repet = s => (lerLinhaTd(s).trecho.match(/title="/g) || []).length;
-  console.log(`  atributos title= na linha: 59cb899=${repet(PRE)} -> agora=${repet(DEPOIS)} (tooltips das colunas truncadas)`);
-  ok(repet(DEPOIS) >= repet(PRE),
+  console.log(`  atributos title= na linha: 59cb899=${repet(PRE)} -> 6a6c392=${repet(POS)} (tooltips das colunas truncadas)`);
+  ok(repet(POS) >= repet(PRE),
     `o que cresceu foi o numero de tooltips (title=), coerente com mais colunas truncadas`);
-  ok(extrairFn(PRE, 'obterValorSortCP') === extrairFn(DEPOIS, 'obterValorSortCP'),
+  ok(extrairFn(PRE, 'obterValorSortCP') === extrairFn(POS, 'obterValorSortCP'),
     `reordenar colunas NAO mexeu no mapa de ordenacao (as chaves nunca dependeram da posicao)`);
   // Rules, ETL e exportacao.
   const mudados = execSync(`git diff --name-only 59cb899 HEAD`, { cwd: RAIZ }).toString().trim().split('\n').filter(Boolean);

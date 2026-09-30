@@ -944,10 +944,15 @@
             </div><!-- /aba-regras-despesas -->
 
             <!-- ════════ ABA 4: GRUPOS DE CONTAS (FRENTE 4 / Onda 4) ════════
-                 Estrutura de 3 níveis: Grupo de Despesa -> Conta de Despesa -> Tipo de
-                 Despesa. O Tipo já existe: é o valor de `categoria` do lançamento, e a
-                 lista dele vem do catálogo `Metadados/CP_Catalogo_Categorias` (1 leitura
-                 de 1 documento, em vez de 51.181).
+                 Estrutura de 2 NÍVEIS: Grupo de Despesa -> Tipo de Despesa. O Tipo
+                 aponta DIRETO para o Grupo.
+                 O nível intermediário "Conta de Despesa" existiu até a
+                 OS-CP-GRUPOS-2NIVEIS-01 e foi REMOVIDO por decisão do diretor: ele
+                 nunca chegou a ser usado (a coleção estava vazia em produção) e
+                 obrigava dois cadastros para classificar uma despesa.
+                 O Tipo já existe: é o valor de `categoria` do lançamento, e a lista
+                 dele vem do catálogo `Metadados/CP_Catalogo_Categorias` (1 leitura de
+                 1 documento, em vez de 51.181).
                  O grupo NÃO é gravado no lançamento: é derivado em runtime pelo Tipo.
                  A classificação no DRE (bucket Custo x G&A) NÃO entra nesta frente, por
                  decisão do diretor: fica para a frente seguinte, junto do DRE por grupo. -->
@@ -999,71 +1004,15 @@
                     </div>
                 </div>
 
-                <!-- ▣ 2. CONTAS DE DESPESA ▣ -->
-                <div>
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-9 h-9 rounded-lg bg-tertiary/10 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-tertiary text-[20px]">list_alt</span>
-                        </div>
-                        <div>
-                            <h2 class="font-headline text-base font-extrabold text-secondary">2. Contas de Despesa</h2>
-                            <p class="text-[11px] text-slate-400 font-medium">O nível do meio. Cada conta pertence a um grupo, e é nela que os tipos de despesa são pendurados.</p>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                        <div class="xl:col-span-1">
-                            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                                <form id="form-conta-despesa" class="space-y-3">
-                                    <div>
-                                        <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Nome da Conta</label>
-                                        <input id="conta-despesa-nome" type="text" required maxlength="80"
-                                            placeholder="Ex: Vale Transporte, Salários"
-                                            class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all placeholder:text-slate-300" />
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase tracking-wider">Grupo</label>
-                                        <!-- Componente do design system em modo seleção única
-                                             (multi + guarda), NUNCA <select> cru: o select
-                                             nativo abre o dropdown do sistema operacional,
-                                             que não obedece ao tema. -->
-                                        <select id="conta-despesa-grupo" multiple data-checkbox-multi data-cb-portal
-                                            data-placeholder="Selecione o grupo…"
-                                            class="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-medium bg-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"></select>
-                                    </div>
-                                    <div id="msg-conta-despesa" class="hidden text-xs font-bold p-2.5 rounded-lg flex items-start gap-2"></div>
-                                    <button type="submit" id="btn-salvar-conta-despesa"
-                                        class="w-full py-2.5 bg-primary text-secondary font-extrabold rounded-xl shadow-md hover:brightness-105 transition-all flex items-center justify-center gap-2 text-xs">
-                                        <span id="conta-despesa-save-icon" class="material-symbols-outlined text-base">add</span>
-                                        <span id="lbl-salvar-conta-despesa">Adicionar Conta</span>
-                                    </button>
-                                    <button type="button" id="btn-cancelar-edicao-conta-despesa"
-                                        class="hidden w-full py-2 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
-                                        Cancelar edição
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="xl:col-span-2">
-                            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                                <div class="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                    <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">Contas Cadastradas</h3>
-                                    <span id="contador-contas-despesa" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full tabular-nums">0</span>
-                                </div>
-                                <div id="lista-contas-despesa" class="max-h-72 overflow-y-auto divide-y divide-slate-100"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ▣ 3. VÍNCULO DOS TIPOS DE DESPESA ▣ -->
+                <!-- ▣ 2. VÍNCULO DOS TIPOS DE DESPESA ▣ -->
                 <div>
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-9 h-9 rounded-lg bg-secondary/10 flex items-center justify-center">
                             <span class="material-symbols-outlined text-secondary text-[20px]">link</span>
                         </div>
                         <div>
-                            <h2 class="font-headline text-base font-extrabold text-secondary">3. Vínculo dos Tipos de Despesa</h2>
-                            <p class="text-[11px] text-slate-400 font-medium">Cada tipo de despesa que aparece nos lançamentos aponta para uma conta. A lista nasce ordenada pelo volume de lançamentos, então os primeiros vínculos já cobrem a maior parte da base.</p>
+                            <h2 class="font-headline text-base font-extrabold text-secondary">2. Vínculo dos Tipos de Despesa</h2>
+                            <p class="text-[11px] text-slate-400 font-medium">Cada tipo de despesa que aparece nos lançamentos aponta direto para um grupo. A lista nasce ordenada pelo volume de lançamentos, então os primeiros vínculos já cobrem a maior parte da base.</p>
                         </div>
                     </div>
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1087,8 +1036,12 @@
                             </label>
                             <span id="tipos-despesa-sel-count" class="text-[11px] font-bold text-secondary tabular-nums">0 selecionados</span>
                             <div class="flex-1"></div>
-                            <select id="tipos-despesa-conta-massa" multiple data-checkbox-multi data-cb-portal
-                                data-placeholder="Vincular à conta…"
+                            <!-- O id diz GRUPO porque o destino do vínculo É o grupo.
+                                 Id que continua dizendo o nome do nível antigo é a
+                                 mesma armadilha nominal que fez o filtro de Favorecido
+                                 filtrar cliente por meses (OS-CP-COLUNAS-CLIENTE-01). -->
+                            <select id="tipos-despesa-grupo-massa" multiple data-checkbox-multi data-cb-portal
+                                data-placeholder="Vincular ao grupo…"
                                 class="w-56 border border-slate-200 rounded-xl py-1.5 px-3 text-xs font-medium bg-white outline-none"></select>
                             <button type="button" id="btn-tipos-despesa-vincular-massa" disabled
                                 class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-extrabold shadow-md active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1104,8 +1057,7 @@
                                         <th class="px-4 py-2.5 text-center w-10"></th>
                                         <th class="px-4 py-2.5 text-left">Tipo de Despesa</th>
                                         <th class="px-4 py-2.5 text-right w-24">Lançamentos</th>
-                                        <th class="px-4 py-2.5 text-left w-64">Conta de Despesa</th>
-                                        <th class="px-4 py-2.5 text-left w-40">Grupo</th>
+                                        <th class="px-4 py-2.5 text-left w-80">Grupo de Despesa</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tipos-despesa-corpo" class="divide-y divide-slate-100"></tbody>
@@ -5033,7 +4985,13 @@
 
         /* ══════════════════════════════════════════════════════════════════════
            FRENTE 4 / Onda 4 (OS-CP-PACOTE-ONDAS-01): GRUPOS DE CONTAS
-           Grupo de Despesa -> Conta de Despesa -> Tipo de Despesa.
+           Estrutura de 2 NIVEIS: Grupo de Despesa -> Tipo de Despesa.
+
+           O nivel do meio, "Conta de Despesa", foi REMOVIDO na
+           OS-CP-GRUPOS-2NIVEIS-01 por decisao do diretor. A remocao foi LIMPA:
+           `CP_Contas_Despesa` tinha ZERO documentos em producao no momento do
+           corte, e o unico doc de `CP_Tipos_Despesa` tinha `conta_id: null`.
+           Nada de dinheiro dependia daquele nivel.
 
            O Tipo de Despesa NAO e cadastrado aqui: ele JA EXISTE como o valor de
            `categoria` dos lancamentos. A lista dos 104 tipos vem do catalogo
@@ -5050,14 +5008,12 @@
            diretor: vem na frente seguinte, junto do DRE por grupo.
            ══════════════════════════════════════════════════════════════════════ */
         const GD_COL_GRUPOS = 'CP_Grupos_Contas';
-        const GD_COL_CONTAS = 'CP_Contas_Despesa';
         const GD_COL_TIPOS  = 'CP_Tipos_Despesa';
         const GD_PAGE_SIZE = 25;
         const GD_CHUNK = 450;
 
         let _gdGrupos = new Map();      // id → { nome }
-        let _gdContas = new Map();      // id → { nome, grupo_id }
-        let _gdTipos  = new Map();      // tipo_norm → { docId, conta_id }
+        let _gdTipos  = new Map();      // tipo_norm → { docId, grupo_id }
         let _gdCatalogo = [];           // [{ tipo, tipo_norm, slug, docs }] por volume desc
         let _gdCatalogoTotalDocs = 0;
         let _gdCatalogoAtualizadoEm = '';
@@ -5065,7 +5021,6 @@
         let _gdBusca = '';
         const _gdSelecao = new Set();   // tipo_norm marcados
         let _gdEditGrupoId = null;
-        let _gdEditContaId = null;
         let _gdConfirmando = null;      // chave do item aguardando 2o clique de exclusao
         let _gdConfirmTimer = null;
 
@@ -5095,28 +5050,20 @@
         }
         const gdValorUnico = (sel) => (sel ? (Array.from(sel.options).filter(o => o.selected).map(o => o.value)[0] || '') : '');
 
-        function gdOpcoesContas() {
-            // Rotulo "Conta (Grupo)" para o diretor nao precisar decorar a hierarquia.
-            return [..._gdContas.entries()].map(([id, c]) => {
-                const g = c.grupo_id ? _gdGrupos.get(c.grupo_id) : null;
-                return { id, label: g ? `${c.nome} (${g.nome})` : `${c.nome} (sem grupo)` };
-            }).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+        // Com 2 niveis o catalogo do vinculo E a lista de grupos. O rotulo e o nome
+        // do grupo, sem parenteses de hierarquia: nao ha mais hierarquia a exibir.
+        function gdOpcoesGrupos() {
+            return [..._gdGrupos.entries()]
+                .map(([id, g]) => ({ id, label: g.nome }))
+                .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
         }
         function gdRepopularSelects() {
-            const selG = document.getElementById('conta-despesa-grupo');
-            if (selG) {
-                const atual = gdValorUnico(selG);
-                const nomes = [..._gdGrupos.entries()].sort((a, b) => a[1].nome.localeCompare(b[1].nome, 'pt-BR'));
-                selG.innerHTML = nomes.map(([id, g]) => `<option value="${escapeHTMLm(id)}">${escapeHTMLm(g.nome)}</option>`).join('');
-                if (atual && _gdGrupos.has(atual)) setMultiValues(selG, [atual]);
-                if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(selG);
-            }
-            const selM = document.getElementById('tipos-despesa-conta-massa');
+            const selM = document.getElementById('tipos-despesa-grupo-massa');
             if (selM) {
                 const atual = gdValorUnico(selM);
-                selM.innerHTML = gdOpcoesContas()
+                selM.innerHTML = gdOpcoesGrupos()
                     .map(o => `<option value="${escapeHTMLm(o.id)}">${escapeHTMLm(o.label)}</option>`).join('');
-                if (atual && _gdContas.has(atual)) setMultiValues(selM, [atual]);
+                if (atual && _gdGrupos.has(atual)) setMultiValues(selM, [atual]);
                 if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(selM);
             }
         }
@@ -5151,61 +5098,24 @@
                 return;
             }
             lista.innerHTML = arr.map(([id, g]) => {
-                const nContas = [..._gdContas.values()].filter(c => c.grupo_id === id).length;
-                const nTipos = [..._gdTipos.values()].filter(t => {
-                    const c = t.conta_id ? _gdContas.get(t.conta_id) : null;
-                    return c && c.grupo_id === id;
-                }).length;
+                // Com 2 niveis o filho do grupo e o TIPO, direto. Este contador e a
+                // MESMA regra que arma a trava de exclusao logo abaixo: contar de um
+                // jeito aqui e de outro la abriria a porta para apagar um grupo que a
+                // tela diz ter filhos.
+                const nTipos = [..._gdTipos.values()].filter(t => t.grupo_id === id).length;
                 const armado = _gdConfirmando === `g:${id}`;
                 return `
                 <div class="px-5 py-3 flex items-center gap-3">
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-extrabold text-secondary truncate">${escapeHTMLm(g.nome)}</p>
-                        <p class="text-[10px] text-slate-400 font-medium tabular-nums">${nContas} conta(s) · ${nTipos} tipo(s) de despesa</p>
+                        <p class="text-[10px] text-slate-400 font-medium tabular-nums">${nTipos} tipo(s) de despesa</p>
                     </div>
                     <button type="button" data-gd-editar-grupo="${escapeHTMLm(id)}" title="Editar"
                         class="p-1.5 rounded-lg text-slate-400 hover:text-secondary hover:bg-slate-100 transition-colors">
                         <span class="material-symbols-outlined text-[18px]">edit</span>
                     </button>
                     <button type="button" data-gd-excluir-grupo="${escapeHTMLm(id)}"
-                        title="${nContas ? 'Não pode excluir: há contas neste grupo' : 'Excluir grupo'}"
-                        class="p-1.5 rounded-lg transition-colors ${nContas ? 'text-slate-300 cursor-not-allowed' : (armado ? 'text-white bg-red-600' : 'text-slate-400 hover:text-red-600 hover:bg-red-50')}">
-                        <span class="material-symbols-outlined text-[18px]">${armado ? 'check' : 'delete'}</span>
-                    </button>
-                </div>`;
-            }).join('');
-        }
-
-        function gdRenderContas() {
-            const lista = document.getElementById('lista-contas-despesa');
-            const cont = document.getElementById('contador-contas-despesa');
-            if (!lista) return;
-            const arr = gdOpcoesContas();
-            if (cont) cont.textContent = String(arr.length);
-            if (!arr.length) {
-                lista.innerHTML = '<p class="px-5 py-6 text-[11px] text-slate-400 italic text-center">Nenhuma conta cadastrada. Crie um grupo primeiro e depois as contas dele.</p>';
-                return;
-            }
-            lista.innerHTML = arr.map(o => {
-                const c = _gdContas.get(o.id);
-                const g = c && c.grupo_id ? _gdGrupos.get(c.grupo_id) : null;
-                const nTipos = [..._gdTipos.values()].filter(t => t.conta_id === o.id).length;
-                const armado = _gdConfirmando === `c:${o.id}`;
-                return `
-                <div class="px-5 py-3 flex items-center gap-3">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-extrabold text-secondary truncate">${escapeHTMLm(c ? c.nome : '')}</p>
-                        <p class="text-[10px] text-slate-400 font-medium">
-                            ${g ? escapeHTMLm(g.nome) : '<span class="text-amber-600">grupo não informado</span>'}
-                            · <span class="tabular-nums">${nTipos} tipo(s)</span>
-                        </p>
-                    </div>
-                    <button type="button" data-gd-editar-conta="${escapeHTMLm(o.id)}" title="Editar"
-                        class="p-1.5 rounded-lg text-slate-400 hover:text-secondary hover:bg-slate-100 transition-colors">
-                        <span class="material-symbols-outlined text-[18px]">edit</span>
-                    </button>
-                    <button type="button" data-gd-excluir-conta="${escapeHTMLm(o.id)}"
-                        title="${nTipos ? 'Não pode excluir: há tipos de despesa vinculados' : 'Excluir conta'}"
+                        title="${nTipos ? 'Não pode excluir: há tipos de despesa neste grupo' : 'Excluir grupo'}"
                         class="p-1.5 rounded-lg transition-colors ${nTipos ? 'text-slate-300 cursor-not-allowed' : (armado ? 'text-white bg-red-600' : 'text-slate-400 hover:text-red-600 hover:bg-red-50')}">
                         <span class="material-symbols-outlined text-[18px]">${armado ? 'check' : 'delete'}</span>
                     </button>
@@ -5230,7 +5140,7 @@
             let vinculados = 0, docsVinculados = 0;
             for (const it of _gdCatalogo) {
                 const v = _gdTipos.get(it.tipo_norm);
-                if (v && v.conta_id) { vinculados++; docsVinculados += it.docs; }
+                if (v && v.grupo_id) { vinculados++; docsVinculados += it.docs; }
             }
             const semVinculo = _gdCatalogo.length - vinculados;
             const pctDocs = _gdCatalogoTotalDocs
@@ -5249,7 +5159,7 @@
 
             const filtrados = _gdCatalogo.filter(it => {
                 const v = _gdTipos.get(it.tipo_norm);
-                const temVinc = !!(v && v.conta_id);
+                const temVinc = !!(v && v.grupo_id);
                 if (soSem && temVinc) return false;
                 if (soCom && !temVinc) return false;
                 if (termo && !gdChave(it.tipo).includes(termo)) return false;
@@ -5280,12 +5190,13 @@
             }
             if (vazio) vazio.classList.add('hidden');
 
-            const opts = gdOpcoesContas();
+            const opts = gdOpcoesGrupos();
             corpo.innerHTML = pagina.map(it => {
                 const v = _gdTipos.get(it.tipo_norm);
-                const contaId = (v && v.conta_id) || '';
-                const conta = contaId ? _gdContas.get(contaId) : null;
-                const grupo = conta && conta.grupo_id ? _gdGrupos.get(conta.grupo_id) : null;
+                // Com 2 niveis nao ha mais coluna derivada a exibir: o que o seletor
+                // mostra JA E o grupo. A coluna "Grupo" que existia ao lado repetiria
+                // o proprio seletor.
+                const grupoId = (v && v.grupo_id) || '';
                 const marcado = _gdSelecao.has(it.tipo_norm) ? 'checked' : '';
                 return `
                 <tr class="hover:bg-slate-50 transition-colors">
@@ -5296,13 +5207,12 @@
                     <td class="px-4 py-2 text-[12px] font-bold text-slate-800">${escapeHTMLm(it.tipo)}</td>
                     <td class="px-4 py-2 text-[12px] text-right text-slate-500 tabular-nums">${it.docs.toLocaleString('pt-BR')}</td>
                     <td class="px-4 py-2">
-                        <select class="gd-tipo-conta w-full border border-slate-200 rounded-lg py-1 px-2 text-[11px] font-medium bg-white outline-none focus:ring-2 focus:ring-primary/30"
+                        <select class="gd-tipo-grupo w-full border border-slate-200 rounded-lg py-1 px-2 text-[11px] font-medium bg-white outline-none focus:ring-2 focus:ring-primary/30"
                                 data-tipo-norm="${escapeHTMLm(it.tipo_norm)}" data-slug="${escapeHTMLm(it.slug)}" data-tipo="${escapeHTMLm(it.tipo)}">
                             <option value="">não informado</option>
-                            ${opts.map(o => `<option value="${escapeHTMLm(o.id)}" ${o.id === contaId ? 'selected' : ''}>${escapeHTMLm(o.label)}</option>`).join('')}
+                            ${opts.map(o => `<option value="${escapeHTMLm(o.id)}" ${o.id === grupoId ? 'selected' : ''}>${escapeHTMLm(o.label)}</option>`).join('')}
                         </select>
                     </td>
-                    <td class="px-4 py-2 text-[11px] ${grupo ? 'font-bold text-secondary' : 'text-slate-400 italic'}">${grupo ? escapeHTMLm(grupo.nome) : 'não informado'}</td>
                 </tr>`;
             }).join('');
             gdAtualizarUISelecao();
@@ -5313,7 +5223,7 @@
             const lbl = document.getElementById('tipos-despesa-sel-count');
             if (lbl) lbl.textContent = `${n} selecionado(s)`;
             const btn = document.getElementById('btn-tipos-despesa-vincular-massa');
-            if (btn) btn.disabled = n === 0 || !gdValorUnico(document.getElementById('tipos-despesa-conta-massa'));
+            if (btn) btn.disabled = n === 0 || !gdValorUnico(document.getElementById('tipos-despesa-grupo-massa'));
             const master = document.getElementById('tipos-despesa-sel-todos');
             if (master) {
                 const vis = [...document.querySelectorAll('.gd-tipo-check')];
@@ -5323,7 +5233,7 @@
             }
         }
 
-        function gdRenderTudo() { gdRepopularSelects(); gdRenderGrupos(); gdRenderContas(); gdRenderTipos(); }
+        function gdRenderTudo() { gdRepopularSelects(); gdRenderGrupos(); gdRenderTipos(); }
 
         // ── Listeners ──────────────────────────────────────────────────────────
         onSnapshot(collection(db, GD_COL_GRUPOS), (snap) => {
@@ -5333,27 +5243,16 @@
             gdRenderTudo();
         }, (err) => console.warn('[CP_Grupos_Contas/master] listener falhou:', err?.code || err?.message));
 
-        onSnapshot(collection(db, GD_COL_CONTAS), (snap) => {
-            const m = new Map();
-            snap.forEach(d => {
-                const v = d.data() || {};
-                m.set(d.id, { nome: String(v.nome || '').trim(), grupo_id: v.grupo_id || null });
-            });
-            _gdContas = m;
-            gdRenderTudo();
-        }, (err) => console.warn('[CP_Contas_Despesa/master] listener falhou:', err?.code || err?.message));
-
         onSnapshot(collection(db, GD_COL_TIPOS), (snap) => {
             const m = new Map();
             snap.forEach(d => {
                 const v = d.data() || {};
                 const k = String(v.tipo_norm || '').trim();
-                if (k) m.set(k, { docId: d.id, conta_id: v.conta_id || null });
+                if (k) m.set(k, { docId: d.id, grupo_id: v.grupo_id || null });
             });
             _gdTipos = m;
             gdRenderTipos();
             gdRenderGrupos();
-            gdRenderContas();
         }, (err) => console.warn('[CP_Tipos_Despesa/master] listener falhou:', err?.code || err?.message));
 
         onSnapshot(doc(db, 'Metadados', 'CP_Catalogo_Categorias'), (snap) => {
@@ -5419,58 +5318,10 @@
             gdCancelarEdicaoGrupo(); gdMsg('msg-grupo-despesa', '', false);
         });
 
-        // ── CRUD de Conta ──────────────────────────────────────────────────────
-        document.getElementById('form-conta-despesa').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const inp = document.getElementById('conta-despesa-nome');
-            const nome = String(inp.value || '').replace(/\s+/g, ' ').trim();
-            const grupoId = gdValorUnico(document.getElementById('conta-despesa-grupo'));
-            if (!nome) return;
-            if (!grupoId) { gdMsg('msg-conta-despesa', 'Escolha o grupo desta conta.', true); return; }
-            const norm = gdChave(nome);
-            for (const [id, c] of _gdContas) {
-                if (id !== _gdEditContaId && c.grupo_id === grupoId && gdChave(c.nome) === norm) {
-                    gdMsg('msg-conta-despesa', `Este grupo já tem uma conta chamada "${c.nome}".`, true);
-                    return;
-                }
-            }
-            try {
-                const g = _gdGrupos.get(grupoId);
-                if (_gdEditContaId) {
-                    await updateDoc(doc(db, GD_COL_CONTAS, _gdEditContaId), {
-                        nome, nome_norm: norm, grupo_id: grupoId, grupo_nome: g ? g.nome : null,
-                        atualizado_em: serverTimestamp(), atualizado_por: usuarioLogadoNome,
-                    });
-                    gdMsg('msg-conta-despesa', 'Conta atualizada.', false);
-                } else {
-                    await addDoc(collection(db, GD_COL_CONTAS), {
-                        nome, nome_norm: norm, grupo_id: grupoId, grupo_nome: g ? g.nome : null,
-                        criado_em: serverTimestamp(), criado_por: usuarioLogadoNome,
-                    });
-                    gdMsg('msg-conta-despesa', 'Conta criada.', false);
-                }
-                gdCancelarEdicaoConta();
-                setTimeout(() => gdMsg('msg-conta-despesa', '', false), 2500);
-            } catch (err) {
-                console.error('[GD conta] falhou:', err);
-                gdMsg('msg-conta-despesa', 'Falha ao salvar: ' + (err?.code === 'permission-denied' ? 'acesso negado pelo Firestore.' : (err?.message || 'erro')), true);
-            }
-        });
-        function gdCancelarEdicaoConta() {
-            _gdEditContaId = null;
-            document.getElementById('conta-despesa-nome').value = '';
-            document.getElementById('lbl-salvar-conta-despesa').textContent = 'Adicionar Conta';
-            document.getElementById('conta-despesa-save-icon').textContent = 'add';
-            document.getElementById('btn-cancelar-edicao-conta-despesa').classList.add('hidden');
-        }
-        document.getElementById('btn-cancelar-edicao-conta-despesa').addEventListener('click', () => {
-            gdCancelarEdicaoConta(); gdMsg('msg-conta-despesa', '', false);
-        });
-
         // ── Editar / excluir por delegação ────────────────────────────────────
         // EXCLUSÃO BLOQUEADA enquanto houver filho, e a guarda mora no CÓDIGO, não no
-        // aviso: apagar um grupo com contas deixaria contas apontando para um id que
-        // não existe, e o relatório perderia o pai de uma linha de dinheiro.
+        // aviso: apagar um grupo com tipos vinculados deixaria vínculos apontando para
+        // um id que não existe, e o relatório perderia o pai de uma linha de dinheiro.
         // Abster-se é o comportamento seguro.
         document.getElementById('aba-regras-grupos').addEventListener('click', async (e) => {
             const bEdG = e.target.closest('[data-gd-editar-grupo]');
@@ -5488,9 +5339,9 @@
             const bExG = e.target.closest('[data-gd-excluir-grupo]');
             if (bExG) {
                 const id = bExG.getAttribute('data-gd-excluir-grupo');
-                const nContas = [..._gdContas.values()].filter(c => c.grupo_id === id).length;
-                if (nContas) {
-                    fornMToast(`Não é possível excluir: este grupo tem ${nContas} conta(s). Mova ou exclua as contas primeiro.`, 'warning', true);
+                const nTipos = [..._gdTipos.values()].filter(t => t.grupo_id === id).length;
+                if (nTipos) {
+                    fornMToast(`Não é possível excluir: este grupo tem ${nTipos} tipo(s) de despesa vinculados. Mova ou desvincule os tipos primeiro.`, 'warning', true);
                     return;
                 }
                 if (_gdConfirmando !== `g:${id}`) {
@@ -5503,51 +5354,20 @@
                 catch (err) { fornMToast('Falha ao excluir: ' + (err?.message || 'erro'), 'error', true); }
                 return;
             }
-            const bEdC = e.target.closest('[data-gd-editar-conta]');
-            if (bEdC) {
-                const id = bEdC.getAttribute('data-gd-editar-conta');
-                const c = _gdContas.get(id);
-                if (!c) return;
-                _gdEditContaId = id;
-                document.getElementById('conta-despesa-nome').value = c.nome;
-                const selG = document.getElementById('conta-despesa-grupo');
-                if (selG && c.grupo_id) setMultiValues(selG, [c.grupo_id]);
-                document.getElementById('lbl-salvar-conta-despesa').textContent = 'Salvar Conta';
-                document.getElementById('conta-despesa-save-icon').textContent = 'save';
-                document.getElementById('btn-cancelar-edicao-conta-despesa').classList.remove('hidden');
-                return;
-            }
-            const bExC = e.target.closest('[data-gd-excluir-conta]');
-            if (bExC) {
-                const id = bExC.getAttribute('data-gd-excluir-conta');
-                const nTipos = [..._gdTipos.values()].filter(t => t.conta_id === id).length;
-                if (nTipos) {
-                    fornMToast(`Não é possível excluir: ${nTipos} tipo(s) de despesa estão vinculados a esta conta. Desvincule primeiro.`, 'warning', true);
-                    return;
-                }
-                if (_gdConfirmando !== `c:${id}`) {
-                    gdArmarConfirmacao(`c:${id}`, gdRenderContas);
-                    fornMToast('Clique de novo no mesmo botão para confirmar a exclusão.', 'warning');
-                    return;
-                }
-                _gdConfirmando = null;
-                try { await deleteDoc(doc(db, GD_COL_CONTAS, id)); fornMToast('Conta excluída.', 'check_circle'); }
-                catch (err) { fornMToast('Falha ao excluir: ' + (err?.message || 'erro'), 'error', true); }
-            }
         });
 
         // ── Vínculo do Tipo de Despesa, individual ────────────────────────────
         // `setDoc` com docId = slug determinístico: idempotente, e o mesmo tipo nunca
         // gera dois documentos de vínculo.
         document.getElementById('tipos-despesa-corpo').addEventListener('change', async (e) => {
-            const sel = e.target.closest('.gd-tipo-conta');
+            const sel = e.target.closest('.gd-tipo-grupo');
             if (sel) {
                 const tipoNorm = sel.getAttribute('data-tipo-norm');
                 const slug = sel.getAttribute('data-slug');
                 const tipo = sel.getAttribute('data-tipo');
-                const contaId = String(sel.value || '');
+                const grupoId = String(sel.value || '');
                 try {
-                    await gdGravarVinculo({ slug, tipoNorm, tipo, contaId });
+                    await gdGravarVinculo({ slug, tipoNorm, tipo, grupoId });
                 } catch (err) {
                     console.error('[GD vínculo] falhou:', err);
                     fornMToast('Falha ao vincular: ' + (err?.code === 'permission-denied' ? 'acesso negado pelo Firestore.' : (err?.message || 'erro')), 'error', true);
@@ -5562,15 +5382,20 @@
             }
         });
 
-        async function gdGravarVinculo({ slug, tipoNorm, tipo, contaId }) {
-            const conta = contaId ? _gdContas.get(contaId) : null;
+        // SOBRESCRITA TOTAL, sem `{ merge: true }`, e isso é deliberado: o objeto
+        // abaixo É o documento inteiro, e a sobrescrita é o que garante que o campo
+        // legado `conta_id` do modelo de 3 níveis não fique pendurado no vínculo.
+        // Com merge, um doc antigo guardaria para sempre um ponteiro para uma coleção
+        // que não existe mais, e a próxima pessoa a ler o documento acreditaria nele.
+        async function gdGravarVinculo({ slug, tipoNorm, tipo, grupoId }) {
+            const grupo = grupoId ? _gdGrupos.get(grupoId) : null;
             await setDoc(doc(db, GD_COL_TIPOS, slug), {
                 tipo, tipo_norm: tipoNorm,
-                conta_id: contaId || null,
-                conta_nome: conta ? conta.nome : null,   // só para log e auditoria
+                grupo_id: grupoId || null,
+                grupo_nome: grupo ? grupo.nome : null,   // só para log e auditoria
                 origem: 'manual',
                 atualizado_em: serverTimestamp(), atualizado_por: usuarioLogadoNome,
-            }, { merge: true });
+            });
         }
 
         document.getElementById('tipos-despesa-sel-todos').addEventListener('change', (e) => {
@@ -5587,10 +5412,10 @@
         // É isto que faz o trabalho caber: 9 vínculos de família cobrem a maior parte
         // da base. writeBatch em chunks, padrão da casa.
         document.getElementById('btn-tipos-despesa-vincular-massa').addEventListener('click', async () => {
-            const contaId = gdValorUnico(document.getElementById('tipos-despesa-conta-massa'));
+            const grupoId = gdValorUnico(document.getElementById('tipos-despesa-grupo-massa'));
             const alvos = _gdCatalogo.filter(it => _gdSelecao.has(it.tipo_norm));
-            if (!contaId || !alvos.length) return;
-            const conta = _gdContas.get(contaId);
+            if (!grupoId || !alvos.length) return;
+            const grupo = _gdGrupos.get(grupoId);
             const btn = document.getElementById('btn-tipos-despesa-vincular-massa');
             btn.disabled = true;
             try {
@@ -5598,19 +5423,21 @@
                     const fatia = alvos.slice(i, i + GD_CHUNK);
                     const b = writeBatch(db);
                     for (const it of fatia) {
+                        // Mesma sobrescrita total do vínculo individual, e pelo mesmo
+                        // motivo: não deixar `conta_id` legado pendurado.
                         b.set(doc(db, GD_COL_TIPOS, it.slug), {
                             tipo: it.tipo, tipo_norm: it.tipo_norm,
-                            conta_id: contaId, conta_nome: conta ? conta.nome : null,
+                            grupo_id: grupoId, grupo_nome: grupo ? grupo.nome : null,
                             origem: 'manual',
                             atualizado_em: serverTimestamp(), atualizado_por: usuarioLogadoNome,
-                        }, { merge: true });
+                        });
                     }
                     await b.commit();
                     await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
                 }
                 const docsAfetados = alvos.reduce((s, it) => s + (Number(it.docs) || 0), 0);
                 _gdSelecao.clear();
-                fornMToast(`${alvos.length} tipo(s) vinculados a "${conta ? conta.nome : ''}", alcançando ${docsAfetados.toLocaleString('pt-BR')} lançamento(s).`, 'check_circle');
+                fornMToast(`${alvos.length} tipo(s) vinculados a "${grupo ? grupo.nome : ''}", alcançando ${docsAfetados.toLocaleString('pt-BR')} lançamento(s).`, 'check_circle');
                 gdRenderTipos();
             } catch (err) {
                 console.error('[GD vínculo massa] falhou:', err);
@@ -5628,9 +5455,8 @@
         document.getElementById('tipos-despesa-pag-prev').addEventListener('click', () => { if (_gdPage > 1) { _gdPage--; gdRenderTipos(); } });
         document.getElementById('tipos-despesa-pag-next').addEventListener('click', () => { _gdPage++; gdRenderTipos(); });
 
-        // Guardas de seleção única nos dois seletores do design system.
-        gdSingleGuard(document.getElementById('conta-despesa-grupo'));
-        gdSingleGuard(document.getElementById('tipos-despesa-conta-massa'), () => gdAtualizarUISelecao());
+        // Guarda de seleção única no seletor do design system.
+        gdSingleGuard(document.getElementById('tipos-despesa-grupo-massa'), () => gdAtualizarUISelecao());
         if (window.CentraCheckboxMulti) {
             ['tipos-despesa-filtro'].forEach(id => {
                 const el = document.getElementById(id);
