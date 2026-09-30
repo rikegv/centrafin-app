@@ -5,26 +5,20 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
-## PONTO DE RETOMADA (2026-09-30, fim do dia) — 5 OS em producao, 2 pendencias e 1 frente recortada
+## PONTO DE RETOMADA (2026-09-30, fim do dia) — 5 OS em producao, e as frentes abertas ESTACIONADAS
 
 **Onde parou, em uma frase:** CINCO ordens de servico foram construidas, auditadas, validadas pelo
-diretor e **publicadas hoje**; `main` == `origin/main` == `c1424d7` == producao (conferido por hash,
-arquivo a arquivo), arvore limpa, zero flags, branch de frente apagado.
+diretor e **publicadas hoje**; nada ficou pela metade.
 
-**A 5a e a mais recente: OS-CP-GRUPOS-2NIVEIS-01**, que REMOVEU o nivel "Conta de Despesa" e deixou a
-estrutura contabil em 2 niveis (Grupo -> Tipo). Entrada propria logo abaixo. **Mudou `firestore.rules`**
-(saiu o match de `CP_Contas_Despesa`), entao o deploy foi COM rules, nao `--only hosting`.
+**Estado do git, conferido no fechamento:** branch `main`, arvore LIMPA,
+`main` == `origin/main` == **`5edb55a`**, **zero** flags `READY_*`, branch da frente apagado.
+O codigo em producao e o commit `c1424d7` (o `5edb55a` seguinte e so DIARIO e TASKS), e producao foi
+conferida **por hash, arquivo a arquivo**, contra `main`: identica nos cinco arquivos servidos.
+Nenhum preview channel aberto: so resta `live`.
 
-**Duas dividas NOVAS que ela deixou, as duas de decisao do diretor e nenhuma urgente:**
-1. O `<select>` por linha da tela de vinculo e CRU (sem `data-checkbox-multi`), fora do padrao da
-   secao 5. O `tester` provou que e HERANCA, ja era assim antes da frente, nao regressao.
-2. `jsdom` nao esta no `package.json`. A suite `test-grupos-2niveis.cjs` precisa de
-   `--jsdom=<caminho>` e ABORTA sem ele (nao devolve "passou" falso). Para entrar no gate, alguem
-   tem que decidir por `devDependencies`.
-
-**Estado do git:** branch `main`, arvore LIMPA, `main` == `origin/main` em `d3abb62`, nenhuma flag
-`READY_*`. Producao conferida IDENTICA a `main` nos arquivos servidos. Nenhum preview channel
-aberto alem do que expira sozinho.
+**DECISAO DO DIRETOR NO FECHAMENTO (2026-09-30):** as frentes abertas listadas abaixo ficam
+**PARADAS PARA DEPOIS**, por decisao explicita dele. Nao estao esquecidas nem bloqueadas por
+problema tecnico: estao estacionadas. A proxima sessao **nao deve comecar por elas** sem ele mandar.
 
 ### O QUE FOI PARA PRODUCAO HOJE, na ordem
 
@@ -33,26 +27,42 @@ aberto alem do que expira sozinho.
 3. **OS-CP-CARDS-CANCELADO-TARIFA-01** (cancelado e tarifa fora dos 4 cards e da tabela do card).
 4. **OS-CP-COLUNAS-CLIENTE-01** (coluna Cliente, filtro de Favorecido corrigido, rolagem lateral
    com colunas congeladas).
+5. **OS-CP-GRUPOS-2NIVEIS-01** (remove o nivel "Conta de Despesa"; a estrutura contabil fica em
+   2 niveis, Grupo -> Tipo). **Unica das cinco que mexeu em `firestore.rules`**, entao o deploy foi
+   COM rules, nao `--only hosting`.
 
 Cada uma tem entrada propria abaixo, com os numeros e as licoes. **Nao reabrir nenhuma sem ler a
 entrada:** tres delas tinham a premissa da ordem de servico ERRADA, e o que se aprendeu ali e o
 que impede repetir o erro.
 
-### AS 2 PENDENCIAS, e as duas exigem o diretor
+### AS FRENTES ABERTAS, todas ESTACIONADAS por decisao do diretor
+
+Nenhuma esta bloqueada por problema tecnico. Todas exigem uma decisao ou um aval dele, e ele
+escolheu deixar para depois. Estao aqui para serem retomadas, nao para serem tocadas sozinhas.
 
 1. **Cadastro do fornecedor #1950 (CATARINA APARECIDA DOS SANTOS) para a area COMERCIAL SOULAN.**
    O diretor JA DECIDIU o destino (gestor Marcelo Medeiros); falta EXECUTAR, e a execucao e
    escrita em producao, entao vai com **DRY-RUN que ele aprova antes**. Corrigir esse 1 cadastro e
    deixar a cascata rodar resolve os 83 lancamentos e o futuro de uma vez. Valor: R$ 7.077,91.
    **E o UNICO centro de custo orfao da base** (varredura completa feita).
-2. **Decisao do bucket do Cliente no DRE**, que abre a frente seguinte. Ver abaixo.
+2. **Decisao do bucket do Cliente no DRE**, que abre a frente do DRE por grupo. Ver logo abaixo.
+   **Mudou de estado hoje:** a dimensao que faltava (os grupos de despesa) existe e esta em
+   producao desde a 5a OS. O que trava agora e so a decisao contabil dele.
+3. **As 3 dividas NOVAS da 5a OS**, detalhadas na entrada dela: o `<select>` cru por linha (heranca
+   provada, nao regressao), o `jsdom` fora do `package.json`, e a trava da sobrescrita total ser
+   convencao e nao codigo.
 
 ### A FRENTE SEGUINTE, ja recortada: DRE por grupo de despesa
 
 Ficou FORA do pacote por decisao do diretor, e o motivo nao foi tempo: o DRE por grupo so mostra
-algo DEPOIS que o diretor agrupar as despesas na tela nova, que acabou de entrar em producao.
-Construir junto obrigaria a validar o relatorio duas vezes, uma com a dimensao vazia e outra com
-dado real.
+algo DEPOIS que o diretor agrupar as despesas na tela de cadastro. Construir junto obrigaria a
+validar o relatorio duas vezes, uma com a dimensao vazia e outra com dado real.
+
+**O QUE MUDOU EM 2026-09-30:** a tela de cadastro existe, esta em producao e agora tem **2 niveis**
+(Grupo -> Tipo), nao 3. Ou seja, o vinculo que o DRE vai ler e `CP_Tipos_Despesa.grupo_id`,
+DIRETO, sem passar por conta nenhuma. Quem construir o DRE por grupo deve reusar a mesma cadeia de
+`_cpGrupoDeReg` (`gerenciador_contas_pagar_desktop/code.html`), que ja e fonte unica, e **nunca**
+reimplementar a regra no DRE. Falta o diretor preencher os grupos e tomar a decisao do bucket.
 
 **DECISAO PENDENTE:** hoje o bucket do DRE vem de QUEM RECEBEU o dinheiro (`bucketDespesa` em
 `dre_gerencial_desktop/code.html:329-331`: tipo Cliente vai para CUSTOS, o resto para G&A). Com
@@ -96,6 +106,10 @@ exatamente para essa decisao nao ser tomada por acidente.
    usuarios tem essa chave; sao clausulas mortas, mas remove-las MUDA regra existente.
 6. **Mojibake A-til/A-circunflexo em `CP_Base_Despesas`**, 40 de 112 docs, reversivel. Provado que
    NAO atrapalha nada: a ancora da Onda 4 e a despesa do lancamento, que esta 100% limpa.
+6b. **`jsdom` nao esta no `package.json`.** A suite `test-grupos-2niveis.cjs` (51 casos, a mais
+   completa da casa: monta o `master.html` em DOM real e executa o bloco de Grupos de ponta a ponta)
+   exige `--jsdom=<caminho>`. Ela ABORTA sem ele, nao devolve "passou" falso. Para entrar no gate,
+   precisa virar `devDependencies`, e isso e decisao do diretor.
 7. **Sujeira de cadastro**: 7 registros com `NEAT` em centro de custo; 86 fornecedores sem centro
    de custo; area chamada `ginfor` em minusculas; `RATEIO` sem gestor; `CLIENTES` com o gestor
    gravado como "CLIENTES".
@@ -121,10 +135,25 @@ exatamente para essa decisao nao ser tomada por acidente.
 5. **Crase dentro de comentario que esta DENTRO de template literal encerra a string.** Quebrou o
    arquivo uma vez.
 6. **Base de comparacao de teste vai em COMMIT EXPLICITO, nunca em `HEAD`.** Aconteceu TRES vezes.
+6b. **E quando a assercao e sobre um FATO HISTORICO, os DOIS lados vao em commit fixo.** Descoberta
+   em 2026-09-30: a suite das colunas afirmava "o commit `6a6c392` mexeu so em marcacao" mas
+   comparava contra a ARVORE VIVA. Com uma perna viva, a afirmacao vira "nenhuma frente futura pode
+   tocar logica nenhuma", e ela reprovou 1 de 210 casos **sem defeito algum**, so porque o diretor
+   mandou mudar uma funcao. Fixar so a base nao basta.
 7. **Caminho de falha aberta tem que ser BARULHENTO.** `catch` mudo faz teste quebrado parecer
    resultado valido.
-8. **Os agentes `seguranca` e `arquiteto` NAO estao registrados no runtime.** Contorno usado e que
-   funciona: despachar agente generico mandando ler `.claude/agents/<papel>.md` e assumir o papel.
+8. **Os agentes `seguranca` e `arquiteto` NAO estao registrados no runtime.** CONFIRMADO de novo em
+   2026-09-30. Contorno usado e que funciona: despachar agente generico mandando ler
+   `.claude/agents/<papel>.md` e assumir o papel. O `tester`, esse SIM esta registrado e foi
+   despachado direto.
+9. **Provar a camada logica NAO prova a camada que o operador toca**, e em 2026-09-30 o tester subiu
+   mais um degrau: nao basta conferir os `<option>` gerados, e preciso **carregar o
+   `assets/checkbox_multi.js` real, abrir o painel pelo clique e ler os rotulos que o operador
+   enxerga**. Foi exatamente entre esses dois degraus que uma OS anterior quebrou em producao.
+10. **`getElementById` orfao e o risco numero 1 ao REMOVER interface.** Se o id sumiu do HTML mas
+   sobrou um `getElementById(...).addEventListener(...)` no JS, o TypeError mata o modulo `<script>`
+   INTEIRO e derruba telas que nada tem a ver com a frente. Toda remocao de bloco de UI passa por
+   uma varredura de ids referenciados x ids existentes, ANTES do preview.
 
 ---
 
