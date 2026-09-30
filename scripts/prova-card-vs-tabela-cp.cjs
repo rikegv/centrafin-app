@@ -51,11 +51,21 @@ function extrairKpiFiltroMap() {
 // cancelado a excluir" quando na verdade o harness estava quebrado. Lição: ao extrair
 // uma funcao real, extrair TODAS as dependencias dela, e nunca confiar num caminho de
 // falha silencioso para dizer que o comportamento esta certo.
+// Aceita declaracao de UMA ou VARIAS linhas: varre do `const NOME =` ate a primeira
+// linha que termina em `;`. `_cpNormTarifa` quebrou a versao anterior, que so pegava
+// uma linha, porque a arrow dele ocupa duas.
 function extrairConstLinha(nome) {
-  const re = new RegExp(`^\\s*const ${nome} = .*;\\s*$`, 'm');
-  const m = SRC.match(re);
-  if (!m) throw new Error(`nao achei a const ${nome}`);
-  return m[0].trim();
+  const marca = `const ${nome} =`;
+  const i = SRC.indexOf(marca);
+  if (i < 0) throw new Error(`nao achei a const ${nome}`);
+  const linhas = SRC.slice(i).split('\n');
+  const out = [];
+  for (const l of linhas) {
+    out.push(l);
+    if (/;\s*$/.test(l)) return out.join('\n').trim();
+    if (out.length > 30) break;
+  }
+  throw new Error(`nao achei o fim da const ${nome}`);
 }
 
 const ANO = new Date().getFullYear();
@@ -103,6 +113,12 @@ function rodar(valoresTipo) {
     + extrair('_cpChaveFiltro') + '\n' + extrair('_cpMesmoConjunto') + '\n'
     + extrairConstLinha('_CARDS_NATUREZA') + '\n'
     + extrair('_cpCardNaturezaAtivoKey') + '\n'
+    // Dependencias da regra de tarifa, que virou fonte unica em 2026-09-30 e passou
+    // a ser consumida TAMBEM pela tabela. Esquecer de injetar aqui foi o segundo
+    // tropeco do mesmo tipo nesta OS; a diferenca e que este estourou ReferenceError
+    // alto, porque nao cai dentro de nenhum try/catch.
+    + extrairConstLinha('_cpNormTarifa') + '\n'
+    + extrair('_cpEhTarifaOuComissao') + '\n'
     + extrair('_cpNormalizarBusca') + '\n';
 
   // TABELA: aplicarFiltrosCP com stubs neutros para o que nao interessa a esta prova
@@ -118,8 +134,12 @@ function rodar(valoresTipo) {
   // CARD: atualizarKPIs sobre o MESMO universo completo (o card nao depende do
   // filtro de Tipo; ele parte de tudo e separa por natureza internamente).
   const amb2 = montarAmbiente(['Todos']);
+  // `_cpEhTarifaOuComissao` saiu de DENTRO de `atualizarKPIs` quando virou fonte
+  // unica, entao o sandbox do card precisa dela injetada tambem. Mesma funcao que a
+  // tabela usa: e isso que garante que os dois lados aplicam a MESMA regra.
   new Function('document', 'fmtBRL', 'CP_LIMIAR_ANO', '_cpPeriodoComitado',
-    extrair('hojeISO') + '\n' + extrair('statusVisual') + '\n' + extrair('atualizarKPIs')
+    extrairConstLinha('_cpNormTarifa') + '\n' + extrair('_cpEhTarifaOuComissao') + '\n'
+    + extrair('hojeISO') + '\n' + extrair('statusVisual') + '\n' + extrair('atualizarKPIs')
     + '\nreturn atualizarKPIs;'
   )(amb2.document, { format: (n) => Number(n).toFixed(2) }, LIMIAR, { ini: '', fim: '' })(regs);
 
@@ -134,16 +154,14 @@ console.log(`\n===== (1) CLICAR NO CARD: somar a tabela tem que fechar com o car
 for (const [key, idCard, rotulo] of CARDS) {
   const conf = MAP[key];
   const { filtrados, cards } = rodar(conf.valores);
-  // A tabela nao aplica o corte de ano (ele vive no card), entao a soma da tabela
-  // e comparada no MESMO recorte: ano vigente e tarifa expurgada ja saem do card.
-  // Aqui somamos a tabela inteira que o clique produz, e o corte de ano e aplicado
-  // porque `aplicarFiltrosCP` nao corta por ano: fazemos o corte aqui, declarado.
+  // MUDOU em 2026-09-30, e a mudanca e o ponto: desde que o clique num card tambem
+  // esconde tarifa, a soma da TABELA CRUA tem que fechar com o card, sem nenhum
+  // desconto feito por este script. A versao anterior descontava a tarifa "de forma
+  // declarada" e por isso fechava; o tester mostrou que isso respondia a pergunta
+  // errada, porque o diretor soma a COLUNA e nao a coluna menos alguma coisa.
+  // Continua valendo o corte de ano, que vive dentro do card e nao no filtro.
   const noRecorte = filtrados.filter(r => String(r.data_vencimento || '') >= LIMIAR);
-  const normTexto = (s) => String(s || '').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  const semTarifa = noRecorte.filter(r => {
-    const blob = `${normTexto(r.categoria)} ${normTexto(r.entidade)}`;
-    return !(blob.includes('TARIFA') || (blob.includes('COMISSAO') && blob.includes('BANC')));
-  });
+  const semTarifa = noRecorte;   // sem desconto: a tabela ja nao traz tarifa
   const somaTabela = semTarifa.reduce((s, r) => s + (Number(r.valor_original) || 0), 0);
   const valorCard = Number(String(cards[idCard] ?? '0'));
   const ok = cent(somaTabela) === cent(valorCard);

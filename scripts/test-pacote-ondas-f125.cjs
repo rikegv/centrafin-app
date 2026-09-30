@@ -108,10 +108,16 @@ try {
 // contagens) roda contra AS DUAS: preservado desde antes da Frente 2 E preservado
 // pela guarda. Se algum dia a guarda for commitada, `--head <ref>` aponta o HEAD
 // para o commit anterior a ela.
+// BASE 2 FIXADA em 2026-09-30, executando a instrucao que o proprio autor desta
+// suite deixou tres linhas acima: a guarda FOI commitada (`32b34ee`), entao `HEAD`
+// deixou de ser "antes da guarda" e a premissa das comparacoes virou falsa, com 15
+// casos reprovando de uma vez. `3f64b96` e o ultimo commit ANTES da guarda.
+// E a mesma doenca da base 1, que ja tinha sido fixada pelo mesmo motivo: base de
+// comparacao presa a `HEAD` apodrece no primeiro commit da propria frente.
 function refHead() {
   const i = process.argv.indexOf('--head');
   if (i >= 0 && process.argv[i + 1]) return process.argv[i + 1];
-  return process.env.CP_HEAD_REF || 'HEAD';
+  return process.env.CP_HEAD_REF || '3f64b96';
 }
 const HEAD_REF = refHead();
 let SRC_HEAD;
@@ -910,11 +916,21 @@ async function frente1() {
 /** Monta a `atualizarKPIs` REAL da versao, capturando o que ela escreve no DOM. */
 function montarKPI(src, rotulo, opcoes) {
   const o = opcoes || {};
+  // A regra de tarifa/comissao vivia INLINE dentro de `atualizarKPIs` e, em
+  // 2026-09-30, virou FONTE UNICA (`_cpEhTarifaOuComissao`) porque a tabela passou a
+  // precisar dela quando um card de natureza esta ativo. O sandbox tem que injetar a
+  // funcao e o normalizador dela; sem isso `atualizarKPIs` lanca ReferenceError.
+  // Nas bases ANTIGAS (`0ca791e` e o HEAD anterior a essa extracao) a funcao nao
+  // existe, e a regra ainda esta inline: por isso a injecao e CONDICIONAL, senao o
+  // extrator quebra ao procurar algo que aquele arquivo nao tem.
+  const temFonteUnicaTarifa = src.includes('function _cpEhTarifaOuComissao(');
   const corpo = [
+    temFonteUnicaTarifa ? extrairStatement(src, 'const _cpNormTarifa =', rotulo) : '',
+    temFonteUnicaTarifa ? extrairFuncao(src, '_cpEhTarifaOuComissao', rotulo) : '',
     extrairFuncao(src, 'hojeISO', rotulo),
     extrairFuncao(src, 'statusVisual', rotulo),
     extrairFuncao(src, 'atualizarKPIs', rotulo),
-  ].join('\n');
+  ].filter(Boolean).join('\n');
   const escrito = {};
   const el = (id) => ({
     set textContent(v) { escrito[id] = v; },
@@ -935,6 +951,71 @@ function montarKPI(src, rotulo, opcoes) {
   const fn = new Function('document', 'fmtBRL', 'CP_LIMIAR_ANO', '_cpPeriodoComitado',
     corpo + '\nreturn atualizarKPIs;')(document, fmtBRL, CP_LIMIAR_ANO, _cpPeriodoComitado);
   return { fn, escrito, CP_LIMIAR_ANO };
+}
+
+/**
+ * Monta o PREDICADO REAL de `aplicarFiltrosCP` (o recorte de Tipo mais a guarda de
+ * card de natureza ativo), extraido textualmente da versao `src`.
+ *
+ * Fica no nivel do modulo, e nao dentro de um bloco, porque DOIS lugares precisam
+ * dele: a prova do drill-down e o mutante da fonte unica de tarifa.
+ *
+ * `opts.semTarifa` monta o ESTADO INTERMEDIARIO (guarda de cancelado, sem a de
+ * tarifa) removendo a LINHA do texto real da guarda, nunca reescrevendo a guarda.
+ *
+ * Assinatura do predicado resultante: (registro, arrayDoFiltroDeTipo, consoleSpy).
+ */
+const DEPS_FILTRO = [
+  ['stmt', 'const _KPI_FILTRO_MAP = {'],
+  ['stmt', 'const _CARDS_NATUREZA = ['],
+  ['stmt', 'const _cpNormTarifa ='],
+  ['fn', '_cpEhTarifaOuComissao'],
+  ['fn', '_cpMesmoConjunto'],
+  ['fn', '_cpCardNaturezaAtivoKey'],
+];
+const temDepFiltro = (src, tipo, nome) =>
+  tipo === 'fn' ? src.includes('function ' + nome + '(') : src.includes(nome);
+/**
+ * ERRO MEU, 2026-09-30, registrado para nao repetir: a versao anterior detectava a
+ * guarda da tabela por regex da forma de UMA LINHA
+ * (`_cardNaturezaAtivo && /^cancel/i`). Quando ela virou BLOCO
+ * (`if (_cardNaturezaAtivo) { ...cancelado... ...tarifa... }`), a regex deixou de
+ * casar e o harness passou a montar o filtro SEM guarda nenhuma, EM SILENCIO. Cinco
+ * casos acusaram "a correcao nao funciona" quando o defeito era do teste.
+ * Agora: tenta as DUAS formas e LANCA se `_cardNaturezaAtivo` existe mas a forma nao
+ * for reconhecida. Degradar calado e o unico desfecho proibido.
+ */
+function extrairGuardaTabela(src, rot) {
+  if (!/_cardNaturezaAtivo/.test(src)) return null;             // ref antiga, nao tem
+  if (src.includes('if (_cardNaturezaAtivo) {')) return extrairBloco(src, 'if (_cardNaturezaAtivo) {', rot);
+  if (/_cardNaturezaAtivo && \/\^cancel\/i/.test(src)) return extrairLinha(src, '_cardNaturezaAtivo && /^cancel/i');
+  throw new Error(rot + ': `_cardNaturezaAtivo` existe mas nao reconheci a FORMA da guarda. ' +
+    'Falhando alto de proposito: montar o filtro sem ela daria um verde falso.');
+}
+function construirFiltroRef(src, rot, opts) {
+  const o = opts || {};
+  const guarda = extrairGuardaTabela(src, rot);
+  const pedacos = [];
+  for (const [tipo, nome] of DEPS_FILTRO) {
+    if (temDepFiltro(src, tipo, nome)) pedacos.push(tipo === 'fn' ? extrairFuncao(src, nome, rot) : extrairStatement(src, nome, rot));
+    else if (guarda) throw new Error(rot + ': tem a guarda da tabela mas falta ' + nome);
+  }
+  let guardaTxt = guarda || '';
+  if (guardaTxt && o.semTarifa) {
+    guardaTxt = guardaTxt.split('\n').filter(l => !/_cpEhTarifaOuComissao\(r\)/.test(l)).join('\n');
+    if (/_cpEhTarifaOuComissao\(r\)/.test(guardaTxt)) throw new Error(rot + ': nao consegui remover a exclusao de tarifa');
+  }
+  return new Function('r', 'tipoArr', 'consoleSpy',
+    pedacos.join('\n') + '\n' +
+    'const console = consoleSpy;\n' +
+    'const isMultiAll = (a) => !a || !a.length || a.indexOf("Todos") >= 0;\n' +
+    'const tipoSet = !isMultiAll(tipoArr) ? new Set(tipoArr) : null;\n' +
+    'const tipoFiltraSemTipo = tipoSet && tipoSet.has("__SEM_TIPO__");\n' +
+    (guarda ? 'const _cardNaturezaAtivo = !!_cpCardNaturezaAtivoKey(tipoArr);\n' : '') +
+    'let _ok = true;\n' +
+    extrairBloco(src, 'if (tipoSet) {', rot).replace(/return false;/g, '{ _ok = false; }') + '\n' +
+    guardaTxt.replace(/return false;/g, '{ _ok = false; }') + '\n' +
+    'return _ok;');
 }
 
 async function frente2() {
@@ -1587,6 +1668,112 @@ async function frente2() {
     'os valores do HEAD (com cancelado dentro) sao interno=5627953.39 e externo=16088181.69 (obtido ' +
     numH.escrito['kpi-interno'] + ' / ' + numH.escrito['kpi-externo'] + ')');
 
+  // ===========================================================================
+  // (2-bis) A EXTRACAO DA REGRA DE TARIFA MUDOU O CARD? Pedido do coordenador.
+  //   A regra saiu de dentro de `atualizarKPIs` e virou `_cpEhTarifaOuComissao`.
+  //   Os KPIs preservados byte a byte (bloco 1) ja cobrem o AGREGADO, mas agregado
+  //   igual nao prova regra igual: duas regras diferentes podem somar o mesmo total
+  //   por compensacao. A prova honesta e POR DOCUMENTO, nos 51.181.
+  //   Extraio o predicado ANTIGO (inline, com o `normTexto` local) do HEAD e o NOVO
+  //   do worktree, e comparo o veredito doc a doc. Zero divergencias, ou e regressao.
+  // ===========================================================================
+  {
+    // O ANTIGO: `const normTexto = ...` + `const ehTarifaOuComissao = ...`, os dois
+    // extraidos TEXTUALMENTE de dentro da `atualizarKPIs` do HEAD.
+    const kpiH = extrairFuncao(SRC_HEAD, 'atualizarKPIs', 'head');
+    const antigo = new Function('r',
+      extrairStatement(kpiH, 'const normTexto =', 'head') + '\n' +
+      extrairStatement(kpiH, 'const blob =', 'head') + '\n' +
+      extrairStatement(kpiH, 'const ehTarifaOuComissao =', 'head') + '\n' +
+      'return ehTarifaOuComissao;');
+    // O NOVO: a fonte unica, extraida do worktree.
+    const novo = new Function('r',
+      extrairStatement(SRC_DEPOIS, 'const _cpNormTarifa =', 'depois') + '\n' +
+      extrairFuncao(SRC_DEPOIS, '_cpEhTarifaOuComissao', 'depois') + '\n' +
+      'return _cpEhTarifaOuComissao(r);');
+    // ── A CONDICIONAL DO `montarKPI` ESTA CORRETA? (o coordenador pediu conferir) ──
+    // Ela injeta `_cpNormTarifa` + `_cpEhTarifaOuComissao` quando
+    // `src.includes('function _cpEhTarifaOuComissao(')`. O invariante que ela PRECISA
+    // satisfazer nao e "a funcao existe", e sim: *se `atualizarKPIs` CHAMA a funcao,
+    // entao a condicao e verdadeira*. Se um dia alguem declarar a fonte unica como
+    // `const _cpEhTarifaOuComissao = (reg) => ...`, a condicao vira falsa, a injecao
+    // e pulada e `atualizarKPIs` lanca ReferenceError. Isso e FALHA ALTA, nao
+    // silenciosa, mas e melhor pegar aqui com o motivo escrito do que num stack trace.
+    for (const [rot, src] of [[BASE_REF, SRC_ANTES], [HEAD_REF, SRC_HEAD], ['worktree', SRC_DEPOIS]]) {
+      const kpi = extrairFuncao(src, 'atualizarKPIs', rot);
+      const chama = /_cpEhTarifaOuComissao\s*\(/.test(kpi);
+      const condicao = src.includes('function _cpEhTarifaOuComissao(');
+      assert(!chama || condicao,
+        'condicional do montarKPI OK para ' + rot + ': atualizarKPIs ' + (chama ? 'CHAMA' : 'nao chama') +
+        ' a fonte unica, e a condicao de injecao e ' + condicao + '. O invariante e "chama => injeta"');
+      // E a recíproca informativa: nas bases antigas a regra ainda esta INLINE.
+      if (!chama) assert(/const ehTarifaOuComissao =/.test(kpi),
+        '  ... e em ' + rot + ' a regra de tarifa esta INLINE dentro de atualizarKPIs, como esperado para ' +
+        'uma ref anterior a extracao. Por isso a injecao ali e corretamente pulada');
+    }
+    // A extracao do `_cpNormTarifa` por `extrairStatement` corta no primeiro `;` de
+    // profundidade zero, e o corpo dele tem um literal de REGEX com colchetes. Se o
+    // corte tivesse saido errado, o resultado poderia ate compilar e normalizar mal.
+    // Prova COMPORTAMENTAL: so casa 'COMISSAO'+'BANC' a partir de 'COMISSÃO BANCÁRIA'
+    // se o strip de acento tiver vindo inteiro.
+    assert(novo({ categoria: 'COMISSÃO BANCÁRIA', entidade: 'X' }) === true,
+      'o `_cpNormTarifa` injetado veio INTEIRO: "COMISSÃO BANCÁRIA" (com acento) e reconhecido, o que so ' +
+      'acontece se o strip de acento (NFD + replace) tiver sido extraido junto. Prova comportamental, e nao ' +
+      'confianca no extrator de statement diante de um literal de regex com colchetes');
+    assert(novo({ categoria: 'COMISSAO DE VENDAS', entidade: 'REPRESENTANTE' }) === false,
+      'e o qualificador BANC continua obrigatorio: comissao de vendas NAO e tarifa bancaria');
+
+    // Sanidade: os dois predicados precisam DISCRIMINAR, senao "sempre false" nos
+    // dois daria zero divergencias e um verde vazio.
+    assert(novo({ categoria: 'TARIFA BANCARIA', entidade: 'X' }) === true &&
+      novo({ categoria: 'ALUGUEL', entidade: 'X' }) === false &&
+      antigo({ categoria: 'TARIFA BANCARIA', entidade: 'X' }) === true &&
+      antigo({ categoria: 'ALUGUEL', entidade: 'X' }) === false,
+      'sanidade: os DOIS predicados de tarifa discriminam (TARIFA=true, ALUGUEL=false). Sem isto, "zero ' +
+      'divergencias" poderia ser os dois respondendo sempre a mesma coisa');
+    let divergem = 0, nTarNovo = 0, nTarAntigo = 0, exemplos = [];
+    for (const r of registros) {
+      const a = !!antigo(r), n = !!novo(r);
+      if (a) nTarAntigo++;
+      if (n) nTarNovo++;
+      if (a !== n && exemplos.length < 5) exemplos.push(r._id + ' cat=' + JSON.stringify(r.categoria) + ' antigo=' + a + ' novo=' + n);
+      if (a !== n) divergem++;
+    }
+    console.log('  --- extracao da regra de tarifa: veredito POR DOCUMENTO nos ' + registros.length.toLocaleString('pt-BR') + ' docs ---');
+    console.log('      inline do ' + HEAD_REF + ' diz tarifa em ... ' + nTarAntigo + ' docs');
+    console.log('      _cpEhTarifaOuComissao diz tarifa em ' + nTarNovo + ' docs');
+    console.log('      divergencias ..................... ' + divergem);
+    assert(divergem === 0,
+      'A EXTRACAO NAO MUDOU A REGRA: o predicado inline do ' + HEAD_REF + ' e a fonte unica ' +
+      '`_cpEhTarifaOuComissao` dao o MESMO veredito nos ' + registros.length + ' documentos, um a um. ' +
+      'Zero divergencias. Agregado igual poderia ser compensacao; isto nao pode' +
+      (exemplos.length ? ' >>> ' + exemplos.join(' | ') : ''));
+    assert(nTarNovo === 601 && nTarAntigo === 601 && numD.escrito['kpi-tarifas-count'] === '601',
+      'e os dois marcam 601 docs como tarifa, que e exatamente o kpi-tarifas-count. Nota: TODAS as tarifas ' +
+      'caem dentro do corte de ano (o unico doc fora do ano, R$ 280,00, nao e tarifa), entao "601 na base" e ' +
+      '"601 no recorte" coincidem. obtido ' + nTarNovo + ' / ' + nTarAntigo);
+    // MUTANTE DA FONTE UNICA (pedido 4 do coordenador): alterar
+    // `_cpEhTarifaOuComissao` tem que mover o CARD e a TABELA JUNTOS. Se so um se
+    // mover, a fonte deixou de ser unica e alguem copiou a regra de volta.
+    const MFonte = SRC_DEPOIS.replace(
+      "return blob.includes('TARIFA') || (blob.includes('COMISSAO') && blob.includes('BANC'));",
+      "return blob.includes('ALUGUEL') || blob.includes('TARIFA') || (blob.includes('COMISSAO') && blob.includes('BANC'));");
+    assert(MFonte !== SRC_DEPOIS, 'mutante da FONTE UNICA de tarifa foi construido (a regra tem o texto suposto)');
+    const kMut = montarKPI(MFonte, 'mutante-tarifa', { numerico: true }); kMut.fn(registros);
+    assert(cent(kMut.escrito['kpi-tarifas']) !== cent(numD.escrito['kpi-tarifas']),
+      'MUTANTE DA FONTE UNICA, lado CARD: acrescentar ALUGUEL a regra move o kpi-tarifas (' +
+      numD.escrito['kpi-tarifas'] + ' -> ' + kMut.escrito['kpi-tarifas'] + ')');
+    const filtroMut = construirFiltroRef(MFonte, 'mutante-tarifa');
+    const cobaiaAluguel = { tipo_entidade: 'Fornecedor Externo', status: 'pago', categoria: 'ALUGUEL', entidade: 'X', valor_original: 1, data_vencimento: '2026-06-15' };
+    assert(filtroMut(cobaiaAluguel, ['Fornecedor Externo'], { warn: () => {} }) === false,
+      'MUTANTE DA FONTE UNICA, lado TABELA: a MESMA alteracao, feita num lugar so, tambem passou a esconder ' +
+      'ALUGUEL da tabela do card. Card e tabela se moveram JUNTOS, logo a fonte e realmente UNICA. Se este ' +
+      'caso falhar, alguem copiou a regra de volta para dentro do filtro e as duas copias vao divergir');
+    // E a contraprova: no codigo REAL (nao mutado) o mesmo lancamento de ALUGUEL passa.
+    assert(construirFiltroRef(SRC_DEPOIS, 'depois')(cobaiaAluguel, ['Fornecedor Externo'], { warn: () => {} }) === true,
+      'contraprova do mutante: no codigo real o lancamento de ALUGUEL continua visivel no card Externo');
+  }
+
   // ── O QUE SAIU, medido pela PROPRIA funcao, sem reimplementar o criterio ─────
   // Metodo: roda a funcao DEPOIS sobre a base com TODO status trocado por 'pago'.
   // Como a unica coisa que a guarda le e `status`, neutralizar o status devolve
@@ -1815,132 +2002,133 @@ async function frente2() {
     // Duas defesas: a lista e explicita e a ausencia de qualquer item na versao
     // DEPOIS e FALHA DURA (o extrator lanca), nunca um fallback silencioso. Na
     // versao HEAD tres delas nao existem (sao novas), e isso e DECLARADO.
-    const DEPS = [
-      ['stmt', 'const _KPI_FILTRO_MAP = {'],
-      ['stmt', 'const _CARDS_NATUREZA = ['],
-      ['fn', '_cpMesmoConjunto'],
-      ['fn', '_cpCardNaturezaAtivoKey'],
-    ];
-    for (const [tipo, nome] of DEPS) {
-      const achou = tipo === 'fn' ? SRC_DEPOIS.includes('function ' + nome + '(') : SRC_DEPOIS.includes(nome);
-      assert(achou, 'dependencia do harness presente na versao DEPOIS: ' + nome +
+    // O `_cpNormTarifa` / `_cpEhTarifaOuComissao` entram na lista porque a guarda da
+    // tabela passou a CHAMAR a fonte unica de tarifa (2026-09-30). Sem eles o
+    // predicado lancaria ReferenceError dentro do filtro.
+    for (const [tipo, nome] of DEPS_FILTRO) {
+      assert(temDepFiltro(SRC_DEPOIS, tipo, nome), 'dependencia do harness presente na versao DEPOIS: ' + nome +
         ' (esquecer esta e o erro que o catch de falha-aberta esconderia)');
     }
+    const guardaD = extrairGuardaTabela(SRC_DEPOIS, 'depois');
+    assert(guardaD !== null && /cancel/i.test(guardaD) && /_cpEhTarifaOuComissao/.test(guardaD),
+      'a guarda da tabela foi EXTRAIDA da versao DEPOIS e contem as DUAS exclusoes, cancelado e tarifa (' +
+      REL + ':' + linhaDe(SRC_DEPOIS, 'if (_cardNaturezaAtivo) {') + '). Se este caso falhar, o harness ' +
+      'abaixo estaria medindo um filtro sem guarda e todo o resto seria verde falso');
     const avisos = [];
-    const construirFiltro = (src, rot) => {
-      const temGuardaTabela = /_cardNaturezaAtivo && \/\^cancel\/i/.test(src);
-      const pedacos = [];
-      for (const [tipo, nome] of DEPS) {
-        const achou = tipo === 'fn' ? src.includes('function ' + nome + '(') : src.includes(nome);
-        if (achou) pedacos.push(tipo === 'fn' ? extrairFuncao(src, nome, rot) : extrairStatement(src, nome, rot));
-        else if (temGuardaTabela) throw new Error(rot + ': tem a guarda da tabela mas falta ' + nome);
-      }
-      return new Function('r', 'tipoArr', 'consoleSpy',
-        pedacos.join('\n') + '\n' +
-        'const console = consoleSpy;\n' +
-        'const isMultiAll = (a) => !a || !a.length || a.indexOf("Todos") >= 0;\n' +
-        'const tipoSet = !isMultiAll(tipoArr) ? new Set(tipoArr) : null;\n' +
-        'const tipoFiltraSemTipo = tipoSet && tipoSet.has("__SEM_TIPO__");\n' +
-        (temGuardaTabela ? 'const _cardNaturezaAtivo = !!_cpCardNaturezaAtivoKey(tipoArr);\n' : '') +
-        'let _ok = true;\n' +
-        extrairBloco(src, 'if (tipoSet) {', rot).replace(/return false;/g, '{ _ok = false; }') + '\n' +
-        (temGuardaTabela
-          ? extrairLinha(src, '_cardNaturezaAtivo && /^cancel/i').replace('return false;', '{ _ok = false; }')
-          : '') + '\n' +
-        'return _ok;');
-    };
     const spy = { warn: (...a) => avisos.push(a.join(' ')) };
-    const filtroD = construirFiltro(SRC_DEPOIS, 'depois');
-    const filtroH = construirFiltro(SRC_HEAD, 'head');
+    const filtroD = construirFiltroRef(SRC_DEPOIS, 'depois');
+    const filtroH = construirFiltroRef(SRC_HEAD, 'head');
+    const filtroSemTarifa = construirFiltroRef(SRC_DEPOIS, 'depois-sem-tarifa', { semTarifa: true });
     assert(!/_cardNaturezaAtivo/.test(SRC_HEAD) && /_cardNaturezaAtivo/.test(SRC_DEPOIS),
       'a guarda da tabela e NOVA: nao existe em ' + HEAD_REF + ' e existe na arvore de trabalho. ' +
       'E por isso que o filtro do HEAD e montado sem ela, e nao por omissao do harness');
     const passa = (fn, r, tipoArr) => fn(r, tipoArr, spy);
-    // Sanidade do harness ANTES de medir: o predicado tem que discriminar de
-    // verdade, senao "tudo passa" ou "nada passa" produziria numero redondo e falso.
-    assert(passa(filtroD, { tipo_entidade: 'Cliente', status: 'pago' }, ['Todos']) === true &&
-      passa(filtroD, { tipo_entidade: 'Cliente', status: 'pago' }, ['Fornecedor Externo']) === false,
-      'sanidade do harness do filtro: com Todos passa, com outro tipo nao passa');
+    // ── SANIDADE DO HARNESS, agora COMPORTAMENTAL e nao so sintatica ───────────
+    // A checagem antiga so provava que o filtro discriminava por TIPO, e por isso
+    // nao pegou o harness sem guarda. Estas provam que as DUAS exclusoes estao
+    // vivas no predicado montado, com card ativo, e MORTAS sem card ativo.
+    const cobaiaCanc = { tipo_entidade: 'Fornecedor Externo', status: 'cancelado', categoria: 'ALUGUEL', entidade: 'X', valor_original: 1, data_vencimento: '2026-06-15' };
+    const cobaiaTar = { tipo_entidade: 'Fornecedor Externo', status: 'pago', categoria: 'TARIFA BANCARIA', entidade: 'BANCO X', valor_original: 1, data_vencimento: '2026-06-15' };
+    const cobaiaOk = { tipo_entidade: 'Fornecedor Externo', status: 'pago', categoria: 'ALUGUEL', entidade: 'X', valor_original: 1, data_vencimento: '2026-06-15' };
+    assert(passa(filtroD, cobaiaOk, ['Todos']) === true && passa(filtroD, cobaiaOk, ['Cliente']) === false,
+      'sanidade 1 do harness: o predicado discrimina por TIPO (com Todos passa, com outro tipo nao)');
+    assert(passa(filtroD, cobaiaCanc, ['Fornecedor Externo']) === false &&
+      passa(filtroD, cobaiaTar, ['Fornecedor Externo']) === false &&
+      passa(filtroD, cobaiaOk, ['Fornecedor Externo']) === true,
+      'sanidade 2 do harness: com o card Externo ATIVO, o predicado montado exclui cancelado E tarifa, e deixa ' +
+      'passar o lancamento normal. E esta checagem que teria pego o harness sem guarda, e nao a sintatica');
+    assert(passa(filtroD, cobaiaCanc, ['Todos']) === true && passa(filtroD, cobaiaTar, ['Todos']) === true,
+      'sanidade 3 do harness: SEM card ativo, as duas exclusoes ficam mortas e os dois passam');
+    assert(passa(filtroSemTarifa, cobaiaCanc, ['Fornecedor Externo']) === false &&
+      passa(filtroSemTarifa, cobaiaTar, ['Fornecedor Externo']) === true,
+      'sanidade 4: o ESTADO INTERMEDIARIO foi montado de verdade (exclui cancelado, NAO exclui tarifa). ' +
+      'E contra ele que a nao-vacuidade dos casos de dado real e medida');
 
     // (5a) A CORRECAO, em numero, sobre o dado real: card == tabela, ao centavo.
     const CARD = { externo: { tipo: ['Fornecedor Externo'], kpi: 'kpi-externo' },
       interno: { tipo: ['Fornecedor Interno', 'Fornecedor Interno - PJ'], kpi: 'kpi-interno' },
       cliente: { tipo: ['Cliente'], kpi: 'kpi-cliente' },
       sem_class: { tipo: ['__SEM_TIPO__'], kpi: 'kpi-sem-class' } };
-    console.log('  --- clique no card: a tabela fecha com o card? (dado real) ---');
+    // ── A REGRA MUDOU EM 2026-09-30, e com ela estes casos ─────────────────────
+    // Eu reportei o GAP-D: descontar tarifa "de forma declarada" fazia a conta
+    // fechar, mas a tabela que o operador ve continuava trazendo 601 linhas de
+    // tarifa no card Externo, R$ 152.170,13 a mais. O diretor mudou a decisao: o
+    // card de natureza ativo esconde cancelado E tarifa. Entao a assercao correta
+    // deixou de ser "soma - tarifa - card == 0" e passou a ser "soma CRUA == card".
+    //
+    // O QUE MORREU, e por que, para nao passar por acidente:
+    //   * O laco "(5a) ... descontada a tarifa": MORTO. Com a tabela ja sem tarifa,
+    //     descontar tarifa de novo subtrai duas vezes. Nao foi relaxado, foi
+    //     SUBSTITUIDO pela comparacao crua, que e mais forte (nada e ajustado pelo
+    //     teste antes de comparar).
+    //   * O laco "(5a-bis) o que o OPERADOR ve": MORTO por virar TAUTOLOGIA. Ele
+    //     existia so para mostrar a diferenca entre a soma crua e a soma descontada.
+    //     As duas viraram a mesma coisa, entao manter os dois seria medir o mesmo
+    //     numero duas vezes e inflar o placar.
+    //   * A assercao "GAP-D: a tabela ainda traz 601 linhas de TARIFA": MORTA, o
+    //     GAP foi corrigido. Virou a assercao INVERSA, que prova a correcao.
+    // Sobra UM laco, com a comparacao crua. Menos casos, prova mais forte.
+    const somaCrua = (arr) => arr.reduce((a, r) => String(r.data_vencimento || '') < String(numD.CP_LIMIAR_ANO)
+      ? a : a + cent(Number(r.valor_original || 0).toFixed(2)), 0);
+    const nLinhas = (arr) => arr.filter(r => String(r.data_vencimento || '') >= String(numD.CP_LIMIAR_ANO)).length;
+    console.log('  --- clique no card: somar a coluna CRUA fecha com o card? (dado real) ---');
+    console.log('      ' + 'card'.padEnd(10) + 'linhas'.padStart(8) + 'soma crua da tabela'.padStart(22) +
+      'valor do card'.padStart(16) + 'gap'.padStart(8) + '   gap se faltasse a guarda de tarifa');
+    const ESP_SEM_TARIFA = { externo: 15217013, interno: 0, cliente: 0, sem_class: 0 };
+    const ESP_SEM_GUARDA = { externo: 28070724, interno: 23587, cliente: 0, sem_class: 0 };
     for (const [nome, c] of Object.entries(CARD)) {
       const drill = registros.filter(r => passa(filtroD, r, c.tipo));
-      const drillH = registros.filter(r => passa(filtroH, r, c.tipo));
-      // O que a tabela soma: TODA linha exibida, dentro do corte de ano da query.
-      const somaTab = (arr) => arr.reduce((a, r) => String(r.data_vencimento || '') < String(numD.CP_LIMIAR_ANO)
-        ? a : a + cent(Number(r.valor_original || 0).toFixed(2)), 0);
       const kD = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kD.fn(drill);
-      // O ESTADO INTERMEDIARIO, que e a unica coisa contra a qual este caso pode
-      // ser nao-vacuo: KPI da arvore de trabalho (JA exclui cancelado) rodando
-      // sobre a tabela do HEAD (que AINDA NAO excluia). E o GAP-B que eu reportei.
-      // Comparar HEAD-com-HEAD daria gap zero e nao provaria nada: no HEAD as DUAS
-      // pontas incluiam cancelado, logo fechavam. A regressao morava no meio.
-      const kMisto = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kMisto.fn(drillH);
-      // A tarifa fica fora do card por decisao antiga (expurgo do KPI), entao a
-      // comparacao honesta e contra a tabela MENOS a tarifa daquele recorte. A
-      // tarifa do recorte tambem vem da funcao real, via `kpi-tarifas`.
-      const restoD = somaTab(drill) - cent(kD.escrito['kpi-tarifas']);
-      const restoMisto = somaTab(drillH) - cent(kMisto.escrito['kpi-tarifas']);
-      const gapD = restoD - cent(kD.escrito[c.kpi]);
-      const gapMisto = restoMisto - cent(kMisto.escrito[c.kpi]);
-      console.log('      ' + nome.padEnd(10) + ' linhas=' + String(drill.length).padStart(6) +
-        '  tabela-tarifa=' + String(restoD).padStart(12) + '  card=' + String(cent(kD.escrito[c.kpi])).padStart(12) +
-        '  gap agora=' + String(gapD).padStart(8) + '  gap no estado intermediario=' + String(gapMisto).padStart(10));
-      assert(gapD === 0,
-        'CORRECAO PROVADA para o card ' + nome + ': clicando nele, a tabela (descontada a tarifa, que sempre ' +
-        'ficou fora do KPI) soma EXATAMENTE o valor do card, ao centavo. gap = ' + gapD);
-      const ESP_GAP_MISTO = { externo: 12853711, interno: 23587, cliente: 0, sem_class: 0 };
-      assert(gapMisto === ESP_GAP_MISTO[nome],
-        '  ... NAO-VACUIDADE do card ' + nome + ': no estado intermediario (KPI novo + tabela do ' + HEAD_REF +
-        ') o gap seria ' + ESP_GAP_MISTO[nome] + ' centavos' +
-        (ESP_GAP_MISTO[nome] ? ', e e exatamente o cancelado deste bucket. O caso acima reprova esse estado' :
-          ', porque este bucket nao tem cancelado no dado real: aqui a correcao e provada pelo SINTETICO de 2.5, nao por este numero'));
+      const alvo = cent(kD.escrito[c.kpi]);
+      const gap = somaCrua(drill) - alvo;
+      // NAO-VACUIDADE, por DOIS estados intermediarios. Sem isto o laco nao testa
+      // nada: um filtro que por acaso devolvesse o conjunto certo passaria igual.
+      //   E1 = guarda de cancelado SEM a de tarifa (o estado que o coordenador
+      //        pediu explicitamente: a decisao antiga, antes do GAP-D).
+      //   E2 = SEM guarda nenhuma (o filtro de 3f64b96), que e o estado original.
+      // Em ambos, o KPI e o da arvore de trabalho: e a tabela que regride.
+      const d1 = registros.filter(r => passa(filtroSemTarifa, r, c.tipo));
+      const d2 = registros.filter(r => passa(filtroH, r, c.tipo));
+      const k1 = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); k1.fn(d1);
+      const k2 = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); k2.fn(d2);
+      const gap1 = somaCrua(d1) - cent(k1.escrito[c.kpi]);
+      const gap2 = somaCrua(d2) - cent(k2.escrito[c.kpi]);
+      console.log('      ' + nome.padEnd(10) + String(nLinhas(drill)).padStart(8) +
+        String(somaCrua(drill)).padStart(22) + String(alvo).padStart(16) + String(gap).padStart(8) +
+        '   E1(sem tarifa)=' + String(gap1).padStart(9) + '  E2(sem guarda)=' + String(gap2).padStart(9));
+      assert(gap === 0,
+        'CRITERIO DO DIRETOR, card ' + nome + ': clicando nele, somar a coluna CRUA da tabela da EXATAMENTE o ' +
+        'valor do card, ao centavo, sem o teste descontar nada. ' + nLinhas(drill) + ' linhas, R$ ' +
+        (alvo / 100).toFixed(2) + ', gap = ' + gap);
+      assert(gap1 === ESP_SEM_TARIFA[nome],
+        '  ... NAO-VACUIDADE E1 do card ' + nome + ': com a guarda de CANCELADO mas SEM a de tarifa (a decisao ' +
+        'anterior), o gap seria ' + ESP_SEM_TARIFA[nome] + ' centavos' +
+        (ESP_SEM_TARIFA[nome] ? ', que e o GAP-D que eu reportei. O caso acima REPROVA esse estado'
+          : ', porque este card nao tem tarifa nenhuma: aqui E1 nao discrimina e quem prova e E2'));
+      assert(gap2 === ESP_SEM_GUARDA[nome],
+        '  ... NAO-VACUIDADE E2 do card ' + nome + ': sem guarda NENHUMA na tabela (' + HEAD_REF + '), o gap ' +
+        'seria ' + ESP_SEM_GUARDA[nome] + ' centavos' +
+        (ESP_SEM_GUARDA[nome] ? ' (cancelado + tarifa deste bucket). O caso acima REPROVA esse estado'
+          : ', porque este bucket nao tem nem cancelado nem tarifa no dado real: aqui quem prova e o SINTETICO de 2.5'));
     }
-    // (5a-bis) A SUTILEZA DO METODO, e ela IMPORTA para o que se diz ao diretor.
-    //   `aplicarFiltrosCP` nao aplica o corte de ano vigente nem o expurgo de
-    //   tarifa: os dois vivem dentro de `atualizarKPIs`. O coordenador descontou os
-    //   dois "a parte, de forma declarada", e para a pergunta "a guarda de cancelado
-    //   alinhou card e tabela?" isso e VALIDO: o teste (5a) acima fecha em ZERO.
-    //   O que NAO e valido e traduzir isso para o diretor como "somar as linhas
-    //   exibidas fecha com o card", porque a tabela que o operador ve na tela
-    //   CONTINUA trazendo as linhas de tarifa, que o card nao conta. Medido:
-    console.log('  --- o que o OPERADOR ve na tela, SEM desconto nenhum ---');
-    for (const [nome, c] of Object.entries(CARD)) {
-      const drill = registros.filter(r => passa(filtroD, r, c.tipo));
-      const visiveis = drill.filter(r => String(r.data_vencimento || '') >= String(numD.CP_LIMIAR_ANO));
-      const somaVis = visiveis.reduce((a, r) => a + cent(Number(r.valor_original || 0).toFixed(2)), 0);
-      const kD = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kD.fn(drill);
-      const tarifa = cent(kD.escrito['kpi-tarifas']);
-      const resto = somaVis - tarifa - cent(kD.escrito[c.kpi]);
-      console.log('      ' + nome.padEnd(10) + ' linhas visiveis=' + String(visiveis.length).padStart(6) +
-        '  soma visivel=' + String(somaVis).padStart(12) + '  card=' + String(cent(kD.escrito[c.kpi])).padStart(12) +
-        '  tarifa na tabela=' + String(tarifa).padStart(10) + '  sobra inexplicada=' + resto);
-      assert(resto === 0,
-        'card ' + nome + ': soma visivel - tarifa - card == 0, logo a UNICA coisa na tabela que o card nao ' +
-        'conta e a tarifa. Nada inexplicado sobrou (' + resto + ')');
-    }
+    // GAP-D RESOLVIDO, e a prova e a INVERSA da que eu usei para reporta-lo: no
+    // recorte que o card Externo abre nao sobra NENHUMA tarifa para o KPI expurgar.
     {
       const drill = registros.filter(r => passa(filtroD, r, CARD.externo.tipo));
       const kD = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); kD.fn(drill);
-      assert(cent(kD.escrito['kpi-tarifas']) === 15217013,
-        'GAP-D: clicando em Custo Fornecedor Externo, a tabela exibida ainda traz 601 linhas de TARIFA somando ' +
-        'R$ 152.170,13, que o card nao conta. Entao "somar as linhas exibidas fecha com o card" NAO e verdade ' +
-        'para esse card: fecha depois de descontar a tarifa. A guarda de cancelado resolveu o desencontro de ' +
-        'R$ 128.537,11; o de R$ 152.170,13 e PRE-EXISTENTE (expurgo de tarifa sempre foi so do KPI) e continua ' +
-        'de pe. Nao contar isto ao diretor como "fecha" seria enganoso: ele vai somar a coluna e achar 152 mil a mais');
-      // Nos outros 3 cards a tarifa e zero, entao neles a soma visivel fecha mesmo.
-      for (const nome of ['interno', 'cliente', 'sem_class']) {
-        const d2 = registros.filter(r => passa(filtroD, r, CARD[nome].tipo));
-        const k2 = montarKPI(SRC_DEPOIS, 'depois', { numerico: true }); k2.fn(d2);
-        assert(cent(k2.escrito['kpi-tarifas']) === 0,
-          'no card ' + nome + ' nao ha tarifa nenhuma, entao aqui somar as linhas exibidas FECHA com o card ' +
-          'sem desconto nenhum. O GAP-D e exclusivo do card Externo (todas as 601 tarifas sao Fornecedor Externo)');
-      }
+      assert(cent(kD.escrito['kpi-tarifas']) === 0 && kD.escrito['kpi-tarifas-count'] === '0',
+        'GAP-D RESOLVIDO: com o card Externo aceso, a tabela nao traz mais NENHUMA linha de tarifa (o KPI de ' +
+        'tarifa sobre esse recorte e 0,00 em 0 docs). Antes eram 601 linhas e R$ 152.170,13 que o card nao ' +
+        'contava. Agora somar a coluna na tela fecha, e dizer isso ao diretor deixou de ser enganoso');
+      // E o numero de LINHAS que cada guarda tira, separado, para nao confundir as
+      // duas exclusoes. E1 exclui so cancelado; D exclui cancelado e tarifa.
+      const nE1 = registros.filter(r => passa(filtroSemTarifa, r, CARD.externo.tipo)).length;
+      const nE2 = registros.filter(r => passa(filtroH, r, CARD.externo.tipo)).length;
+      const nD = drill.length;
+      console.log('      linhas no card Externo: sem guarda=' + nE2 + '  so cancelado=' + nE1 + '  cancelado+tarifa=' + nD);
+      assert(nE2 - nE1 === 3 && nE1 - nD === 601,
+        'as duas exclusoes tiram exatamente o que devem, em LINHAS: a de cancelado tira 3 (' + (nE2 - nE1) +
+        ') e a de tarifa tira 601 (' + (nE1 - nD) + '). Somadas, 604 linhas saem do card Externo');
     }
 
     assert(avisos.length === 0,
@@ -1956,6 +2144,26 @@ async function frente2() {
     assert(cancReal.every(r => passa(filtroD, r, ['Todos']) === true),
       'SEM card de natureza ativo, os 4 cancelados CONTINUAM visiveis na tabela. A correcao nao esconde ' +
       'lancamento do operador, so alinha a tabela ao card quando o card esta aceso');
+    // A MESMA garantia para a tarifa, que e a exclusao NOVA de 2026-09-30 e a mais
+    // arriscada das duas: tarifa e 601 linhas, nao 4. Se ela vazasse para fora do
+    // card aceso, o operador perderia 601 lancamentos da tela sem entender por que.
+    const tarifaReal = registros.filter(r => {
+      const n = (s) => String(s || '').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const b = n(r.categoria) + ' ' + n(r.entidade);
+      return b.includes('TARIFA') || (b.includes('COMISSAO') && b.includes('BANC'));
+    });
+    assert(tarifaReal.length === 601,
+      'pre-condicao: 601 docs de tarifa na base, todos dentro do corte de ano (obtido ' + tarifaReal.length + ')');
+    assert(tarifaReal.every(r => passa(filtroD, r, ['Todos']) === true),
+      'SEM card de natureza ativo, as ' + tarifaReal.length + ' linhas de TARIFA continuam visiveis na tabela. ' +
+      'Esta e a exclusao nova e a de maior volume: um vazamento dela sumiria com 601 lancamentos da tela');
+    assert(tarifaReal.every(r => passa(filtroD, r, ['Fornecedor Externo', 'Cliente']) === true),
+      'e com um conjunto de Tipo que nao e o de nenhum card, a tarifa tambem continua visivel');
+    // Contagem total sem card ativo, que e o numero que o coordenador reportou.
+    const semCard = registros.filter(r => passa(filtroD, r, ['Todos']));
+    assert(semCard.length === registros.length && semCard.length === 51181,
+      'sem card de natureza ativo a tabela mostra a base INTEIRA: ' + semCard.length + ' de ' + registros.length +
+      ' lancamentos, nada escondido. Confere com a prova do coordenador (51.181 linhas)');
     // Conjunto de Tipo que NAO e o de nenhum card: a guarda nao dispara. So os
     // cancelados cujo TIPO casa com o filtro e que podem aparecer, obviamente, e a
     // exclusao a testar e a de STATUS, nao a de tipo. O PJ cai fora pelo tipo, nao
@@ -2166,10 +2374,14 @@ async function gapsMedidos() {
     const usos = (v) => [...semComentario.matchAll(new RegExp('(?<![\\w$\\-])' + v + '(?![\\w$\\-])', 'g'))].length;
     // 2 usos = a declaracao e o incremento. Nenhum terceiro uso = nunca lido.
     assert(usos('total') === 2 && usos('cTotal') === 2,
-      'GAP 4: `total` e `cTotal` sao acumulados e NUNCA lidos (' + usos('total') + ' e ' + usos('cTotal') +
+      'GAP 4 (o achado permanece, e o COMENTARIO ja foi corrigido pelo coordenador em ' + REL + ':' +
+      linhaDe(SRC_DEPOIS, 'do Total Geral". A segunda metade') + '): `total` e `cTotal` sao acumulados e NUNCA lidos (' + usos('total') + ' e ' + usos('cTotal') +
       ' usos, so declaracao e incremento). O card Total Geral e `pago + tarifas`, nao `total`. ' +
       'Logo o cancelado NAO esta no Total Geral: ele nao esta em card nenhum. Corrigir o comentario em ' +
-      REL + ':' + linhaDe(SRC_DEPOIS, 'esta frente (o `total` sempre incluiu cancelado') + ' e em scripts/diag-cards-natureza-cp.cjs.');
+      REL + ':' + linhaDe(SRC_DEPOIS, 'total += v; cTotal++;') + '. Falta so o mesmo acerto em scripts/diag-cards-natureza-cp.cjs:127.');
+    assert(/A segunda metade é FALSA/.test(SRC_DEPOIS),
+      'GAP 4 FECHADO no comentario: o codigo agora diz explicitamente que "cancelado entra em `total` e ' +
+      'PORTANTO no Total Geral" e falso. A proxima frente le a coisa certa');
     // GAP 5 (PRE-EXISTENTE): `kpi-vencido` e escrito mas nao existe no DOM.
     assert(/setKPI\('kpi-vencido'/.test(SRC_DEPOIS) && !SRC_DEPOIS.includes('id="kpi-vencido"'),
       'GAP 5 (PRE-EXISTENTE, nao desta frente): setKPI escreve `kpi-vencido` mas nao ha elemento com esse id ' +

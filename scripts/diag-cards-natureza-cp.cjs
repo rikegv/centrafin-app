@@ -124,8 +124,11 @@ function extrairFuncao(src, nome) {
     const sv = statusVisual(r, hoje);
     if (!porStatus.has(sv)) porStatus.set(sv, { n: 0, v: 0 });
     const ps = porStatus.get(sv); ps.n++; ps.v += v;
-    // A guarda de 2026-09-30: cancelado entra em `total` (e portanto na conta do
-    // Total Geral) mas NAO entra nos 4 cards de natureza.
+    // A guarda de 2026-09-30: cancelado entra no acumulador `total` da funcao, mas
+    // NAO entra nos 4 cards de natureza e NAO entra no Total Geral. Corrigido aqui
+    // tambem: eu havia consertado a mesma afirmacao errada so na linha de SAIDA e
+    // deixei esta para tras; o tester pegou. `total` e `cTotal` sao incrementados e
+    // NUNCA LIDOS, e o Total Geral e `pago + tarifas`.
     if (ehCancelado(r)) {
       cancelado.n++; cancelado.v += v; pt.nCanc++; pt.vCanc += v; continue;
     }

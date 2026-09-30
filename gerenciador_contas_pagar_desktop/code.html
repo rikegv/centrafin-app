@@ -2882,7 +2882,16 @@
             // volta e somar a tabela não fechava com o número do card.
             // Vale SÓ com um card de natureza ativo: fora disso a tabela continua
             // mostrando tudo, inclusive cancelado, como sempre fez.
-            if (_cardNaturezaAtivo && /^cancel/i.test(String(r.status || '').trim())) return false;
+            if (_cardNaturezaAtivo) {
+                // Cancelado não é custo (decisão do diretor).
+                if (/^cancel/i.test(String(r.status || '').trim())) return false;
+                // Tarifa e comissão bancária TÊM CARD PRÓPRIO e são expurgadas dos 4
+                // cards de natureza. Sem esconder aqui também, somar a coluna não
+                // fechava com o card: o Externo mostrava 601 linhas de tarifa,
+                // R$ 152.170,13 a mais que o card, porque TODAS as tarifas da base são
+                // de fornecedor externo. Mesma função que o card usa, fonte única.
+                if (_cpEhTarifaOuComissao(r)) return false;
+            }
             // FRENTE 4: mesma mecânica das outras sentinelas. Resolvido em runtime,
             // nada é lido do documento além de `categoria`.
             if (grupoSet) {
@@ -3169,12 +3178,25 @@
     // concentradas no card #kpi-tarifas. Isso isola o custo financeiro do
     // custo operacional. Os lançamentos permanecem na tabela e podem ser
     // editados; apenas a matemática dos cards macro foi segregada.
+    // REGRA CONTÁBIL DE TARIFA / COMISSÃO BANCÁRIA, fonte ÚNICA.
+    // Extraída de dentro de `atualizarKPIs` em 2026-09-30, quando o clique num card de
+    // natureza passou a precisar da MESMA regra na tabela. Antes ela vivia inline num
+    // lugar só; manter duas cópias de uma regra que decide se um valor é custo ou custo
+    // bancário é exatamente o que a Parte B proíbe (fonte única de cálculo).
+    //
+    // "TARIFA" sozinho qualifica (uso praticamente 100% bancário no ERP). "COMISSAO"
+    // exige o qualificador "BANC", para não capturar comissão de venda ou de
+    // representação. Olha categoria E entidade, porque o fornecedor pode vir como
+    // "BANCO BRADESCO, TARIFA MENSAL".
+    const _cpNormTarifa = (s) => String(s || '').trim().toUpperCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '');
+    function _cpEhTarifaOuComissao(reg) {
+        const blob = `${_cpNormTarifa(reg && reg.categoria)} ${_cpNormTarifa(reg && reg.entidade)}`;
+        return blob.includes('TARIFA') || (blob.includes('COMISSAO') && blob.includes('BANC'));
+    }
+
     function atualizarKPIs(filtrados) {
         const hoje = hojeISO();
-        // Normalizador: UPPER + strip de acentos (NFD) — captura "COMISSÃO"
-        // igual a "COMISSAO". Padrão idêntico ao usado em outros pontos do app.
-        const normTexto = (s) => String(s || '').trim().toUpperCase()
-            .normalize('NFD').replace(/[̀-ͯ]/g, '');
         let total = 0, pago = 0, aPagar = 0, vencido = 0;
         // FRENTE 2: os 4 buckets de Natureza do Custo substituem `opex` + `cliente`.
         // Eles PARTICIONAM o universo (todo lançamento cai em exatamente um), então
@@ -3199,10 +3221,12 @@
             // "COMISSAO" exige qualificador "BANC" — protege contra comissão
             // de vendas/representação. Olha categoria + entidade pois o
             // fornecedor pode trazer "BANCO BRADESCO — TARIFA MENSAL".
-            const blob = `${normTexto(r.categoria)} ${normTexto(r.entidade)}`;
-            const ehTarifaOuComissao =
-                blob.includes('TARIFA') ||
-                (blob.includes('COMISSAO') && blob.includes('BANC'));
+            // FONTE ÚNICA (2026-09-30): a regra saiu daqui para `_cpEhTarifaOuComissao`
+            // porque a TABELA passou a precisar dela também, quando um card de natureza
+            // está ativo. Duas cópias de uma regra que decide dinheiro divergem, e a
+            // Parte B da constituição é explícita sobre isso. Comportamento idêntico ao
+            // que estava inline; provado pelos KPIs preservados byte a byte.
+            const ehTarifaOuComissao = _cpEhTarifaOuComissao(r);
 
             if (ehTarifaOuComissao) {
                 tarifas += v;
