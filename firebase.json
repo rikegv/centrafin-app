@@ -10,6 +10,7 @@
       "**/.*",
       "**/node_modules/**",
       "populador.html",
+      "contas_a_pagar_desktop/**",
       "**/*.mjs",
       "**/*.ps1",
       "**/*.py",
