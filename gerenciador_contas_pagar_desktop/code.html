@@ -252,7 +252,7 @@
             </div>
             <!-- 8. Sem Classificação — favorecido sem tipo. Toggle da sentinela
                  __SEM_TIPO__ que JÁ existe no filtro de Tipo, sem duplicar regra. -->
-            <div data-kpi-card="sem_class" role="button" tabindex="0" title="Filtrar somente lançamentos sem tipo de favorecido"
+            <div data-kpi-card="sem_class" role="button" tabindex="0" title="Filtrar os lançamentos cujo favorecido ainda não tem o tipo classificado"
                  class="relative bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer select-none">
                 <button type="button" data-kpi="sem_class" class="absolute top-2 right-2 p-1 rounded-md text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="Como esse KPI é calculado?">
                     <span class="material-symbols-outlined text-[14px]">lightbulb</span>
@@ -6854,7 +6854,13 @@
         },
         sem_class: {
             titulo: 'Sem Classificação',
-            texto: 'São os lançamentos cujo favorecido ainda não tem um tipo definido no cadastro, então o sistema não sabe se aquele custo é interno, externo ou de cliente. Clique no card para ver quais são e classificar o favorecido.',
+            // Texto reescrito em 2026-09-30 a pedido do diretor. O anterior dizia
+            // "favorecido ainda não tem um tipo definido", o que o operador lia como
+            // "o favorecido está em branco". Conferido na base antes de afirmar o
+            // contrário: dos 1.932 lançamentos deste card, ZERO têm favorecido vazio
+            // e ZERO estão sem codigo_fornecedor, então todos apontam para um cadastro
+            // real e o caminho indicado aqui resolve 100% dos casos.
+            texto: 'O favorecido destes lançamentos está preenchido. O que falta é o tipo dele: Cliente, Fornecedor Externo, Fornecedor Interno ou Fornecedor Interno - PJ. Sem esse tipo, o sistema não sabe em que natureza de custo encaixar o lançamento, e este valor mostra quanto do seu custo ainda está sem classificação. Para resolver, classifique o tipo do favorecido no cadastro de fornecedores.',
         },
         cliente: {
             titulo: 'Custo Cliente',
