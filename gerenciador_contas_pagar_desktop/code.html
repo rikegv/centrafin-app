@@ -354,8 +354,21 @@
                                  1o clique asc, 2o desc; seta indica a coluna ativa.
                                  Mesmo idioma do Faturamento (window.ordenarTabelaCP).
                                  Detalhe/Obs e Ações não ordenam. -->
+                            <!-- FRENTE A (OS-CP-COLUNAS-CLIENTE-01): "Empresa" virou
+                                 "Empresa Pagadora" e passou a ser a PRIMEIRA coluna,
+                                 por decisão do diretor. O id do ícone de ordenação
+                                 (`icone-sort-empresa`) e a chave de ordenação
+                                 ('empresa') NÃO mudaram: só o rótulo e a posição. -->
+                            <th onclick="window.ordenarTabelaCP('empresa')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-28 cursor-pointer select-none hover:text-secondary transition-colors">Empresa Pagadora <span id="icone-sort-empresa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('data')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-28 cursor-pointer select-none hover:text-secondary transition-colors">Mês de Referência <span id="icone-sort-data" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('codigo')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-20 cursor-pointer select-none hover:text-secondary transition-colors">Código <span id="icone-sort-codigo" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <!-- FRENTE B: CLIENTE. Exibe `entidade`, que é o nome do
+                                 BLOCO do TXT: para bloco de cliente é o cliente, para
+                                 bloco de fornecedor é o próprio favorecido. Os dois
+                                 ramos da regra do diretor caem no mesmo campo, e ele
+                                 JÁ existe nos 51.181 lançamentos (295 valores
+                                 distintos, zero vazios). Nenhuma mudança no ETL. -->
+                            <th onclick="window.ordenarTabelaCP('cliente')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-40 cursor-pointer select-none hover:text-secondary transition-colors">Cliente <span id="icone-sort-cliente" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('favorecido')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Favorecido <span id="icone-sort-favorecido" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <th onclick="window.ordenarTabelaCP('despesa')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">Despesa <span id="icone-sort-despesa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <!-- FRENTE 4 / Onda 4: GRUPO DE CONTAS, à direita de Despesa
@@ -365,16 +378,11 @@
                                  passa de 10 para 11 colunas e este é o ponto de aperto,
                                  então a Conta vai no tooltip em vez de coluna própria. -->
                             <th onclick="window.ordenarTabelaCP('grupo')" class="px-3 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-32 cursor-pointer select-none hover:text-secondary transition-colors">Grupo de Contas <span id="icone-sort-grupo" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
-                            <!-- FRENTE 3 / Onda 3: "Detalhe / Obs." virou EMPRESA.
-                                 Nada de informação saiu da tela: `observacao` já era
-                                 renderizado DUAS vezes (a coluna Favorecido também o
-                                 mostra), e o badge do nº do título migrou para a
-                                 coluna Código, onde ele conceitualmente mora. A tabela
-                                 segue com o MESMO número de colunas.
-                                 Nasce ordenável, e o filtro multiselect de Empresa já
-                                 existia (`cp-filtro-empresa`, com a sentinela
-                                 __SEM_EMPRESA__), então nada foi duplicado. -->
-                            <th onclick="window.ordenarTabelaCP('empresa')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest w-32 cursor-pointer select-none hover:text-secondary transition-colors">Empresa <span id="icone-sort-empresa" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
+                            <!-- A coluna de Empresa que a Onda 3 criou aqui (no lugar de
+                                 "Detalhe / Obs.") FOI MOVIDA para a primeira posição na
+                                 Frente A, e renomeada para "Empresa Pagadora". O filtro
+                                 multiselect dela (`cp-filtro-empresa`, com a sentinela
+                                 __SEM_EMPRESA__) continua o mesmo, e nada foi duplicado. -->
                             <th onclick="window.ordenarTabelaCP('cc')" class="px-4 py-3 text-left font-bold text-on-surface-variant uppercase tracking-widest cursor-pointer select-none hover:text-secondary transition-colors">CC <span id="icone-sort-cc" class="material-symbols-outlined text-[13px] align-middle text-slate-300">unfold_more</span></th>
                             <!-- Coluna RESPONSÁVEL (ex-Gestor, Frente 1 — 2026-05-20).
                                  Cruzamento em memória: cada linha procura o
@@ -766,9 +774,26 @@
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Favorecido</label>
+                <!-- FRENTE D (OS-CP-COLUNAS-CLIENTE-01): este filtro passou a casar por
+                     `observacao`, que é o que a coluna Favorecido EXIBE (o nome da linha
+                     do TXT, o funcionário). Antes ele casava por `entidade`, o nome do
+                     BLOCO, então filtrar "Favorecido" trazia o cliente inteiro e a coluna
+                     mostrava outra coisa. São 3.688 valores distintos; o componente tem
+                     campo de busca, que é o previsto para lista longa. -->
                 <select id="cp-filtro-favorecido" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todos os favorecidos"
                         class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
                     <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Favorecidos</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">Cliente</label>
+                <!-- FRENTE B: filtro do CLIENTE, que casa por `entidade` (o nome do bloco).
+                     É este que herdou o comportamento que o filtro de Favorecido tinha
+                     antes, e agora bate com a coluna que está do lado. Catálogo em união
+                     cadastro ∪ base, como manda a Parte A: 295 valores na base. -->
+                <select id="cp-filtro-cliente" multiple size="5" data-cb-portal data-checkbox-multi data-placeholder="Todos os clientes"
+                        class="w-full border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all bg-white shadow-inner">
+                    <option value="Todos" selected class="font-bold border-b pb-1 mb-1">Todos os Clientes</option>
                 </select>
             </div>
             <div>
@@ -1550,6 +1575,27 @@
         return { grupo: grupo.nome, conta: conta.nome, estado: 'ok' };
     }
 
+    // FRENTE B (OS-CP-COLUNAS-CLIENTE-01): catálogo do filtro de CLIENTE.
+    // Fica fora da cadeia serial de `_cpPopularDropdownsAsync` pelo mesmo motivo do
+    // filtro de Grupo: acrescentar um 6º nível naquela cadeia aninhada seria mexer em
+    // código validado sem necessidade. União cadastro ∪ base, como manda a Parte A, e
+    // é a MESMA união que o filtro de Favorecido usava antes de a Frente D separar os
+    // dois: `_cpCadFavorecidos` guarda os nomes de `/Fornecedores`, que são nomes de
+    // BLOCO (cliente ou fornecedor), não de funcionário.
+    let _cpClientesDaBase = new Set();
+    function _cpPopularFiltroCliente() {
+        const sel = document.getElementById('cp-filtro-cliente');
+        if (!sel) return;
+        const marcados = new Set(getMultiValues(sel));
+        const lista = _cpUniaoOpcoes(_cpClientesDaBase, _cpCadFavorecidos);
+        sel.innerHTML =
+            '<option value="Todos" class="font-bold border-b pb-1 mb-1">Todos os Clientes</option>' +
+            lista.map(n => `<option value="${escHTML(n)}">${escHTML(n)}</option>`).join('');
+        const restaurar = [...marcados].filter(v => v === 'Todos' || lista.includes(v));
+        setMultiValues(sel, restaurar.length ? restaurar : ['Todos']);
+        if (window.CentraCheckboxMulti) window.CentraCheckboxMulti.upgrade(sel);
+    }
+
     // Catálogo do filtro vem do CADASTRO, não das linhas carregadas (regra da Parte A).
     // Por isso NÃO entra na cadeia serial de `_cpPopularDropdownsAsync`: é populado
     // direto pelo listener, o que também evita mexer naquele código validado.
@@ -2075,17 +2121,26 @@
         // `reg.empresa` — o objeto do cache é espalhado para dentro de writeBatch
         // e o valor derivado era persistido. Mesmo laço, sem segunda passada.
         const comps = new Set(), favs = new Set(), desp = new Set(),
-              ccs = new Set(), empresas = new Set();
+              ccs = new Set(), empresas = new Set(), clientes = new Set();
         _cpEmpresaDerivada.clear();
         for (const reg of cacheRegistros) {
             const empResolvida = _cpResolverEmpresaDoReg(reg);
             if (empResolvida) { _cpEmpresaDerivada.set(reg._id, empResolvida); empresas.add(empResolvida); }
             const comp = fmtCompetenciaBR(reg);
             if (comp) comps.add(comp);
-            if (reg.entidade)     favs.add(reg.entidade);
+            // FRENTE D: `favs` passou a coletar `observacao` (o funcionário, que é o
+            // que a coluna Favorecido exibe) e `entidade` foi para o catálogo do filtro
+            // de CLIENTE. Antes os dois viviam no mesmo Set, e por isso o filtro de
+            // Favorecido casava por bloco enquanto a coluna mostrava a linha.
+            if (reg.observacao)   favs.add(reg.observacao);
+            if (reg.entidade)     clientes.add(reg.entidade);
             if (reg.categoria)    desp.add(reg.categoria);
             if (reg.centro_custo) ccs.add(reg.centro_custo);
         }
+        // Guardado em módulo porque o populador do filtro de Cliente roda FORA da
+        // cadeia serial de `_cpPopularDropdownsAsync`, mesmo padrão do filtro de Grupo.
+        _cpClientesDaBase = clientes;
+        _cpPopularFiltroCliente();
         window._cpDiag.docs = cacheRegistros.length;
         // Append não pode jogar o operador pra página 1: sinaliza ao frontend
         // (dono de `_renderTudoSync`) que preserve `_cpPage` neste render.
@@ -2105,6 +2160,11 @@
         _cpUltimoSnapRefresh = () => {
             // FRENTE 5: reenriquecimento no Map paralelo, nunca no objeto do cache.
             const empresasReenriq = _cpRecomputarEmpresaDerivada();
+            // FRENTE B: o catálogo de Cliente também é união com o cadastro
+            // (`_cpCadFavorecidos`), que chega pelo listener de /Fornecedores. Sem
+            // repopular aqui, um cliente que existe no cadastro e ainda não apareceu
+            // em lançamento só entraria no filtro na próxima ingestão.
+            _cpPopularFiltroCliente();
             _cpPopularDropdownsAsync(comps, favs, desp, ccs, empresasReenriq, _cpTentarRestaurarFiltros);
             renderTudo();
         };
@@ -2402,7 +2462,12 @@
         // persistem `centro_custo` no Firestore — normalizar em lugar gravaria
         // CC em caixa alta no banco). `Despesa` fica fora da união por decisão
         // do diretor: continua espelhando só o mês carregado.
-        const favsOrd = _cpUniaoOpcoes(favs, _cpCadFavorecidos);
+        // FRENTE D: Favorecido saiu da união com o cadastro. `_cpCadFavorecidos` são os
+        // nomes de `/Fornecedores`, que são nomes de BLOCO (cliente ou fornecedor), e
+        // agora esse catálogo pertence ao filtro de CLIENTE. O de Favorecido passou a
+        // ser só o que existe em `observacao`, que é o que a coluna exibe. Unir os dois
+        // aqui misturaria funcionário com cliente na mesma lista.
+        const favsOrd = [...favs].sort((a, b) => a.localeCompare(b, 'pt-BR'));
         const despOrd = [...desp].sort((a, b) => a.localeCompare(b, 'pt-BR'));
         const ccsOrd  = _cpUniaoOpcoes(ccs, _ccDisponiveis);
         const empsOrd = _cpUniaoOpcoes(empresas, _cpCadEmpresas);
@@ -2602,6 +2667,8 @@
                     },
                     status:        getMultiValues(document.getElementById('cp-filtro-status')),
                     favorecido:    getMultiValues(document.getElementById('cp-filtro-favorecido')),
+                    cliente:       getMultiValues(document.getElementById('cp-filtro-cliente')),
+                    grupo:         getMultiValues(document.getElementById('cp-filtro-grupo')),
                     despesa:       getMultiValues(document.getElementById('cp-filtro-despesa')),
                     empresa:       getMultiValues(document.getElementById('cp-filtro-empresa')),
                     tipo:          getMultiValues(document.getElementById('cp-filtro-tipo')),
@@ -2677,6 +2744,8 @@
         const mapeamento = [
             ['cp-filtro-status',        est.status],
             ['cp-filtro-favorecido',    est.favorecido],
+            ['cp-filtro-cliente',       est.cliente],
+            ['cp-filtro-grupo',         est.grupo],
             ['cp-filtro-despesa',       est.despesa],
             ['cp-filtro-empresa',       est.empresa],
             ['cp-filtro-tipo',          est.tipo],
@@ -2795,6 +2864,7 @@
 
         const statusArr  = getMultiValues(document.getElementById('cp-filtro-status'));
         const favsArr    = getMultiValues(document.getElementById('cp-filtro-favorecido'));
+        const cliArr     = getMultiValues(document.getElementById('cp-filtro-cliente')); // FRENTE B
         const despArr    = getMultiValues(document.getElementById('cp-filtro-despesa'));
         const empArr     = getMultiValues(document.getElementById('cp-filtro-empresa'));
         const tipoArr    = getMultiValues(document.getElementById('cp-filtro-tipo'));
@@ -2805,6 +2875,7 @@
         const statusSet = !isMultiAll(statusArr) ? new Set(statusArr) : null;
         const grupoSet = !isMultiAll(grupoArr)  ? new Set(grupoArr)  : null;
         const favSet   = !isMultiAll(favsArr)   ? new Set(favsArr)   : null;
+        const cliSet   = !isMultiAll(cliArr)    ? new Set(cliArr)    : null; // FRENTE B
         const despSet  = !isMultiAll(despArr)   ? new Set(despArr)   : null;
         const empSet   = !isMultiAll(empArr)    ? new Set(empArr)    : null;
         const tipoSet  = !isMultiAll(tipoArr)   ? new Set(tipoArr)   : null;
@@ -2854,7 +2925,12 @@
             // setMultiValues e a constante do checkbox_multi.js). A chamada é
             // inline e preguiçosa de propósito: nada é anexado ao objeto do
             // cache, que é espalhado direto para dentro de writeBatch.
-            if (favSet && !favSet.has(_cpChaveFiltro(r.entidade))) return false;
+            // FRENTE D: Favorecido casa por `observacao`, que é o que a coluna
+            // Favorecido EXIBE. Antes casava por `entidade` (o bloco), e por isso
+            // filtrar um favorecido trazia o cliente inteiro.
+            if (favSet && !favSet.has(_cpChaveFiltro(r.observacao))) return false;
+            // FRENTE B: Cliente casa por `entidade`, o nome do bloco.
+            if (cliSet && !cliSet.has(_cpChaveFiltro(r.entidade))) return false;
             if (despSet && !despSet.has(r.categoria || '')) return false;
             if (empSet) {
                 // FRENTE 5: acessor único (gravado ganha do derivado).
@@ -2984,7 +3060,11 @@
     function obterValorSortCP(r, coluna) {
         switch (coluna) {
             case 'data':        return { tipo: 'texto',  valor: String(r.data_vencimento || '') }; // ISO ordena cronologicamente
+            // Favorecido = `observacao`, o nome da LINHA do TXT (o funcionário).
             case 'favorecido':  return { tipo: 'texto',  valor: String(r.observacao || '') };
+            // FRENTE B: Cliente = `entidade`, o nome do BLOCO do TXT. Mesmo campo que a
+            // célula exibe e que o filtro de Cliente casa.
+            case 'cliente':     return { tipo: 'texto',  valor: String(r.entidade || '') };
             case 'codigo':      return { tipo: 'numero', valor: Number(r.codigo_fornecedor) };
             case 'despesa':     return { tipo: 'texto',  valor: String(r.categoria || '') };
             case 'cc':          return { tipo: 'texto',  valor: String(r.centro_custo || '') };
@@ -3109,6 +3189,17 @@
                     <td class="px-4 py-3 text-center">
                         <input type="checkbox" class="cp-row-checkbox rounded border-slate-300 text-primary focus:ring-primary/30" data-id="${idAttr}" ${marcado}>
                     </td>
+                    <td class="px-3 py-3 text-xs text-slate-600 uppercase font-semibold w-28 max-w-28">${
+                        // FRENTE A: Empresa Pagadora, agora a PRIMEIRA coluna. Mesmo
+                        // acessor de antes (gravada ganha da derivada); só mudou o lugar
+                        // e o rótulo. Largura fixa + truncate para não empurrar o resto.
+                        (() => {
+                            const emp = _cpEmpresaDeReg(r);
+                            return emp
+                                ? `<span class="block truncate" title="${escHTML(emp)}">${escHTML(emp)}</span>`
+                                : '<span class="text-slate-500 italic text-xs normal-case font-normal">não informado</span>';
+                        })()
+                    }</td>
                     <td class="px-4 py-3 text-xs font-mono font-bold text-secondary">${r.data_vencimento ? escHTML(fmtDataBR(r.data_vencimento)) : 'não informado'}</td>
                     <td class="px-4 py-3 text-xs font-mono text-tertiary tabular-nums">
                         ${r.codigo_fornecedor != null ? r.codigo_fornecedor : 'não informado'}
@@ -3116,6 +3207,14 @@
                             ? `<span class="font-mono bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1 align-middle tabular-nums" title="Nº do Título / Ordenamento">${escHTML(r.codigo_titulo_ord)}</span>`
                             : ''}
                     </td>
+                    <td class="px-3 py-3 text-xs text-slate-700 w-40 max-w-40">${
+                        // FRENTE B: CLIENTE = `entidade`, o nome do BLOCO do TXT.
+                        // Truncate + title porque nome de cliente é longo
+                        // ("GARRETT MOTION INDUSTRIA AUTOMOTIVA BRASIL LTDA").
+                        r.entidade
+                            ? `<span class="block truncate font-semibold" title="${escHTML(r.entidade)}">${escHTML(r.entidade)}</span>`
+                            : '<span class="text-slate-500 italic">não informado</span>'
+                    }</td>
                     <td class="px-4 py-3 text-xs font-bold text-slate-800">${escHTML(r.observacao || 'não informado')}</td>
                     <td class="px-4 py-3 text-xs text-slate-600">${escHTML(r.categoria || 'não informado')}</td>
                     <td class="px-3 py-3 text-xs text-slate-700 w-32 max-w-32">${
@@ -3127,15 +3226,6 @@
                             if (!g.grupo) return '<span class="text-slate-500 italic">não informado</span>';
                             const tt = g.conta ? `Conta: ${g.conta}` : '';
                             return `<span class="block truncate font-semibold" title="${escHTML(tt)}">${escHTML(g.grupo)}</span>`;
-                        })()
-                    }</td>
-                    <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${
-                        // FRENTE 3: acessor único (empresa gravada ganha da derivada).
-                        (() => {
-                            const emp = _cpEmpresaDeReg(r);
-                            return emp
-                                ? escHTML(emp)
-                                : '<span class="text-slate-500 italic text-xs normal-case font-normal">não informado</span>';
                         })()
                     }</td>
                     <td class="px-4 py-3 text-xs text-slate-600 uppercase font-semibold">${escHTML(r.centro_custo || 'não informado')}</td>
@@ -3321,6 +3411,8 @@
         const dims = [
             ['Status', getMultiValues(document.getElementById('cp-filtro-status'))],
             ['Favorecido', getMultiValues(document.getElementById('cp-filtro-favorecido'))],
+            ['Cliente', getMultiValues(document.getElementById('cp-filtro-cliente'))],
+            ['Grupo de Contas', getMultiValues(document.getElementById('cp-filtro-grupo'))],
             ['Despesa', getMultiValues(document.getElementById('cp-filtro-despesa'))],
             ['Empresa', getMultiValues(document.getElementById('cp-filtro-empresa'))],
             ['Tipo', getMultiValues(document.getElementById('cp-filtro-tipo'))],
@@ -3350,8 +3442,12 @@
     document.getElementById('btn-fechar-filtros-cp').addEventListener('click', () => fecharModal('modal-filtros-cp'));
 
     function limparTodosFiltros() {
-        ['cp-filtro-status','cp-filtro-favorecido',
-         'cp-filtro-despesa','cp-filtro-empresa','cp-filtro-tipo',
+        // FRENTE B/D acrescentou 'cp-filtro-cliente'. E 'cp-filtro-grupo' entrou aqui
+        // corrigindo um ESQUECIMENTO da Onda 4: aquele filtro foi criado e nunca foi
+        // ligado ao Limpar, ao chip de filtros ativos nem ao estado persistido, então
+        // "Limpar filtros" deixava um filtro ativo para trás sem o operador perceber.
+        ['cp-filtro-status','cp-filtro-favorecido','cp-filtro-cliente',
+         'cp-filtro-despesa','cp-filtro-empresa','cp-filtro-tipo','cp-filtro-grupo',
          'cp-filtro-cc','cp-filtro-classificacao'].forEach(id => {
             setMultiValues(document.getElementById(id), ['Todos']);
         });
