@@ -43,20 +43,20 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
 
 ## Backlog aberto — levantado durante OS já concluídas
 
-- [ ] **"Responsável não informado" nos lançamentos do CP** (perdida numa queda de sessão,
-      re-registrada em 2026-09-24). Centro de custo aparece com Responsável "não informado"
-      mesmo com o gestor JÁ cadastrado na tela de Áreas & Gestores.
-      **Caso concreto:** CATARINA APARECIDA DOS SANTOS, centro de custo "Comercial",
-      responsável cadastrado e mesmo assim exibido como "não informado".
-      **Hipótese a investigar quando a frente abrir:** o Responsável não é campo gravado, é
-      DERIVADO em runtime do cruzamento `lancamento.centro_custo` × `AreasContasPagar.nome`
-      → `gestor_nome`. O match é EXATO e sensível a caixa/acento/espaço interno: o mapa é
-      chaveado por `String(data.nome).trim()` (`gerenciador_contas_pagar_desktop/code.html:1257-1261`)
-      e consultado por `String(r.centro_custo).trim()` (`code.html:2539` e `code.html:5151`),
-      sem `toUpperCase`/`normalize('NFD')` dos dois lados. Qualquer divergência de grafia
-      entre o CC gravado no lançamento e o nome cadastrado na Área faz o lookup falhar em
-      silêncio e cair no marcador "não informado".
-      **Status: NO RADAR.** Entra em frente própria DEPOIS das Ondas 2/3/4. Não iniciar agora.
+- [x] ~~**"Responsável não informado" nos lançamentos do CP**~~ — **RESOLVIDO em 2026-09-30 pela
+      OS-CP-PACOTE-ONDAS-01 (Frente 1), e a HIPÓTESE QUE ESTAVA AQUI ERA FALSA.** Ficou
+      registrado porque a lição vale mais que o conserto: este item afirmava que a causa era
+      match sensível a caixa/acento/espaço. A medição na base real derrubou isso, e
+      **normalizar os dois lados corrige ZERO lançamento**. A causa real é outra: o CC gravado
+      é `COMERCIAL` e **não existe área com esse nome** (existem `COMERCIAL THOMAS`,
+      `COMERCIAL TEAM TAILOR` e `COMERCIAL SOULAN`). Era área faltando e ambígua, não erro de
+      grafia. Prova: 49.984 lançamentos resolvem gestor ANTES e 49.984 DEPOIS, zero divergentes.
+      O que a frente entregou de real: o MESMO campo era comparado com DUAS réguas
+      (`_cpChaveFiltro` no filtro, `.trim()` puro no lookup), e agora há lookup único
+      `_cpResponsavelDoReg` nos três consumidores, mais a distinção entre "área não cadastrada"
+      e "não informado". **O conserto dos 83 lançamentos segue PENDENTE** (corrigir o cadastro
+      do fornecedor #1950 para COMERCIAL SOULAN, com dry-run), e está na seção da
+      OS-CP-PACOTE-ONDAS-01 mais abaixo.
 - [ ] **Faturamento sem janela de carga** (levantado na OS-CP-ULTIMO-MES-01, 2026-09-08).
       `contas_a_receber_desktop/code.html:4319` faz `onSnapshot(collection(db,"Lancamentos"))`
       sem `where`/`orderBy`/`limit` — carrega a coleção inteira a cada abertura. É a mesma
@@ -112,34 +112,86 @@ Legenda: [ ] a fazer · [~] em andamento · [x] feito · [!] bloqueado (aguarda 
       - [ ] Decisões abertas do diretor: gatilho só-por-tipo (recomendado manter); remover código
             morto da quarentena antiga em OS de higiene separada; ciência de que `tipo_entidade` =
             Cliente joga a despesa para o bucket CUSTOS do DRE (`dre_gerencial_desktop/code.html:329-331`)
-## FRENTE ÚNICA — próxima sessão (o diretor abre os 4 itens juntos)
+## OS-CP-PACOTE-ONDAS-01 — pacote único, CONCLUÍDO E EM PRODUÇÃO (2026-09-30)
 
-> Decidido em 2026-09-29, no encerramento da sessão. Detalhe completo e avisos no
-> **PONTO DE RETOMADA** no topo do `DIARIO.md`. Ordem abaixo = ordem de execução sugerida.
+> Branch `feature/cp-pacote-ondas`, 4 commits, merge fast-forward em `main`
+> (`0ca791e..1e1b4d0`), deploy com **hosting + firestore.rules** no mesmo comando (as regras
+> eram pré-condição da aba nova). Validado na tela pelo diretor em preview channel ANTES de
+> qualquer publicação. Segurança VETOU 6 achados e depois LEVANTOU o veto. Detalhe completo no
+> `DIARIO.md` (entrada 2026-09-30) e o desenho em
+> `docs/os-briefings/OS-CP-PACOTE-ONDAS-01-DESENHO.md`.
+>
+> Provas: tester independente 210 casos verdes · rules no emulador 40 casos verdes · prova
+> numérica dos cards PASSA · prova numérica do DRE PASSA · prova da Frente 1 PASSA (49.984
+> antes e depois, zero divergentes).
 
-- [ ] **1. Onda 3 — empresa na importação.** Seletor de empresa na Central de Importações,
-      carimbando a empresa **por lote** no lançamento; a coluna Detalhe/Obs vira "Empresa".
-      Na Onda 2 a empresa ficou só no CADASTRO do favorecido (Desenho B) e o override por
-      lote foi adiado explicitamente para cá.
-      **AVISO do `docs/MAPA-CP-REFATORACAO.md`, ler antes de construir:** exige GUARDA na
-      cascata do master, que hoje reescreve TODAS as faturas do código. Sem a guarda,
-      carimbar por lote espalha a mudança para fatura fora do lote.
-- [ ] **2. Onda 4 — grupos de despesa / DRE.** Estrutura grupo de despesa → conta de despesa,
-      e coluna "Grupo de Contas" na tabela. Coluna nova nasce com filtro multiselect e
-      ordenável (regra da Parte A). No DRE Gerencial o bucket vem de `tipo_entidade`
-      (`dre_gerencial_desktop/code.html:329-331`).
-- [ ] **3. Cards Custo Interno / Custo Externo.** Destrinchar o OPEX em Interno (CLT + PJ)
-      contra Externo. Só ficou possível agora: é a Onda 2 que garante TIPO preenchido em todo
-      favorecido, e o tipo é a chave da separação. Lançamento classificado ANTES da Onda 2
-      pode não ter tipo — conferir a cobertura do campo antes de prometer o número.
-- [ ] **4. Caso Catarina — responsável "não informado".** CAUSA JÁ ACHADA, não reinvestigar:
-      o Responsável é DERIVADO em runtime do cruzamento `lancamento.centro_custo` ×
-      `AreasContasPagar.nome` → `gestor_nome`, com match EXATO sensível a caixa/acento/espaço.
-      Mapa chaveado por `String(data.nome).trim()` (`gerenciador_contas_pagar_desktop/code.html:1257-1261`),
-      consultado por `String(r.centro_custo).trim()` (`code.html:2539` e `code.html:5151`), sem
-      `toUpperCase` nem `normalize('NFD')` dos dois lados. **Correção provável:** normalizar OS
-      DOIS LADOS, em função única aplicada nos três pontos. Caso concreto: CATARINA APARECIDA
-      DOS SANTOS, centro de custo "Comercial", gestor já cadastrado.
+- [x] **1. Onda 3 — empresa na importação.** CONCLUÍDA. Seletor obrigatório com as 4 empresas
+      válidas, com trava em DUAS camadas (botão desabilitado e guarda de abstenção no caminho da
+      escrita, mais uma segunda guarda ANTES da remoção do lote anterior). Carimbo por lote
+      gravando `empresa` + o rastro `empresa_origem`, e só em quem não herdaria do cadastro.
+      Coluna Detalhe/Obs virou Empresa, ordenável, reusando o filtro multiselect que já existia;
+      o badge do nº do título migrou para a coluna Código e **nada saiu da tela** (`observacao`
+      já era renderizado duas vezes). Guarda na cascata do master por `empresa_origem`, com
+      ausência do campo cascateando, logo no-op para os 51.181 docs existentes.
+- [x] **2. Onda 4 — grupos de despesa, SEM o DRE.** CONCLUÍDA. Estrutura de 3 níveis
+      (`CP_Grupos_Contas` → `CP_Contas_Despesa` → `CP_Tipos_Despesa`) ancorada na **despesa do
+      lançamento** (100% de cobertura e zero corrupção), e não no `CP_Base_Despesas` (27,7% de
+      cobertura, por truncamento do ERP em 30 caracteres). Vínculo por ID, nunca por nome.
+      Herança **derivada em runtime**, sem gravar no lançamento. Sub-aba nova "Grupos de Contas"
+      no `master.html` com vínculo em massa e ordenação por volume. Coluna "Grupo de Contas" no
+      CP com filtro multiselect e ordenação. Exclusão BLOQUEADA enquanto houver filho.
+      Catálogo dos 104 tipos em `Metadados/CP_Catalogo_Categorias`: **os 15 maiores cobrem 91,6%
+      da base**.
+- [x] **3. Cards Custo Interno / Custo Externo.** CONCLUÍDA. Card OPEX REMOVIDO: ele somava só
+      Interno CLT + Externo e deixava o PJ de fora, então **R$ 4.717.986,32, 9,7% do custo, não
+      apareciam em card nenhum**. Entraram Interno (CLT+PJ), Externo, Cliente (mantido) e Sem
+      Classificação. `MAP_CLASS_FILTRO` e `classSetExpandido` ficaram INTOCADOS.
+- [x] **4. Caso Catarina — responsável "não informado".** PARCIAL, e por um bom motivo: a causa
+      registrada estava **falsificada pelos dados**. Não era grafia; o CC `COMERCIAL` simplesmente
+      não existe como área. A normalização entrou (lookup único nos 3 consumidores, fim das duas
+      réguas para o mesmo campo) e a tela passou a dizer "área não cadastrada" em vez de "não
+      informado". **O conserto dos 83 lançamentos ficou PENDENTE** (item abaixo). O sub-item de
+      "padronizar a grafia dos CCs" foi RETIRADO pelo diretor: sem grafia divergente, seria
+      escrita em massa regravando o valor que o doc já tem.
+- [x] **5. Vazamento da natureza gravada.** CONCLUÍDA, e não estava no pedido original. A empresa
+      derivada em runtime era persistida em fatura nova via `_cpProjetarRecorrencia` (que espalha
+      o objeto do cache para dentro do `writeBatch`), e o DRE congelava o valor. **Medido: ZERO
+      faturas afetadas** — o caminho existia e nunca havia disparado. Corrigido com Map paralelo
+      e acessor único.
+- [x] **6. Corte do módulo legado `contas_a_pagar_desktop`.** CONCLUÍDO e **REVERSÍVEL**: a pasta
+      entrou no `ignore` do hosting e **deixou de ser publicada**, mas o arquivo NÃO foi apagado e
+      segue no git e no disco. Motivo: era um SEGUNDO ESCRITOR de `ContasAPagar` sem o carimbo de
+      empresa e sem a trava de abstenção. Verificação exigida pelo diretor antes de cortar
+      (`scripts/verificar-uso-legado-cp.cjs`): sem link, sem rota, fora do cadastro de menus,
+      fora do redirect; e nos dados, **0 dos 18 usuários têm a chave de menu legada** e **0
+      lançamentos** têm as assinaturas de escrita dele. Limite declarado: a verificação não prova
+      ausência de acesso por LEITURA, que não deixa rastro. Produção conferida: 404.
+
+### PENDÊNCIA que sobrou deste pacote
+
+- [!] **Corrigir o cadastro do fornecedor #1950 (CATARINA APARECIDA DOS SANTOS)** para a área
+      **COMERCIAL SOULAN** (gestor Marcelo Medeiros), decisão já tomada pelo diretor. Corrigir
+      esse 1 cadastro e deixar a cascata rodar resolve os 83 lançamentos e o futuro de uma vez.
+      É escrita em produção, então vai com **DRY-RUN que o diretor aprova antes de aplicar**.
+      Valor envolvido: R$ 7.077,91. É o ÚNICO CC órfão da base (varredura completa feita).
+
+### FRENTE SEGUINTE já recortada — DRE por grupo de despesa
+
+- [ ] **DRE Gerencial por grupo de despesa.** Ficou FORA do pacote por decisão do diretor: o DRE
+      por grupo só mostra algo DEPOIS que ele agrupar as despesas na tela nova, que acabou de
+      entrar em produção. Construir junto obrigaria a validar o relatório duas vezes, uma com a
+      dimensão vazia e outra com dado real.
+- [!] **DECISÃO PENDENTE DO DIRETOR que abre essa frente: o bucket do Cliente no DRE.** Hoje o
+      bucket vem de QUEM RECEBEU o dinheiro (`bucketDespesa` em
+      `dre_gerencial_desktop/code.html:329-331`: tipo Cliente → CUSTOS, todo o resto → G&A). Com
+      grupos, poderia vir DO QUE FOI GASTO. Em 2026 são R$ 25.474.325,89 em CUSTOS contra
+      R$ 23.419.841,17 em G&A. **Em qualquer cenário o EBITDA é idêntico ao centavo**; o que muda
+      é a fronteira Custo × Despesa, logo o Lucro Bruto e a margem bruta. As três opções e a
+      recomendação (cenário misto: `bucket_dre` nasce nulo e cada grupo migra sozinho quando o
+      diretor classificar) estão em
+      `docs/os-briefings/OS-CP-PACOTE-ONDAS-01-DESENHO.md`, seção 5.6 e pergunta Q7.
+      O campo `bucket_dre` **já existe** nos docs de `CP_Grupos_Contas`, nasce `null` e **ainda
+      não tem controle na tela**, exatamente para essa decisão não ser tomada por acidente.
 
 ### OS do CP encerradas sem entrega (superadas)
 - [x] ~~OS-CP-FILTROS-BASE-COMPLETA-01~~ e ~~OS-CP-JANELA-6M-01~~ — **ENCERRADAS, superadas

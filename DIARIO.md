@@ -5,91 +5,259 @@ Mantido pelo coordenador a cada tarefa concluida ou decisao tomada.
 
 ---
 
-## PONTO DE RETOMADA (2026-09-29, sessao encerrada pelo diretor) — nada pendente, proxima sessao abre FRENTE UNICA
+## PONTO DE RETOMADA (2026-09-30) — OS-CP-PACOTE-ONDAS-01 EM PRODUCAO, uma pendencia com dry-run
 
-**Onde parou, em uma frase:** todas as frentes abertas FECHARAM e estao em producao ou na `main`;
-nao ha nada aguardando validacao, deploy ou decisao. A proxima sessao comeca de escopo limpo, e o
-diretor ja definiu que vai abrir UMA frente unica com quatro itens (secao "A PROXIMA FRENTE").
+**Onde parou, em uma frase:** o pacote das 4 frentes mais o vazamento esta EM PRODUCAO e em
+`main`, validado pelo diretor e aprovado pelo seguranca. Sobrou UMA pendencia pequena e uma
+FRENTE SEGUINTE ja definida.
 
-**Estado do git:** branch `main`, arvore LIMPA, `main` == `origin/main`, nenhuma flag `READY_*`
-(`.claude/state/` vazio, gate fechado de proposito).
+**Estado do git:** branch `main`, arvore LIMPA, `main` == `origin/main` em `1e1b4d0`, nenhuma flag
+`READY_*` (removida apos o push). Produção conferida IDENTICA a `main` nos 8 arquivos servidos.
 
-### JA EM PRODUCAO, nada a fazer nestes
+### A PENDENCIA, e ela exige o diretor
 
-| frente | o que entregou |
-|---|---|
-| **Onda 1**, OS-CP-CORRIGE-NOMES-01 | correcao in-place dos 197 campos com U+FFFD, zero doc apagado ou criado |
-| **Onda Layout**, OS-CP-LAYOUT-01 | colunas, KPIs, ordenacao por clique nas 7 colunas, travessao fora da UI do CP |
-| **Onda 2**, OS-CP-CLASSIFICACAO-IMPORT-01 | classificacao obrigatoria de favorecido SEM TIPO na importacao, mais o ajuste Tipo = Cliente (o cliente E o proprio centro de custo, CAIXA ALTA) |
-| **Gate de deploy**, OS-CP-GATE-PREVIEW-01 | preview channel deixou de exigir flag; 7 furos do gate fechados, 2 deles antigos |
-| **Gate destrutivo**, OS-GATE-DESTRUTIVO-01 | bloqueio incondicional de comando destrutivo (entrada propria abaixo) |
+**Cadastro da Catarina (fornecedor #1950).** O centro de custo dele esta `COMERCIAL`, que nao
+existe como area. O diretor JA DECIDIU o destino: area **COMERCIAL SOULAN** (gestor Marcelo
+Medeiros). Falta EXECUTAR, e a execucao e escrita em producao, entao vai com DRY-RUN que o
+diretor aprova antes. Corrigir esse 1 cadastro e deixar a cascata rodar resolve os 83
+lancamentos e o futuro de uma vez. Valor envolvido: R$ 7.077,91.
 
-### A PROXIMA FRENTE, que o diretor vai abrir numa SO frente de trabalho
+### A FRENTE SEGUINTE, ja recortada
 
-Quatro itens, e a ordem abaixo e a de execucao sugerida. Os dois primeiros sao as Ondas que faltam,
-o terceiro so ficou possivel POR CAUSA da Onda 2, e o quarto e o bug mais antigo do radar.
+**DRE por grupo de despesa.** Ficou FORA deste pacote por decisao do diretor, e o motivo nao foi
+falta de tempo: o DRE por grupo so mostra algo DEPOIS que o diretor agrupar as despesas na tela
+nova, que acabou de entrar em producao. Construir junto obrigaria a validar o relatorio duas
+vezes, uma com a dimensao vazia e outra com dado real.
 
-1. **Onda 3, empresa na importacao.** Seletor de empresa na Central de Importacoes, carimbando a
-   empresa POR LOTE no lancamento; a coluna Detalhe/Obs vira Empresa. Na Onda 2 a empresa ficou
-   apenas no CADASTRO do favorecido (Desenho B, decisao do diretor), e o override por lote foi
-   explicitamente adiado para esta Onda.
-   **AVISO do `docs/MAPA-CP-REFATORACAO.md`, ler antes de construir:** exige GUARDA na cascata do
-   master, que hoje reescreve TODAS as faturas do codigo. Sem a guarda, carimbar empresa por lote
-   espalha a mudanca para fatura que nao estava no lote.
-2. **Onda 4, grupos de despesa / DRE.** Estrutura grupo de despesa -> conta de despesa, e a coluna
-   "Grupo de Contas" na tabela. Coluna nova nasce com filtro multiselect e ordenavel (regra da
-   Parte A), e no DRE Gerencial o bucket e definido por `tipo_entidade`
-   (`dre_gerencial_desktop/code.html:329-331`).
-3. **Cards Custo Interno / Custo Externo.** Destrinchar o OPEX em Interno (CLT + PJ) contra Externo.
-   So ficou possivel agora: e a Onda 2 que garante que todo favorecido tem TIPO preenchido, e o tipo
-   e a chave dessa separacao. Lancamento classificado ANTES da Onda 2 pode nao ter tipo, entao
-   conferir a cobertura do campo antes de prometer o numero.
-4. **Caso Catarina, responsavel "nao informado".** Caso concreto: CATARINA APARECIDA DOS SANTOS,
-   centro de custo "Comercial", gestor JA cadastrado em Areas & Gestores e a tela mostra "nao
-   informado". **CAUSA JA ACHADA, nao precisa investigar de novo:** o Responsavel nao e campo
-   gravado, e DERIVADO em runtime do cruzamento `lancamento.centro_custo` x `AreasContasPagar.nome`
-   -> `gestor_nome`. O match e EXATO e sensivel a caixa, acento e espaco interno: o mapa e chaveado
-   por `String(data.nome).trim()` em `gerenciador_contas_pagar_desktop/code.html:1257-1261` e
-   consultado por `String(r.centro_custo).trim()` em `code.html:2539` e `code.html:5151`, sem
-   `toUpperCase` nem `normalize('NFD')` de nenhum dos dois lados. **Correcao provavel:** normalizar
-   OS DOIS LADOS do lookup. Atencao ao alcance: o mesmo cruzamento alimenta mais de um ponto da tela,
-   entao a normalizacao tem que ser feita numa funcao unica e aplicada nos tres lugares.
+**DECISAO PENDENTE que abre essa frente, e o arquiteto preparou os numeros:** hoje o bucket do DRE
+vem de QUEM RECEBEU o dinheiro (`bucketDespesa` em `dre_gerencial_desktop/code.html:329-331`, tipo
+Cliente vai para CUSTOS e todo o resto para G&A). Com grupos, ele poderia vir DO QUE FOI GASTO. Em
+2026 isso e R$ 25.474.325,89 em CUSTOS contra R$ 23.419.841,17 em G&A. **Em qualquer cenario o
+EBITDA e identico ao centavo**; o que muda e a fronteira entre Custo e Despesa, logo o Lucro Bruto
+e a margem. As tres opcoes, com a recomendacao (cenario misto, `bucket_dre` nasce nulo e cada
+grupo migra sozinho quando o diretor classificar), estao em
+`docs/os-briefings/OS-CP-PACOTE-ONDAS-01-DESENHO.md`, secao 5.6 e pergunta Q7.
 
-### BACKLOG que continua ABERTO e NAO entra na frente unica
+O campo `bucket_dre` JA existe nos docs de `CP_Grupos_Contas`, nasce `null` e ainda NAO tem
+controle na tela, exatamente para essa decisao nao ser tomada por acidente.
 
-Fica registrado para o diretor priorizar quando quiser; nada aqui bloqueia a frente unica.
+### BACKLOG que continua aberto
+
 1. **Modo permissivo do gate em `main`.** Fora de branch de frente nao ha slug para casar, entao
-   QUALQUER flag `READY_*` libera qualquer publicacao a partir de `main`. O seguranca elevou a
-   prioridade com evidencia viva (o repo vizinho `CENTRA DASH` esta em `main` com 25 flags
-   acumuladas) e recomenda esta OS antes de mais endurecimento do gate.
-2. **Faturamento sem janela de carga.** `contas_a_receber_desktop/code.html:4319` faz
-   `onSnapshot(collection(db,"Lancamentos"))` sem `where`/`orderBy`/`limit`. Mesma classe de problema
-   que travava o CP antes da carga por recencia, e piora conforme a base cresce.
-3. **Mojibake "A-tilde / A-circunflexo" no `CP_Base_Despesas`** (ex.: `ASSESSORIA CONTABIL` gravado
-   errado), 42 de 110 docs. E corrupcao DIFERENTE do U+FFFD da Onda 1 e e REVERSIVEL por
-   re-decodificacao.
-4. **7 cadastros com `NEAT` em centro de custo.**
-5. **Codigo morto da quarentena:** handler `btn-aplicar-cp-quarentena`, caminho inalcancavel.
-6. **`scripts/check-syntax.cjs` quebrado:** grava bloco `<script type="module">` com extensao `.cjs`,
-   entao `node --check` reprova qualquer `import`, inclusive arquivo intocado do HEAD. E gate cego do
-   DoD hoje; as OS recentes contornam extraindo para `.mjs`.
+   qualquer flag `READY_*` libera publicacao a partir de `main`. O gate avisa em stderr, mas
+   libera. Prioridade elevada pelo seguranca desde 2026-09-27.
+2. **Faturamento sem janela de carga** (`contas_a_receber_desktop/code.html`, `onSnapshot` na
+   colecao inteira). Mesma classe do problema que o CP resolveu com carga por recencia.
+3. **DRE le `ContasAPagar` inteira sem limite** (`dre_gerencial_desktop/code.html:624-630`),
+   51.181 docs, e reprocessa 5 abas a cada snapshot de 3 colecoes. Achado do arquiteto nesta OS;
+   NAO estava no backlog antes. Vira gargalo quando o DRE por grupo for construido.
+4. **Tres esquemas de chave de fornecedor convivem:** ETL (codigo + alias por doc-id), runtime do
+   CP (codigo E doc-id) e DRE (codigo OU doc-id, exclusivo). Esta OS fechou a divergencia que
+   importava; um resolvedor unico compartilhado e frente propria. Achado do seguranca.
+5. **`firestore.rules` ainda honram `hasMenu('contas_pagar')`**, a chave do modulo legado, para
+   ler e escrever `ContasAPagar` (linhas 165-166 e 251-254). ZERO usuarios tem essa chave hoje,
+   entao sao clausulas mortas, mas remove-las MUDA regra existente e pede auditoria propria.
+6. **Mojibake A-til/A-circunflexo em `CP_Base_Despesas`**, 40 de 112 docs, reversivel por
+   re-decodificacao. Esta OS provou que ele NAO atrapalha nada: a ancora da Onda 4 e a despesa do
+   lancamento, que esta 100% limpa.
+7. **7 cadastros com `NEAT` em centro de custo**; 86 fornecedores sem centro de custo; 127
+   fornecedores sem empresa (a tela de correcao em massa ja atende esses 127).
+8. **Sujeira no cadastro de areas:** uma area chamada `ginfor` em minusculas, `RATEIO` sem gestor,
+   `CLIENTES` com o gestor gravado como "CLIENTES".
+9. **`scripts/check-syntax.cjs` quebrado** (grava bloco de modulo com extensao `.cjs`, entao
+   `node --check` reprova qualquer `import`). Contorno usado e obrigatorio: extrair para `.mjs`.
+10. **Dois testes MORTOS no repo**, que quebram na extracao antes do primeiro caso e ninguem
+    percebe: `scripts/test-cp-filtros-base-completa-logica.cjs` (procura funcao que nao existe
+    mais) e `scripts/test-filtro-servico-dinamico.cjs` (compara contra `HEAD`, que andou). Achado
+    do tester. **Licao que vale para todo teste novo:** comparar contra `HEAD` apodrece no
+    primeiro commit da propria frente; fixe a base num commit explicito.
 
-### Regras operacionais que a proxima sessao precisa saber, e que ja custaram retrabalho
+### Regras operacionais que a proxima sessao precisa saber
 
-1. **O gate agora barra comando DESTRUTIVO sempre**, sem flag de bypass. Ele le a STRING do comando,
-   entao CITAR um desses verbos em texto tambem bloqueia. Contorno, que e obrigatorio e nao
-   preferencia: mensagem de commit que cite os verbos vai por ARQUIVO (`git commit -F <arquivo>`),
-   busca por texto usa a ferramenta Grep e nunca o `grep` de shell, e string de teste mora DENTRO de
-   um arquivo `.cjs`. A propria mensagem de bloqueio do gate ensina isso.
-2. **Qualquer edicao em `scripts/gate-deploy.js` roda `node scripts/test-gate-deploy.cjs` ANTES do
-   commit.** Nao e conferencia, e pre-condicao, e esta escrita no cabecalho do arquivo. O risco
-   dominante do gate deixou de ser o falso negativo e passou a ser a OSCILACAO: em sete rodadas de
-   auditoria, apertar um lado abriu o outro, e foi a suite que pegou cada inversao.
-3. **Os agentes `seguranca` e `arquiteto` NAO estao registrados no runtime**, embora
-   `.claude/agents/seguranca.md` e `arquiteto.md` existam. A lista de tipos disponiveis traz apenas
-   backend, coordenador, frontend, tester e os genericos. Contorno usado nesta sessao: despachar um
-   agente generico mandando ler `.claude/agents/seguranca.md` e assumir aquele papel. Funcionou, e a
-   auditoria saiu com a mesma qualidade.
+1. **O gate exige ARVORE LIMPA mesmo para preview channel.** Ele dispensa a flag `READY_*` no
+   preview, nao a arvore limpa. Consequencia pratica: para publicar preview e preciso COMMITAR
+   antes, o que inverte a ordem da secao 8 (commit depois da validacao). Nao e furo do gate, e o
+   fluxo real; assuma e registre.
+2. **O carimbo de empresa por lote e PERMANENTE para aquele lancamento.** A guarda da cascata
+   protege `empresa_origem` em `importacao`, `manual` e `backfill`, entao preencher a empresa do
+   fornecedor depois NAO move mais esses lancamentos no DRE. Corrigir cadastro conserta o futuro,
+   nao o que ja foi carimbado. Lote carimbado errado so se conserta com nova escrita em massa.
+3. **Teste que documenta um bug precisa ser INVERTIDO quando o bug e consertado.** Nesta OS dois
+   casos do tester afirmavam a presenca do gap e viraram vermelho permanente quando eu corrigi.
+4. **O gate barra comando destrutivo pela STRING**, entao citar um desses verbos em texto tambem
+   bloqueia: mensagem de commit vai por arquivo (`git commit -F`), busca de texto usa a ferramenta
+   Grep e nunca o `grep` de shell.
+5. **Nao usar `sed` para editar codigo.** Nesta sessao um `sed` mangueou uma linha de teste dentro
+   de uma string. Edicao de codigo vai por ferramenta de edicao precisa.
+
+---
+
+## 2026-09-30 — OS-CP-PACOTE-ONDAS-01: 4 frentes + vazamento + corte do legado, EM PRODUCAO
+
+Pacote unico, branch `feature/cp-pacote-ondas`, 4 commits, mergeado em `main` por fast-forward
+(`0ca791e..1e1b4d0`) e publicado com **hosting + firestore.rules** no mesmo deploy, porque as
+regras eram pre-condicao da aba nova. Validado na tela pelo diretor em preview channel antes de
+qualquer publicacao.
+
+### O que cada frente entregou
+
+**FRENTE 5, o vazamento (a mais grave, e nao estava no pedido original).** A empresa resolvida em
+runtime era escrita de volta em `reg.empresa`, no objeto de `cacheRegistros`, e
+`_cpProjetarRecorrencia` espalha esse objeto (`...reg`) direto para dentro de `writeBatch`. Ou
+seja: um valor CALCULADO era PERSISTIDO em fatura nova, sem decisao e sem rastro, e o DRE passava
+a congelar aquele valor porque `empresaDespesa` da precedencia ao campo explicito. Contrariava um
+veto ja registrado (entrada de 2026-09-04 sobre campo sintetico). O proprio codigo documentava em
+TRES lugares que o objeto vai para dentro do `writeBatch`, e ainda assim escrevia ali.
+**Corrigido** com Map paralelo `_cpEmpresaDerivada` e acessor unico `_cpEmpresaDeReg`, no mesmo
+padrao que o indice de busca ja usava de proposito. **Medido: ZERO faturas afetadas** (nao existia
+nenhum clone de recorrencia na base), entao nao houve nada a corrigir retroativamente. A arma
+estava carregada e nunca havia disparado.
+
+**FRENTE 1, caso Catarina.** A causa registrada na OS estava **FALSIFICADA pelos dados**: nao era
+lookup sensivel a caixa/acento/espaco. Os 83 lancamentos tem `centro_custo = "COMERCIAL"` e nao
+existe area com esse nome; existem tres (`COMERCIAL THOMAS`, `COMERCIAL TEAM TAILOR`,
+`COMERCIAL SOULAN`). Normalizar os dois lados corrige **ZERO** lancamento hoje. O que a frente de
+fato entregou: o MESMO campo era comparado com DUAS reguas (`_cpChaveFiltro` no filtro, `.trim()`
+puro no lookup de gestor), e agora ha lookup unico `_cpResponsavelDoReg` nos tres consumidores.
+Mais a distincao entre "area nao cadastrada" (CC preenchido sem area) e "nao informado" (CC vazio),
+que nomeia a causa em vez de deixar o operador achar que o sistema quebrou.
+**Prova numerica com as funcoes REAIS sobre os 51.181 docs: 49.984 resolvem gestor ANTES, 49.984
+DEPOIS, ZERO linhas com gestor diferente.** O item "padronizar a grafia dos CCs" foi RETIRADO do
+pacote pelo diretor: sem grafia divergente para padronizar, seria escrita em massa em producao
+regravando o valor que o doc ja tem.
+
+**FRENTE 2, cards de Natureza do Custo.** O card OPEX SAIU. Descoberta que justificou a frente:
+ele somava so `Fornecedor Interno` + `Fornecedor Externo` e deixava o **Interno PJ de fora**, e o
+"sem tipo" nunca teve card, entao **R$ 4.717.986,32, 9,7% do custo, nao apareciam em card nenhum**.
+Entraram Custo Fornecedor Interno (CLT + PJ), Custo Fornecedor Externo, Custo Cliente (mantido) e
+Sem Classificacao, em fileira propria de 4 dentro do MESMO wrapper `#kpi-grid-cp` (tres listeners
+delegados dependem daquele id). 1/4 de largura e MAIOR que o 1/6 de antes, entao nenhum card ficou
+mais estreito. Os cards novos apontam para `cp-filtro-tipo`, que ja tinha os 4 valores e a
+sentinela `__SEM_TIPO__`, o que deixou `MAP_CLASS_FILTRO` e `classSetExpandido` INTOCADOS.
+**Prova numerica**: os 5 KPIs preservados ficaram identicos como STRING; Interno R$ 5.627.953,39,
+Externo R$ 16.088.181,69, Cliente R$ 25.474.325,89 (igual ao centavo ao de antes), Sem
+Classificacao R$ 1.551.255,96 em 1.931 docs; delta contra o OPEX antigo = R$ 3.166.730,36, que e
+EXATAMENTE o bucket PJ. **A prova pegou um erro meu:** eu havia escrito no codigo que os 4 cards
+somam o Total Geral. Nao somam. Eles somam o total do recorte (R$ 48.741.716,93); o card Total
+Geral e `Pago + Tarifas` (R$ 48.765.114,08) por decisao da Onda Layout. Diferenca de R$ 23.397,15,
+corrigida no comentario para ninguem conferir pela conta errada.
+
+**FRENTE 3, Onda 3, empresa na importacao.** Seletor obrigatorio com as 4 empresas, com trava em
+DUAS camadas: botao desabilitado no modal e **guarda de abstencao no caminho da escrita**. Carimbo
+por lote gravando `empresa` e o rastro `empresa_origem`, e **so em quem nao herdaria** empresa do
+cadastro do fornecedor. Coluna "Detalhe / Obs." virou "Empresa", ordenavel, reusando o filtro
+multiselect que JA existia. Nenhuma informacao saiu da tela: `observacao` ja era renderizado DUAS
+vezes (a coluna Favorecido tambem o mostra), e o badge do numero do titulo migrou para a coluna
+Codigo, onde ele conceitualmente mora. **Guarda na cascata do master**, decidindo por
+`empresa_origem`: ausencia do campo CASCATEIA, logo e no-op para os 51.181 docs existentes, e so
+fatura criada depois com carimbo explicito fica protegida. Tela de correcao em massa: **reuso da
+aba de Fornecedores em vez de tela nova** (ela ja filtrava "sem empresa" e ja alterava empresa em
+massa com cascata), com tres acrescimos: atalho para o recorte, "Selecionar Todos Do Filtro" (a
+selecao era pagina por pagina, e sao 127 fornecedores) e **dry-run obrigatorio** em dois cliques.
+
+**FRENTE 4, Onda 4, grupos de despesa (SEM o DRE).** Estrutura de 3 niveis
+(`CP_Grupos_Contas` -> `CP_Contas_Despesa` -> `CP_Tipos_Despesa`) **ancorada na despesa do
+lancamento**, e nao no Banco de Despesas. A medicao decidiu: `CP_Base_Despesas` casa com so
+**14.155 de 51.181 docs (27,7%)**, porque o ERP trunca a descricao em 30 caracteres, e ancorar ali
+deixaria 72,3% dos lancamentos sem grupo. A despesa do lancamento cobre 100% e esta **sem nenhuma
+corrupcao** (medido: zero mojibake e zero U+FFFD nos 104 valores distintos). O diretor ja havia
+decidido o mesmo em 2026-09-04 por medicao equivalente. Vinculo **por ID, nunca por nome**:
+renomear um grupo e `updateDoc` de 1 campo em 1 doc, e vinculo por NOME e exatamente o que
+produziu o caso Catarina. Heranca **DERIVADA EM RUNTIME**, sem gravar no lancamento: gravar seriam
+51.181 updates e NAO uma vez so, porque o diretor mexe nos vinculos iterativamente. Nova sub-aba
+"Grupos de Contas" no `master.html` (HTML puramente aditivo, o switcher de sub-abas e generico),
+com vinculo em massa e ordenacao por VOLUME. Coluna "Grupo de Contas" no CP com filtro multiselect
+(populado pelo cadastro, fora da cadeia serial de dropdowns, que e codigo validado e nao foi
+tocado) e ordenacao. **Exclusao BLOQUEADA enquanto houver filho**, nao apenas avisada como no
+precedente de `AreasContasPagar`.
+
+**CORTE DO MODULO LEGADO.** `contas_a_pagar_desktop/` saiu da superficie servida (entrou no
+`ignore` do hosting). Motivo, levantado pelo seguranca: e um **SEGUNDO ESCRITOR** de
+`ContasAPagar` que nao tem o carimbo de empresa nem a trava de abstencao. Verificacao antes de
+cortar, exigida pelo diretor, em `scripts/verificar-uso-legado-cp.cjs`: sem link no `sidebar.js`,
+fora do cadastro de menus do `master.html`, fora do redirect do `login.html`, ninguem importa nada
+da pasta; e nos dados, dos 18 usuarios **ZERO tem a chave de menu legada**, todos os 51.181
+lancamentos tem `origem: 'etl_txt_gerenciador'` (o modulo vivo), **zero** com as assinaturas
+exclusivas do legado e **zero** com `cliente_origem`. **Corte REVERSIVEL: o arquivo NAO foi
+apagado, segue no git e no disco, so deixou de ser publicado.** Limite declarado: a verificacao
+nao prova ausencia de acesso por LEITURA, que nao deixa rastro.
+
+### Escritas em producao, todas com dry-run e backup
+
+1. `/Base_Empresas/ESTAGIO` criado (`scripts/criar-empresa-estagio.cjs`). O diretor declarou 4
+   empresas alocaveis e so 3 existiam. O seletor agora oferece as 4.
+2. `/Metadados/CP_Catalogo_Categorias` semeado (`scripts/seed-catalogo-categorias-cp.cjs`), 104
+   tipos, 13,5 KB. **Os 15 maiores cobrem 91,6% da base**, entao o trabalho de vinculo e muito
+   menor que 104 cliques. O catalogo NAO se atualiza sozinho a cada importacao: a data de geracao
+   fica VISIVEL no contador de saude da tela, para o contador nao mentir.
+3. `RAFUL` e `SOULAN CONSULTORIA 3` sairam dos seletores por critério de DADO (so entra quem tem o
+   campo canonico `nome`), nao por lista fixa de nomes. Medido antes: ZERO fornecedores e ZERO
+   lancamentos usam esses dois. Isso limpou os TRES lugares que os exibiam, nao so a importacao.
+
+### Auditoria: o seguranca VETOU, e o veto valeu a pena
+
+**6 achados, 3 bloqueantes, todos fechados, e depois VETO LEVANTADO.** Na reauditoria o proprio
+agente rodou as suites em vez de aceitar meus numeros, mais uma sonda adversarial propria (7/7,
+nenhum bypass). Os achados:
+
+1. **(alta) O ETL carimbaria empresa ERRADA e o erro se autotrancaria.** `cpCarregarFornecedoresMap`
+   chaveava SO por `codigo`, enquanto o runtime e o DRE tambem acham o fornecedor pelo DOC-ID. Um
+   fornecedor visivel ao runtime e invisivel ao ETL receberia a empresa do LOTE com
+   `empresa_origem: 'importacao'`, que a guarda trata como protegido: **corrigir o cadastro nunca
+   mais consertaria aquele lancamento**. Medido: 0 dos 841 fornecedores estao nessa situacao, entao
+   zero instancias. A classe foi fechada com alias por doc-id, guardado por `!map.has` para o
+   fornecedor legitimo sempre ganhar.
+2. **(alta) Faltava a prova numerica do DRE.** Ele RECUSOU minha afirmacao de que nada mudara,
+   corretamente, porque era palavra do autor. Criado `scripts/prova-dre-pacote-ondas.cjs`, que
+   EXTRAI `empresaDespesa`, `normalizarEmpresa` e `bucketDespesa` do proprio arquivo do DRE.
+   Resultado: nenhum doc tem `empresa_origem`, logo o DRE de hoje e identico; soma das abas
+   (SOULAN R$ 39.296.717,43, OUTRAS R$ 5.141.993,99, NEAT R$ 4.455.455,64) == consolidado
+   R$ 48.894.167,06; os **6.266 lancamentos** que o carimbo alcancaria (R$ 4.711.670,77) estao
+   **100% em OUTRAS hoje**, entao o carimbo so pode MOVER valor de OUTRAS para uma aba real,
+   nenhuma aba real perde e o consolidado e invariante; CUSTOS x G&A intocados porque
+   `bucketDespesa` le apenas `tipo_entidade`. **Na reauditoria ele achou um erro factual no MEU
+   script:** eu dava DUAS chaves por fornecedor quando o DRE usa chave EXCLUSIVA. Corrigido; os
+   numeros sao identicos porque todo fornecedor tem codigo, entao o valor passou de piso a exato.
+3. **(media) O catalogo de controladoria era gravavel por nao-admin.** A regra de `Metadados`
+   liberava escrita para quem tem o menu do CP, e a Onda 4 colocou ali os 104 tipos: um operador
+   comum podia sobrescrever tudo com objeto vazio. Regra estreitada por `docId`. **O caso de teste
+   que existia AFIRMAVA esse comportamento como desejado**, provando que a regra fazia o que estava
+   escrito e nao que estava certa: foi invertido para exigir a negacao, mais um caso novo provando
+   que a telemetria legitima do ETL nao quebrou.
+4. **(media) A guarda de abstencao estava do lado ERRADO da acao irreversivel.** A verificacao da
+   empresa do lote so existia no caminho da escrita, DEPOIS da remocao do lote anterior na decisao
+   "substituir": com empresa vazia, o lote antigo seria removido e nada gravado no lugar. Movida
+   para ANTES, como manda a secao 7.
+5. **(media) Duplo clique pulava a previa do dry-run.** Sem intervalo entre exibir e confirmar, um
+   duplo clique gravava sem ninguem ter lido. Passou a exigir 700 ms.
+6. **(baixa) A contagem de preservados mentia:** o detalhe da cascata nao era resetado na entrada,
+   entao um early-return deixava o numero do fornecedor anterior pendurado e o laco re-somava.
+
+**Pre-existente fechado no caminho:** a credencial ADC temporaria estava protegida **apenas na
+raiz** (`firebase.json`), entao um `scripts/adc_tmp.json` teria sido **SERVIDO PUBLICAMENTE**.
+Agora esta no `.gitignore` e no `firebase.json`, em qualquer pasta. Conferido: 404 em producao.
+
+### Tester independente: 210 casos, e achou duas regressoes minhas
+
+1. **A coluna Empresa ficaria vazia no uso offline.** Ao tirar a empresa derivada de dentro do
+   registro, eu quebrei a hidratacao: o cache local guardava aquele valor embutido. O Map derivado
+   passou a ser persistido em chave SEPARADA do cache, e o recalculo so roda quando o cadastro de
+   fornecedores chegou, senao limparia o que veio do cache.
+2. **Um snapshot vazio de areas pintaria a tabela inteira de alarme falso.** O texto novo "area
+   nao cadastrada" apareceria em TODA linha se o cadastro viesse vazio por um instante. Lista vazia
+   passou a ser tratada como "ainda carregando", com o texto neutro.
+
+Residual aceito, impacto ZERO hoje: o card Sem Classificacao soma qualquer tipo desconhecido, mas o
+clique nele filtra so tipo vazio. A base tem apenas os 4 tipos e o vazio. Alinhar exigiria mexer na
+semantica do filtro, que e codigo validado.
+
+### Numeros de referencia auditados nesta OS
+
+`ContasAPagar` 51.181 docs · `Fornecedores` 841 · `AreasContasPagar` 14 · `Base_Empresas` 6 (4 no
+seletor) · `CP_Base_Despesas` 112 · `Usuarios` 18 (4 com o menu do CP) · 104 tipos de despesa
+distintos · 13 CCs distintos no lancamento · 1.114 lancamentos com CC vazio · 6.266 sem empresa por
+nenhum caminho · 44.586 que herdam empresa do cadastro · 329 com empresa gravada (todos da cascata
+do master, nenhum do vazamento).
 
 ---
 
